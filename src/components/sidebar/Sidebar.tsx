@@ -5,6 +5,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  Shield,
   UserCircle2,
   Users,
   Users2,
@@ -23,6 +24,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "User Management", to: "/users", icon: Users },
+  { label: "Role Management", to: "/roles", icon: Shield },
   { label: "Content Management", to: "/content", icon: BookOpen },
   { label: "Notifications", to: "/notifications", icon: Bell },
   { label: "User Log", to: "/user-log", icon: ClipboardList },
@@ -33,12 +35,12 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   return (
-    <aside className="flex w-[264px] flex-col border-r bg-grayScale-50 px-4 py-5">
+    <aside className="fixed left-0 top-0 flex h-screen w-[264px] flex-col border-r bg-grayScale-50 px-4 py-5">
       <div className="px-2">
         <BrandLogo />
       </div>
 
-      <nav className="mt-6 space-y-1">
+      <nav className="mt-6 flex-1 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
           return (
@@ -75,7 +77,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto px-2 pt-6">
+      <div className="px-2 pt-6">
         <button
           type="button"
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600"

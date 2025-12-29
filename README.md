@@ -188,14 +188,13 @@ src/
 - **Search & Filter** - Advanced filtering capabilities
 - **Question Management** - Comprehensive question bank with multiple question types
 
-## 🛠️ Getting Started
+## 🛠️ Getting Started 
 
 ### Prerequisites
 
 - Node.js (v18 or higher)
 - npm or yarn
 
-test
 
 ### Installation
 
@@ -306,5 +305,7 @@ Each question type has dynamic form behavior that adapts based on selection.
 This project is private and proprietary.
 
 ---
+
+Developed by Yaltopia Tech
 
 Built with ❤️ for Yimaru Academy

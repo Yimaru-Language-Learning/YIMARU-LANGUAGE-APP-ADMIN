@@ -195,6 +195,8 @@ src/
 - Node.js (v18 or higher)
 - npm or yarn
 
+test
+
 ### Installation
 
 1. Clone the repository

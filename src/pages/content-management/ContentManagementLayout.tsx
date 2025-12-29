@@ -6,6 +6,7 @@ const tabs = [
   { label: "Courses", to: "/content/courses" },
   { label: "Speaking", to: "/content/speaking" },
   { label: "Practice", to: "/content/practices" },
+  { label: "Questions", to: "/content/questions" },
 ]
 
 export function ContentManagementLayout() {

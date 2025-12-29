@@ -22,11 +22,19 @@ import { RolesListPage } from "../pages/role-management/RolesListPage"
 import { AddRolePage } from "../pages/role-management/AddRolePage"
 import { PracticeDetailsPage } from "../pages/content-management/PracticeDetailsPage"
 import { PracticeMembersPage } from "../pages/content-management/PracticeMembersPage"
+import { QuestionsPage } from "../pages/content-management/QuestionsPage"
+import { AddQuestionPage } from "../pages/content-management/AddQuestionPage"
 import { UserLogPage } from "../pages/user-log/UserLogPage"
+import { LoginPage } from "../pages/auth/LoginPage"
+import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage"
+import { VerificationPage } from "../pages/auth/VerificationPage"
 
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/verification" element={<VerificationPage />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
@@ -51,6 +59,9 @@ export function AppRoutes() {
           <Route path="speaking/add-practice" element={<AddPracticePage />} />
           <Route path="practices" element={<PracticeDetailsPage />} />
           <Route path="practices/members" element={<PracticeMembersPage />} />
+          <Route path="questions" element={<QuestionsPage />} />
+          <Route path="questions/add" element={<AddQuestionPage />} />
+          <Route path="questions/edit/:id" element={<AddQuestionPage />} />
         </Route>
 
         <Route path="/notifications" element={<NotificationsPage />} />

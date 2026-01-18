@@ -1,13 +1,16 @@
 import { Eye, Search } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect } from "react"
 import { Link } from "react-router-dom"
 import { Badge } from "../../components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { cn } from "../../lib/utils"
-import type { SubscriptionType, User } from "../../stores/usersStore"
-import { useUsersStore } from "../../stores/usersStore"
+import { getUsers } from "../../api/users.api"
+import { mapUserApiToUser } from "../../types/user.types"
+import { useUsersStore } from "../../zustand/userStore"
+
+type SubscriptionType = "Monthly" | "Free" | "Expired" | "3-Month" | "6-Month" | "N/A"
 
 function subscriptionVariant(sub: SubscriptionType) {
   switch (sub) {
@@ -27,73 +30,58 @@ function subscriptionVariant(sub: SubscriptionType) {
 }
 
 export function UsersListPage() {
-  const [page, setPage] = useState(1)
-  const search = useUsersStore((s) => s.search)
-  const region = useUsersStore((s) => s.region)
-  const subscription = useUsersStore((s) => s.subscription)
-  const allUsers = useUsersStore((s) => s.users)
-  const setSearch = useUsersStore((s) => s.setSearch)
-  const setRegion = useUsersStore((s) => s.setRegion)
-  const setSubscription = useUsersStore((s) => s.setSubscription)
-  const getFilteredUsers = useUsersStore((s) => s.getFilteredUsers)
+  const {
+    users,
+    total,
+    page,
+    pageSize,
+    search,
+    setUsers,
+    setTotal,
+    setPage,
+    setPageSize,
+    setSearch,
+  } = useUsersStore()
 
-  const users = getFilteredUsers()
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await getUsers(page, pageSize)
+        const apiUsers = res.data.data.users
 
-  const pageSize = 10
-  const pageCount = Math.max(1, Math.ceil(users.length / pageSize))
+        setUsers(apiUsers.map(mapUserApiToUser))
+        setTotal(res.data.data.total)
+      } catch (error) {
+        console.error("Failed to fetch users:", error)
+        setUsers([])
+        setTotal(0)
+      }
+    }
+
+    fetchUsers()
+  }, [page, pageSize, setUsers, setTotal])
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const safePage = Math.min(page, pageCount)
-  const start = (safePage - 1) * pageSize
-  const end = safePage * pageSize
-  const paged = users.slice(start, end)
+  const pageNumbers = Array.from({ length: pageCount }, (_, i) => i + 1)
 
-  const regions = useMemo(() => Array.from(new Set(allUsers.map((u) => u.region))).sort(), [allUsers])
+  const handlePrev = () => safePage > 1 && setPage(safePage - 1)
+  const handleNext = () => safePage < pageCount && setPage(safePage + 1)
 
   return (
     <Card className="shadow-none">
       <CardHeader className="pb-3">
         <CardTitle>User Management</CardTitle>
+
         <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="relative w-full md:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
             <Input
-              placeholder="Search by name, phone number"
+              placeholder="Search by name or phone number"
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              className={cn(
-                "h-10 rounded-lg border bg-white px-3 text-sm font-medium text-grayScale-600",
-                "focus:outline-none focus:ring-2 focus:ring-ring",
-              )}
-            >
-              <option value="All">Region</option>
-              {regions.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-            <select
-              value={subscription}
-              onChange={(e) => setSubscription(e.target.value as SubscriptionType | "All")}
-              className={cn(
-                "h-10 rounded-lg border bg-white px-3 text-sm font-medium text-grayScale-600",
-                "focus:outline-none focus:ring-2 focus:ring-ring",
-              )}
-            >
-              <option value="All">Subscription</option>
-              <option value="Monthly">Monthly</option>
-              <option value="Free">Free</option>
-              <option value="Expired">Expired</option>
-              <option value="3-Month">3-Month</option>
-              <option value="6-Month">6-Month</option>
-            </select>
           </div>
         </div>
       </CardHeader>
@@ -102,62 +90,114 @@ export function UsersListPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[40%]">Full Name</TableHead>
+              <TableHead className="w-8">#</TableHead>
+              <TableHead>First Name</TableHead>
+              <TableHead>Last Name</TableHead>
+              <TableHead>Nick Name</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Phone Number</TableHead>
               <TableHead>Region</TableHead>
+              <TableHead>Country</TableHead>
               <TableHead>Last Active</TableHead>
               <TableHead>Subscription</TableHead>
               <TableHead className="w-[56px]" />
             </TableRow>
           </TableHeader>
+
           <TableBody>
-            {paged.map((u: User) => (
-              <TableRow key={u.id}>
-                <TableCell className="font-medium text-grayScale-600">{u.fullName}</TableCell>
-                <TableCell className="text-grayScale-500">{u.phone}</TableCell>
-                <TableCell className="text-grayScale-500">{u.region}</TableCell>
-                <TableCell className="text-grayScale-500">{u.lastActive}</TableCell>
-                <TableCell>
-                  <Badge variant={subscriptionVariant(u.subscription)}>{u.subscription}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Link
-                    to={`/users/${u.id}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white text-grayScale-500 hover:text-brand-600"
-                    aria-label="View user"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Link>
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={11} className="text-center text-grayScale-400">
+                  No users found
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              users.map((u, index) => (
+                <TableRow key={u.id}>
+                  <TableCell className="text-grayScale-500">{(page - 1) * pageSize + index + 1}</TableCell>
+                  <TableCell className="text-grayScale-600">{u.firstName}</TableCell>
+                  <TableCell className="text-grayScale-600">{u.lastName}</TableCell>
+                  <TableCell className="text-grayScale-600">{u.nickName}</TableCell>
+                  <TableCell className="text-grayScale-500">{u.email}</TableCell>
+                  <TableCell className="text-grayScale-500">{u.phoneNumber || "-"}</TableCell>
+                  <TableCell className="text-grayScale-500">{u.region}</TableCell>
+                  <TableCell className="text-grayScale-500">{u.country}</TableCell>
+                  <TableCell className="text-grayScale-500">
+                    {u.lastLogin ? new Date(u.lastLogin).toLocaleString() : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={subscriptionVariant("N/A")}>N/A</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link
+                      to={`/users/${u.id}`}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border bg-white text-grayScale-500 hover:text-brand-600"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
+        {/* Pagination */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-xs text-grayScale-500">
           <div className="flex items-center gap-2">
-            Row Per Page
-            <span className="rounded-md border bg-white px-2 py-1 font-semibold text-grayScale-600">{pageSize}</span>
-            Entries
+            Rows per page
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value))
+                setPage(1)
+              }}
+              className="h-8 rounded-md border bg-white px-2 text-xs font-semibold text-grayScale-600 focus:outline-none"
+            >
+              {[1, 2, 3, 4, 5, 10, 20, 30].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+            of {total}
           </div>
 
           <div className="flex items-center gap-1">
-            {[1, 2, 3, 4].map((n) => (
+            <button
+              onClick={handlePrev}
+              disabled={safePage === 1}
+              className={cn(
+                "h-8 w-12 rounded-md border bg-white text-xs font-semibold text-grayScale-500",
+                safePage === 1 && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              Prev
+            </button>
+
+            {pageNumbers.map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => setPage(n)}
                 className={cn(
                   "h-8 w-8 rounded-md border bg-white text-xs font-semibold text-grayScale-500",
-                  n === safePage && "border-brand-200 bg-brand-100/40 text-brand-600",
+                  n === safePage && "border-brand-200 bg-brand-100/40 text-brand-600"
                 )}
               >
                 {n}
               </button>
             ))}
-            <span className="px-2">…</span>
-            <button type="button" className="h-8 w-10 rounded-md border bg-white font-semibold">
-              15
+
+            <button
+              onClick={handleNext}
+              disabled={safePage === pageCount}
+              className={cn(
+                "h-8 w-12 rounded-md border bg-white text-xs font-semibold text-grayScale-500",
+                safePage === pageCount && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              Next
             </button>
           </div>
         </div>
@@ -165,5 +205,3 @@ export function UsersListPage() {
     </Card>
   )
 }
-
-

@@ -1,37 +1,56 @@
-import { ArrowLeft } from "lucide-react"
-import { Link, useParams } from "react-router-dom"
-import { Badge } from "../../components/ui/badge"
-import { Button } from "../../components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
-import { Separator } from "../../components/ui/separator"
-import { cn } from "../../lib/utils"
-import { useUsersStore } from "../../stores/usersStore"
+import { useEffect } from "react";
+import { ArrowLeft, UserCircle2 } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { cn } from "../../lib/utils";
+import { useUsersStore } from "../../zustand/userStore";
+import { getUserById } from "../../api/users.api";
 
 export function UserDetailPage() {
-  const { id } = useParams()
-  const user = useUsersStore((s) => (id ? s.getUserById(id) : undefined))
+  const { id } = useParams();
+  const userProfile = useUsersStore((s) => s.userProfile);
+  const setUserProfile = useUsersStore((s) => s.setUserProfile);
 
-  if (!user) {
+  useEffect(() => {
+    if (!id) return;
+    const fetchUser = async () => {
+      try {
+        const res = await getUserById(Number(id));
+        setUserProfile(res.data.data);
+      } catch (err) {
+        console.error("Failed to fetch user profile", err);
+        setUserProfile(null);
+      }
+    };
+    fetchUser();
+  }, [id, setUserProfile]);
+
+  if (!userProfile) {
     return (
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-4 text-sm font-semibold text-grayScale-500">User Detail</div>
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle>User not found</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link to="/users">Back to Users</Link>
+      <div className="mx-auto w-full max-w-3xl space-y-4">
+        <div className="text-sm font-semibold text-grayScale-500">User Detail</div>
+        <Card className="overflow-hidden shadow-sm">
+          <div className="h-2 bg-gradient-to-r from-brand-500 to-brand-600" />
+          <CardContent className="p-6 space-y-4">
+            <div className="text-lg font-semibold text-grayScale-900">User not found</div>
+            <Button asChild variant="outline" className="w-full">
+              <Link to="/users/list">Back to Users</Link>
             </Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
+  const user = userProfile;
+  const fullName = `${user.first_name} ${user.last_name}`;
+
   return (
-    <div>
-      <div className="mb-4 flex items-center gap-3">
+    <div className="space-y-6">
+      {/* Back Link */}
+      <div className="flex items-center gap-3">
         <Link
           to="/users"
           className="inline-flex items-center gap-2 text-sm font-semibold text-grayScale-500 hover:text-brand-600"
@@ -41,166 +60,157 @@ export function UserDetailPage() {
         </Link>
       </div>
 
-      <div className="mb-4 text-sm font-semibold text-grayScale-500">User Detail</div>
+      <div className="text-xl font-semibold text-grayScale-900">User Detail</div>
 
       <div className="grid gap-4 lg:grid-cols-3">
+        {/* Left Column */}
         <div className="space-y-4 lg:col-span-1">
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Basic Information */}
+          <Card className="overflow-hidden shadow-sm">
+            <div className="h-2 bg-gradient-to-r from-brand-500 to-brand-600" />
+            <CardContent className="p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-grayScale-200" />
+                <div className="h-12 w-12 rounded-full bg-grayScale-200 flex items-center justify-center overflow-hidden">
+                  {user.profile_picture_url ? (
+                    <img
+                      src={user.profile_picture_url}
+                      alt={fullName}
+                      className="h-12 w-12 object-cover"
+                    />
+                  ) : (
+                    <UserCircle2 className="h-12 w-12 text-grayScale-400" />
+                  )}
+                </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-grayScale-600">{user.fullName}</div>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-grayScale-500">
+                  <div className="truncate text-lg font-semibold text-grayScale-900">{fullName}</div>
+                  <div className="mt-1 flex items-center gap-2 text-xs text-grayScale-400">
                     <span>ID: {user.id}</span>
                     <span className="h-1 w-1 rounded-full bg-grayScale-300" />
                     <span className="inline-flex items-center gap-1">
-                      <span className={cn("h-2 w-2 rounded-full", user.isActive ? "bg-mint-500" : "bg-grayScale-300")} />
-                      {user.isActive ? "Active" : "Inactive"}
+                      <span
+                        className={cn(
+                          "h-2 w-2 rounded-full",
+                          user.status === "ACTIVE" ? "bg-mint-500" : "bg-destructive"
+                        )}
+                      />
+                      {user.status === "ACTIVE" ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <Separator />
-
-              <div className="space-y-3 text-sm">
+              <div className="space-y-3 text-sm text-grayScale-600">
                 <div>
                   <div className="text-xs font-semibold text-grayScale-400">Phone</div>
-                  <div className="font-medium text-grayScale-600">{user.phone}</div>
+                  <div className="font-semibold">{user.phone_number || "-"}</div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-grayScale-400">Email</div>
-                  <div className="font-medium text-grayScale-600">{user.email}</div>
+                  <div className="font-semibold">{user.email || "-"}</div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-grayScale-400">Region</div>
-                  <div className="font-medium text-grayScale-600">{user.region}</div>
+                  <div className="font-semibold">{user.region || "-"}</div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-grayScale-400">Joined Date</div>
-                  <div className="font-medium text-grayScale-600">{user.joinedDate}</div>
+                  <div className="font-semibold">
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : "-"}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle>Subscription</CardTitle>
-                <Badge className={cn(user.isActive ? "bg-mint-500" : "bg-destructive")}>
-                  {user.isActive ? "Active" : "Inactive"}
+          {/* Subscription */}
+          <Card className="overflow-hidden shadow-sm">
+            <div className="h-2 bg-gradient-to-r from-brand-500 to-brand-600" />
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="text-lg font-semibold text-grayScale-900">Subscription</div>
+                <Badge
+                  className={cn(
+                    user.status === "ACTIVE" ? "bg-mint-500 text-white" : "bg-destructive text-white"
+                  )}
+                >
+                  {user.status === "ACTIVE" ? "Active" : "Inactive"}
                 </Badge>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <div className="text-xs font-semibold text-grayScale-400">Current Plan</div>
-                <div className="text-sm font-semibold text-grayScale-600">{user.currentPlan}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs font-semibold text-grayScale-400">Expires On</div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-grayScale-600">
-                  {user.expiresOn}
-                  <span className="rounded-full bg-gold-100 px-2 py-0.5 text-xs font-semibold text-gold-600">
-                    {user.daysLeftLabel}
-                  </span>
+              <div className="space-y-1 text-sm text-grayScale-600">
+                <div>
+                  <div className="text-xs font-semibold text-grayScale-400">Profile Completed</div>
+                  <div className="font-semibold">{user.profile_completed ? "Yes" : "No"}</div>
                 </div>
-              </div>
-
-              <Button className="w-full">Extend Subscription</Button>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" className="w-full">
-                  Mark as Paid
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Cancel
-                </Button>
+                <div>
+                  <div className="text-xs font-semibold text-grayScale-400">Preferred Language</div>
+                  <div className="font-semibold">{user.preferred_language || "-"}</div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Right Column */}
         <div className="space-y-4 lg:col-span-2">
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>Learning Profile</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Learning Profile */}
+          <Card className="overflow-hidden shadow-sm">
+            <div className="h-2 bg-gradient-to-r from-brand-500 to-brand-600" />
+            <CardContent className="p-6 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <div className="text-xs font-semibold text-grayScale-400">Education Level</div>
-                  <div className="mt-1 text-sm font-semibold text-grayScale-600">{user.learningProfile.educationLevel}</div>
+                  <div className="text-sm font-semibold text-grayScale-600">{user.education_level || "-"}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-grayScale-400">Age Group</div>
-                  <div className="mt-1 text-sm font-semibold text-grayScale-600">{user.learningProfile.ageGroup}</div>
+                  <div className="text-xs font-semibold text-grayScale-400">Age</div>
+                  <div className="text-sm font-semibold text-grayScale-600">{user.age || "-"}</div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm">
-                <div className="text-xs font-semibold text-grayScale-400">Current Proficiency</div>
-                <Badge variant="secondary" className="border-brand-200 bg-brand-100/50 text-brand-600">
-                  {user.learningProfile.currentProficiency}
-                </Badge>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <div className="text-xs font-semibold text-grayScale-400">Preferred Topic</div>
-                  <div className="mt-1 text-sm font-semibold text-grayScale-600">{user.learningProfile.preferredTopic}</div>
+                  <div className="text-xs font-semibold text-grayScale-400">Nick Name</div>
+                  <div className="text-sm font-semibold text-grayScale-600">{user.nick_name || "-"}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-grayScale-400">Primary Goal</div>
-                  <div className="mt-2 rounded-lg border bg-white px-3 py-2 text-sm text-grayScale-600">
-                    {user.learningProfile.primaryGoal}
-                  </div>
+                  <div className="text-xs font-semibold text-grayScale-400">Occupation</div>
+                  <div className="text-sm font-semibold text-grayScale-600">{user.occupation || "-"}</div>
                 </div>
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-grayScale-400">Challenges</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {user.learningProfile.challenges.map((c) => (
-                    <Badge key={c} variant="secondary">
-                      {c}
-                    </Badge>
-                  ))}
-                </div>
+                <div className="text-xs font-semibold text-grayScale-400">Learning Goal</div>
+                <div className="text-sm font-semibold text-grayScale-600">{user.learning_goal || "-"}</div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-grayScale-400">Language Challenge</div>
+                <div className="text-sm font-semibold text-grayScale-600">{user.language_challange || "-"}</div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-grayScale-400">Favourite Topic</div>
+                <div className="text-sm font-semibold text-grayScale-600">{user.favoutite_topic || "-"}</div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {user.recentActivity.map((a) => (
-                <div key={a.id} className="flex items-start gap-3">
-                  <span
-                    className={cn(
-                      "mt-1 h-2.5 w-2.5 rounded-full",
-                      a.dotColor === "brand" ? "bg-brand-500" : "bg-grayScale-300",
-                    )}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-grayScale-600">{a.text}</div>
-                    <div className="text-xs text-grayScale-400">{a.time}</div>
-                  </div>
-                </div>
-              ))}
+          {/* Status / Dates */}
+          <Card className="overflow-hidden shadow-sm">
+            <div className="h-2 bg-gradient-to-r from-brand-500 to-brand-600" />
+            <CardContent className="p-6 space-y-3 text-sm text-grayScale-600">
+              <div>
+                <div className="text-xs font-semibold text-grayScale-400">Last Login</div>
+                <div className="font-semibold">{user.last_login ? new Date(user.last_login).toLocaleString() : "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-grayScale-400">Updated At</div>
+                <div className="font-semibold">{user.updated_at ? new Date(user.updated_at).toLocaleString() : "-"}</div>
+              </div>
             </CardContent>
           </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-

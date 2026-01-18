@@ -1,3 +1,4 @@
+// import type { UserProfileResponse } from "../types/user.types";
 import {
   Activity,
   BadgeCheck,
@@ -24,6 +25,9 @@ import { StatCard } from "../components/dashboard/StatCard"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { cn } from "../lib/utils"
+import { getUserById } from "../api/users.api"
+import type { UserProfileResponse } from "../types/user.types"
+import { useEffect, useState } from "react"
 
 const userGrowth = [
   { month: "Jan", users: 2400 },
@@ -59,12 +63,33 @@ const revenueTrend = [
 const ranges = ["1D", "1W", "1M", "3M", "6M", "1Y"] as const
 
 export function DashboardPage() {
+  const [userFirstName, setUserFirstName] = useState<string>("")
   const activeRange = "1Y"
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userId = Number(localStorage.getItem("user_id"))
+        const res = await getUserById(userId)
+        const userProfile: UserProfileResponse = res.data
+
+        setUserFirstName(userProfile.data.first_name)
+        localStorage.setItem("user_first_name", userProfile.data.first_name)
+        localStorage.setItem("user_last_name", userProfile.data.last_name)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    fetchUser()
+  }, [])
 
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="mb-2 text-sm font-semibold text-grayScale-500">Dashboard</div>
-      <div className="mb-5 text-2xl font-semibold tracking-tight">Welcome, Josh</div>
+      <div className="mb-5 text-2xl font-semibold tracking-tight">
+        Welcome, {userFirstName || localStorage.getItem("user_first_name")}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <StatCard

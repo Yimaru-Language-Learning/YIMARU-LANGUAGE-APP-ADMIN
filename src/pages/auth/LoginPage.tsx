@@ -36,7 +36,7 @@ export function LoginPage() {
       localStorage.setItem("access_token", res.accessToken);
       localStorage.setItem("refresh_token", res.refreshToken);
       localStorage.setItem("role", res.role);
-      localStorage.setItem("user_id", res.user_id.toString());
+      localStorage.setItem("member_id", res.memberId.toString());
 
       navigate("/dashboard");
     } catch (err: any) {
@@ -69,7 +69,7 @@ export function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on">
+          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on" method="post">
             {/* Email */}
             <div>
               <label
@@ -82,7 +82,7 @@ export function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="username"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

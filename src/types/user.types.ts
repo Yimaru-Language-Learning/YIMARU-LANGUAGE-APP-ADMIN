@@ -1,40 +1,36 @@
 // This matches the API response 1:1
 export interface UserApiDTO {
-  ID: number
-  FirstName: string
-  LastName: string
-  Gender: string
+  id: number
+  first_name: string
+  last_name: string
+  gender: string
   birth_day: string | null
 
-  Email: string
-  PhoneNumber: string
-  Role: string
+  email: string
+  phone_number?: string
+  role: string
 
-  Age: number
-  EducationLevel: string
-  Country: string
-  Region: string
+  age_group: string
+  education_level: string
+  country: string
+  region: string
 
-  KnowledgeLevel: string
-  InitialAssessmentCompleted: boolean
-  NickName: string
-  Occupation: string
-  LearningGoal: string
-  LanguageGoal: string
-  LanguageChallange: string
-  FavouriteTopic: string
+  nick_name: string
+  occupation: string
+  learning_goal: string
+  language_goal: string
+  language_challange: string
+  favoutite_topic: string
 
-  EmailVerified: boolean
-  PhoneVerified: boolean
-  Status: string
+  email_verified: boolean
+  phone_verified: boolean
+  status: string
 
-  LastLogin: string | null
-  ProfileCompleted: boolean
-  ProfilePictureURL: string
-  PreferredLanguage: string
+  profile_completed: boolean
+  profile_picture_url: string
+  preferred_language: string
 
-  CreatedAt: string
-  UpdatedAt: string | null
+  created_at: string
 }
 
 export interface GetUsersResponse {
@@ -60,15 +56,15 @@ export interface User {
 }
 
 export const mapUserApiToUser = (u: UserApiDTO): User => ({
-  id: u.ID,
-  firstName: u.FirstName,
-  lastName: u.LastName,
-  nickName: u.NickName,
-  email: u.Email,
-  phoneNumber: u.PhoneNumber,
-  region: u.Region,
-  country: u.Country,
-  lastLogin: u.LastLogin,
+  id: u.id,
+  firstName: u.first_name,
+  lastName: u.last_name,
+  nickName: u.nick_name,
+  email: u.email,
+  phoneNumber: u.phone_number ?? "",
+  region: u.region,
+  country: u.country,
+  lastLogin: null,
 })
 
 export interface UserProfileData {
@@ -104,6 +100,8 @@ export interface UserProfileData {
 
   created_at: string
   updated_at?: string | null // optional
+  age_group?: string
+  profile_completion_percentage?: number
 }
 
 export interface UserProfileResponse {

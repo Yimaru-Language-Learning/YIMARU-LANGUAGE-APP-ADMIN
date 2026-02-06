@@ -25,8 +25,7 @@ import { StatCard } from "../components/dashboard/StatCard"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { cn } from "../lib/utils"
-import { getUserById } from "../api/users.api"
-import type { UserProfileResponse } from "../types/user.types"
+import { getTeamMemberById } from "../api/team.api"
 import { useEffect, useState } from "react"
 
 const userGrowth = [
@@ -69,13 +68,14 @@ export function DashboardPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const userId = Number(localStorage.getItem("user_id"))
-        const res = await getUserById(userId)
-        const userProfile: UserProfileResponse = res.data
+        const memberId = Number(localStorage.getItem("member_id"))
+        const res = await getTeamMemberById(memberId)
+        const member = res.data.data
 
-        setUserFirstName(userProfile.data.first_name)
-        localStorage.setItem("user_first_name", userProfile.data.first_name)
-        localStorage.setItem("user_last_name", userProfile.data.last_name)
+        setUserFirstName(member.first_name)
+        localStorage.setItem("user_first_name", member.first_name)
+        localStorage.setItem("user_last_name", member.last_name)
+        window.dispatchEvent(new Event("user-profile-updated"))
       } catch (err) {
         console.error(err)
       }

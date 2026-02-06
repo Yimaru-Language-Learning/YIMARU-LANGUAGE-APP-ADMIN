@@ -11,3 +11,6 @@ export const getUsers = (page?: number, pageSize?: number) =>
 
 export const getUserById = (id: number) =>
   http.get<UserProfileResponse>(`/user/single/${id}`);
+
+export const getMyProfile = () =>
+  http.get<UserProfileResponse>("/team/me");

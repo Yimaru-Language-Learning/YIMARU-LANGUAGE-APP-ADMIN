@@ -1,7 +1,7 @@
 "use client" // make sure this is a client component
 
 import { useEffect, useState } from "react"
-import { Bell } from "lucide-react"
+import { Bell, LogOut, Settings, UserCircle2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import { cn } from "../../lib/utils"
@@ -11,9 +11,16 @@ export function Topbar() {
   const [shortName, setShortName] = useState("AA") 
 
   useEffect(() => {
-    const first = localStorage.getItem("user_first_name") ?? "A"
-    const last = localStorage.getItem("user_last_name") ?? "A"
-    setShortName(first.charAt(0).toUpperCase() + last.charAt(0).toUpperCase())
+    const updateShortName = () => {
+      const first = localStorage.getItem("user_first_name") ?? "A"
+      const last = localStorage.getItem("user_last_name") ?? "A"
+      setShortName(first.charAt(0).toUpperCase() + last.charAt(0).toUpperCase())
+    }
+
+    updateShortName()
+
+    window.addEventListener("user-profile-updated", updateShortName)
+    return () => window.removeEventListener("user-profile-updated", updateShortName)
   }, [])
 
   const handleOptionClick = (option: string) => {
@@ -66,30 +73,39 @@ export function Topbar() {
         <DropdownMenu.Content
           side="bottom"
           align="end"
-          className="z-50 w-40 rounded-lg bg-white p-2 shadow-lg ring-1 ring-black ring-opacity-5"
+          className="z-50 w-48 rounded-lg bg-white p-2 shadow-lg ring-1 ring-black ring-opacity-5"
         >
           <DropdownMenu.Item
             className={cn(
-              "cursor-pointer rounded px-3 py-2 text-grayScale-700 text-sm hover:bg-grayScale-100"
+              "group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-grayScale-600 hover:bg-grayScale-100 hover:text-brand-600"
             )}
             onClick={() => handleOptionClick("profile")}
           >
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 group-hover:bg-brand-100 group-hover:text-brand-600">
+              <UserCircle2 className="h-4 w-4" />
+            </span>
             Profile
           </DropdownMenu.Item>
           <DropdownMenu.Item
             className={cn(
-              "cursor-pointer rounded px-3 py-2 text-grayScale-700 text-sm hover:bg-grayScale-100"
+              "group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-grayScale-600 hover:bg-grayScale-100 hover:text-brand-600"
             )}
             onClick={() => handleOptionClick("settings")}
           >
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 group-hover:bg-brand-100 group-hover:text-brand-600">
+              <Settings className="h-4 w-4" />
+            </span>
             Settings
           </DropdownMenu.Item>
           <DropdownMenu.Item
             className={cn(
-              "cursor-pointer rounded px-3 py-2 text-grayScale-700 text-sm hover:bg-grayScale-100"
+              "group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-grayScale-600 hover:bg-grayScale-100 hover:text-brand-600"
             )}
             onClick={() => handleOptionClick("logout")}
           >
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 group-hover:bg-brand-100 group-hover:text-brand-600">
+              <LogOut className="h-4 w-4" />
+            </span>
             Logout
           </DropdownMenu.Item>
         </DropdownMenu.Content>

@@ -159,7 +159,7 @@ export function TeamMemberDetailPage() {
 
       <Card className="overflow-hidden">
         <div className="h-28 bg-gradient-to-r from-brand-600 via-brand-400 to-mint-500" />
-        <CardContent className="-mt-12 px-8 pb-8 pt-0">
+        <CardContent className="-mt-12 px-4 sm:px-8 pb-4 sm:pb-8 pt-0">
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-end">
             <Avatar className="h-24 w-24 ring-4 ring-white shadow-soft">
               <AvatarImage src={undefined} alt={fullName} />

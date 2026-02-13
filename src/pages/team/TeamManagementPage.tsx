@@ -138,21 +138,21 @@ export function TeamManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-grayScale-600">Team Management</h1>
           <p className="text-sm text-grayScale-400">
             Manage user access, roles, and platform permissions.
           </p>
         </div>
-        <Button className="bg-brand-600 hover:bg-brand-500 text-white">
+        <Button className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Add Team Member
         </Button>
       </div>
 
-      <div className="flex items-center gap-3 rounded-lg border bg-white p-3">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-white p-3">
+        <div className="relative w-full sm:flex-1 sm:w-auto">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
           <Input
             placeholder="Search by name or email address..."
@@ -206,7 +206,7 @@ export function TeamManagementPage() {
             <TableRow>
               <TableHead>USER</TableHead>
               <TableHead>ROLE</TableHead>
-              <TableHead>LAST LOGIN</TableHead>
+              <TableHead className="hidden sm:table-cell">LAST LOGIN</TableHead>
               <TableHead>STATUS</TableHead>
             </TableRow>
           </TableHeader>
@@ -258,7 +258,7 @@ export function TeamManagementPage() {
                         {formatRoleLabel(member.team_role)}
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {member.last_login ? (
                         <div>
                           <div className="text-sm text-grayScale-600">

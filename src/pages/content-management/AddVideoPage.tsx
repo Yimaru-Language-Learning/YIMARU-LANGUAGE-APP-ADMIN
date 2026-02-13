@@ -27,55 +27,72 @@ export function AddVideoPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/content/courses")}
-            className="h-8 w-8"
+            className="h-9 w-9 rounded-lg border border-grayScale-200 bg-white shadow-sm transition-colors hover:bg-grayScale-50 hover:border-grayScale-300"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-grayScale-500" />
           </Button>
-          <h1 className="text-xl font-semibold text-grayScale-900">Add New Video</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">Add New Video</h1>
+            <p className="text-sm text-grayScale-400">Upload and configure a new video</p>
+          </div>
         </div>
-        <Button onClick={handleSubmit} className="bg-brand-500 hover:bg-brand-600">
+        <Button onClick={handleSubmit} className="bg-brand-500 shadow-sm hover:bg-brand-600 transition-colors">
           <Save className="h-4 w-4" />
           Save
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold text-grayScale-900">Video Upload</h2>
+      <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6">
+        {/* Upload Card */}
+        <Card className="border-grayScale-200 p-6 shadow-sm sm:p-8">
+          <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
+            Video Upload
+          </h2>
           <FileUpload
             accept="video/*"
             onFileSelect={setVideoFile}
             label="Drag & Drop Video Here"
             description="or click to browse files"
-            className="min-h-[200px]"
+            className="min-h-[200px] rounded-xl border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
           />
         </Card>
 
+        {/* Preview Card */}
         {videoFile && (
-          <Card className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-grayScale-900">Video Preview</h2>
-            <div className="aspect-video w-full overflow-hidden rounded-lg bg-grayScale-900">
-              <video
-                src={URL.createObjectURL(videoFile)}
-                controls
-                className="h-full w-full object-contain"
-              />
+          <Card className="border-grayScale-200 overflow-hidden p-0 shadow-sm">
+            <div className="border-b border-grayScale-100 px-6 py-4 sm:px-8">
+              <h2 className="text-lg font-semibold tracking-tight text-grayScale-600">
+                Video Preview
+              </h2>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="aspect-video w-full overflow-hidden rounded-xl bg-grayScale-900 shadow-inner">
+                <video
+                  src={URL.createObjectURL(videoFile)}
+                  controls
+                  className="h-full w-full object-contain"
+                />
+              </div>
             </div>
           </Card>
         )}
 
-        <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold text-grayScale-900">Video Details</h2>
-          <div className="space-y-4">
+        {/* Details Card */}
+        <Card className="border-grayScale-200 p-6 shadow-sm sm:p-8">
+          <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
+            Video Details
+          </h2>
+          <div className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-medium text-grayScale-700">
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                 Video Title
               </label>
               <Input
@@ -87,7 +104,7 @@ export function AddVideoPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-grayScale-700">
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                 Description
               </label>
               <Textarea
@@ -99,9 +116,9 @@ export function AddVideoPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">Tags</label>
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">Tags</label>
                 <Input
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
@@ -110,7 +127,7 @@ export function AddVideoPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Category
                 </label>
                 <Select
@@ -127,9 +144,9 @@ export function AddVideoPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Visibility
                 </label>
                 <Select
@@ -145,7 +162,7 @@ export function AddVideoPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Thumbnail
                 </label>
                 <FileUpload
@@ -153,15 +170,15 @@ export function AddVideoPage() {
                   onFileSelect={(file) => setFormData({ ...formData, thumbnail: file })}
                   label="Upload Thumbnail"
                   description="or click to browse"
-                  className="min-h-[100px]"
+                  className="min-h-[100px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
                 />
               </div>
             </div>
           </div>
         </Card>
 
-        <div className="flex justify-end">
-          <Button type="submit" className="bg-brand-500 hover:bg-brand-600">
+        <div className="flex justify-end pb-4">
+          <Button type="submit" className="bg-brand-500 px-6 shadow-sm hover:bg-brand-600 transition-colors">
             Save Video
           </Button>
         </div>
@@ -169,4 +186,3 @@ export function AddVideoPage() {
     </div>
   )
 }
-

@@ -136,36 +136,43 @@ export function AddPracticePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/content/speaking")}
-            className="h-8 w-8"
+            className="h-9 w-9 rounded-lg border border-grayScale-200 bg-white shadow-sm transition-colors hover:bg-grayScale-50 hover:border-grayScale-300"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-grayScale-500" />
           </Button>
-          <h1 className="text-xl font-semibold text-grayScale-900">Add New Practice</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">Add New Practice</h1>
+            <p className="text-sm text-grayScale-400">Create a new practice session with questions</p>
+          </div>
         </div>
-        <Button className="bg-brand-500 hover:bg-brand-600">
+        <Button className="bg-brand-500 shadow-sm hover:bg-brand-600 transition-colors">
           <Check className="h-4 w-4" />
           Save
         </Button>
       </div>
 
-      <Card className="p-6">
+      {/* Stepper */}
+      <Card className="border-grayScale-200 bg-white/80 p-5 shadow-sm sm:p-6">
         <Stepper steps={STEPS} currentStep={currentStep} />
       </Card>
 
       {/* Step 1: Details */}
       {currentStep === 1 && (
-        <Card className="p-6">
-          <h2 className="mb-6 text-lg font-semibold text-grayScale-900">Practice Details</h2>
-          <div className="space-y-4">
+        <Card className="mx-auto max-w-3xl border-grayScale-200 p-6 shadow-sm sm:p-8">
+          <h2 className="mb-6 text-lg font-semibold tracking-tight text-grayScale-600">
+            Practice Details
+          </h2>
+          <div className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-medium text-grayScale-700">
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                 Practice Title
               </label>
               <Input
@@ -177,7 +184,7 @@ export function AddPracticePage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-grayScale-700">
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                 Description
               </label>
               <Textarea
@@ -189,9 +196,9 @@ export function AddPracticePage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Category
                 </label>
                 <Select
@@ -208,7 +215,7 @@ export function AddPracticePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Difficulty
                 </label>
                 <Select
@@ -224,9 +231,9 @@ export function AddPracticePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Duration (minutes)
                 </label>
                 <Input
@@ -239,7 +246,7 @@ export function AddPracticePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">Tags</label>
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">Tags</label>
                 <Input
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
@@ -249,11 +256,11 @@ export function AddPracticePage() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-8 flex justify-end border-t border-grayScale-100 pt-6">
             <Button
               onClick={() => setCurrentStep(2)}
               disabled={!canProceedToStep2()}
-              className="bg-brand-500 hover:bg-brand-600"
+              className="bg-brand-500 px-6 shadow-sm hover:bg-brand-600 transition-colors"
             >
               Next
             </Button>
@@ -265,31 +272,43 @@ export function AddPracticePage() {
       {currentStep === 2 && (
         <div className="space-y-6">
           {/* Select Participants Section */}
-          <Card className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-grayScale-900">Select Participants</h2>
-            <div className="grid grid-cols-4 gap-4">
+          <Card className="border-grayScale-200 p-6 shadow-sm">
+            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
+              Select Participants
+            </h2>
+            <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 lg:grid-cols-8">
               {mockParticipants.map((participant) => {
                 const isSelected = formData.participants.includes(participant.id)
                 return (
                   <div
                     key={participant.id}
-                    className="relative flex flex-col items-center"
+                    className="group relative flex cursor-pointer flex-col items-center"
                     onClick={() => toggleParticipant(participant.id)}
                   >
                     <div className="relative">
-                      <Avatar className="h-16 w-16 cursor-pointer border-2 border-grayScale-200 transition-all hover:border-brand-500">
+                      <Avatar
+                        className={`h-16 w-16 border-2 transition-all duration-200 ${
+                          isSelected
+                            ? "border-brand-500 ring-2 ring-brand-500/20 scale-105"
+                            : "border-grayScale-200 group-hover:border-brand-400 group-hover:shadow-md group-hover:scale-105"
+                        }`}
+                      >
                         <AvatarImage src={participant.avatar} />
-                        <AvatarFallback className="bg-brand-100 text-brand-600">
+                        <AvatarFallback className="bg-brand-100 text-brand-600 font-medium">
                           {participant.name[0]}
                         </AvatarFallback>
                       </Avatar>
                       {isSelected && (
-                        <div className="absolute -right-1 -top-1 grid h-6 w-6 place-items-center rounded-full bg-brand-500 text-white">
+                        <div className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-brand-500 text-white shadow-sm ring-2 ring-white">
                           <X className="h-3 w-3" />
                         </div>
                       )}
                     </div>
-                    <span className="mt-2 text-sm font-medium text-grayScale-700">
+                    <span
+                      className={`mt-2 text-xs font-medium transition-colors ${
+                        isSelected ? "text-brand-600" : "text-grayScale-500 group-hover:text-grayScale-600"
+                      }`}
+                    >
                       {participant.name}
                     </span>
                   </div>
@@ -299,28 +318,28 @@ export function AddPracticePage() {
           </Card>
 
           {/* Add Questions Section */}
-          <Card className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-grayScale-900">
+          <Card className="border-grayScale-200 p-6 shadow-sm">
+            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
               General Practice Questions
             </h2>
 
             {/* Existing Questions */}
             {formData.questions.map((q) => (
-              <div key={q.id} className="mb-4 rounded-lg border bg-grayScale-50 p-4">
+              <div key={q.id} className="mb-4 rounded-xl border border-grayScale-200 bg-grayScale-50/50 p-4 transition-colors hover:bg-grayScale-50">
                   <div className="mb-2 flex items-start justify-between">
-                    <p className="font-medium text-grayScale-900">{q.question}</p>
+                    <p className="font-medium text-grayScale-600">{q.question}</p>
                     <Badge variant="secondary">{q.points} points</Badge>
                   </div>
-                <p className="text-sm text-grayScale-600">
+                <p className="text-sm text-grayScale-400">
                   Type: {q.type} | Correct Answer: {q.correctAnswer}
                 </p>
               </div>
             ))}
 
             {/* Add New Question Form */}
-            <div className="space-y-4 rounded-lg border bg-white p-4">
+            <div className="space-y-5 rounded-xl border border-dashed border-grayScale-300 bg-white p-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Question
                 </label>
                 <Textarea
@@ -333,9 +352,9 @@ export function AddPracticePage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                  <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                     Question Type
                   </label>
                   <Select
@@ -354,7 +373,7 @@ export function AddPracticePage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-grayScale-700">Points</label>
+                  <label className="mb-1.5 block text-sm font-medium text-grayScale-500">Points</label>
                   <Input
                     type="number"
                     value={currentQuestion.points}
@@ -371,7 +390,7 @@ export function AddPracticePage() {
 
               {currentQuestion.type === "multiple-choice" && (
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                  <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                     Options
                   </label>
                   <div className="space-y-2">
@@ -389,7 +408,7 @@ export function AddPracticePage() {
                       variant="outline"
                       size="sm"
                       onClick={addOption}
-                      className="w-full"
+                      className="mt-1 w-full border-dashed"
                     >
                       <Plus className="h-4 w-4" />
                       Add Option
@@ -399,7 +418,7 @@ export function AddPracticePage() {
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-700">
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   Correct Answer
                 </label>
                 {currentQuestion.type === "multiple-choice" ? (
@@ -434,7 +453,7 @@ export function AddPracticePage() {
                 type="button"
                 onClick={addQuestion}
                 disabled={!currentQuestion.question || !currentQuestion.correctAnswer}
-                className="w-full bg-brand-500 hover:bg-brand-600"
+                className="w-full bg-brand-500 shadow-sm hover:bg-brand-600 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Add New Question
@@ -442,14 +461,14 @@ export function AddPracticePage() {
             </div>
           </Card>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setCurrentStep(1)} className="px-6">
               Back
             </Button>
             <Button
               onClick={() => setCurrentStep(3)}
               disabled={!canProceedToStep3()}
-              className="bg-brand-500 hover:bg-brand-600"
+              className="bg-brand-500 px-6 shadow-sm hover:bg-brand-600 transition-colors"
             >
               Next
             </Button>
@@ -459,90 +478,84 @@ export function AddPracticePage() {
 
       {/* Step 3: Review */}
       {currentStep === 3 && (
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-grayScale-900">Practice Details</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-grayScale-600">Title:</span>
-                <span className="text-sm font-medium text-grayScale-900">{formData.title}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-grayScale-600">Description:</span>
-                <span className="text-sm font-medium text-grayScale-900">
-                  {formData.description}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-grayScale-600">Category:</span>
-                <span className="text-sm font-medium text-grayScale-900">{formData.category}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-grayScale-600">Difficulty:</span>
-                <span className="text-sm font-medium text-grayScale-900">
-                  {formData.difficulty}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-grayScale-600">Duration:</span>
-                <span className="text-sm font-medium text-grayScale-900">
-                  {formData.duration} minutes
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-grayScale-600">Tags:</span>
-                <span className="text-sm font-medium text-grayScale-900">{formData.tags}</span>
-              </div>
+        <div className="mx-auto max-w-3xl space-y-6">
+          <Card className="border-grayScale-200 p-6 shadow-sm sm:p-8">
+            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
+              Practice Details
+            </h2>
+            <div className="divide-y divide-grayScale-100 overflow-hidden rounded-lg border border-grayScale-200">
+              {[
+                { label: "Title", value: formData.title },
+                { label: "Description", value: formData.description },
+                { label: "Category", value: formData.category },
+                { label: "Difficulty", value: formData.difficulty },
+                { label: "Duration", value: `${formData.duration} minutes` },
+                { label: "Tags", value: formData.tags },
+              ].map((row, idx) => (
+                <div
+                  key={row.label}
+                  className={`flex items-baseline justify-between px-4 py-3 ${
+                    idx % 2 === 0 ? "bg-grayScale-50/50" : "bg-white"
+                  }`}
+                >
+                  <span className="text-sm font-medium text-grayScale-400">{row.label}</span>
+                  <span className="text-right text-sm font-medium text-grayScale-600">
+                    {row.value}
+                  </span>
+                </div>
+              ))}
             </div>
           </Card>
 
-          <Card className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-grayScale-900">Questions</h2>
+          <Card className="border-grayScale-200 p-6 shadow-sm sm:p-8">
+            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
+              Questions
+            </h2>
             <div className="space-y-4">
               {formData.questions.map((q, index) => (
-                <div key={q.id} className="rounded-lg border bg-grayScale-50 p-4">
-                  <div className="mb-2 flex items-start justify-between">
+                <div key={q.id} className="rounded-xl border border-grayScale-200 bg-grayScale-50/50 p-5 transition-colors hover:bg-grayScale-50">
+                  <div className="mb-2 flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-grayScale-900">
+                      <p className="font-medium text-grayScale-600">
                         {index + 1}. {q.question}
                       </p>
-                      <p className="mt-1 text-sm text-grayScale-600">
+                      <p className="mt-1.5 text-sm text-grayScale-400">
                         Type: {q.type} | Points: {q.points}
                       </p>
                     </div>
                   </div>
                   {q.type === "multiple-choice" && q.options.length > 0 && (
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-3 space-y-1.5">
                       {q.options.map((opt, optIdx) => (
                         <div
                           key={optIdx}
-                          className={`rounded px-2 py-1 text-sm ${
+                          className={`rounded-lg px-3 py-1.5 text-sm ${
                             opt === q.correctAnswer
-                              ? "bg-brand-100 text-brand-700 font-medium"
-                              : "bg-white text-grayScale-600"
+                              ? "bg-brand-100 text-brand-700 font-medium ring-1 ring-brand-200"
+                              : "bg-white text-grayScale-500 ring-1 ring-grayScale-100"
                           }`}
                         >
                           {opt}
                           {opt === q.correctAnswer && (
-                            <Check className="ml-2 inline h-3 w-3" />
+                            <Check className="ml-2 inline h-3.5 w-3.5" />
                           )}
                         </div>
                       ))}
                     </div>
                   )}
-                  <div className="mt-2 text-sm text-grayScale-600">
-                    Correct Answer: <span className="font-medium">{q.correctAnswer}</span>
+                  <div className="mt-3 border-t border-grayScale-100 pt-2 text-sm text-grayScale-400">
+                    Correct Answer: <span className="font-medium text-grayScale-600">{q.correctAnswer}</span>
                   </div>
                 </div>
               ))}
             </div>
           </Card>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setCurrentStep(2)}>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setCurrentStep(2)} className="px-6">
               Back
             </Button>
-            <Button onClick={handleSubmit} className="bg-brand-500 hover:bg-brand-600">
+            <Button onClick={handleSubmit} className="bg-brand-500 px-6 shadow-sm hover:bg-brand-600 transition-colors">
               Create Practice
             </Button>
           </div>
@@ -551,4 +564,3 @@ export function AddPracticePage() {
     </div>
   )
 }
-

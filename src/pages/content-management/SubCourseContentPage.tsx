@@ -285,16 +285,20 @@ export function SubCourseContentPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-sm text-grayScale-500">Loading sub-course...</div>
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+        <p className="mt-4 text-sm font-medium text-grayScale-500">Loading sub-course…</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-sm text-red-500">{error}</div>
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="rounded-full bg-red-50 p-3">
+          <X className="h-6 w-6 text-red-500" />
+        </div>
+        <p className="mt-3 text-sm font-medium text-red-600">{error}</p>
       </div>
     )
   }
@@ -304,37 +308,37 @@ export function SubCourseContentPage() {
       {/* Back Button */}
       <Link
         to={`/content/category/${categoryId}/courses/${courseId}/sub-courses`}
-        className="inline-flex items-center gap-2 text-sm text-grayScale-600 hover:text-grayScale-900"
+        className="group inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-grayScale-500 transition-all hover:bg-grayScale-50 hover:text-grayScale-900"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
         Back to Sub-courses
       </Link>
 
       {/* SubCourse Header */}
-      <div className="flex items-start justify-between">
-        <div className="max-w-2xl">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-grayScale-900">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="max-w-2xl space-y-2">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-grayScale-900">
               {subCourse?.title}
             </h1>
             {subCourse?.level && (
-              <Badge className="bg-purple-100 text-purple-700">{subCourse.level}</Badge>
+              <Badge className="rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-semibold text-purple-700 ring-1 ring-inset ring-purple-200">{subCourse.level}</Badge>
             )}
           </div>
-          <p className="mt-2 text-sm text-grayScale-500">
+          <p className="text-sm leading-relaxed text-grayScale-500">
             {subCourse?.description || "No description available"}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
           <Button 
             variant="outline" 
-            className="border-brand-500 text-brand-500 hover:bg-brand-50"
+            className="border-brand-200 text-brand-600 transition-colors hover:border-brand-500 hover:bg-brand-50"
             onClick={handleAddPractice}
           >
             <FileText className="mr-2 h-4 w-4" />
             Add Practice
           </Button>
-          <Button className="bg-brand-500 hover:bg-brand-600" onClick={handleAddVideo}>
+          <Button className="bg-brand-500 shadow-sm transition-colors hover:bg-brand-600" onClick={handleAddVideo}>
             <Plus className="mr-2 h-4 w-4" />
             Add Video
           </Button>
@@ -343,26 +347,32 @@ export function SubCourseContentPage() {
 
       {/* Tabs */}
       <div className="border-b border-grayScale-200">
-        <div className="flex gap-8">
+        <div className="-mb-px flex gap-6">
           <button
             onClick={() => setActiveTab("video")}
-            className={`pb-3 text-sm font-medium transition-colors ${
+            className={`relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all ${
               activeTab === "video"
-                ? "border-b-2 border-brand-500 text-brand-500"
-                : "text-grayScale-500 hover:text-grayScale-700"
+                ? "text-brand-600"
+                : "text-grayScale-400 hover:text-grayScale-700"
             }`}
           >
             Video
+            {activeTab === "video" && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+            )}
           </button>
           <button
             onClick={() => setActiveTab("practice")}
-            className={`pb-3 text-sm font-medium transition-colors ${
+            className={`relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all ${
               activeTab === "practice"
-                ? "border-b-2 border-brand-500 text-brand-500"
-                : "text-grayScale-500 hover:text-grayScale-700"
+                ? "text-brand-600"
+                : "text-grayScale-400 hover:text-grayScale-700"
             }`}
           >
             Practice
+            {activeTab === "practice" && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+            )}
           </button>
         </div>
       </div>
@@ -373,83 +383,88 @@ export function SubCourseContentPage() {
       {activeTab === "practice" && (
         <>
           {practicesLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-sm text-grayScale-500">Loading practices...</div>
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <p className="mt-4 text-sm font-medium text-grayScale-500">Loading practices…</p>
             </div>
           ) : filteredPractices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <FileText className="mb-4 h-12 w-12 text-grayScale-300" />
-              <p className="text-sm text-grayScale-500">No practices found</p>
-              <Button variant="outline" className="mt-4" onClick={handleAddPractice}>
-                Add your first practice
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-grayScale-200 bg-grayScale-50/50 py-16">
+              <div className="rounded-full bg-brand-50 p-4">
+                <FileText className="h-8 w-8 text-brand-400" />
+              </div>
+              <p className="mt-4 text-sm font-semibold text-grayScale-700">No practices yet</p>
+              <p className="mt-1 text-sm text-grayScale-400">Create your first practice to get started</p>
+              <Button variant="outline" className="mt-5 border-brand-200 text-brand-600 hover:bg-brand-50" onClick={handleAddPractice}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Practice
               </Button>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredPractices.map((practice) => {
                 const statusConfig: Record<string, { bg: string; dot: string; text: string }> = {
-                  PUBLISHED: { bg: "bg-transparent border border-green-200 text-green-600", dot: "bg-green-500", text: "Published" },
-                  DRAFT: { bg: "bg-grayScale-100 border border-grayScale-200 text-grayScale-600", dot: "bg-grayScale-400", text: "Draft" },
-                  ARCHIVED: { bg: "bg-transparent border border-amber-200 text-amber-600", dot: "bg-amber-500", text: "Archived" },
+                  PUBLISHED: { bg: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200", dot: "bg-green-500", text: "Published" },
+                  DRAFT: { bg: "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200", dot: "bg-grayScale-400", text: "Draft" },
+                  ARCHIVED: { bg: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200", dot: "bg-amber-500", text: "Archived" },
                 }
                 const status = statusConfig[practice.status] ?? statusConfig.DRAFT
 
                 return (
                   <Card 
                     key={practice.id} 
-                    className="cursor-pointer overflow-hidden border border-grayScale-200 shadow-sm transition hover:shadow-md hover:border-brand-200"
+                    className="group cursor-pointer overflow-hidden rounded-xl border border-grayScale-200 bg-white shadow-sm transition-all duration-200 hover:border-brand-300 hover:shadow-md hover:ring-1 hover:ring-brand-100"
                     onClick={() => handlePracticeClick(practice.id)}
                   >
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-grayScale-900 line-clamp-2">{practice.title}</h3>
-                        <Badge className={`shrink-0 text-xs font-medium ${status.bg}`}>
+                    <div className="flex h-full flex-col p-5 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-semibold leading-snug text-grayScale-900 line-clamp-2">{practice.title}</h3>
+                        <Badge className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.bg}`}>
                           <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${status.dot}`} />
                           {status.text}
                         </Badge>
                       </div>
 
-                      <p className="text-sm text-grayScale-500 line-clamp-2">{practice.description}</p>
+                      <p className="text-sm leading-relaxed text-grayScale-500 line-clamp-2">{practice.description}</p>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className="bg-brand-50 text-brand-600 text-xs px-2 py-0.5 border border-brand-200">
+                        <Badge className="rounded-full bg-brand-50 text-brand-600 text-[11px] font-medium px-2.5 py-0.5 ring-1 ring-inset ring-brand-200">
                           {practice.set_type}
                         </Badge>
                         {practice.persona && (
-                          <Badge className="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 border border-purple-200">
+                          <Badge className="rounded-full bg-purple-50 text-purple-600 text-[11px] font-medium px-2.5 py-0.5 ring-1 ring-inset ring-purple-200">
                             {practice.persona}
                           </Badge>
                         )}
                       </div>
 
                       <div className="flex items-center gap-3 text-xs text-grayScale-400">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <Layers className="h-3.5 w-3.5" />
                           <span>{practice.owner_type.replace("_", " ")}</span>
                         </div>
                         {practice.shuffle_questions && (
-                          <span className="text-amber-500">Shuffle ON</span>
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600 ring-1 ring-inset ring-amber-200">Shuffle ON</span>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-grayScale-100 pt-3">
-                        <span className="text-xs text-grayScale-400">
+                      <div className="mt-auto flex items-center justify-between border-t border-grayScale-100 pt-3">
+                        <span className="text-xs font-medium text-grayScale-400">
                           {new Date(practice.created_at).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
                           })}
                         </span>
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => handleEditClick(practice)}
-                            className="rounded p-1.5 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                            className="rounded-lg p-1.5 text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-700"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteClick(practice)}
-                            className="rounded p-1.5 text-grayScale-400 hover:bg-red-50 hover:text-red-500"
+                            className="rounded-lg p-1.5 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -467,25 +482,30 @@ export function SubCourseContentPage() {
       {activeTab === "video" && (
         <>
           {videosLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-sm text-grayScale-500">Loading videos...</div>
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <p className="mt-4 text-sm font-medium text-grayScale-500">Loading videos…</p>
             </div>
           ) : videos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Video className="mb-4 h-12 w-12 text-grayScale-300" />
-              <p className="text-sm text-grayScale-500">No videos found</p>
-              <Button variant="outline" className="mt-4" onClick={handleAddVideo}>
-                Add your first video
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-grayScale-200 bg-grayScale-50/50 py-16">
+              <div className="rounded-full bg-brand-50 p-4">
+                <Video className="h-8 w-8 text-brand-400" />
+              </div>
+              <p className="mt-4 text-sm font-semibold text-grayScale-700">No videos yet</p>
+              <p className="mt-1 text-sm text-grayScale-400">Upload your first video to get started</p>
+              <Button variant="outline" className="mt-5 border-brand-200 text-brand-600 hover:bg-brand-50" onClick={handleAddVideo}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Video
               </Button>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {videos.map((video, index) => {
                 const gradients = [
-                  "bg-gradient-to-br from-blue-100 to-blue-200",
-                  "bg-gradient-to-br from-yellow-100 to-yellow-200",
-                  "bg-gradient-to-br from-purple-100 to-purple-200",
-                  "bg-gradient-to-br from-green-100 to-green-200",
+                  "bg-gradient-to-br from-blue-100 via-blue-50 to-indigo-100",
+                  "bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100",
+                  "bg-gradient-to-br from-purple-100 via-fuchsia-50 to-pink-100",
+                  "bg-gradient-to-br from-emerald-100 via-green-50 to-teal-100",
                 ]
                 const formatDuration = (seconds: number) => {
                   const mins = Math.floor(seconds / 60)
@@ -493,15 +513,17 @@ export function SubCourseContentPage() {
                   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
                 }
                 return (
-                  <Card key={video.id} className="overflow-hidden border-0 bg-white shadow-sm">
+                  <Card key={video.id} className="group overflow-hidden rounded-xl border border-grayScale-200 bg-white shadow-sm transition-all duration-200 hover:border-brand-300 hover:shadow-md hover:ring-1 hover:ring-brand-100">
                     {/* Thumbnail with duration */}
-                    <div className="relative aspect-video w-full">
+                    <div className="relative aspect-video w-full overflow-hidden">
                       {video.thumbnail ? (
-                        <img src={video.thumbnail} alt={video.title} className="h-full w-full object-cover rounded-t-lg" />
+                        <img src={video.thumbnail} alt={video.title} className="h-full w-full rounded-t-xl object-cover transition-transform duration-300 group-hover:scale-105" />
                       ) : (
-                        <div className={`h-full w-full rounded-t-lg ${gradients[index % gradients.length]}`} />
+                        <div className={`flex h-full w-full items-center justify-center rounded-t-xl ${gradients[index % gradients.length]}`}>
+                          <Video className="h-10 w-10 text-white/40" />
+                        </div>
                       )}
-                      <div className="absolute bottom-2 right-2 rounded bg-grayScale-900/80 px-2 py-0.5 text-xs font-medium text-white">
+                      <div className="absolute bottom-2.5 right-2.5 rounded-md bg-grayScale-900/75 px-2 py-0.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm">
                         {formatDuration(video.duration || 0)}
                       </div>
                     </div>
@@ -511,10 +533,10 @@ export function SubCourseContentPage() {
                       {/* Status and menu */}
                       <div className="flex items-center justify-between">
                         <Badge 
-                          className={`text-xs font-medium ${
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                             video.is_published 
-                              ? "bg-transparent text-green-600 border border-green-200" 
-                              : "bg-grayScale-100 text-grayScale-600 border border-grayScale-200"
+                              ? "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200" 
+                              : "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200"
                           }`}
                         >
                           <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${video.is_published ? "bg-green-500" : "bg-grayScale-400"}`} />
@@ -523,18 +545,18 @@ export function SubCourseContentPage() {
                         <div className="relative">
                           <button 
                             onClick={() => setOpenVideoMenuId(openVideoMenuId === video.id ? null : video.id)}
-                            className="text-grayScale-400 hover:text-grayScale-600"
+                            className="rounded-lg p-1.5 text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
                           >
                             <MoreVertical className="h-4 w-4" />
                           </button>
                           {openVideoMenuId === video.id && (
-                            <div className="absolute right-0 top-full z-10 mt-1 w-32 rounded-lg bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5">
+                            <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-xl bg-white py-1.5 shadow-lg ring-1 ring-grayScale-200">
                               <button
                                 onClick={() => {
                                   handleDeleteVideoClick(video)
                                   setOpenVideoMenuId(null)
                                 }}
-                                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50"
+                                className="flex w-full items-center gap-2 px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50"
                               >
                                 <Trash2 className="h-4 w-4" />
                                 Delete
@@ -545,12 +567,12 @@ export function SubCourseContentPage() {
                       </div>
                       
                       {/* Title */}
-                      <h3 className="font-medium text-grayScale-900">{video.title}</h3>
+                      <h3 className="font-semibold leading-snug text-grayScale-900 line-clamp-2">{video.title}</h3>
                       
                       {/* Edit button */}
                       <Button 
                         variant="outline" 
-                        className="w-full border-grayScale-200 text-grayScale-700"
+                        className="w-full border-grayScale-200 text-grayScale-700 transition-colors hover:border-grayScale-300 hover:bg-grayScale-50"
                         onClick={() => handleEditVideoClick(video)}
                       >
                         <Edit className="mr-2 h-4 w-4" />
@@ -559,7 +581,7 @@ export function SubCourseContentPage() {
                       
                       {/* Publish button */}
                       <Button 
-                        className={`w-full ${
+                        className={`w-full shadow-sm transition-colors ${
                           video.is_published 
                             ? "bg-green-500 hover:bg-green-600" 
                             : "bg-brand-500 hover:bg-brand-600"
@@ -578,28 +600,28 @@ export function SubCourseContentPage() {
 
       {/* Delete Modal */}
       {showDeleteModal && practiceToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Practice</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="px-6 py-5">
-              <p className="text-sm text-grayScale-600">
+              <p className="text-sm leading-relaxed text-grayScale-600">
                 Are you sure you want to delete{" "}
-                <span className="font-semibold">{practiceToDelete.title}</span>? This action cannot be undone.
+                <span className="font-semibold text-grayScale-900">{practiceToDelete.title}</span>? This action cannot be undone.
               </p>
             </div>
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex flex-col-reverse gap-2.5 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
               <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={deleting}>
                 Cancel
               </Button>
-              <Button className="bg-red-500 hover:bg-red-600" onClick={handleConfirmDelete} disabled={deleting}>
+              <Button className="bg-red-500 shadow-sm hover:bg-red-600" onClick={handleConfirmDelete} disabled={deleting}>
                 {deleting ? "Deleting..." : "Delete"}
               </Button>
             </div>
@@ -609,19 +631,19 @@ export function SubCourseContentPage() {
 
       {/* Edit Practice Modal */}
       {showEditPracticeModal && practiceToEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Practice</h2>
               <button
                 onClick={() => setShowEditPracticeModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-4 px-6 py-5">
-              <div className="space-y-2">
+            <div className="space-y-5 px-6 py-6">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Title</label>
                 <Input
                   value={title}
@@ -629,17 +651,17 @@ export function SubCourseContentPage() {
                   placeholder="Enter practice title"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Description</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Enter practice description"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                   rows={3}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Persona (Optional)</label>
                 <Input
                   value={persona}
@@ -647,14 +669,14 @@ export function SubCourseContentPage() {
                   placeholder="Enter persona"
                 />
               </div>
-              {saveError && <p className="text-sm text-red-500">{saveError}</p>}
+              {saveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{saveError}</p>}
             </div>
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex flex-col-reverse gap-2.5 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
               <Button variant="outline" onClick={() => setShowEditPracticeModal(false)} disabled={saving}>
                 Cancel
               </Button>
               <Button
-                className="bg-brand-500 hover:bg-brand-600"
+                className="bg-brand-500 shadow-sm hover:bg-brand-600"
                 onClick={handleSaveEditPractice}
                 disabled={saving || !title.trim()}
               >
@@ -667,19 +689,19 @@ export function SubCourseContentPage() {
 
       {/* Add Video Modal */}
       {showAddVideoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-900">Add Video</h2>
               <button
                 onClick={() => setShowAddVideoModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-4 px-6 py-5">
-              <div className="space-y-2">
+            <div className="space-y-5 px-6 py-6">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Title</label>
                 <Input
                   value={videoTitle}
@@ -687,17 +709,17 @@ export function SubCourseContentPage() {
                   placeholder="Enter video title"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Description</label>
                 <textarea
                   value={videoDescription}
                   onChange={(e) => setVideoDescription(e.target.value)}
                   placeholder="Enter video description"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                   rows={3}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Source URL</label>
                 <Input
                   value={videoUrl}
@@ -706,7 +728,7 @@ export function SubCourseContentPage() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-sm font-medium text-grayScale-700">File Size (bytes)</label>
                   <Input
                     type="number"
@@ -716,7 +738,7 @@ export function SubCourseContentPage() {
                     min={0}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-sm font-medium text-grayScale-700">Duration (seconds)</label>
                   <Input
                     type="number"
@@ -727,14 +749,14 @@ export function SubCourseContentPage() {
                   />
                 </div>
               </div>
-              {saveError && <p className="text-sm text-red-500">{saveError}</p>}
+              {saveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{saveError}</p>}
             </div>
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex flex-col-reverse gap-2.5 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
               <Button variant="outline" onClick={() => setShowAddVideoModal(false)} disabled={saving}>
                 Cancel
               </Button>
               <Button
-                className="bg-brand-500 hover:bg-brand-600"
+                className="bg-brand-500 shadow-sm hover:bg-brand-600"
                 onClick={handleSaveNewVideo}
                 disabled={saving || !videoTitle.trim() || !videoUrl.trim()}
               >
@@ -747,19 +769,19 @@ export function SubCourseContentPage() {
 
       {/* Edit Video Modal */}
       {showEditVideoModal && videoToEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Video</h2>
               <button
                 onClick={() => setShowEditVideoModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-4 px-6 py-5">
-              <div className="space-y-2">
+            <div className="space-y-5 px-6 py-6">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Title</label>
                 <Input
                   value={videoTitle}
@@ -767,17 +789,17 @@ export function SubCourseContentPage() {
                   placeholder="Enter video title"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Description</label>
                 <textarea
                   value={videoDescription}
                   onChange={(e) => setVideoDescription(e.target.value)}
                   placeholder="Enter video description"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                   rows={3}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Video URL</label>
                 <Input
                   value={videoUrl}
@@ -785,14 +807,14 @@ export function SubCourseContentPage() {
                   placeholder="Enter video URL"
                 />
               </div>
-              {saveError && <p className="text-sm text-red-500">{saveError}</p>}
+              {saveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{saveError}</p>}
             </div>
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex flex-col-reverse gap-2.5 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
               <Button variant="outline" onClick={() => setShowEditVideoModal(false)} disabled={saving}>
                 Cancel
               </Button>
               <Button
-                className="bg-brand-500 hover:bg-brand-600"
+                className="bg-brand-500 shadow-sm hover:bg-brand-600"
                 onClick={handleSaveEditVideo}
                 disabled={saving || !videoTitle.trim()}
               >
@@ -805,28 +827,28 @@ export function SubCourseContentPage() {
 
       {/* Delete Video Modal */}
       {showDeleteVideoModal && videoToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Video</h2>
               <button
                 onClick={() => setShowDeleteVideoModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="px-6 py-5">
-              <p className="text-sm text-grayScale-600">
+              <p className="text-sm leading-relaxed text-grayScale-600">
                 Are you sure you want to delete{" "}
-                <span className="font-semibold">{videoToDelete.title}</span>? This action cannot be undone.
+                <span className="font-semibold text-grayScale-900">{videoToDelete.title}</span>? This action cannot be undone.
               </p>
             </div>
-            <div className="flex justify-end gap-3 border-t px-6 py-4">
+            <div className="flex flex-col-reverse gap-2.5 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
               <Button variant="outline" onClick={() => setShowDeleteVideoModal(false)} disabled={deletingVideo}>
                 Cancel
               </Button>
-              <Button className="bg-red-500 hover:bg-red-600" onClick={handleConfirmDeleteVideo} disabled={deletingVideo}>
+              <Button className="bg-red-500 shadow-sm hover:bg-red-600" onClick={handleConfirmDeleteVideo} disabled={deletingVideo}>
                 {deletingVideo ? "Deleting..." : "Delete"}
               </Button>
             </div>

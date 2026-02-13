@@ -105,7 +105,7 @@ export function UserDetailPage() {
           {/* Profile card */}
           <Card className="overflow-hidden">
             <div className="h-24 bg-gradient-to-br from-brand-600 via-brand-500 to-brand-400" />
-            <CardContent className="-mt-12 space-y-5 px-6 pb-6 pt-0">
+            <CardContent className="-mt-12 space-y-5 px-4 sm:px-6 pb-6 pt-0">
               <div className="flex flex-col items-center text-center">
                 <Avatar className="h-20 w-20 ring-4 ring-white shadow-soft">
                   <AvatarImage src={user.profile_picture_url ?? undefined} alt={fullName} />
@@ -197,7 +197,7 @@ export function UserDetailPage() {
                   <span className="text-sm font-semibold text-grayScale-600">6-Month</span>
                 </div>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-1">
                   <span className="text-xs font-medium uppercase tracking-wider text-grayScale-400">
                     Expires
                   </span>
@@ -215,7 +215,7 @@ export function UserDetailPage() {
                 Extend Subscription
               </Button>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Button variant="outline" className="w-full text-sm">
                   Mark as Paid
                 </Button>

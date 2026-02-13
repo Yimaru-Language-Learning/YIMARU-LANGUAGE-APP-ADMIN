@@ -135,182 +135,207 @@ export function AddQuestionPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/content/questions")}>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/content/questions")}
+          className="rounded-lg bg-grayScale-50 hover:bg-brand-500/10 hover:text-brand-500 transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-xl font-semibold text-grayScale-900">
-          {isEditing ? "Edit Question" : "Add New Question"}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">
+            {isEditing ? "Edit Question" : "Add New Question"}
+          </h1>
+          <p className="mt-1 text-sm text-grayScale-400">
+            {isEditing ? "Update the question details below" : "Fill in the details to create a new question"}
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle>Question Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Question Type */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-grayScale-600">
-                Question Type
-              </label>
-              <Select
-                value={formData.type}
-                onChange={(e) => handleTypeChange(e.target.value as QuestionType)}
-              >
-                <option value="multiple-choice">Multiple Choice</option>
-                <option value="short-answer">Short Answer</option>
-                <option value="true-false">True/False</option>
-              </Select>
-            </div>
-
-            {/* Question Text */}
-            <div>
-              <label htmlFor="question" className="mb-2 block text-sm font-medium text-grayScale-600">
-                Question
-              </label>
-              <Textarea
-                id="question"
-                placeholder="Enter your question here..."
-                value={formData.question}
-                onChange={(e) => setFormData((prev) => ({ ...prev, question: e.target.value }))}
-                rows={3}
-                required
-              />
-            </div>
-
-            {/* Options for Multiple Choice */}
-            {(formData.type === "multiple-choice" || formData.type === "true-false") && (
+      <div className="max-w-3xl mx-auto">
+        <form onSubmit={handleSubmit}>
+          <Card className="shadow-sm border border-grayScale-100 rounded-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold text-grayScale-600">Question Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-7">
+              {/* Question Type */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-grayScale-600">
-                  Options
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                  Question Type
                 </label>
-                <div className="space-y-2">
-                  {formData.options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        value={option}
-                        onChange={(e) => handleOptionChange(index, e.target.value)}
-                        placeholder={`Option ${index + 1}`}
-                        disabled={formData.type === "true-false"}
-                        required
-                      />
-                      {formData.type === "multiple-choice" && formData.options.length > 2 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeOption(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  {formData.type === "multiple-choice" && (
-                    <Button type="button" variant="outline" onClick={addOption} className="w-full">
-                      <Plus className="h-4 w-4" />
-                      Add Option
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Correct Answer */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-grayScale-600">
-                Correct Answer
-              </label>
-              {formData.type === "multiple-choice" || formData.type === "true-false" ? (
                 <Select
-                  value={formData.correctAnswer}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, correctAnswer: e.target.value }))
-                  }
-                  required
+                  value={formData.type}
+                  onChange={(e) => handleTypeChange(e.target.value as QuestionType)}
                 >
-                  <option value="">Select correct answer</option>
-                  {formData.options.map((option, index) => (
-                    <option key={index} value={option}>
-                      {option}
-                    </option>
-                  ))}
+                  <option value="multiple-choice">Multiple Choice</option>
+                  <option value="short-answer">Short Answer</option>
+                  <option value="true-false">True/False</option>
                 </Select>
-              ) : (
+              </div>
+
+              <hr className="border-grayScale-100" />
+
+              {/* Question Text */}
+              <div>
+                <label htmlFor="question" className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                  Question
+                </label>
                 <Textarea
-                  placeholder="Enter the correct answer..."
-                  value={formData.correctAnswer}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, correctAnswer: e.target.value }))
-                  }
-                  rows={2}
+                  id="question"
+                  placeholder="Enter your question here..."
+                  value={formData.question}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, question: e.target.value }))}
+                  rows={3}
                   required
                 />
+              </div>
+
+              {/* Options for Multiple Choice */}
+              {(formData.type === "multiple-choice" || formData.type === "true-false") && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                    Options
+                  </label>
+                  <div className="space-y-3">
+                    {formData.options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-2 group">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-grayScale-50 text-grayScale-400 text-xs font-medium flex items-center justify-center">
+                          {index + 1}
+                        </span>
+                        <Input
+                          value={option}
+                          onChange={(e) => handleOptionChange(index, e.target.value)}
+                          placeholder={`Option ${index + 1}`}
+                          disabled={formData.type === "true-false"}
+                          required
+                        />
+                        {formData.type === "multiple-choice" && formData.options.length > 2 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeOption(index)}
+                            className="opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {formData.type === "multiple-choice" && (
+                      <Button type="button" variant="outline" onClick={addOption} className="w-full mt-1 border-dashed border-grayScale-200 text-grayScale-400 hover:text-brand-500 hover:border-brand-500/30">
+                        <Plus className="h-4 w-4" />
+                        Add Option
+                      </Button>
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
 
-            {/* Points */}
-            <div>
-              <label htmlFor="points" className="mb-2 block text-sm font-medium text-grayScale-600">
-                Points
-              </label>
-              <Input
-                id="points"
-                type="number"
-                min="1"
-                value={formData.points}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, points: parseInt(e.target.value) || 0 }))
-                }
-                required
-              />
-            </div>
+              <hr className="border-grayScale-100" />
 
-            {/* Category */}
-            <div>
-              <label htmlFor="category" className="mb-2 block text-sm font-medium text-grayScale-600">
-                Category (Optional)
-              </label>
-              <Input
-                id="category"
-                placeholder="e.g., Programming, Geography"
-                value={formData.category || ""}
-                onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
-              />
-            </div>
+              {/* Correct Answer */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                  Correct Answer
+                </label>
+                {formData.type === "multiple-choice" || formData.type === "true-false" ? (
+                  <Select
+                    value={formData.correctAnswer}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, correctAnswer: e.target.value }))
+                    }
+                    required
+                  >
+                    <option value="">Select correct answer</option>
+                    {formData.options.map((option, index) => (
+                      <option key={index} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Textarea
+                    placeholder="Enter the correct answer..."
+                    value={formData.correctAnswer}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, correctAnswer: e.target.value }))
+                    }
+                    rows={2}
+                    required
+                  />
+                )}
+              </div>
 
-            {/* Difficulty */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-grayScale-600">
-                Difficulty (Optional)
-              </label>
-              <Select
-                value={formData.difficulty || ""}
-                onChange={(e) => setFormData((prev) => ({ ...prev, difficulty: e.target.value }))}
-              >
-                <option value="">Select difficulty</option>
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
-              </Select>
-            </div>
+              <hr className="border-grayScale-100" />
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate("/content/questions")}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-brand-500 hover:bg-brand-600">
-                {isEditing ? "Update Question" : "Create Question"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+              {/* Points and Difficulty side by side */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Points */}
+                <div>
+                  <label htmlFor="points" className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                    Points
+                  </label>
+                  <Input
+                    id="points"
+                    type="number"
+                    min="1"
+                    value={formData.points}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, points: parseInt(e.target.value) || 0 }))
+                    }
+                    required
+                  />
+                </div>
+
+                {/* Difficulty */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                    Difficulty (Optional)
+                  </label>
+                  <Select
+                    value={formData.difficulty || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, difficulty: e.target.value }))}
+                  >
+                    <option value="">Select difficulty</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label htmlFor="category" className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                  Category (Optional)
+                </label>
+                <Input
+                  id="category"
+                  placeholder="e.g., Programming, Geography"
+                  value={formData.category || ""}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-grayScale-100">
+                <Button type="button" variant="outline" onClick={() => navigate("/content/questions")} className="w-full sm:w-auto hover:bg-grayScale-50">
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-brand-500 hover:bg-brand-600 text-white w-full sm:w-auto shadow-sm hover:shadow-md transition-all">
+                  {isEditing ? "Update Question" : "Create Question"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </form>
+      </div>
     </div>
   )
 }
-

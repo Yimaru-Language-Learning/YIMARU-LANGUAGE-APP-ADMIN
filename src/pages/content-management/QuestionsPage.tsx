@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { Plus, Search, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, Edit, Trash2, HelpCircle } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
@@ -95,9 +95,9 @@ const typeLabels: Record<QuestionType, string> = {
 }
 
 const typeColors: Record<QuestionType, string> = {
-  "multiple-choice": "bg-blue-100 text-blue-700",
-  "short-answer": "bg-green-100 text-green-700",
-  "true-false": "bg-purple-100 text-purple-700",
+  "multiple-choice": "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200",
+  "short-answer": "bg-mint-100 text-green-700 ring-1 ring-inset ring-green-200",
+  "true-false": "bg-brand-100 text-brand-600 ring-1 ring-inset ring-brand-200",
 }
 
 export function QuestionsPage() {
@@ -126,35 +126,45 @@ export function QuestionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-grayScale-900">Questions</h1>
-        <Link to="/content/questions/add">
-          <Button className="bg-brand-500 hover:bg-brand-600">
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">
+            Questions
+          </h1>
+          <p className="mt-1.5 text-sm leading-relaxed text-grayScale-400">
+            Create and manage your question bank
+          </p>
+        </div>
+        <Link to="/content/questions/add" className="w-full sm:w-auto">
+          <Button className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto">
             <Plus className="h-4 w-4" />
             Add New Question
           </Button>
         </Link>
       </div>
 
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle>Question Management</CardTitle>
+      <Card className="shadow-soft">
+        <CardHeader className="border-b border-grayScale-200 pb-4">
+          <CardTitle className="text-base font-semibold text-grayScale-600">
+            Question Management
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 pt-5">
           {/* Search and Filters */}
-          <div className="flex flex-col gap-4 md:flex-row">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
               <Input
                 placeholder="Search questions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-10 transition-colors focus:border-brand-300 focus:ring-brand-200"
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                 <option value="all">All Types</option>
                 <option value="multiple-choice">Multiple Choice</option>
@@ -190,42 +200,63 @@ export function QuestionsPage() {
           </div>
 
           {/* Results count */}
-          <div className="text-sm text-grayScale-500">
+          <div className="text-xs font-medium text-grayScale-400">
             Showing {filteredQuestions.length} of {questions.length} questions
           </div>
 
           {/* Questions Table */}
           {filteredQuestions.length > 0 ? (
-            <div className="rounded-lg border">
+            <div className="overflow-x-auto rounded-lg border border-grayScale-200">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Question</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Difficulty</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="bg-grayScale-100 hover:bg-grayScale-100">
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                      Question
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                      Type
+                    </TableHead>
+                    <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
+                      Category
+                    </TableHead>
+                    <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
+                      Difficulty
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                      Points
+                    </TableHead>
+                    <TableHead className="py-3 text-right text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredQuestions.map((question) => (
-                    <TableRow key={question.id}>
-                      <TableCell className="max-w-md">
-                        <div className="truncate font-medium">{question.question}</div>
+                  {filteredQuestions.map((question, index) => (
+                    <TableRow
+                      key={question.id}
+                      className={`transition-colors hover:bg-brand-100/30 ${
+                        index % 2 === 0 ? "bg-white" : "bg-grayScale-100/50"
+                      }`}
+                    >
+                      <TableCell className="max-w-md py-3.5">
+                        <div className="truncate text-sm font-medium text-grayScale-600">
+                          {question.question}
+                        </div>
                         {question.type === "multiple-choice" && question.options.length > 0 && (
-                          <div className="mt-1 text-xs text-grayScale-400">
+                          <div className="mt-1 truncate text-xs text-grayScale-400">
                             Options: {question.options.join(", ")}
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Badge className={typeColors[question.type]}>
+                      <TableCell className="py-3.5">
+                        <Badge className={`text-xs font-medium ${typeColors[question.type]}`}>
                           {typeLabels[question.type]}
                         </Badge>
                       </TableCell>
-                      <TableCell>{question.category || "-"}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden py-3.5 text-sm text-grayScale-500 md:table-cell">
+                        {question.category || "—"}
+                      </TableCell>
+                      <TableCell className="hidden py-3.5 md:table-cell">
                         {question.difficulty && (
                           <Badge
                             variant={
@@ -240,20 +271,27 @@ export function QuestionsPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>{question.points}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      <TableCell className="py-3.5 text-sm font-semibold text-grayScale-600">
+                        {question.points}
+                      </TableCell>
+                      <TableCell className="py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Link to={`/content/questions/edit/${question.id}`}>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-grayScale-400 hover:bg-brand-100/50 hover:text-brand-500"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </Link>
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8 text-grayScale-400 hover:bg-red-50 hover:text-destructive"
                             onClick={() => handleDelete(question.id)}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -263,8 +301,17 @@ export function QuestionsPage() {
               </Table>
             </div>
           ) : (
-            <div className="py-12 text-center text-grayScale-400">
-              <p>No questions found matching your criteria.</p>
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-20 text-center">
+              <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-grayScale-100 to-grayScale-200">
+                <HelpCircle className="h-8 w-8 text-grayScale-400" />
+              </div>
+              <p className="text-base font-semibold text-grayScale-600">
+                No questions found
+              </p>
+              <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-grayScale-400">
+                Try adjusting your search or filter criteria to find what you're
+                looking for.
+              </p>
             </div>
           )}
         </CardContent>
@@ -272,4 +319,3 @@ export function QuestionsPage() {
     </div>
   )
 }
-

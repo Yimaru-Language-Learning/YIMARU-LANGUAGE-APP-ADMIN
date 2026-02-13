@@ -20,3 +20,18 @@ export const login = async (payload: LoginRequest): Promise<LoginResult> => {
     memberId: data.member_id,
   }
 }
+
+export const loginWithGoogle = async (credential: string): Promise<LoginResult> => {
+  const res = await http.post<LoginResponse>("/team/google-login", {
+    token: credential,
+  })
+
+  const data: LoginResponseData = res.data.data
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    role: data.team_role,
+    memberId: data.member_id,
+  }
+}

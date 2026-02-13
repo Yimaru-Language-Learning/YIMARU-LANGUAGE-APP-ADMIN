@@ -29,6 +29,7 @@ import { PracticeMembersPage } from "../pages/content-management/PracticeMembers
 import { QuestionsPage } from "../pages/content-management/QuestionsPage"
 import { AddQuestionPage } from "../pages/content-management/AddQuestionPage"
 import { UserLogPage } from "../pages/user-log/UserLogPage"
+import { IssuesPage } from "../pages/issues/IssuesPage"
 import { ProfilePage } from "../pages/ProfilePage"
 import { TeamManagementPage } from "../pages/team/TeamManagementPage"
 import { TeamMemberDetailPage } from "../pages/team/TeamMemberDetailPage"
@@ -79,6 +80,7 @@ export function AppRoutes() {
 
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/user-log" element={<UserLogPage />} />
+        <Route path="/issues" element={<IssuesPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
 
         <Route path="/team" element={<TeamManagementPage />} />

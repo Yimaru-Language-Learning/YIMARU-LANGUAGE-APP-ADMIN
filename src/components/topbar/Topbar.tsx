@@ -1,17 +1,20 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Bell, LogOut, Menu, Settings, UserCircle2 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { LogOut, Menu, Settings, UserCircle2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import { cn } from "../../lib/utils"
+import { NotificationDropdown } from "./NotificationDropdown"
 
 type TopbarProps = {
   onMenuClick: () => void
 }
 
 export function Topbar({ onMenuClick }: TopbarProps) {
-  const [shortName, setShortName] = useState("AA") 
+  const navigate = useNavigate()
+  const [shortName, setShortName] = useState("AA")
 
   useEffect(() => {
     const updateShortName = () => {
@@ -29,10 +32,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const handleOptionClick = (option: string) => {
     switch (option) {
       case "profile":
-        console.log("Go to profile")
+        navigate("/profile")
         break
       case "settings":
-        console.log("Go to settings")
+        navigate("/settings")
         break
       case "logout":
         localStorage.clear()
@@ -55,13 +58,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
       <div className="flex items-center gap-3">
         {/* Notifications */}
-        <button
-          type="button"
-          className="grid h-10 w-10 place-items-center rounded-full border bg-white text-grayScale-500 hover:text-brand-600 transition-colors"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
+        <NotificationDropdown />
 
         {/* Separator */}
         <div className="h-6 w-px bg-grayScale-200" />

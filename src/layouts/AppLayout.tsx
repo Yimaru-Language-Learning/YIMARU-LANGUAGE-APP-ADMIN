@@ -22,6 +22,21 @@ export function AppLayout() {
         <main className="min-w-0 flex-1 overflow-y-auto px-4 pb-8 pt-4 lg:px-6">
           <Outlet />
         </main>
+        <footer className="border-t bg-grayScale-50 px-4 py-3 lg:px-6">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-grayScale-400">
+            <span>Powered by</span>
+            <a
+              href="https://yaltopia.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand-500 transition-colors hover:text-brand-600"
+            >
+              Yaltopia
+            </a>
+            <span>·</span>
+            <span>© {new Date().getFullYear()}</span>
+          </div>
+        </footer>
       </div>
     </div>
   )

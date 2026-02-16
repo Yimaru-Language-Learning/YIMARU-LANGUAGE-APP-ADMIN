@@ -1,11 +1,15 @@
-// import type { UserProfileResponse } from "../types/user.types";
 import {
-  Activity,
+  // Activity,
   BadgeCheck,
-  Coins,
+  BookOpen,
+  // Coins,
   DollarSign,
-  TrendingUp,
+  HelpCircle,
+  TicketCheck,
+  // TrendingUp,
   Users,
+  Bell,
+  UsersRound,
 } from "lucide-react"
 import {
   Area,
@@ -22,48 +26,24 @@ import {
   YAxis,
 } from "recharts"
 import { StatCard } from "../components/dashboard/StatCard"
-import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
-import { cn } from "../lib/utils"
+// import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
+import { getDashboard } from "../api/analytics.api"
 import { useEffect, useState } from "react"
+import type { DashboardData } from "../types/analytics.types"
 
-const userGrowth = [
-  { month: "Jan", users: 2400 },
-  { month: "Feb", users: 2700 },
-  { month: "Mar", users: 3100 },
-  { month: "Apr", users: 1900 },
-  { month: "May", users: 1900 },
-  { month: "Jun", users: 2100 },
-  { month: "Jul", users: 2050 },
-  { month: "Aug", users: 2900 },
-  { month: "Sep", users: 2000 },
-  { month: "Oct", users: 2050 },
-  { month: "Nov", users: 1850 },
-  { month: "Dec", users: 1900 },
-]
+const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444"]
 
-const subscriptionStatus = [
-  { name: "Free Plan", value: 3125, color: "#9E2891" },
-  { name: "Monthly Plan", value: 5901, color: "#FFD23F" },
-  { name: "3-Month Plan", value: 1203, color: "#1DE9B6" },
-  { name: "6-Monthly Plan", value: 825, color: "#C26FC0" },
-]
-
-const revenueTrend = [
-  { month: "Jan", value: 52000 },
-  { month: "Feb", value: 30000 },
-  { month: "Mar", value: 50000 },
-  { month: "Apr", value: 28000 },
-  { month: "May", value: 70000 },
-  { month: "Jun", value: 76000 },
-]
-
-const ranges = ["1D", "1W", "1M", "3M", "6M", "1Y"] as const
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
 
 export function DashboardPage() {
   const [userFirstName, setUserFirstName] = useState<string>("")
-  const activeRange = "1Y"
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -81,8 +61,46 @@ export function DashboardPage() {
       }
     }
 
+    const fetchDashboard = async () => {
+      try {
+        const res = await getDashboard()
+        setDashboard(res.data as unknown as DashboardData)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchUser()
+    fetchDashboard()
   }, [])
+
+  const registrationData =
+    dashboard?.users.registrations_last_30_days.map((d) => ({
+      date: formatDate(d.date),
+      count: d.count,
+    })) ?? []
+
+  const revenueData =
+    dashboard?.payments.revenue_last_30_days.map((d) => ({
+      date: formatDate(d.date),
+      revenue: d.revenue,
+    })) ?? []
+
+  const subscriptionStatusData =
+    dashboard?.subscriptions.by_status.map((s, i) => ({
+      name: s.label,
+      value: s.count,
+      color: PIE_COLORS[i % PIE_COLORS.length],
+    })) ?? []
+
+  const issueStatusData =
+    dashboard?.issues.by_status.map((s, i) => ({
+      name: s.label,
+      value: s.count,
+      color: PIE_COLORS[i % PIE_COLORS.length],
+    })) ?? []
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -91,134 +109,107 @@ export function DashboardPage() {
         Welcome, {userFirstName || localStorage.getItem("user_first_name")}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <StatCard
-          icon={Users}
-          label="Total Users"
-          value="12,490"
-          deltaLabel="-15%"
-          deltaPositive={false}
-        />
-        <StatCard
-          icon={BadgeCheck}
-          label="Active Subscribers"
-          value="3,200"
-          deltaLabel="+35%"
-          deltaPositive
-        />
-        <StatCard
-          icon={Activity}
-          label="Monthly Active Users"
-          value="521"
-          deltaLabel="+41%"
-          deltaPositive
-        />
-        <StatCard
-          icon={DollarSign}
-          label="Total Revenue (ETB)"
-          value="927,004"
-          deltaLabel="-20%"
-          deltaPositive={false}
-        />
-        <StatCard
-          icon={Coins}
-          label="Monthly Revenue (ETB)"
-          value="81,290"
-          deltaLabel="+35%"
-          deltaPositive
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Growth Rate"
-          value="12.5%"
-          deltaLabel="+5%"
-          deltaPositive
-        />
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-grayScale-500">Loading dashboard…</div>
+      ) : !dashboard ? (
+        <div className="flex items-center justify-center py-20 text-destructive">Failed to load dashboard data.</div>
+      ) : (
+        <>
+          {/* Stat Cards */}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              icon={Users}
+              label="Total Users"
+              value={dashboard.users.total_users.toLocaleString()}
+              deltaLabel={`+${dashboard.users.new_month} this month`}
+              deltaPositive={dashboard.users.new_month > 0}
+            />
+            <StatCard
+              icon={BadgeCheck}
+              label="Active Subscribers"
+              value={dashboard.subscriptions.active_subscriptions.toLocaleString()}
+              deltaLabel={`+${dashboard.subscriptions.new_month} this month`}
+              deltaPositive={dashboard.subscriptions.new_month > 0}
+            />
+            <StatCard
+              icon={DollarSign}
+              label="Total Revenue (ETB)"
+              value={dashboard.payments.total_revenue.toLocaleString()}
+              deltaLabel={`${dashboard.payments.total_payments} payments`}
+              deltaPositive={dashboard.payments.total_revenue > 0}
+            />
+            <StatCard
+              icon={TicketCheck}
+              label="Issues"
+              value={`${dashboard.issues.resolved_issues}/${dashboard.issues.total_issues}`}
+              deltaLabel={`${(dashboard.issues.resolution_rate * 100).toFixed(1)}% resolved`}
+              deltaPositive={dashboard.issues.resolution_rate > 0.5}
+            />
+          </div>
 
-      <div className="mt-5 grid gap-4">
-        <Card className="shadow-none">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle>User Growth</CardTitle>
-                <div className="mt-1 text-2xl font-semibold tracking-tight">5,730</div>
-                <div className="text-xs font-medium text-mint-500">Last 12 Months +15.2%</div>
-              </div>
+          {/* Secondary Stats */}
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              icon={BookOpen}
+              label="Courses"
+              value={dashboard.courses.total_courses.toLocaleString()}
+              deltaLabel={`${dashboard.courses.total_sub_courses} sub-courses, ${dashboard.courses.total_videos} videos`}
+              deltaPositive
+            />
+            <StatCard
+              icon={HelpCircle}
+              label="Questions"
+              value={dashboard.content.total_questions.toLocaleString()}
+              deltaLabel={`${dashboard.content.total_question_sets} question sets`}
+              deltaPositive
+            />
+            <StatCard
+              icon={Bell}
+              label="Notifications"
+              value={dashboard.notifications.total_sent.toLocaleString()}
+              deltaLabel={`${dashboard.notifications.unread_count} unread`}
+              deltaPositive={dashboard.notifications.unread_count === 0}
+            />
+            <StatCard
+              icon={UsersRound}
+              label="Team Members"
+              value={dashboard.team.total_members.toLocaleString()}
+              deltaLabel={`${dashboard.team.by_role.length} roles`}
+              deltaPositive
+            />
+          </div>
 
-              <div className="flex items-center gap-1 rounded-full bg-grayScale-100 p-1">
-                {ranges.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-semibold text-grayScale-500",
-                      r === activeRange && "bg-brand-500 text-white",
-                    )}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="h-[280px] p-6 pt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={userGrowth} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="fillBrand" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#9E2891" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#9E2891" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                <YAxis tickLine={false} axisLine={false} fontSize={12} width={32} />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: "1px solid #E0E0E0",
-                    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="users"
-                  stroke="#9E2891"
-                  strokeWidth={2}
-                  fill="url(#fillBrand)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="shadow-none">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle>Subscription Status</CardTitle>
-                <div className="rounded-full bg-grayScale-100 px-3 py-1 text-xs font-semibold text-grayScale-500">
-                  Weekly
+          {/* User Registrations Chart */}
+          <div className="mt-5 grid gap-4">
+            <Card className="shadow-none">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>User Registrations</CardTitle>
+                    <div className="mt-1 text-2xl font-semibold tracking-tight">
+                      {dashboard.users.total_users.toLocaleString()}
+                    </div>
+                    <div className="text-xs font-medium text-mint-500">
+                      +{dashboard.users.new_today} today · +{dashboard.users.new_week} this week
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-grayScale-100 px-3 py-1 text-xs font-semibold text-grayScale-500">
+                    Last 30 Days
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-4 p-6 pt-2 md:grid-cols-2">
-              <div className="h-[180px]">
+              </CardHeader>
+              <CardContent className="h-[280px] p-6 pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={subscriptionStatus}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={2}
-                    >
-                      {subscriptionStatus.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
+                  <AreaChart data={registrationData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="fillBrand" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#9E2891" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#9E2891" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
+                    <YAxis tickLine={false} axisLine={false} fontSize={12} width={32} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
                         borderRadius: 12,
@@ -226,60 +217,152 @@ export function DashboardPage() {
                         boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
                       }}
                     />
-                  </PieChart>
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#9E2891"
+                      strokeWidth={2}
+                      fill="url(#fillBrand)"
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="space-y-3">
-                {subscriptionStatus.map((s) => (
-                  <div key={s.name} className="flex items-center justify-between gap-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                      <span className="text-grayScale-600">{s.name}</span>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Subscription / Issue Status Pie */}
+              <Card className="shadow-none">
+                <CardHeader className="pb-2">
+                  <CardTitle>
+                    {subscriptionStatusData.length > 0 ? "Subscription Status" : "Issue Status"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 p-6 pt-2 md:grid-cols-2">
+                  {(subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData).length > 0 ? (
+                    <>
+                      <div className="h-[180px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={55}
+                              outerRadius={80}
+                              paddingAngle={2}
+                            >
+                              {(subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData).map(
+                                (entry) => (
+                                  <Cell key={entry.name} fill={entry.color} />
+                                ),
+                              )}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{
+                                borderRadius: 12,
+                                border: "1px solid #E0E0E0",
+                                boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="space-y-3">
+                        {(subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData).map((s) => (
+                          <div key={s.name} className="flex items-center justify-between gap-3 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: s.color }}
+                              />
+                              <span className="text-grayScale-600">{s.name}</span>
+                            </div>
+                            <span className="font-semibold text-grayScale-600">{s.value.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="col-span-2 flex items-center justify-center py-10 text-sm text-grayScale-400">
+                      No data available
                     </div>
-                    <span className="font-semibold text-grayScale-600">{s.value.toLocaleString()} Users</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  )}
+                </CardContent>
+              </Card>
 
-          <Card className="shadow-none">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Revenue Trend</CardTitle>
-                  <div className="mt-2 text-2xl font-semibold tracking-tight">ETB 923,417</div>
-                  <div className="text-xs font-medium text-grayScale-500">Last 6 Months (ETB)</div>
-                </div>
-                <Button variant="ghost" className="text-brand-600 hover:text-brand-600">
-                  View Report
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="h-[220px] p-6 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueTrend} margin={{ left: 8, right: 8, top: 8 }}>
-                  <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                  <YAxis tickLine={false} axisLine={false} fontSize={12} width={42} />
-                  <Tooltip
-                    formatter={(v) => [`${Number(v).toLocaleString()}`, "ETB"]}
-                    contentStyle={{
-                      borderRadius: 12,
-                      border: "1px solid #E0E0E0",
-                      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                    }}
-                  />
-                  <Bar dataKey="value" radius={[10, 10, 0, 0]} fill="#9E2891" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              {/* Revenue Chart */}
+              <Card className="shadow-none">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Revenue Trend</CardTitle>
+                      <div className="mt-2 text-2xl font-semibold tracking-tight">
+                        ETB {dashboard.payments.total_revenue.toLocaleString()}
+                      </div>
+                      <div className="text-xs font-medium text-grayScale-500">Last 30 Days (ETB)</div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-[220px] p-6 pt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueData} margin={{ left: 8, right: 8, top: 8 }}>
+                      <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
+                      <YAxis tickLine={false} axisLine={false} fontSize={12} width={42} />
+                      <Tooltip
+                        formatter={(v) => [`${Number(v).toLocaleString()}`, "ETB"]}
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: "1px solid #E0E0E0",
+                          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                        }}
+                      />
+                      <Bar dataKey="revenue" radius={[10, 10, 0, 0]} fill="#9E2891" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Users by Role / Region / Knowledge Level */}
+            <div className="grid gap-4 lg:grid-cols-3">
+              {[
+                { title: "Users by Role", data: dashboard.users.by_role },
+                { title: "Users by Region", data: dashboard.users.by_region },
+                { title: "Users by Knowledge Level", data: dashboard.users.by_knowledge_level },
+              ].map(({ title, data }) => (
+                <Card key={title} className="shadow-none">
+                  <CardHeader className="pb-2">
+                    <CardTitle>{title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-2">
+                    {data.length > 0 ? (
+                      <div className="space-y-3">
+                        {data.map((item, i) => (
+                          <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                              />
+                              <span className="text-grayScale-600">{item.label}</span>
+                            </div>
+                            <span className="font-semibold text-grayScale-600">{item.count.toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center py-6 text-sm text-grayScale-400">
+                        No data available
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
-
-

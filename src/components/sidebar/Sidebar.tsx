@@ -12,10 +12,11 @@ import {
   Users2,
   X,
 } from "lucide-react"
-import type { ComponentType } from "react"
+import { type ComponentType, useEffect, useState } from "react"
 import { NavLink } from "react-router-dom"
 import { cn } from "../../lib/utils"
 import { BrandLogo } from "../brand/BrandLogo"
+import { getUnreadCount } from "../../api/notifications.api"
 
 type NavItem = {
   label: string
@@ -42,6 +43,24 @@ type SidebarProps = {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await getUnreadCount()
+        setUnreadCount(res.data.unread)
+      } catch {
+        // silently fail
+      }
+    }
+
+    fetchUnread()
+
+    window.addEventListener("notifications-updated", fetchUnread)
+    return () => window.removeEventListener("notifications-updated", fetchUnread)
+  }, [])
+
   return (
     <>
       {/* Mobile overlay */}
@@ -101,7 +120,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="truncate">{item.label}</span>
-                    {isActive ? (
+                    {item.to === "/notifications" && unreadCount > 0 && (
+                      <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                    {item.to !== "/notifications" && isActive ? (
+                      <span className="ml-auto h-6 w-1 rounded-full bg-brand-500" />
+                    ) : item.to === "/notifications" && unreadCount === 0 && isActive ? (
                       <span className="ml-auto h-6 w-1 rounded-full bg-brand-500" />
                     ) : null}
                   </>

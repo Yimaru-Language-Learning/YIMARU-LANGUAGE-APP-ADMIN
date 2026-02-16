@@ -31,6 +31,7 @@ import { AddQuestionPage } from "../pages/content-management/AddQuestionPage"
 import { UserLogPage } from "../pages/user-log/UserLogPage"
 import { IssuesPage } from "../pages/issues/IssuesPage"
 import { ProfilePage } from "../pages/ProfilePage"
+import { SettingsPage } from "../pages/SettingsPage"
 import { TeamManagementPage } from "../pages/team/TeamManagementPage"
 import { TeamMemberDetailPage } from "../pages/team/TeamMemberDetailPage"
 import { LoginPage } from "../pages/auth/LoginPage"
@@ -86,6 +87,7 @@ export function AppRoutes() {
         <Route path="/team" element={<TeamManagementPage />} />
         <Route path="/team/:id" element={<TeamMemberDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

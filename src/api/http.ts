@@ -109,6 +109,12 @@ http.interceptors.response.use(
       }
     }
 
+    // Backend is down (network error, timeout, connection refused)
+    if (!error.response) {
+      clearAuthAndRedirect();
+      return Promise.reject(error);
+    }
+
     return Promise.reject(error);
   }
 );

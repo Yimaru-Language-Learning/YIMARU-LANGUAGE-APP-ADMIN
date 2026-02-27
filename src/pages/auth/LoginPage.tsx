@@ -71,6 +71,7 @@ export function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [googleReady, setGoogleReady] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
@@ -156,6 +157,16 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errors: { email?: string; password?: string } = {};
+    if (!email.trim()) errors.email = "Please enter your email address";
+    if (!password) errors.password = "Please enter your password";
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
+
     setError(null);
     setLoading(true);
 
@@ -309,7 +320,7 @@ export function LoginPage() {
             </>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5" autoComplete="on" method="post">
+          <form onSubmit={handleSubmit} className="space-y-5" autoComplete="on" method="post" noValidate>
             {/* Email */}
             <div>
               <label
@@ -325,10 +336,15 @@ export function LoginPage() {
                 placeholder="you@example.com"
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-11 rounded-xl"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }}
+                className={`h-11 rounded-xl ${fieldErrors.email ? "border-red-400 focus-visible:ring-red-400/40" : ""}`}
               />
+              {fieldErrors.email && (
+                <p className="mt-1.5 text-xs text-red-500">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* Password */}
@@ -355,9 +371,11 @@ export function LoginPage() {
                   placeholder="••••••••"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-11 rounded-xl pr-10"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
+                  className={`h-11 rounded-xl pr-10 ${fieldErrors.password ? "border-red-400 focus-visible:ring-red-400/40" : ""}`}
                 />
                 <button
                   type="button"
@@ -368,6 +386,9 @@ export function LoginPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1.5 text-xs text-red-500">{fieldErrors.password}</p>
+              )}
             </div>
 
             <Button

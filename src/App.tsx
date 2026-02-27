@@ -1,7 +1,20 @@
+import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { AppRoutes } from './app/AppRoutes'
 
+const SESSION_KEY = 'yimaru_session_active'
+
 export default function App() {
+  useEffect(() => {
+    if (!sessionStorage.getItem(SESSION_KEY)) {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('member_id')
+      localStorage.removeItem('role')
+      sessionStorage.setItem(SESSION_KEY, '1')
+    }
+  }, [])
+
   return (
     <>
       <AppRoutes />

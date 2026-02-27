@@ -1,10 +1,15 @@
 import { useState, useCallback } from "react"
-import { Outlet } from "react-router-dom"
+import { Navigate, Outlet } from "react-router-dom"
 import { Sidebar } from "../components/sidebar/Sidebar"
 import { Topbar } from "../components/topbar/Topbar"
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const token = localStorage.getItem("access_token")
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
 
   const handleMenuClick = useCallback(() => {
     setSidebarOpen(true)

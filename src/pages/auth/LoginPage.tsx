@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 import { BrandLogo } from "../../components/brand/BrandLogo";
@@ -63,6 +63,11 @@ function GoogleIcon({ className }: { className?: string }) {
 
 export function LoginPage() {
   const navigate = useNavigate();
+
+  const token = localStorage.getItem("access_token");
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");

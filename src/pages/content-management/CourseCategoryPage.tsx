@@ -1,14 +1,27 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { FolderOpen, RefreshCw, AlertCircle, BookOpen } from "lucide-react"
+import { FolderOpen, RefreshCw, AlertCircle, BookOpen, Plus } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
-import { getCourseCategories } from "../../api/courses.api"
+import { Button } from "../../components/ui/button"
+import { Input } from "../../components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog"
+import { getCourseCategories, createCourseCategory } from "../../api/courses.api"
 import type { CourseCategory } from "../../types/course.types"
+import { toast } from "sonner"
 
 export function CourseCategoryPage() {
   const [categories, setCategories] = useState<CourseCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState("")
+  const [creating, setCreating] = useState(false)
 
   const fetchCategories = async () => {
     setLoading(true)
@@ -68,11 +81,21 @@ export function CourseCategoryPage() {
   return (
     <div className="space-y-8">
       {/* Page header */}
-      <div>
-        <h1 className="text-xl font-semibold text-grayScale-600">Course Categories</h1>
-        <p className="mt-1 text-sm text-grayScale-400">
-          Browse and manage your course categories below
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-grayScale-600">Course Categories</h1>
+          <p className="mt-1 text-sm text-grayScale-400">
+            Browse and manage your course categories below
+          </p>
+        </div>
+        <Button
+          className="gap-2 bg-brand-500 text-white hover:bg-brand-600"
+          size="sm"
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          New Category
+        </Button>
       </div>
 
       {categories.length === 0 ? (
@@ -126,6 +149,75 @@ export function CourseCategoryPage() {
           ))}
         </div>
       )}
+
+      {/* Create category dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-4 w-4 text-brand-500" />
+              <span>Create course category</span>
+            </DialogTitle>
+            <DialogDescription>
+              Add a new high-level bucket to organize your courses.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                Category name
+              </label>
+              <Input
+                placeholder="e.g. Beginner English, Exam Prep"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateOpen(false)
+                setNewCategoryName("")
+              }}
+              disabled={creating}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-brand-500 text-white hover:bg-brand-600"
+              disabled={creating || !newCategoryName.trim()}
+              onClick={async () => {
+                if (!newCategoryName.trim()) return
+                setCreating(true)
+                try {
+                  await createCourseCategory({ name: newCategoryName.trim() })
+                  toast.success("Category created", {
+                    description: `"${newCategoryName.trim()}" has been added.`,
+                  })
+                  setNewCategoryName("")
+                  setCreateOpen(false)
+                  fetchCategories()
+                } catch (err: any) {
+                  const message =
+                    err?.response?.data?.message ||
+                    "Failed to create category. Please try again."
+                  toast.error("Could not create category", {
+                    description: message,
+                  })
+                } finally {
+                  setCreating(false)
+                }
+              }}
+            >
+              {creating ? "Creating..." : "Create"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

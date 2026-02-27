@@ -226,7 +226,7 @@ export function ProfilePage() {
         </div>
 
         <div className="px-6 py-6 sm:px-8 sm:py-7">
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.8fr)_minmax(0,1.2fr)]">
+          <div className="grid gap-8 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)]">
             {/* Left column: About & details */}
             <div className="space-y-6">
               {/* Identity */}
@@ -345,70 +345,6 @@ export function ProfilePage() {
                     </dd>
                   </div>
                 </dl>
-              </div>
-            </div>
-
-            {/* Middle column: Job information */}
-            <div className="space-y-6">
-              <div>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
-                  Job information
-                </h3>
-                <div className="overflow-x-auto rounded-xl border border-grayScale-100">
-                  <table className="w-full min-w-[600px] border-collapse text-sm">
-                    <thead className="bg-grayScale-50 text-xs font-medium uppercase tracking-[0.12em] text-grayScale-400">
-                      <tr>
-                        <th className="px-4 py-2 text-left">Title</th>
-                        <th className="px-4 py-2 text-left">Team</th>
-                        <th className="px-4 py-2 text-left">Division</th>
-                        <th className="px-4 py-2 text-left">Manager</th>
-                        <th className="px-4 py-2 text-left">Hire date</th>
-                        <th className="px-4 py-2 text-left">Location</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-grayScale-100 text-grayScale-700">
-                      <tr>
-                        <td className="px-4 py-3">{profile.occupation || profile.role}</td>
-                        <td className="px-4 py-3">{profile.role}</td>
-                        <td className="px-4 py-3">{profile.preferred_language || "—"}</td>
-                        <td className="px-4 py-3">—</td>
-                        <td className="px-4 py-3">{formatDate(profile.created_at)}</td>
-                        <td className="px-4 py-3">
-                          {[profile.region, profile.country].filter(Boolean).join(", ") || "—"}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Learning & goals */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card className="shadow-none border-grayScale-100">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold text-grayScale-700">
-                      Learning goal
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-1">
-                    <p className="text-sm text-grayScale-500">
-                      {profile.learning_goal || "No learning goal specified."}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-none border-grayScale-100">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold text-grayScale-700">
-                      Language goal
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-1">
-                    <p className="text-sm text-grayScale-500">
-                      {profile.language_goal || "No language goal specified."}
-                    </p>
-                  </CardContent>
-                </Card>
               </div>
             </div>
 

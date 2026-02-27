@@ -37,10 +37,14 @@ import type {
   CreateQuestionRequest,
   CreateQuestionResponse,
   CreateVimeoVideoRequest,
+  CreateCourseCategoryRequest,
 } from "../types/course.types"
 
 export const getCourseCategories = () =>
   http.get<GetCourseCategoriesResponse>("/course-management/categories")
+
+export const createCourseCategory = (data: CreateCourseCategoryRequest) =>
+  http.post("/course-management/categories", data)
 
 export const getCoursesByCategory = (categoryId: number) =>
   http.get<GetCoursesResponse>(`/course-management/categories/${categoryId}/courses`)

@@ -5,6 +5,10 @@ export interface CourseCategory {
   created_at: string
 }
 
+export interface CreateCourseCategoryRequest {
+  name: string
+}
+
 export interface GetCourseCategoriesResponse {
   message: string
   data: {

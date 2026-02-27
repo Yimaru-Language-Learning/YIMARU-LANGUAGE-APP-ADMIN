@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Plus, X } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
@@ -105,32 +106,44 @@ export function AddQuestionPage() {
 
     // Validation
     if (!formData.question.trim()) {
-      alert("Please enter a question")
+      toast.error("Missing question", {
+        description: "Please enter a question before saving.",
+      })
       return
     }
 
     if (formData.type === "multiple-choice" || formData.type === "true-false") {
       if (!formData.correctAnswer) {
-        alert("Please select a correct answer")
+        toast.error("Missing correct answer", {
+          description: "Select the correct answer for this question.",
+        })
         return
       }
       if (formData.type === "multiple-choice") {
         const hasEmptyOptions = formData.options.some((opt) => !opt.trim())
         if (hasEmptyOptions) {
-          alert("Please fill in all options")
+          toast.error("Incomplete options", {
+            description: "Fill in all answer options for this multiple choice question.",
+          })
           return
         }
       }
     } else if (formData.type === "short-answer") {
       if (!formData.correctAnswer.trim()) {
-        alert("Please enter a correct answer")
+        toast.error("Missing correct answer", {
+          description: "Enter the expected correct answer.",
+        })
         return
       }
     }
 
     // In a real app, save the question here
     console.log("Saving question:", formData)
-    alert(isEditing ? "Question updated successfully!" : "Question created successfully!")
+    toast.success(isEditing ? "Question updated" : "Question created", {
+      description: isEditing
+        ? "The question has been updated successfully."
+        : "Your new question has been created.",
+    })
     navigate("/content/questions")
   }
 

@@ -61,6 +61,9 @@ export function CourseFlowBuilderPage() {
   // Order of sub category ids for the selected parent (scope = sub)
   const [subCategoryOrder, setSubCategoryOrder] = useState<string[]>([])
   const [dragCategoryId, setDragCategoryId] = useState<string | null>(null)
+  const [parentOrderDirty, setParentOrderDirty] = useState(false)
+  const [subOrderDirty, setSubOrderDirty] = useState(false)
+  const [stepsDirty, setStepsDirty] = useState(false)
 
   const parentCategories = useMemo(
     () => categories.filter((c) => !c.parent_id),
@@ -147,6 +150,7 @@ export function CourseFlowBuilderPage() {
         const parsed: string[] = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           setParentCategoryOrder(parsed)
+          setParentOrderDirty(false)
           return
         }
       }
@@ -154,13 +158,8 @@ export function CourseFlowBuilderPage() {
       // ignore
     }
     setParentCategoryOrder(parentCategories.map((c) => String(c.id)))
+    setParentOrderDirty(false)
   }, [parentCategories.length])
-
-  // Persist parent category order
-  useEffect(() => {
-    if (parentCategoryOrder.length === 0) return
-    window.localStorage.setItem(PARENT_ORDER_KEY, JSON.stringify(parentCategoryOrder))
-  }, [parentCategoryOrder])
 
   // Load sub category order for selected parent
   useEffect(() => {
@@ -175,6 +174,7 @@ export function CourseFlowBuilderPage() {
         const parsed: string[] = JSON.parse(raw)
         if (Array.isArray(parsed) && parsed.length > 0) {
           setSubCategoryOrder(parsed)
+          setSubOrderDirty(false)
           return
         }
       }
@@ -182,21 +182,14 @@ export function CourseFlowBuilderPage() {
       // ignore
     }
     setSubCategoryOrder(subCategoriesForParent.map((c) => String(c.id)))
+    setSubOrderDirty(false)
   }, [selectedParentCategoryId, subCategoriesForParent.length])
-
-  // Persist sub category order for selected parent
-  useEffect(() => {
-    if (!selectedParentCategoryId || subCategoryOrder.length === 0) return
-    window.localStorage.setItem(
-      `${SUB_ORDER_KEY_PREFIX}${selectedParentCategoryId}`,
-      JSON.stringify(subCategoryOrder),
-    )
-  }, [selectedParentCategoryId, subCategoryOrder])
 
   // Load flow steps for selected sub category only (sub category structure)
   useEffect(() => {
     if (scope !== "sub" || !selectedSubCategoryId) {
       setSteps([])
+      setStepsDirty(false)
       return
     }
     const key = `subcategory_flow_${selectedSubCategoryId}`
@@ -205,6 +198,7 @@ export function CourseFlowBuilderPage() {
       if (raw) {
         const parsed: FlowStep[] = JSON.parse(raw)
         setSteps(parsed)
+        setStepsDirty(false)
         return
       }
     } catch {
@@ -212,19 +206,34 @@ export function CourseFlowBuilderPage() {
     }
 
     const defaults: FlowStep[] = [
-      { id: `${selectedSubCategoryId}-lesson`, type: "lesson", title: "Core lessons", description: "Main learning content for this sub category." },
-      { id: `${selectedSubCategoryId}-practice`, type: "practice", title: "Practice sessions", description: "Speaking or practice activities to reinforce learning." },
-      { id: `${selectedSubCategoryId}-exam`, type: "exam", title: "Exam / Assessment", description: "Formal evaluation of student understanding." },
-      { id: `${selectedSubCategoryId}-feedback`, type: "feedback", title: "Feedback loop", description: "Collect feedback and share results with learners." },
+      {
+        id: `${selectedSubCategoryId}-lesson`,
+        type: "lesson",
+        title: "Core lessons",
+        description: "Main learning content for this sub category.",
+      },
+      {
+        id: `${selectedSubCategoryId}-practice`,
+        type: "practice",
+        title: "Practice sessions",
+        description: "Speaking or practice activities to reinforce learning.",
+      },
+      {
+        id: `${selectedSubCategoryId}-exam`,
+        type: "exam",
+        title: "Exam / Assessment",
+        description: "Formal evaluation of student understanding.",
+      },
+      {
+        id: `${selectedSubCategoryId}-feedback`,
+        type: "feedback",
+        title: "Feedback loop",
+        description: "Collect feedback and share results with learners.",
+      },
     ]
     setSteps(defaults)
+    setStepsDirty(true)
   }, [scope, selectedSubCategoryId])
-
-  // Persist flow steps for selected sub category
-  useEffect(() => {
-    if (scope !== "sub" || !selectedSubCategoryId) return
-    window.localStorage.setItem(`subcategory_flow_${selectedSubCategoryId}`, JSON.stringify(steps))
-  }, [steps, scope, selectedSubCategoryId])
 
   const handleReorder = (targetId: string) => {
     if (!dragStepId || dragStepId === targetId) return
@@ -238,6 +247,7 @@ export function CourseFlowBuilderPage() {
       return copy
     })
     setDragStepId(null)
+    setStepsDirty(true)
   }
 
   const handleReorderParentCategory = (targetId: string) => {
@@ -252,6 +262,7 @@ export function CourseFlowBuilderPage() {
       return copy
     })
     setDragCategoryId(null)
+    setParentOrderDirty(true)
   }
 
   const handleReorderSubCategory = (targetId: string) => {
@@ -266,6 +277,28 @@ export function CourseFlowBuilderPage() {
       return copy
     })
     setDragCategoryId(null)
+    setSubOrderDirty(true)
+  }
+
+  const handleSaveParentOrder = () => {
+    if (orderedParentCategories.length === 0 || parentCategoryOrder.length === 0) return
+    window.localStorage.setItem(PARENT_ORDER_KEY, JSON.stringify(parentCategoryOrder))
+    setParentOrderDirty(false)
+  }
+
+  const handleSaveSubOrder = () => {
+    if (!selectedParentCategoryId || subCategoryOrder.length === 0) return
+    window.localStorage.setItem(
+      `${SUB_ORDER_KEY_PREFIX}${selectedParentCategoryId}`,
+      JSON.stringify(subCategoryOrder),
+    )
+    setSubOrderDirty(false)
+  }
+
+  const handleSaveSteps = () => {
+    if (scope !== "sub" || !selectedSubCategoryId) return
+    window.localStorage.setItem(`subcategory_flow_${selectedSubCategoryId}`, JSON.stringify(steps))
+    setStepsDirty(false)
   }
 
   const getDefaultDescription = (type: StepType): string => {
@@ -299,14 +332,17 @@ export function CourseFlowBuilderPage() {
       description: getDefaultDescription(type),
     }
     setSteps((prev) => [...prev, newStep])
+    setStepsDirty(true)
   }
 
   const handleUpdateStep = (id: string, changes: Partial<FlowStep>) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...changes } : s)))
+    setStepsDirty(true)
   }
 
   const handleRemoveStep = (id: string) => {
     setSteps((prev) => prev.filter((s) => s.id !== id))
+    setStepsDirty(true)
   }
 
   if (loading) {
@@ -424,12 +460,26 @@ export function CourseFlowBuilderPage() {
       {scope === "parent" && (
         <Card className="shadow-soft">
           <CardHeader className="border-b border-grayScale-200 pb-3">
-            <CardTitle className="text-base font-semibold text-grayScale-600">
-              Parent category sequence
-            </CardTitle>
-            <p className="mt-1 text-xs text-grayScale-400">
-              Drag to reorder the sequence in which parent categories appear. No courses or steps—order only.
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold text-grayScale-600">
+                  Parent category sequence
+                </CardTitle>
+                <p className="mt-1 text-xs text-grayScale-400">
+                  Drag to reorder the sequence in which parent categories appear. No courses or
+                  steps—order only.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 px-3 text-[11px]"
+                disabled={!parentOrderDirty || orderedParentCategories.length === 0}
+                onClick={handleSaveParentOrder}
+              >
+                Save
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-2 pt-4">
             {orderedParentCategories.length === 0 ? (
@@ -466,12 +516,25 @@ export function CourseFlowBuilderPage() {
         <>
           <Card className="shadow-soft">
             <CardHeader className="border-b border-grayScale-200 pb-3">
-              <CardTitle className="text-base font-semibold text-grayScale-600">
-                Sub category sequence
-              </CardTitle>
-              <p className="mt-1 text-xs text-grayScale-400">
-                Drag to reorder sub categories under this parent.
-              </p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold text-grayScale-600">
+                  Sub category sequence
+                </CardTitle>
+                <p className="mt-1 text-xs text-grayScale-400">
+                  Drag to reorder sub categories under this parent.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 px-3 text-[11px]"
+                disabled={!subOrderDirty || orderedSubCategories.length === 0}
+                onClick={handleSaveSubOrder}
+              >
+                Save
+              </Button>
+            </div>
             </CardHeader>
             <CardContent className="space-y-2 pt-4">
               {orderedSubCategories.length === 0 ? (
@@ -507,12 +570,25 @@ export function CourseFlowBuilderPage() {
             <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
               <Card className="shadow-soft">
                 <CardHeader className="border-b border-grayScale-200 pb-3">
-                  <CardTitle className="text-base font-semibold text-grayScale-600">
-                    Sub category structure
-                  </CardTitle>
-                  <p className="mt-1 text-xs text-grayScale-400">
-                    Courses, questions, and feedback steps for “{selectedSubCategory.name}”.
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base font-semibold text-grayScale-600">
+                        Sub category structure
+                      </CardTitle>
+                      <p className="mt-1 text-xs text-grayScale-400">
+                        Courses, questions, and feedback steps for “{selectedSubCategory.name}”.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 px-3 text-[11px]"
+                      disabled={!stepsDirty || steps.length === 0}
+                      onClick={handleSaveSteps}
+                    >
+                      Save
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-4">
                   {steps.length === 0 && (

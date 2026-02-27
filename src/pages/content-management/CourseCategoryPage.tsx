@@ -24,6 +24,8 @@ export function CourseCategoryPage() {
   const [newCategoryName, setNewCategoryName] = useState("")
   const [creating, setCreating] = useState(false)
   const [parentCategoryId, setParentCategoryId] = useState<number | null>(null)
+  const [newSubCategoryName, setNewSubCategoryName] = useState("")
+  const [pendingSubCategories, setPendingSubCategories] = useState<string[]>([])
 
   const fetchCategories = async () => {
     setLoading(true)
@@ -154,7 +156,7 @@ export function CourseCategoryPage() {
 
       {/* Create category dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-4 w-4 text-brand-500" />
@@ -165,34 +167,108 @@ export function CourseCategoryPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
-                Category name
-              </label>
-              <Input
-                placeholder="e.g. Beginner English, Exam Prep"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-              />
+          <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                  Category name
+                </label>
+                <Input
+                  placeholder="e.g. Beginner English, Exam Prep"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                  Parent category (optional)
+                </label>
+                <Select
+                  value={parentCategoryId ?? ""}
+                  onChange={(e) =>
+                    setParentCategoryId(e.target.value ? Number(e.target.value) : null)
+                  }
+                >
+                  <option value="">No parent (top level)</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </Select>
+                <p className="mt-1 text-[11px] text-grayScale-400">
+                  When left empty, this becomes a parent category. Any sub categories you add on the
+                  right will be created under it.
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
-                Parent category (optional)
-              </label>
-              <Select
-                value={parentCategoryId ?? ""}
-                onChange={(e) =>
-                  setParentCategoryId(e.target.value ? Number(e.target.value) : null)
-                }
-              >
-                <option value="">No parent (top level)</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </Select>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-grayScale-600">
+                  Sub categories for this category (optional)
+                </p>
+                {pendingSubCategories.length > 0 && (
+                  <span className="text-[11px] text-grayScale-400">
+                    {pendingSubCategories.length} sub categor
+                    {pendingSubCategories.length === 1 ? "y" : "ies"} to create
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. Grammar basics, Speaking, Exam practice"
+                  value={newSubCategoryName}
+                  onChange={(e) => setNewSubCategoryName(e.target.value)}
+                  className="h-9 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 px-3 text-xs"
+                  onClick={() => {
+                    const name = newSubCategoryName.trim()
+                    if (!name) return
+                    if (pendingSubCategories.includes(name)) {
+                      setNewSubCategoryName("")
+                      return
+                    }
+                    setPendingSubCategories((prev) => [...prev, name])
+                    setNewSubCategoryName("")
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+
+              <div className="min-h-[3.5rem] rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/60 p-2">
+                {pendingSubCategories.length === 0 ? (
+                  <p className="text-[11px] leading-relaxed text-grayScale-400">
+                    Added sub categories will appear here so you can visually confirm the structure
+                    before saving. This is optional.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {pendingSubCategories.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="group inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] text-grayScale-600 shadow-sm ring-1 ring-grayScale-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200"
+                        onClick={() =>
+                          setPendingSubCategories((prev) =>
+                            prev.filter((subName) => subName !== name),
+                          )
+                        }
+                      >
+                        <span className="max-w-[160px] truncate">{name}</span>
+                        <span className="text-[10px] text-grayScale-300 group-hover:text-red-400">
+                          ×
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -202,6 +278,9 @@ export function CourseCategoryPage() {
               onClick={() => {
                 setCreateOpen(false)
                 setNewCategoryName("")
+                setParentCategoryId(null)
+                setNewSubCategoryName("")
+                setPendingSubCategories([])
               }}
               disabled={creating}
             >
@@ -214,15 +293,48 @@ export function CourseCategoryPage() {
                 if (!newCategoryName.trim()) return
                 setCreating(true)
                 try {
-                  await createCourseCategory({
+                  const name = newCategoryName.trim()
+                  const parentPayloadId = parentCategoryId ?? null
+                  const parentRes = await createCourseCategory({
                     name: newCategoryName.trim(),
-                    parent_id: parentCategoryId ?? null,
+                    parent_id: parentPayloadId,
                   })
+                  let createdCategoryId: number | null = null
+                  try {
+                    const data: any = parentRes?.data
+                    createdCategoryId =
+                      data?.data?.category?.id ??
+                      data?.data?.id ??
+                      data?.category?.id ??
+                      data?.id ??
+                      null
+                  } catch {
+                    createdCategoryId = null
+                  }
+
+                  if (createdCategoryId && pendingSubCategories.length > 0) {
+                    await Promise.all(
+                      pendingSubCategories.map((subName) =>
+                        createCourseCategory({
+                          name: subName,
+                          parent_id: createdCategoryId,
+                        }),
+                      ),
+                    )
+                  }
+
                   toast.success("Category created", {
-                    description: `"${newCategoryName.trim()}" has been added.`,
+                    description:
+                      pendingSubCategories.length > 0
+                        ? `"${name}" and ${pendingSubCategories.length} sub categor${
+                            pendingSubCategories.length === 1 ? "y" : "ies"
+                          } have been added.`
+                        : `"${name}" has been added.`,
                   })
                   setNewCategoryName("")
                   setParentCategoryId(null)
+                  setNewSubCategoryName("")
+                  setPendingSubCategories([])
                   setCreateOpen(false)
                   fetchCategories()
                 } catch (err: any) {

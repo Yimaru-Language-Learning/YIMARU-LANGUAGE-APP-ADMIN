@@ -401,11 +401,15 @@ export function LoginPage() {
           </form>
 
           {/* Footer */}
-          <p className="mt-10 text-center text-xs text-grayScale-400">
-            © {new Date().getFullYear()} Yimaru Academy · All rights reserved
-          </p>
+          <div className="mt-10 text-center text-xs text-grayScale-400">
+            <p>© {new Date().getFullYear()} Yimaru Academy · All rights reserved</p>
+            <p className="mt-1 font-mono text-[10px] text-grayScale-300">
+              v{__BUILD_HASH__} · {new Date(__BUILD_TIME__).toLocaleDateString()}
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

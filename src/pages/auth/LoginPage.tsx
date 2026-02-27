@@ -216,7 +216,7 @@ export function LoginPage() {
             <div className="h-9 w-9 rotate-45 rounded-lg bg-white/90" />
           </div>
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-white">
-            Yimaru Academy
+            Yimaru Academy Test Mode
           </h2>
           <p className="text-base leading-relaxed text-white/70">
             Manage your academy, track student progress, and streamline
@@ -401,11 +401,15 @@ export function LoginPage() {
           </form>
 
           {/* Footer */}
-          <p className="mt-10 text-center text-xs text-grayScale-400">
-            © {new Date().getFullYear()} Yimaru Academy · All rights reserved
-          </p>
+          <div className="mt-10 text-center text-xs text-grayScale-400">
+            <p>© {new Date().getFullYear()} Yimaru Academy · All rights reserved</p>
+            <p className="mt-1 font-mono text-[10px] text-grayScale-300">
+              v{__BUILD_HASH__} · {new Date(__BUILD_TIME__).toLocaleDateString()}
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

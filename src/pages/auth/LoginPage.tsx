@@ -216,7 +216,7 @@ export function LoginPage() {
             <div className="h-9 w-9 rotate-45 rounded-lg bg-white/90" />
           </div>
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-white">
-            Yimaru Academy
+            Yimaru Academy Test Mode
           </h2>
           <p className="text-base leading-relaxed text-white/70">
             Manage your academy, track student progress, and streamline

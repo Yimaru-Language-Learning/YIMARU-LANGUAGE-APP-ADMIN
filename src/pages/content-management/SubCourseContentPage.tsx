@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, Plus, FileText, Layers, Edit, Trash2, X, Video, MoreVertical } from "lucide-react"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card } from "../../components/ui/card"
+import alertSrc from "../../assets/Alert.svg"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -286,7 +288,7 @@ export function SubCourseContentPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+        <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
         <p className="mt-4 text-sm font-medium text-grayScale-500">Loading sub-course…</p>
       </div>
     )
@@ -295,9 +297,7 @@ export function SubCourseContentPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="rounded-full bg-red-50 p-3">
-          <X className="h-6 w-6 text-red-500" />
-        </div>
+        <img src={alertSrc} alt="" className="h-12 w-12" />
         <p className="mt-3 text-sm font-medium text-red-600">{error}</p>
       </div>
     )

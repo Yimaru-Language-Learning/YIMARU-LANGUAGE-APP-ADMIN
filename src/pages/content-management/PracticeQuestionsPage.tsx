@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ArrowLeft, HelpCircle, Plus, Edit, Trash2, X } from "lucide-react"
+import { ArrowLeft, Plus, Edit, Trash2, X } from "lucide-react"
+import practiceSrc from "../../assets/Practice.svg"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import alertSrc from "../../assets/Alert.svg"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { getPracticeQuestions, createPracticeQuestion, updatePracticeQuestion, deletePracticeQuestion } from "../../api/courses.api"
@@ -171,7 +174,7 @@ export function PracticeQuestionsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-grayScale-200 border-t-brand-500" />
+        <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
         <p className="mt-4 text-sm font-medium text-grayScale-500">Loading questions...</p>
       </div>
     )
@@ -180,9 +183,7 @@ export function PracticeQuestionsPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-          <X className="h-6 w-6 text-red-500" />
-        </div>
+        <img src={alertSrc} alt="" className="h-12 w-12" />
         <p className="mt-4 text-sm font-medium text-red-600">{error}</p>
       </div>
     )
@@ -212,9 +213,7 @@ export function PracticeQuestionsPage() {
       {questions.length === 0 ? (
         <Card className="border-2 border-dashed border-grayScale-200 shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-grayScale-100">
-              <HelpCircle className="h-8 w-8 text-grayScale-300" />
-            </div>
+            <img src={practiceSrc} alt="" className="h-20 w-20" />
             <p className="mt-4 text-sm font-medium text-grayScale-600">No questions found for this practice</p>
             <p className="mt-1 text-xs text-grayScale-400">Get started by adding your first question</p>
             <Button variant="outline" className="mt-6 border-brand-200 text-brand-600 hover:bg-brand-50" onClick={handleAddQuestion}>

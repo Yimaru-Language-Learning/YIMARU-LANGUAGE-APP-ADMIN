@@ -11,6 +11,7 @@ import {
   Bell,
   UsersRound,
 } from "lucide-react"
+import spinnerSrc from "../assets/Circular-indeterminate progress indicator.svg"
 import {
   Area,
   AreaChart,
@@ -26,6 +27,7 @@ import {
   YAxis,
 } from "recharts"
 import { StatCard } from "../components/dashboard/StatCard"
+import alertSrc from "../assets/Alert.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 // import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
@@ -110,9 +112,15 @@ export function DashboardPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-grayScale-500">Loading dashboard…</div>
+        <div className="flex flex-col items-center justify-center gap-3 py-20">
+          <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
+          <span className="text-sm font-medium text-grayScale-400">Loading dashboard…</span>
+        </div>
       ) : !dashboard ? (
-        <div className="flex items-center justify-center py-20 text-destructive">Failed to load dashboard data.</div>
+        <div className="flex flex-col items-center justify-center gap-3 py-20">
+          <img src={alertSrc} alt="" className="h-12 w-12" />
+          <span className="text-sm font-medium text-destructive">Failed to load dashboard data.</span>
+        </div>
       ) : (
         <>
           {/* Stat Cards */}

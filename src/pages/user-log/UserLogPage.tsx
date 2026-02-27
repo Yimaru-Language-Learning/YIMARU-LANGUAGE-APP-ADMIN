@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg";
 import {
   Search,
   ChevronDown,
@@ -376,7 +377,7 @@ export function UserLogPage() {
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-12">
                   <div className="flex flex-col items-center gap-3">
-                    <RefreshCw className="h-6 w-6 animate-spin text-grayScale-300" />
+                    <img src={spinnerSrc} alt="" className="h-6 w-6 animate-spin" />
                     <span className="text-sm text-grayScale-400">Loading activity logs...</span>
                   </div>
                 </TableCell>

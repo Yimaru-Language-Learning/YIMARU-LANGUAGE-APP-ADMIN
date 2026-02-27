@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { Plus, ArrowLeft, BookOpen, ToggleLeft, ToggleRight, X, Trash2, MoreVertical, Edit, RefreshCw, AlertCircle } from "lucide-react"
+import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, MoreVertical, Edit, AlertCircle } from "lucide-react"
+import practiceSrc from "../../assets/Practice.svg"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card, CardContent } from "../../components/ui/card"
+import alertSrc from "../../assets/Alert.svg"
 import { Button } from "../../components/ui/button"
 import { Badge } from "../../components/ui/badge"
 import { Input } from "../../components/ui/input"
@@ -238,9 +241,7 @@ export function CoursesPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
-        <div className="rounded-2xl bg-brand-50/50 p-6">
-          <RefreshCw className="h-10 w-10 animate-spin text-brand-500" />
-        </div>
+        <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
         <p className="mt-4 text-sm font-medium text-grayScale-400">Loading courses...</p>
       </div>
     )
@@ -250,9 +251,7 @@ export function CoursesPage() {
     return (
       <div className="flex items-center justify-center py-32">
         <div className="mx-4 flex w-full max-w-md items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-6 py-5 shadow-sm">
-          <div className="rounded-full bg-red-100 p-2">
-            <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
-          </div>
+          <img src={alertSrc} alt="" className="h-10 w-10 shrink-0" />
           <p className="text-sm font-medium text-red-600">{error}</p>
         </div>
       </div>
@@ -291,9 +290,7 @@ export function CoursesPage() {
       {courses.length === 0 ? (
         <Card className="border-dashed border-grayScale-200 shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-20">
-            <div className="rounded-2xl bg-grayScale-50 p-5">
-              <BookOpen className="h-14 w-14 text-grayScale-300" />
-            </div>
+            <img src={practiceSrc} alt="" className="h-20 w-20" />
             <h3 className="mt-5 text-base font-semibold text-grayScale-600">No courses yet</h3>
             <p className="mt-1.5 text-sm text-grayScale-400">No courses found in this category</p>
             <Button variant="outline" className="mt-6 border-brand-200 text-brand-600 transition-colors hover:bg-brand-50" onClick={handleOpenModal}>

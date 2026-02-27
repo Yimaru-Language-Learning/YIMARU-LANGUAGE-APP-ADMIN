@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, Layers, ToggleLeft, ToggleRight, MoreVertical, X, Trash2, RefreshCw, AlertCircle, Edit } from "lucide-react"
+import { ArrowLeft, ToggleLeft, ToggleRight, MoreVertical, X, Trash2, AlertCircle, Edit } from "lucide-react"
+import practiceSrc from "../../assets/Practice.svg"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card, CardContent } from "../../components/ui/card"
+import alertSrc from "../../assets/Alert.svg"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { getSubCoursesByCourse, getCoursesByCategory, getCourseCategories, createSubCourse, updateSubCourse, updateSubCourseStatus, deleteSubCourse } from "../../api/courses.api"
@@ -199,9 +202,7 @@ export function SubCoursesPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <div className="rounded-full bg-brand-50 p-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-brand-500" />
-        </div>
+        <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
         <p className="mt-4 text-sm font-medium text-grayScale-400">Loading sub-courses...</p>
       </div>
     )
@@ -211,9 +212,7 @@ export function SubCoursesPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="mx-4 flex w-full max-w-md items-center gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4 shadow-md">
-          <div className="rounded-full bg-red-100 p-2">
-            <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
-          </div>
+          <img src={alertSrc} alt="" className="h-10 w-10 shrink-0" />
           <p className="text-sm font-medium text-red-600">{error}</p>
         </div>
       </div>
@@ -250,9 +249,7 @@ export function SubCoursesPage() {
       {subCourses.length === 0 ? (
         <Card className="border border-dashed border-grayScale-200 shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="rounded-2xl bg-brand-50 p-5">
-              <Layers className="h-10 w-10 text-brand-400" />
-            </div>
+            <img src={practiceSrc} alt="" className="h-20 w-20" />
             <h3 className="mt-5 text-base font-semibold text-grayScale-600">No sub-courses yet</h3>
             <p className="mt-1.5 max-w-xs text-center text-sm text-grayScale-400">Get started by adding your first sub-course to this course</p>
             <Button className="mt-5 rounded-xl bg-brand-500 px-5 shadow-sm hover:bg-brand-600 hover:shadow-md" onClick={handleAddSubCourse}>

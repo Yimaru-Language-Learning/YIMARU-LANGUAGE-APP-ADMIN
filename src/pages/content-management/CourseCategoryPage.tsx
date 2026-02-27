@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { FolderOpen, RefreshCw, AlertCircle, BookOpen } from "lucide-react"
+import { FolderOpen, RefreshCw, BookOpen } from "lucide-react"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
+import alertSrc from "../../assets/Alert.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { getCourseCategories } from "../../api/courses.api"
 import type { CourseCategory } from "../../types/course.types"
@@ -31,10 +33,7 @@ export function CourseCategoryPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24">
-        <div className="relative">
-          <div className="h-12 w-12 rounded-full border-4 border-brand-100" />
-          <div className="absolute inset-0 h-12 w-12 animate-spin rounded-full border-4 border-transparent border-t-brand-500" />
-        </div>
+        <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
         <span className="text-sm font-medium text-grayScale-400">Loading categories…</span>
       </div>
     )
@@ -44,9 +43,7 @@ export function CourseCategoryPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-red-100 bg-red-50/60 px-10 py-8 text-center shadow-sm">
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-red-100">
-            <AlertCircle className="h-6 w-6 text-red-500" />
-          </div>
+          <img src={alertSrc} alt="" className="h-12 w-12" />
           <div>
             <p className="text-sm font-semibold text-red-700">{error}</p>
             <p className="mt-1 text-xs text-red-400">

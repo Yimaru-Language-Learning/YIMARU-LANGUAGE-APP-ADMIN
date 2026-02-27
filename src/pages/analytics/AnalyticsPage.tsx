@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import {
   Area,
   AreaChart,
@@ -14,6 +15,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import alertSrc from "../../assets/Alert.svg"
 import {
   Users,
   BadgeCheck,
@@ -304,7 +306,10 @@ export function AnalyticsPage() {
     return (
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-4 text-sm font-semibold text-grayScale-500">Analytics</div>
-        <div className="flex items-center justify-center py-20 text-grayScale-500">Loading analytics…</div>
+        <div className="flex flex-col items-center justify-center gap-3 py-20">
+          <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
+          <span className="text-sm font-medium text-grayScale-400">Loading analytics…</span>
+        </div>
       </div>
     )
   }
@@ -314,6 +319,7 @@ export function AnalyticsPage() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-4 text-sm font-semibold text-grayScale-500">Analytics</div>
         <div className="flex flex-col items-center justify-center gap-3 py-20">
+          <img src={alertSrc} alt="" className="h-12 w-12" />
           <span className="text-sm text-destructive">Failed to load analytics data.</span>
           <Button variant="outline" size="sm" onClick={fetchData}>
             <RefreshCw className="mr-2 h-4 w-4" />

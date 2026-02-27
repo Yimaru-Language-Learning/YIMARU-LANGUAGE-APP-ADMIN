@@ -6,6 +6,7 @@ import { BrandLogo } from "../../components/brand/BrandLogo";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
+
 import { login, loginWithGoogle } from "../../api/auth.api";
 import type { LoginRequest } from "../../types/auth.types";
 import type { LoginResult } from "../../api/auth.api";
@@ -216,13 +217,8 @@ export function LoginPage() {
         </div>
 
         <div className="relative z-10 max-w-md px-12 text-center">
-          {/* Large brand icon */}
-          <div className="mx-auto mb-8 grid h-20 w-20 place-items-center rounded-2xl bg-white/15 shadow-lg backdrop-blur-sm">
-            <div className="h-9 w-9 rotate-45 rounded-lg bg-white/90" />
-          </div>
-          <h2 className="mb-4 text-3xl font-bold tracking-tight text-white">
-            Yimaru Academy
-          </h2>
+          {/* Brand logo */}
+          <BrandLogo variant="light" className="mx-auto mb-8 h-16" />
           <p className="text-base leading-relaxed text-white/70">
             Manage your academy, track student progress, and streamline
             operations — all from one powerful dashboard.

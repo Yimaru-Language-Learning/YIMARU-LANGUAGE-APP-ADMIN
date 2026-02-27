@@ -57,9 +57,13 @@ const contentSections = [
   },
 ] as const
 
+type ContentSection = (typeof contentSections)[number]
+
 export function ContentOverviewPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
   const [category, setCategory] = useState<CourseCategory | null>(null)
+  const [sections, setSections] = useState<ContentSection[]>(() => [...contentSections])
+  const [dragKey, setDragKey] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchCategory = async () => {
@@ -76,6 +80,51 @@ export function ContentOverviewPage() {
       fetchCategory()
     }
   }, [categoryId])
+
+  // Load persisted section order from localStorage
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("content_sections_order")
+      if (!raw) return
+      const savedKeys: string[] = JSON.parse(raw)
+      const byKey = new Map(contentSections.map((s) => [s.key, s]))
+      const reordered: ContentSection[] = []
+      savedKeys.forEach((k) => {
+        const item = byKey.get(k as ContentSection["key"])
+        if (item) {
+          reordered.push(item)
+          byKey.delete(k as ContentSection["key"])
+        }
+      })
+      // Append any new sections that weren't in saved order
+      byKey.forEach((item) => reordered.push(item))
+      if (reordered.length) {
+        setSections(reordered)
+      }
+    } catch {
+      // ignore corrupted localStorage
+    }
+  }, [])
+
+  // Persist order whenever it changes
+  useEffect(() => {
+    const keys = sections.map((s) => s.key)
+    window.localStorage.setItem("content_sections_order", JSON.stringify(keys))
+  }, [sections])
+
+  const handleDropOn = (targetKey: string) => {
+    if (!dragKey || dragKey === targetKey) return
+    setSections((prev) => {
+      const currentIndex = prev.findIndex((s) => s.key === dragKey)
+      const targetIndex = prev.findIndex((s) => s.key === targetKey)
+      if (currentIndex === -1 || targetIndex === -1) return prev
+      const copy = [...prev]
+      const [moved] = copy.splice(currentIndex, 1)
+      copy.splice(targetIndex, 0, moved)
+      return copy
+    })
+    setDragKey(null)
+  }
 
   return (
     <div className="space-y-8">
@@ -120,69 +169,76 @@ export function ContentOverviewPage() {
         </div>
       </div>
 
-      {/* Cards Grid */}
+      {/* Cards Grid (course builder style – draggable sections) */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {contentSections.map((section) => {
+        {sections.map((section) => {
           const Icon = section.icon
           return (
-            <Link
+            <div
               key={section.key}
-              to={section.pathFn(categoryId)}
               className="group"
+              draggable
+              onDragStart={() => setDragKey(section.key)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDropOn(section.key)}
             >
-              <Card
-                className={`relative h-full overflow-hidden border border-grayScale-100 bg-white transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.02] ${section.accentBorder} group-hover:shadow-lg`}
-                style={{
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-                }}
-              >
-                {/* Subtle gradient background on icon area */}
-                <div
-                  className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${section.gradient} pointer-events-none`}
-                />
+              <Link to={section.pathFn(categoryId)} className="block">
+                <Card
+                  className={`relative h-full overflow-hidden border border-grayScale-100 bg-white transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.02] ${section.accentBorder} group-hover:shadow-lg ${
+                    dragKey === section.key ? "ring-2 ring-brand-300" : ""
+                  }`}
+                  style={{
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  {/* Subtle gradient background on icon area */}
+                  <div
+                    className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${section.gradient} pointer-events-none`}
+                  />
 
-                <CardHeader className="relative pb-2">
-                  <div className="mb-4 flex items-start justify-between">
-                    {/* Icon with gradient ring */}
-                    <div className="relative">
-                      <div
-                        className="grid h-12 w-12 place-items-center rounded-xl bg-white text-brand-600 shadow-sm ring-1 ring-grayScale-100 transition-all duration-300 group-hover:ring-brand-300 group-hover:shadow-md"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(158,40,145,0.08) 0%, rgba(106,27,154,0.04) 100%)",
-                        }}
-                      >
-                        <Icon className="h-5.5 w-5.5 transition-transform duration-300 group-hover:scale-110" />
+                  <CardHeader className="relative pb-2">
+                    <div className="mb-4 flex items-start justify-between">
+                      {/* Icon with gradient ring */}
+                      <div className="relative">
+                        <div
+                          className="grid h-12 w-12 place-items-center rounded-xl bg-white text-brand-600 shadow-sm ring-1 ring-grayScale-100 transition-all duration-300 group-hover:ring-brand-300 group-hover:shadow-md"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, rgba(158,40,145,0.08) 0%, rgba(106,27,154,0.04) 100%)",
+                          }}
+                        >
+                          <Icon className="h-5.5 w-5.5 transition-transform duration-300 group-hover:scale-110" />
+                        </div>
+                        {/* Decorative dot */}
+                        <div className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                       </div>
-                      {/* Decorative dot */}
-                      <div className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                      {/* Count Badge */}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-grayScale-50 px-2.5 py-1 text-xs font-medium text-grayScale-500 ring-1 ring-inset ring-grayScale-100 transition-all duration-300 group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-200">
+                        {section.count} {section.countLabel}
+                      </span>
                     </div>
 
-                    {/* Count Badge */}
-                    <span className="inline-flex items-center gap-1 rounded-full bg-grayScale-50 px-2.5 py-1 text-xs font-medium text-grayScale-500 ring-1 ring-inset ring-grayScale-100 transition-all duration-300 group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-200">
-                      {section.count} {section.countLabel}
+                    <CardTitle className="text-[15px] font-semibold text-grayScale-700 transition-colors duration-200 group-hover:text-brand-600">
+                      {section.title}
+                    </CardTitle>
+                    <CardDescription className="mt-1 text-[13px] leading-relaxed text-grayScale-400">
+                      {section.description}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="relative pt-0">
+                    {/* Thin separator */}
+                    <div className="mb-3 h-px w-full bg-gradient-to-r from-transparent via-grayScale-100 to-transparent" />
+
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 transition-colors duration-200 group-hover:text-brand-600">
+                      {section.action}
+                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" />
                     </span>
-                  </div>
-
-                  <CardTitle className="text-[15px] font-semibold text-grayScale-700 transition-colors duration-200 group-hover:text-brand-600">
-                    {section.title}
-                  </CardTitle>
-                  <CardDescription className="mt-1 text-[13px] leading-relaxed text-grayScale-400">
-                    {section.description}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="relative pt-0">
-                  {/* Thin separator */}
-                  <div className="mb-3 h-px w-full bg-gradient-to-r from-transparent via-grayScale-100 to-transparent" />
-
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 transition-colors duration-200 group-hover:text-brand-600">
-                    {section.action}
-                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" />
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           )
         })}
       </div>

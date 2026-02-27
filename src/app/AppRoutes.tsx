@@ -4,6 +4,8 @@ import { DashboardPage } from "../pages/DashboardPage"
 import { AnalyticsPage } from "../pages/analytics/AnalyticsPage"
 import { ContentManagementLayout } from "../pages/content-management/ContentManagementLayout"
 import { CourseCategoryPage } from "../pages/content-management/CourseCategoryPage"
+import { AllCoursesPage } from "../pages/content-management/AllCoursesPage"
+import { CourseFlowBuilderPage } from "../pages/content-management/CourseFlowBuilderPage"
 import { ContentOverviewPage } from "../pages/content-management/ContentOverviewPage"
 import { CoursesPage } from "../pages/content-management/CoursesPage"
 import { PracticeQuestionsPage } from "../pages/content-management/PracticeQuestionsPage"
@@ -62,6 +64,8 @@ export function AppRoutes() {
 
         <Route path="/content" element={<ContentManagementLayout />}>
           <Route index element={<CourseCategoryPage />} />
+          <Route path="courses" element={<AllCoursesPage />} />
+          <Route path="flows" element={<CourseFlowBuilderPage />} />
           <Route path="category/:categoryId" element={<ContentOverviewPage />} />
           <Route path="category/:categoryId/courses" element={<CoursesPage />} />
           {/* Course → Sub-course → Video/Practice */}

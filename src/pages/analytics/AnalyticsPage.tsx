@@ -282,6 +282,7 @@ export function AnalyticsPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [activeSummaryTab, setActiveSummaryTab] = useState<"key" | "content" | "operations">("key")
 
   const fetchData = async () => {
     setLoading(true)
@@ -384,107 +385,166 @@ export function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Summary Tabs */}
+      <div className="mb-4 border-b border-grayScale-200">
+        <div className="-mb-px flex gap-6">
+          <button
+            onClick={() => setActiveSummaryTab("key")}
+            className={cn(
+              "relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all",
+              activeSummaryTab === "key" ? "text-brand-600" : "text-grayScale-400 hover:text-grayScale-700",
+            )}
+          >
+            Key Metrics
+            {activeSummaryTab === "key" && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveSummaryTab("content")}
+            className={cn(
+              "relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all",
+              activeSummaryTab === "content" ? "text-brand-600" : "text-grayScale-400 hover:text-grayScale-700",
+            )}
+          >
+            Content &amp; Platform
+            {activeSummaryTab === "content" && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveSummaryTab("operations")}
+            className={cn(
+              "relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all",
+              activeSummaryTab === "operations" ? "text-brand-600" : "text-grayScale-400 hover:text-grayScale-700",
+            )}
+          >
+            Operations
+            {activeSummaryTab === "operations" && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+            )}
+          </button>
+        </div>
+      </div>
+
       <div className="space-y-4">
-        {/* ─── Key Metrics ─── */}
-        <Section title="Key Metrics" icon={TrendingUp} defaultOpen>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              icon={Users}
-              label="Total Users"
-              value={formatNumber(users.total_users)}
-              sub={`+${users.new_today} today · +${users.new_week} this week · +${users.new_month} this month`}
-              trend={users.new_month > 0 ? "up" : "neutral"}
-            />
-            <KpiCard
-              icon={BadgeCheck}
-              label="Active Subscriptions"
-              value={formatNumber(subscriptions.active_subscriptions)}
-              sub={`${subscriptions.total_subscriptions} total · +${subscriptions.new_month} this month`}
-              trend={subscriptions.new_month > 0 ? "up" : "neutral"}
-            />
-            <KpiCard
-              icon={DollarSign}
-              label="Total Revenue"
-              value={`ETB ${formatNumber(payments.total_revenue)}`}
-              sub={`${payments.successful_payments}/${payments.total_payments} successful · Avg ETB ${payments.avg_transaction_value.toLocaleString()}`}
-              trend={payments.total_revenue > 0 ? "up" : "neutral"}
-            />
-            <KpiCard
-              icon={TicketCheck}
-              label="Issue Resolution"
-              value={`${(issues.resolution_rate * 100).toFixed(1)}%`}
-              sub={`${issues.resolved_issues} resolved of ${issues.total_issues} total`}
-              trend={issues.resolution_rate >= 0.5 ? "up" : "down"}
-            />
-          </div>
-        </Section>
+        {activeSummaryTab === "key" && (
+          <>
+            {/* ─── Key Metrics ─── */}
+            <Section title="Key Metrics" icon={TrendingUp} defaultOpen>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                  icon={Users}
+                  label="Total Users"
+                  value={formatNumber(users.total_users)}
+                  sub={`+${users.new_today} today · +${users.new_week} this week · +${users.new_month} this month`}
+                  trend={users.new_month > 0 ? "up" : "neutral"}
+                />
+                <KpiCard
+                  icon={BadgeCheck}
+                  label="Active Subscriptions"
+                  value={formatNumber(subscriptions.active_subscriptions)}
+                  sub={`${subscriptions.total_subscriptions} total · +${subscriptions.new_month} this month`}
+                  trend={subscriptions.new_month > 0 ? "up" : "neutral"}
+                />
+                <KpiCard
+                  icon={DollarSign}
+                  label="Total Revenue"
+                  value={`ETB ${formatNumber(payments.total_revenue)}`}
+                  sub={`${payments.successful_payments}/${payments.total_payments} successful · Avg ETB ${payments.avg_transaction_value.toLocaleString()}`}
+                  trend={payments.total_revenue > 0 ? "up" : "neutral"}
+                />
+                <KpiCard
+                  icon={TicketCheck}
+                  label="Issue Resolution"
+                  value={`${(issues.resolution_rate * 100).toFixed(1)}%`}
+                  sub={`${issues.resolved_issues} resolved of ${issues.total_issues} total`}
+                  trend={issues.resolution_rate >= 0.5 ? "up" : "down"}
+                />
+              </div>
+            </Section>
+          </>
+        )}
 
-        {/* ─── Content & Platform ─── */}
-        <Section title="Content & Platform" icon={BookOpen} count={courses.total_courses + content.total_questions} defaultOpen>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              icon={FolderOpen}
-              label="Categories"
-              value={courses.total_categories.toLocaleString()}
-              sub={`${courses.total_courses} courses`}
-              trend="neutral"
-            />
-            <KpiCard
+        {activeSummaryTab === "content" && (
+          <>
+            {/* ─── Content & Platform ─── */}
+            <Section
+              title="Content & Platform"
               icon={BookOpen}
-              label="Sub-Courses"
-              value={courses.total_sub_courses.toLocaleString()}
-              sub={`across ${courses.total_courses} courses`}
-              trend="neutral"
-            />
-            <KpiCard
-              icon={Video}
-              label="Videos"
-              value={courses.total_videos.toLocaleString()}
-              trend="neutral"
-            />
-            <KpiCard
-              icon={HelpCircle}
-              label="Questions"
-              value={content.total_questions.toLocaleString()}
-              sub={`${content.total_question_sets} question sets`}
-              trend="neutral"
-            />
-          </div>
-        </Section>
+              count={courses.total_courses + content.total_questions}
+              defaultOpen
+            >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                  icon={FolderOpen}
+                  label="Categories"
+                  value={courses.total_categories.toLocaleString()}
+                  sub={`${courses.total_courses} courses`}
+                  trend="neutral"
+                />
+                <KpiCard
+                  icon={BookOpen}
+                  label="Sub-Courses"
+                  value={courses.total_sub_courses.toLocaleString()}
+                  sub={`across ${courses.total_courses} courses`}
+                  trend="neutral"
+                />
+                <KpiCard
+                  icon={Video}
+                  label="Videos"
+                  value={courses.total_videos.toLocaleString()}
+                  trend="neutral"
+                />
+                <KpiCard
+                  icon={HelpCircle}
+                  label="Questions"
+                  value={content.total_questions.toLocaleString()}
+                  sub={`${content.total_question_sets} question sets`}
+                  trend="neutral"
+                />
+              </div>
+            </Section>
+          </>
+        )}
 
-        {/* ─── Operations ─── */}
-        <Section title="Operations" icon={Bell} defaultOpen>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              icon={Bell}
-              label="Notifications Sent"
-              value={formatNumber(notifications.total_sent)}
-              sub={`${notifications.read_count} read · ${notifications.unread_count} unread`}
-              trend={notifications.unread_count === 0 ? "up" : "neutral"}
-            />
-            <KpiCard
-              icon={UsersRound}
-              label="Team Members"
-              value={team.total_members.toLocaleString()}
-              sub={`${team.by_role.length} roles`}
-              trend="neutral"
-            />
-            <KpiCard
-              icon={CreditCard}
-              label="Payments"
-              value={payments.total_payments.toLocaleString()}
-              sub={`${payments.successful_payments} successful`}
-              trend={payments.successful_payments > 0 ? "up" : "neutral"}
-            />
-            <KpiCard
-              icon={Layers}
-              label="Question Sets"
-              value={content.total_question_sets.toLocaleString()}
-              sub={content.question_sets_by_type.map((q) => `${q.count} ${q.label.toLowerCase()}`).join(" · ")}
-              trend="neutral"
-            />
-          </div>
-        </Section>
+        {activeSummaryTab === "operations" && (
+          <>
+            {/* ─── Operations ─── */}
+            <Section title="Operations" icon={Bell} defaultOpen>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                  icon={Bell}
+                  label="Notifications Sent"
+                  value={formatNumber(notifications.total_sent)}
+                  sub={`${notifications.read_count} read · ${notifications.unread_count} unread`}
+                  trend={notifications.unread_count === 0 ? "up" : "neutral"}
+                />
+                <KpiCard
+                  icon={UsersRound}
+                  label="Team Members"
+                  value={team.total_members.toLocaleString()}
+                  sub={`${team.by_role.length} roles`}
+                  trend="neutral"
+                />
+                <KpiCard
+                  icon={CreditCard}
+                  label="Payments"
+                  value={payments.total_payments.toLocaleString()}
+                  sub={`${payments.successful_payments} successful`}
+                  trend={payments.successful_payments > 0 ? "up" : "neutral"}
+                />
+                <KpiCard
+                  icon={Layers}
+                  label="Question Sets"
+                  value={content.total_question_sets.toLocaleString()}
+                  sub={content.question_sets_by_type.map((q) => `${q.count} ${q.label.toLowerCase()}`).join(" · ")}
+                  trend="neutral"
+                />
+              </div>
+            </Section>
+          </>
+        )}
 
         {/* ─── User Analytics ─── */}
         <Section title="User Analytics" icon={Users} count={users.total_users} defaultOpen>

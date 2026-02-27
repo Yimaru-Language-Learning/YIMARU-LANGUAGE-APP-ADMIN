@@ -512,7 +512,7 @@ export function IssuesPage() {
                   <TableRow key={issue.id} className="group">
                     <TableCell>
                       <div className="flex items-start gap-3 max-w-[300px]">
-                        <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 group-hover:bg-brand-50 group-hover:text-brand-500 transition-colors">
+                        <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 group-hover:bg-brand-500 group-hover:text-white transition-colors">
                           <TypeIcon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">

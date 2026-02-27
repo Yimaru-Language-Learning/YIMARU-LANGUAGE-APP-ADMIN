@@ -29,32 +29,32 @@ export function UserManagementDashboard() {
               <Users className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-grayScale-400">Total Users</p>
-              <p className="text-2xl font-bold text-grayScale-600">1,248</p>
+              <p className="text-sm font-medium text-white/80">Total Users</p>
+              <p className="text-2xl font-bold text-white">1,248</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none bg-mint-50 shadow-sm">
+        <Card className="border-none bg-brand-50 shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-mint-100 text-mint-600">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
               <UserCheck className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-grayScale-400">Active Users</p>
-              <p className="text-2xl font-bold text-grayScale-600">1,180</p>
+              <p className="text-sm font-medium text-white/80">Active Users</p>
+              <p className="text-2xl font-bold text-white">1,180</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none bg-gold-50 shadow-sm sm:col-span-2 lg:col-span-1">
+        <Card className="border-none bg-brand-50 shadow-sm sm:col-span-2 lg:col-span-1">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gold-100 text-gold-600">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
               <TrendingUp className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-grayScale-400">New This Month</p>
-              <p className="text-2xl font-bold text-grayScale-600">64</p>
+              <p className="text-sm font-medium text-white/80">New This Month</p>
+              <p className="text-2xl font-bold text-white">64</p>
             </div>
           </CardContent>
         </Card>

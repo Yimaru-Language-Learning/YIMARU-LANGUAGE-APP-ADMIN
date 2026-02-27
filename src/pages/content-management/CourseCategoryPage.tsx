@@ -4,6 +4,7 @@ import { FolderOpen, RefreshCw, AlertCircle, BookOpen, Plus } from "lucide-react
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
+import { Select } from "../../components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ export function CourseCategoryPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [creating, setCreating] = useState(false)
+  const [parentCategoryId, setParentCategoryId] = useState<number | null>(null)
 
   const fetchCategories = async () => {
     setLoading(true)
@@ -159,7 +161,7 @@ export function CourseCategoryPage() {
               <span>Create course category</span>
             </DialogTitle>
             <DialogDescription>
-              Add a new high-level bucket to organize your courses.
+              Add a new high-level bucket to organize your courses. You can also nest it under an existing parent category.
             </DialogDescription>
           </DialogHeader>
 
@@ -173,6 +175,24 @@ export function CourseCategoryPage() {
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
               />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                Parent category (optional)
+              </label>
+              <Select
+                value={parentCategoryId ?? ""}
+                onChange={(e) =>
+                  setParentCategoryId(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">No parent (top level)</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </Select>
             </div>
           </div>
 
@@ -194,11 +214,15 @@ export function CourseCategoryPage() {
                 if (!newCategoryName.trim()) return
                 setCreating(true)
                 try {
-                  await createCourseCategory({ name: newCategoryName.trim() })
+                  await createCourseCategory({
+                    name: newCategoryName.trim(),
+                    parent_id: parentCategoryId ?? null,
+                  })
                   toast.success("Category created", {
                     description: `"${newCategoryName.trim()}" has been added.`,
                   })
                   setNewCategoryName("")
+                  setParentCategoryId(null)
                   setCreateOpen(false)
                   fetchCategories()
                 } catch (err: any) {

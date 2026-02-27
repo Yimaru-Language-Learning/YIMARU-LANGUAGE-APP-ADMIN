@@ -64,6 +64,14 @@ export function ContentOverviewPage() {
   const [category, setCategory] = useState<CourseCategory | null>(null)
   const [sections, setSections] = useState<ContentSection[]>(() => [...contentSections])
   const [dragKey, setDragKey] = useState<string | null>(null)
+  const [flowSteps, setFlowSteps] = useState<
+    {
+      id: string
+      type: "lesson" | "practice" | "exam" | "feedback" | "course" | "speaking" | "new_course"
+      title: string
+      description?: string
+    }[]
+  >([])
 
   useEffect(() => {
     const fetchCategory = async () => {
@@ -79,6 +87,30 @@ export function ContentOverviewPage() {
     if (categoryId) {
       fetchCategory()
     }
+  }, [categoryId])
+
+  // Load category-level flow sequence (if any) from localStorage
+  useEffect(() => {
+    if (!categoryId) {
+      setFlowSteps([])
+      return
+    }
+    const key = `category_flow_${categoryId}`
+    try {
+      const raw = window.localStorage.getItem(key)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          setFlowSteps(parsed)
+          return
+        }
+      }
+    } catch {
+      // ignore and fall back to default
+    }
+
+    // No explicit flow saved; fall back to an empty sequence
+    setFlowSteps([])
   }, [categoryId])
 
   // Load persisted section order from localStorage
@@ -242,6 +274,88 @@ export function ContentOverviewPage() {
           )
         })}
       </div>
+      {/* Category flow sequence (if defined) */}
+      {flowSteps.length > 0 && (
+        <Card className="shadow-soft">
+          <CardHeader className="border-b border-grayScale-200 pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base font-semibold text-grayScale-600">
+                  Learning flow
+                </CardTitle>
+                <CardDescription className="mt-0.5 text-xs text-grayScale-400">
+                  Sequence of lessons, practice, exams, and feedback for this category.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:auto-cols-fr md:grid-flow-col md:overflow-visible">
+              {flowSteps.map((step, index) => (
+                <div
+                  key={step.id}
+                  className="flex min-w-[200px] flex-col justify-between rounded-xl border border-grayScale-100 bg-white p-3.5 shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                        step.type === "lesson" && "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200",
+                        step.type === "practice" &&
+                          "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+                        step.type === "exam" &&
+                          "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+                        step.type === "feedback" &&
+                          "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+                        step.type === "course" &&
+                          "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200",
+                        step.type === "speaking" &&
+                          "bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200",
+                        step.type === "new_course" &&
+                          "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
+                      )}
+                    >
+                      {step.type === "lesson"
+                        ? "Lesson"
+                        : step.type === "practice"
+                          ? "Practice"
+                          : step.type === "exam"
+                            ? "Exam / Questions"
+                            : step.type === "feedback"
+                              ? "Feedback"
+                              : step.type === "course"
+                                ? "Course"
+                                : step.type === "speaking"
+                                  ? "Speaking section"
+                                  : "New course (category)"}
+                      <span className="text-[10px] text-grayScale-400">#{index + 1}</span>
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm font-semibold text-grayScale-700 line-clamp-2">
+                      {step.title}
+                    </p>
+                    <p className="text-xs text-grayScale-500 line-clamp-3">
+                      {step.description ||
+                        (step.type === "exam"
+                          ? "Place exams and question sets here."
+                          : step.type === "feedback"
+                            ? "Collect feedback or run follow‑up surveys."
+                            : step.type === "course"
+                              ? "Link or add an existing course to this flow."
+                              : step.type === "speaking"
+                                ? "Speaking or oral practice section."
+                                : step.type === "new_course"
+                                  ? "Add a new course within this category."
+                                  : "Configure this step in the flow builder.")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

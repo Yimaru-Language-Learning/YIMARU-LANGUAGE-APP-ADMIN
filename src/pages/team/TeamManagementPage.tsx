@@ -145,7 +145,10 @@ export function TeamManagementPage() {
             Manage user access, roles, and platform permissions.
           </p>
         </div>
-        <Button className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto">
+        <Button
+          className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto"
+          onClick={() => navigate("/team/add")}
+        >
           <Plus className="h-4 w-4" />
           Add Team Member
         </Button>

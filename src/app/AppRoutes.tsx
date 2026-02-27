@@ -35,6 +35,7 @@ import { IssuesPage } from "../pages/issues/IssuesPage"
 import { ProfilePage } from "../pages/ProfilePage"
 import { SettingsPage } from "../pages/SettingsPage"
 import { TeamManagementPage } from "../pages/team/TeamManagementPage"
+import { AddTeamMemberPage } from "../pages/team/AddTeamMemberPage"
 import { TeamMemberDetailPage } from "../pages/team/TeamMemberDetailPage"
 import { LoginPage } from "../pages/auth/LoginPage"
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage"
@@ -89,6 +90,7 @@ export function AppRoutes() {
         <Route path="/analytics" element={<AnalyticsPage />} />
 
         <Route path="/team" element={<TeamManagementPage />} />
+        <Route path="/team/add" element={<AddTeamMemberPage />} />
         <Route path="/team/:id" element={<TeamMemberDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />

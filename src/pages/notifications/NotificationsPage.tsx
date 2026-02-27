@@ -35,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog"
+import { FileUpload } from "../../components/ui/file-upload"
 import { cn } from "../../lib/utils"
 import {
   getNotifications,
@@ -246,6 +247,8 @@ export function NotificationsPage() {
   const [channelFilter, setChannelFilter] = useState<"all" | "push" | "sms">("all")
   const [activeStatusTab, setActiveStatusTab] = useState<"all" | "read" | "unread">("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [typeFilter, setTypeFilter] = useState<"all" | string>("all")
+  const [levelFilter, setLevelFilter] = useState<"all" | string>("all")
 
   const [composeChannels, setComposeChannels] = useState<Array<"push" | "sms">>(["push"])
   const [composeAudience, setComposeAudience] = useState<"all" | "selected">("all")
@@ -256,6 +259,7 @@ export function NotificationsPage() {
   const [composeMessage, setComposeMessage] = useState("")
   const [sending, setSending] = useState(false)
   const [composeOpen, setComposeOpen] = useState(false)
+  const [composeImage, setComposeImage] = useState<File | null>(null)
 
   const fetchData = useCallback(async (currentOffset: number) => {
     setLoading(true)
@@ -335,6 +339,8 @@ export function NotificationsPage() {
     if (channelFilter !== "all" && n.delivery_channel !== channelFilter) return false
     if (activeStatusTab === "read" && !n.is_read) return false
     if (activeStatusTab === "unread" && n.is_read) return false
+    if (typeFilter !== "all" && n.type !== typeFilter) return false
+    if (levelFilter !== "all" && n.level !== levelFilter) return false
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase()
       const haystack = [
@@ -371,6 +377,7 @@ export function NotificationsPage() {
       setComposeAudience("all")
       setComposeChannels(["push"])
       setSelectedRecipientIds([])
+      setComposeImage(null)
       setComposeOpen(false)
     } finally {
       setSending(false)
@@ -584,6 +591,36 @@ export function NotificationsPage() {
                     <option value="all">All</option>
                     <option value="push">Push</option>
                     <option value="sms">SMS</option>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-grayScale-500">Type</span>
+                  <Select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="h-8 w-[150px] text-xs"
+                  >
+                    <option value="all">All types</option>
+                    {Array.from(new Set(notifications.map((n) => n.type))).map((t) => (
+                      <option key={t} value={t}>
+                        {formatTypeLabel(t)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-grayScale-500">Level</span>
+                  <Select
+                    value={levelFilter}
+                    onChange={(e) => setLevelFilter(e.target.value)}
+                    className="h-8 w-[130px] text-xs"
+                  >
+                    <option value="all">All levels</option>
+                    {Array.from(new Set(notifications.map((n) => n.level))).map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        {lvl}
+                      </option>
+                    ))}
                   </Select>
                 </div>
               </div>
@@ -901,27 +938,48 @@ export function NotificationsPage() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-grayScale-500">Title</label>
-                <Input
-                  placeholder="Short headline for this notification"
-                  value={composeTitle}
-                  onChange={(e) => setComposeTitle(e.target.value)}
-                />
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)]">
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-500">Title</label>
+                  <Input
+                    placeholder="Short headline for this notification"
+                    value={composeTitle}
+                    onChange={(e) => setComposeTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                    Message
+                  </label>
+                  <Textarea
+                    rows={3}
+                    placeholder={
+                      composeChannels.includes("sms") && !composeChannels.includes("push")
+                        ? "Concise SMS body. Keep it clear and under 160 characters where possible."
+                        : "Notification body shown inside the app."
+                    }
+                    value={composeMessage}
+                    onChange={(e) => setComposeMessage(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-grayScale-500">Message</label>
-                <Textarea
-                  rows={3}
-                  placeholder={
-                    composeChannels.includes("sms") && !composeChannels.includes("push")
-                      ? "Concise SMS body. Keep it clear and under 160 characters where possible."
-                      : "Notification body shown inside the app."
-                  }
-                  value={composeMessage}
-                  onChange={(e) => setComposeMessage(e.target.value)}
+
+              <div className="space-y-2">
+                <p className="mb-1 block text-xs font-medium text-grayScale-500">
+                  Image (push only)
+                </p>
+                <FileUpload
+                  accept="image/*"
+                  onFileSelect={setComposeImage}
+                  label="Upload notification image"
+                  description="Shown with push notification where supported"
+                  className="min-h-[110px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
                 />
+                <p className="text-[10px] text-grayScale-400">
+                  Image will be ignored for SMS-only sends. Connect your push provider to attach it
+                  to real notifications.
+                </p>
               </div>
             </div>
 
@@ -988,6 +1046,7 @@ export function NotificationsPage() {
                     setComposeAudience("all")
                     setComposeChannels(["push"])
                     setSelectedRecipientIds([])
+                    setComposeImage(null)
                   }}
                 >
                   Clear

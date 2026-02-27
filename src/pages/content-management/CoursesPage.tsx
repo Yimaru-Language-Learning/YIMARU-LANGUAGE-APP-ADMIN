@@ -245,8 +245,8 @@ export function CoursesPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
-        <div className="rounded-2xl bg-brand-50/50 p-6">
-          <RefreshCw className="h-10 w-10 animate-spin text-brand-500" />
+        <div className="rounded-2xl bg-white shadow-sm p-6">
+          <RefreshCw className="h-10 w-10 animate-spin text-brand-600" />
         </div>
         <p className="mt-4 text-sm font-medium text-grayScale-400">Loading courses...</p>
       </div>
@@ -421,7 +421,7 @@ export function CoursesPage() {
       {/* Add Course Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
+          <div className="mx-4 w-full max-w-2xl animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
               <h2 className="text-lg font-bold text-grayScale-700">Add New Course</h2>
               <button

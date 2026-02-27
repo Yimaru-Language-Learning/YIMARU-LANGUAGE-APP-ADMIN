@@ -199,8 +199,8 @@ export function SubCoursesPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <div className="rounded-full bg-brand-50 p-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-brand-500" />
+        <div className="rounded-full bg-white shadow-sm p-4">
+          <RefreshCw className="h-8 w-8 animate-spin text-brand-600" />
         </div>
         <p className="mt-4 text-sm font-medium text-grayScale-400">Loading sub-courses...</p>
       </div>

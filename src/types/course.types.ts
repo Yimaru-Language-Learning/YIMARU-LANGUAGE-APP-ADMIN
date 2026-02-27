@@ -2,11 +2,13 @@ export interface CourseCategory {
   id: number
   name: string
   is_active: boolean
+  parent_id?: number | null
   created_at: string
 }
 
 export interface CreateCourseCategoryRequest {
   name: string
+  parent_id?: number | null
 }
 
 export interface GetCourseCategoriesResponse {

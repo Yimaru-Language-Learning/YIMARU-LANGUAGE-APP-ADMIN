@@ -29,7 +29,7 @@ import {
 import { StatCard } from "../components/dashboard/StatCard"
 import alertSrc from "../assets/Alert.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
-// import { cn } from "../lib/utils"
+import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
 import { getDashboard } from "../api/analytics.api"
 import { useEffect, useState } from "react"
@@ -46,6 +46,7 @@ export function DashboardPage() {
   const [userFirstName, setUserFirstName] = useState<string>("")
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeStatTab, setActiveStatTab] = useState<"primary" | "secondary">("primary")
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -123,69 +124,109 @@ export function DashboardPage() {
         </div>
       ) : (
         <>
-          {/* Stat Cards */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              icon={Users}
-              label="Total Users"
-              value={dashboard.users.total_users.toLocaleString()}
-              deltaLabel={`+${dashboard.users.new_month} this month`}
-              deltaPositive={dashboard.users.new_month > 0}
-            />
-            <StatCard
-              icon={BadgeCheck}
-              label="Active Subscribers"
-              value={dashboard.subscriptions.active_subscriptions.toLocaleString()}
-              deltaLabel={`+${dashboard.subscriptions.new_month} this month`}
-              deltaPositive={dashboard.subscriptions.new_month > 0}
-            />
-            <StatCard
-              icon={DollarSign}
-              label="Total Revenue (ETB)"
-              value={dashboard.payments.total_revenue.toLocaleString()}
-              deltaLabel={`${dashboard.payments.total_payments} payments`}
-              deltaPositive={dashboard.payments.total_revenue > 0}
-            />
-            <StatCard
-              icon={TicketCheck}
-              label="Issues"
-              value={`${dashboard.issues.resolved_issues}/${dashboard.issues.total_issues}`}
-              deltaLabel={`${(dashboard.issues.resolution_rate * 100).toFixed(1)}% resolved`}
-              deltaPositive={dashboard.issues.resolution_rate > 0.5}
-            />
+          {/* Stat tabs */}
+          <div className="mb-3 border-b border-grayScale-200">
+            <div className="-mb-px flex gap-6">
+              <button
+                type="button"
+                onClick={() => setActiveStatTab("primary")}
+                className={cn(
+                  "relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all",
+                  activeStatTab === "primary"
+                    ? "text-brand-600"
+                    : "text-grayScale-400 hover:text-grayScale-700",
+                )}
+              >
+                Overview
+                {activeStatTab === "primary" && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveStatTab("secondary")}
+                className={cn(
+                  "relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all",
+                  activeStatTab === "secondary"
+                    ? "text-brand-600"
+                    : "text-grayScale-400 hover:text-grayScale-700",
+                )}
+              >
+                More metrics
+                {activeStatTab === "secondary" && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+                )}
+              </button>
+            </div>
           </div>
 
+          {/* Stat Cards */}
+          {activeStatTab === "primary" && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                icon={Users}
+                label="Total Users"
+                value={dashboard.users.total_users.toLocaleString()}
+                deltaLabel={`+${dashboard.users.new_month} this month`}
+                deltaPositive={dashboard.users.new_month > 0}
+              />
+              <StatCard
+                icon={BadgeCheck}
+                label="Active Subscribers"
+                value={dashboard.subscriptions.active_subscriptions.toLocaleString()}
+                deltaLabel={`+${dashboard.subscriptions.new_month} this month`}
+                deltaPositive={dashboard.subscriptions.new_month > 0}
+              />
+              <StatCard
+                icon={DollarSign}
+                label="Total Revenue (ETB)"
+                value={dashboard.payments.total_revenue.toLocaleString()}
+                deltaLabel={`${dashboard.payments.total_payments} payments`}
+                deltaPositive={dashboard.payments.total_revenue > 0}
+              />
+              <StatCard
+                icon={TicketCheck}
+                label="Issues"
+                value={`${dashboard.issues.resolved_issues}/${dashboard.issues.total_issues}`}
+                deltaLabel={`${(dashboard.issues.resolution_rate * 100).toFixed(1)}% resolved`}
+                deltaPositive={dashboard.issues.resolution_rate > 0.5}
+              />
+            </div>
+          )}
+
           {/* Secondary Stats */}
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              icon={BookOpen}
-              label="Courses"
-              value={dashboard.courses.total_courses.toLocaleString()}
-              deltaLabel={`${dashboard.courses.total_sub_courses} sub-courses, ${dashboard.courses.total_videos} videos`}
-              deltaPositive
-            />
-            <StatCard
-              icon={HelpCircle}
-              label="Questions"
-              value={dashboard.content.total_questions.toLocaleString()}
-              deltaLabel={`${dashboard.content.total_question_sets} question sets`}
-              deltaPositive
-            />
-            <StatCard
-              icon={Bell}
-              label="Notifications"
-              value={dashboard.notifications.total_sent.toLocaleString()}
-              deltaLabel={`${dashboard.notifications.unread_count} unread`}
-              deltaPositive={dashboard.notifications.unread_count === 0}
-            />
-            <StatCard
-              icon={UsersRound}
-              label="Team Members"
-              value={dashboard.team.total_members.toLocaleString()}
-              deltaLabel={`${dashboard.team.by_role.length} roles`}
-              deltaPositive
-            />
-          </div>
+          {activeStatTab === "secondary" && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                icon={BookOpen}
+                label="Courses"
+                value={dashboard.courses.total_courses.toLocaleString()}
+                deltaLabel={`${dashboard.courses.total_sub_courses} sub-courses, ${dashboard.courses.total_videos} videos`}
+                deltaPositive
+              />
+              <StatCard
+                icon={HelpCircle}
+                label="Questions"
+                value={dashboard.content.total_questions.toLocaleString()}
+                deltaLabel={`${dashboard.content.total_question_sets} question sets`}
+                deltaPositive
+              />
+              <StatCard
+                icon={Bell}
+                label="Notifications"
+                value={dashboard.notifications.total_sent.toLocaleString()}
+                deltaLabel={`${dashboard.notifications.unread_count} unread`}
+                deltaPositive={dashboard.notifications.unread_count === 0}
+              />
+              <StatCard
+                icon={UsersRound}
+                label="Team Members"
+                value={dashboard.team.total_members.toLocaleString()}
+                deltaLabel={`${dashboard.team.by_role.length} roles`}
+                deltaPositive
+              />
+            </div>
+          )}
 
           {/* User Registrations Chart */}
           <div className="mt-5 grid gap-4">

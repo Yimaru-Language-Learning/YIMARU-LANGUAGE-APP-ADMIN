@@ -203,7 +203,10 @@ export function SubCoursesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
-        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading sub-courses...</p>
+        {/* <div className="rounded-full bg-white shadow-sm p-4">
+          <RefreshCw className="h-8 w-8 animate-spin text-brand-600" />
+        </div>
+        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading sub-courses...</p> */}
       </div>
     )
   }

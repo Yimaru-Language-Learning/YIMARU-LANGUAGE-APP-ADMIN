@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   XCircle,
   ArrowUpCircle,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -201,6 +202,12 @@ export function IssuesPage() {
   // Status update
   const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
 
+  // Create issue dialog (admin-created)
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSubject, setCreateSubject] = useState("");
+  const [createType, setCreateType] = useState<string>("bug");
+  const [createDescription, setCreateDescription] = useState("");
+
   const fetchIssues = useCallback(async () => {
     setLoading(true);
     try {
@@ -345,17 +352,26 @@ export function IssuesPage() {
             Review and manage user-reported issues across the platform.
           </p>
         </div>
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => {
-            setPage(1);
-            fetchIssues();
-          }}
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => {
+              setPage(1);
+              fetchIssues();
+            }}
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            Refresh
+          </Button>
+          <Button
+            className="gap-2 bg-brand-500 text-white hover:bg-brand-600"
+            onClick={() => setCreateOpen(true)}
+          >
+            <MessageCircle className="h-4 w-4" />
+            New Issue
+          </Button>
+        </div>
       </div>
 
       {/* Stats cards */}
@@ -512,7 +528,7 @@ export function IssuesPage() {
                   <TableRow key={issue.id} className="group">
                     <TableCell>
                       <div className="flex items-start gap-3 max-w-[300px]">
-                        <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 group-hover:bg-brand-50 group-hover:text-brand-500 transition-colors">
+                        <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 group-hover:bg-brand-500 group-hover:text-white transition-colors">
                           <TypeIcon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
@@ -837,6 +853,90 @@ export function IssuesPage() {
               </div>
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Issue Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-brand-500" />
+              <span>Create admin issue</span>
+            </DialogTitle>
+            <DialogDescription>
+              Log an issue directly from the admin panel so it can be tracked and resolved.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                Subject
+              </label>
+              <Input
+                placeholder="Short summary of the issue"
+                value={createSubject}
+                onChange={(e) => setCreateSubject(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                Type
+              </label>
+              <select
+                value={createType}
+                onChange={(e) => setCreateType(e.target.value)}
+                className="h-10 w-full rounded-lg border bg-white px-3 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {ISSUE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {getIssueTypeConfig(t).label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                Description
+              </label>
+              <textarea
+                className="min-h-[100px] w-full rounded-lg border bg-white px-3 py-2 text-sm text-grayScale-700 placeholder:text-grayScale-400 focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Describe what happened, steps to reproduce, and any context that might help."
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateOpen(false);
+                setCreateSubject("");
+                setCreateDescription("");
+                setCreateType("bug");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-brand-500 text-white hover:bg-brand-600"
+              onClick={() => {
+                // Hook to create-issue API here; currently UI-only.
+                if (!createSubject.trim() || !createDescription.trim()) {
+                  return;
+                }
+                setCreateOpen(false);
+                setCreateSubject("");
+                setCreateDescription("");
+                setCreateType("bug");
+              }}
+            >
+              Create Issue
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -44,7 +44,7 @@ function formatDateTime(dateStr: string | null | undefined): string {
 
 function LoadingSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10 sm:px-6">
       <div className="animate-pulse space-y-8">
         {/* Hero skeleton */}
         <div className="overflow-hidden rounded-2xl border border-grayScale-100">
@@ -93,15 +93,15 @@ function InfoRow({
   extra?: React.ReactNode;
 }) {
   return (
-    <div className="group flex items-center justify-between rounded-lg px-3 py-3 transition-colors hover:bg-grayScale-100/60">
+    <div className="group flex flex-col gap-1 rounded-lg px-3 py-3 transition-colors hover:bg-grayScale-100/60 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3 text-sm text-grayScale-400">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-grayScale-100 text-grayScale-400 transition-colors group-hover:bg-brand-100 group-hover:text-brand-500">
           <Icon className="h-4 w-4" />
         </div>
         <span className="font-medium">{label}</span>
       </div>
-      <div className="flex items-center gap-2 text-sm font-medium text-grayScale-600">
-        <span className="text-right">{value || "—"}</span>
+      <div className="flex items-center gap-2 text-sm font-medium text-grayScale-600 sm:justify-end min-w-0">
+        <span className="truncate text-right sm:text-left">{value || "—"}</span>
         {extra}
       </div>
     </div>
@@ -121,13 +121,13 @@ function VerifiedIcon({ verified }: { verified: boolean }) {
 }
 
 function ProgressRing({ percent }: { percent: number }) {
-  const radius = 18;
+  const radius = 14;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      <svg className="h-11 w-11 -rotate-90" viewBox="0 0 44 44">
+      <svg className="h-8 w-8 -rotate-90" viewBox="0 0 44 44">
         <circle
           cx="22"
           cy="22"
@@ -150,7 +150,7 @@ function ProgressRing({ percent }: { percent: number }) {
           className="text-brand-500 transition-all duration-700"
         />
       </svg>
-      <span className="absolute text-[10px] font-bold text-brand-600">{percent}%</span>
+      <span className="absolute text-[9px] font-bold text-brand-600">{percent}%</span>
     </div>
   );
 }
@@ -179,7 +179,7 @@ export function ProfilePage() {
 
   if (error || !profile) {
     return (
-      <div className="mx-auto w-full max-w-5xl px-4 py-16 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-5 p-12">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-grayScale-100">
@@ -203,227 +203,246 @@ export function ProfilePage() {
   const initials = `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`.toUpperCase();
   const completionPct = profile.profile_completion_percentage ?? 0;
 
-  const sectionCardIcons: Record<string, { icon: typeof User; color: string }> = {
-    personal: { icon: User, color: "from-brand-500 to-brand-600" },
-    contact: { icon: Mail, color: "from-brand-400 to-brand-500" },
-    account: { icon: Shield, color: "from-brand-600 to-brand-500" },
-  };
-
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 sm:px-6">
-      {/* Hero Card */}
-      <Card className="overflow-hidden border-0 shadow-lg">
-        {/* Banner gradient */}
-        <div className="relative h-36 bg-gradient-to-br from-brand-600 via-brand-500 to-brand-400 sm:h-40">
-          {/* Decorative pattern overlay */}
-          <div className="absolute inset-0 opacity-10">
-            <div
-              className="h-full w-full"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 25% 50%, white 1px, transparent 1px), radial-gradient(circle at 75% 50%, white 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-              }}
-            />
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      {/* Page header (no tabs) */}
+      <div className="mb-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">My Info</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-grayScale-800">Profile</h1>
+      </div>
+
+      {/* Main profile layout card */}
+      <div className="rounded-2xl border border-grayScale-100 bg-white shadow-sm">
+        {/* Header strip */}
+        <div className="border-b border-grayScale-100 px-6 py-4 sm:px-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">Overview</p>
+              <p className="mt-1 text-sm text-grayScale-500">
+                Personal, job and account details for this team member.
+              </p>
+            </div>
           </div>
-          {/* Bottom fade */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/20 to-transparent" />
         </div>
 
-        <CardContent className="-mt-16 px-6 pb-8 pt-0 sm:px-10">
-          <div className="flex flex-col items-center text-center">
-            {/* Avatar */}
-            <Avatar className="h-28 w-28 ring-4 ring-white shadow-lg">
-              <AvatarImage src={profile.profile_picture_url || undefined} alt={fullName} />
-              <AvatarFallback className="bg-gradient-to-br from-brand-100 to-brand-200 text-2xl font-bold text-brand-600">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-
-            {/* Name */}
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-grayScale-600 sm:text-3xl">
-              {fullName}
-            </h1>
-
-            {/* Role badge */}
-            <Badge
-              className={cn(
-                "mt-2.5 px-3 py-1",
-                profile.role === "ADMIN"
-                  ? "bg-brand-500/10 text-brand-600 border border-brand-500/20"
-                  : "bg-grayScale-100 text-grayScale-600 border border-grayScale-200"
-              )}
-            >
-              <Shield className="h-3 w-3 mr-1.5" />
-              {profile.role}
-            </Badge>
-
-            {/* Status pills */}
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
-              {/* Active status */}
-              <div
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                  profile.status === "ACTIVE"
-                    ? "border-mint-300 bg-mint-100/60 text-mint-500"
-                    : "border-destructive/20 bg-destructive/10 text-destructive"
-                )}
-              >
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-full",
-                    profile.status === "ACTIVE" ? "bg-mint-500 animate-pulse" : "bg-destructive"
-                  )}
-                />
-                {profile.status}
+        <div className="px-6 py-6 sm:px-8 sm:py-7">
+          <div className="grid gap-8 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)]">
+            {/* Left column: About & details */}
+            <div className="space-y-6">
+              {/* Identity */}
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <Avatar className="h-16 w-16 sm:h-18 sm:w-18">
+                  <AvatarImage src={profile.profile_picture_url || undefined} alt={fullName} />
+                  <AvatarFallback className="bg-grayScale-100 text-base font-semibold text-grayScale-600">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-lg font-semibold tracking-tight text-grayScale-800">{fullName}</h2>
+                    <span className="rounded-full bg-grayScale-50 px-2.5 py-0.5 text-xs font-medium text-grayScale-500">
+                      #{profile.id}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge
+                      className={cn(
+                        "px-2.5 py-0.5 text-xs font-semibold",
+                        profile.role === "ADMIN"
+                          ? "bg-brand-500/10 text-brand-600 border border-brand-500/20"
+                          : "bg-grayScale-50 text-grayScale-600 border border-grayScale-200"
+                      )}
+                    >
+                      <Shield className="mr-1 h-3 w-3" />
+                      {profile.role}
+                    </Badge>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-grayScale-50 px-2.5 py-0.5 text-xs font-medium text-grayScale-500">
+                      <Calendar className="h-3 w-3" />
+                      Joined {formatDate(profile.created_at)}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                        profile.status === "ACTIVE"
+                          ? "bg-mint-50 text-mint-600"
+                          : "bg-destructive/10 text-destructive"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          profile.status === "ACTIVE" ? "bg-mint-500" : "bg-destructive"
+                        )}
+                      />
+                      {profile.status}
+                    </span>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50/60 px-2.5 py-0.5 text-xs font-semibold text-brand-600">
+                      <ProgressRing percent={completionPct} />
+                      <span>Profile complete</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Email verification */}
-              <div
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                  profile.email_verified
-                    ? "border-mint-300 bg-mint-100/60 text-mint-500"
-                    : "border-grayScale-200 bg-grayScale-100/60 text-grayScale-400"
-                )}
-              >
-                {profile.email_verified ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <XCircle className="h-3 w-3" />
-                )}
-                Email {profile.email_verified ? "Verified" : "Unverified"}
+              {/* About / Contact */}
+              <div>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
+                  About
+                </h3>
+                <div className="space-y-1.5 rounded-xl border border-grayScale-100 bg-grayScale-50/60 px-3 py-3">
+                  <InfoRow icon={Phone} label="Phone" value={profile.phone_number} extra={<VerifiedIcon verified={profile.phone_verified} />} />
+                  <InfoRow icon={Mail} label="Email" value={profile.email} extra={<VerifiedIcon verified={profile.email_verified} />} />
+                  <InfoRow
+                    icon={MapPin}
+                    label="Location"
+                    value={[profile.region, profile.country].filter(Boolean).join(", ") || "—"}
+                  />
+                </div>
               </div>
 
-              {/* Phone verification */}
-              <div
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                  profile.phone_verified
-                    ? "border-mint-300 bg-mint-100/60 text-mint-500"
-                    : "border-grayScale-200 bg-grayScale-100/60 text-grayScale-400"
-                )}
-              >
-                {profile.phone_verified ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <XCircle className="h-3 w-3" />
-                )}
-                Phone {profile.phone_verified ? "Verified" : "Unverified"}
+              {/* Employee details */}
+              <div>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
+                  Employee details
+                </h3>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:text-sm text-grayScale-500">
+                  <div>
+                    <dt className="text-grayScale-400">Date of birth</dt>
+                    <dd className="mt-0.5 font-medium text-grayScale-700">
+                      {formatDate(profile.birth_day)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-grayScale-400">Age</dt>
+                    <dd className="mt-0.5 font-medium text-grayScale-700">
+                      {profile.age ? `${profile.age} years` : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-grayScale-400">Gender</dt>
+                    <dd className="mt-0.5 font-medium text-grayScale-700">
+                      {profile.gender || "Not specified"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-grayScale-400">Age group</dt>
+                    <dd className="mt-0.5 font-medium text-grayScale-700">
+                      {profile.age_group || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-grayScale-400">Occupation</dt>
+                    <dd className="mt-0.5 font-medium text-grayScale-700">
+                      {profile.occupation || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-grayScale-400">Preferred language</dt>
+                    <dd className="mt-0.5 font-medium text-grayScale-700">
+                      {profile.preferred_language || "—"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+
+            {/* Right column: Activity & account summary */}
+            <div className="space-y-6">
+              {/* Activity */}
+              <div>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
+                  Activity
+                </h3>
+                <Card className="shadow-none border-grayScale-100">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+                          <Clock className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-grayScale-700">
+                            Last login
+                          </p>
+                          <p className="text-xs text-grayScale-400">
+                            {formatDateTime(profile.last_login)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-grayScale-50 text-grayScale-500">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-grayScale-700">
+                          Account created
+                        </p>
+                        <p className="text-xs text-grayScale-400">
+                          {formatDateTime(profile.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Profile completion ring */}
-              <div className="flex items-center gap-2 rounded-full border border-brand-200 bg-brand-100/30 px-3 py-1 text-xs font-semibold text-brand-600">
-                <ProgressRing percent={completionPct} />
-                <span>Profile Complete</span>
+              {/* Account summary */}
+              <div>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
+                  Account
+                </h3>
+                <Card className="shadow-none border-grayScale-100">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-grayScale-400">Role</span>
+                      <span className="font-medium text-grayScale-700">{profile.role}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-grayScale-400">Status</span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 text-xs font-semibold",
+                          profile.status === "ACTIVE"
+                            ? "text-mint-600"
+                            : "text-destructive"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            profile.status === "ACTIVE" ? "bg-mint-500" : "bg-destructive"
+                          )}
+                        />
+                        {profile.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-grayScale-400">Email</span>
+                      <span className="flex items-center gap-1 text-grayScale-700">
+                        <span className="truncate max-w-[140px] text-right text-xs sm:text-sm">
+                          {profile.email}
+                        </span>
+                        <VerifiedIcon verified={profile.email_verified} />
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-grayScale-400">Phone</span>
+                      <span className="flex items-center gap-1 text-grayScale-700">
+                        <span className="truncate max-w-[120px] text-right text-xs sm:text-sm">
+                          {profile.phone_number || "—"}
+                        </span>
+                        <VerifiedIcon verified={profile.phone_verified} />
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Info Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Personal Information */}
-        <Card className="group overflow-hidden border border-grayScale-100 transition-all duration-200 hover:shadow-lg">
-          <div className="h-1 w-full bg-gradient-to-r from-brand-500 to-brand-600" />
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm">
-                <User className="h-4 w-4" />
-              </div>
-              <CardTitle className="text-base font-semibold tracking-tight text-grayScale-600">
-                Personal Information
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-0.5 px-3 pb-4">
-            <InfoRow icon={User} label="Full Name" value={fullName} />
-            <InfoRow icon={User} label="Gender" value={profile.gender || "Not specified"} />
-            <InfoRow icon={Calendar} label="Birthday" value={formatDate(profile.birth_day)} />
-            <InfoRow icon={User} label="Age Group" value={profile.age_group || "—"} />
-            <InfoRow icon={Briefcase} label="Occupation" value={profile.occupation || "—"} />
-          </CardContent>
-        </Card>
-
-        {/* Contact & Location */}
-        <Card className="group overflow-hidden border border-grayScale-100 transition-all duration-200 hover:shadow-lg">
-          <div className="h-1 w-full bg-gradient-to-r from-brand-400 to-brand-500" />
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-500 text-white shadow-sm">
-                <Mail className="h-4 w-4" />
-              </div>
-              <CardTitle className="text-base font-semibold tracking-tight text-grayScale-600">
-                Contact & Location
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-0.5 px-3 pb-4">
-            <InfoRow
-              icon={Mail}
-              label="Email"
-              value={profile.email}
-              extra={<VerifiedIcon verified={profile.email_verified} />}
-            />
-            <InfoRow
-              icon={Phone}
-              label="Phone"
-              value={profile.phone_number}
-              extra={<VerifiedIcon verified={profile.phone_verified} />}
-            />
-            <InfoRow icon={Globe} label="Country" value={profile.country || "—"} />
-            <InfoRow icon={MapPin} label="Region" value={profile.region || "—"} />
-          </CardContent>
-        </Card>
-
-        {/* Account Details */}
-        <Card className="group overflow-hidden border border-grayScale-100 transition-all duration-200 hover:shadow-lg">
-          <div className="h-1 w-full bg-gradient-to-r from-brand-600 to-brand-500" />
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-white shadow-sm">
-                <Shield className="h-4 w-4" />
-              </div>
-              <CardTitle className="text-base font-semibold tracking-tight text-grayScale-600">
-                Account Details
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-0.5 px-3 pb-4">
-            <InfoRow icon={Shield} label="Role" value={profile.role} />
-            <InfoRow
-              icon={Languages}
-              label="Language"
-              value={profile.preferred_language || "—"}
-            />
-            <InfoRow
-              icon={Clock}
-              label="Last Login"
-              value={formatDateTime(profile.last_login)}
-            />
-            <InfoRow
-              icon={Calendar}
-              label="Member Since"
-              value={formatDate(profile.created_at)}
-            />
-            <InfoRow
-              icon={CheckCircle2}
-              label="Status"
-              value={profile.status}
-              extra={
-                <span
-                  className={cn(
-                    "h-2.5 w-2.5 rounded-full ring-2",
-                    profile.status === "ACTIVE"
-                      ? "bg-mint-500 ring-mint-100"
-                      : "bg-destructive ring-destructive/20"
-                  )}
-                />
-              }
-            />
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );

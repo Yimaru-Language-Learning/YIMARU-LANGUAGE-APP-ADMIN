@@ -405,7 +405,7 @@ export function UserLogPage() {
                   <TableRow key={log.id} className="group">
                     <TableCell>
                       <div className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 group-hover:bg-brand-50 group-hover:text-brand-500 transition-colors">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 group-hover:bg-brand-500 group-hover:text-white transition-colors">
                           <ActionIcon className="h-4 w-4" />
                         </div>
                         <span

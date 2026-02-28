@@ -4,6 +4,8 @@ import { DashboardPage } from "../pages/DashboardPage"
 import { AnalyticsPage } from "../pages/analytics/AnalyticsPage"
 import { ContentManagementLayout } from "../pages/content-management/ContentManagementLayout"
 import { CourseCategoryPage } from "../pages/content-management/CourseCategoryPage"
+import { AllCoursesPage } from "../pages/content-management/AllCoursesPage"
+import { CourseFlowBuilderPage } from "../pages/content-management/CourseFlowBuilderPage"
 import { ContentOverviewPage } from "../pages/content-management/ContentOverviewPage"
 import { CoursesPage } from "../pages/content-management/CoursesPage"
 import { PracticeQuestionsPage } from "../pages/content-management/PracticeQuestionsPage"
@@ -33,6 +35,7 @@ import { IssuesPage } from "../pages/issues/IssuesPage"
 import { ProfilePage } from "../pages/ProfilePage"
 import { SettingsPage } from "../pages/SettingsPage"
 import { TeamManagementPage } from "../pages/team/TeamManagementPage"
+import { AddTeamMemberPage } from "../pages/team/AddTeamMemberPage"
 import { TeamMemberDetailPage } from "../pages/team/TeamMemberDetailPage"
 import { LoginPage } from "../pages/auth/LoginPage"
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage"
@@ -62,6 +65,8 @@ export function AppRoutes() {
 
         <Route path="/content" element={<ContentManagementLayout />}>
           <Route index element={<CourseCategoryPage />} />
+          <Route path="courses" element={<AllCoursesPage />} />
+          <Route path="flows" element={<CourseFlowBuilderPage />} />
           <Route path="category/:categoryId" element={<ContentOverviewPage />} />
           <Route path="category/:categoryId/courses" element={<CoursesPage />} />
           {/* Course → Sub-course → Video/Practice */}
@@ -85,6 +90,7 @@ export function AppRoutes() {
         <Route path="/analytics" element={<AnalyticsPage />} />
 
         <Route path="/team" element={<TeamManagementPage />} />
+        <Route path="/team/add" element={<AddTeamMemberPage />} />
         <Route path="/team/:id" element={<TeamMemberDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />

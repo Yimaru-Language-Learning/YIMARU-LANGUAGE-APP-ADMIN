@@ -8,6 +8,7 @@ import alertSrc from "../../assets/Alert.svg"
 import { Button } from "../../components/ui/button"
 import { Badge } from "../../components/ui/badge"
 import { Input } from "../../components/ui/input"
+import { FileUpload } from "../../components/ui/file-upload"
 import { getCoursesByCategory, getCourseCategories, createCourse, deleteCourse, updateCourseStatus, updateCourse } from "../../api/courses.api"
 import type { Course, CourseCategory } from "../../types/course.types"
 
@@ -41,6 +42,8 @@ export function CoursesPage() {
   const [description, setDescription] = useState("")
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null)
+  const [newVideoFile, setNewVideoFile] = useState<File | null>(null)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
@@ -112,6 +115,8 @@ export function CoursesPage() {
     setTitle("")
     setDescription("")
     setSaveError(null)
+    setNewThumbnailFile(null)
+    setNewVideoFile(null)
     setShowModal(true)
   }
 
@@ -120,6 +125,8 @@ export function CoursesPage() {
     setTitle("")
     setDescription("")
     setSaveError(null)
+    setNewThumbnailFile(null)
+    setNewVideoFile(null)
   }
 
   const handleSave = async () => {
@@ -242,7 +249,10 @@ export function CoursesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
-        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading courses...</p>
+        {/* <div className="rounded-2xl bg-white shadow-sm p-6">
+          <RefreshCw className="h-10 w-10 animate-spin text-brand-600" />
+        </div>
+        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading courses...</p> */}
       </div>
     )
   }
@@ -411,7 +421,7 @@ export function CoursesPage() {
       {/* Add Course Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
+          <div className="mx-4 w-full max-w-2xl animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
               <h2 className="text-lg font-bold text-grayScale-700">Add New Course</h2>
               <button
@@ -460,6 +470,29 @@ export function CoursesPage() {
                   rows={4}
                   className="flex w-full rounded-xl border border-grayScale-200 bg-white px-3.5 py-2.5 text-sm transition-colors ring-offset-background placeholder:text-grayScale-400 focus-visible:border-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-100"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-grayScale-600">Thumbnail image</p>
+                  <FileUpload
+                    accept="image/*"
+                    onFileSelect={setNewThumbnailFile}
+                    label="Upload thumbnail"
+                    description="Optional course cover image"
+                    className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-grayScale-600">Intro video</p>
+                  <FileUpload
+                    accept="video/*"
+                    onFileSelect={setNewVideoFile}
+                    label="Upload intro video"
+                    description="Optional overview for this course"
+                    className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+                  />
+                </div>
               </div>
 
               <div className="rounded-lg bg-grayScale-50 px-3 py-2 text-xs text-grayScale-400">

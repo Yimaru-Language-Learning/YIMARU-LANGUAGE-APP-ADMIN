@@ -17,6 +17,19 @@ export interface TeamMember {
   created_at: string
 }
 
+export interface CreateTeamMemberRequest {
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  team_role: string
+  department: string
+  job_title: string
+  employment_type: string
+  hire_date: string
+  bio?: string
+}
+
 export interface TeamMembersMetadata {
   total: number
   total_pages: number

@@ -57,9 +57,21 @@ const contentSections = [
   },
 ] as const
 
+type ContentSection = (typeof contentSections)[number]
+
 export function ContentOverviewPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
   const [category, setCategory] = useState<CourseCategory | null>(null)
+  const [sections, setSections] = useState<ContentSection[]>(() => [...contentSections])
+  const [dragKey, setDragKey] = useState<string | null>(null)
+  const [flowSteps, setFlowSteps] = useState<
+    {
+      id: string
+      type: "lesson" | "practice" | "exam" | "feedback" | "course" | "speaking" | "new_course"
+      title: string
+      description?: string
+    }[]
+  >([])
 
   useEffect(() => {
     const fetchCategory = async () => {
@@ -76,6 +88,75 @@ export function ContentOverviewPage() {
       fetchCategory()
     }
   }, [categoryId])
+
+  // Load category-level flow sequence (if any) from localStorage
+  useEffect(() => {
+    if (!categoryId) {
+      setFlowSteps([])
+      return
+    }
+    const key = `category_flow_${categoryId}`
+    try {
+      const raw = window.localStorage.getItem(key)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          setFlowSteps(parsed)
+          return
+        }
+      }
+    } catch {
+      // ignore and fall back to default
+    }
+
+    // No explicit flow saved; fall back to an empty sequence
+    setFlowSteps([])
+  }, [categoryId])
+
+  // Load persisted section order from localStorage
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("content_sections_order")
+      if (!raw) return
+      const savedKeys: string[] = JSON.parse(raw)
+      const byKey = new Map(contentSections.map((s) => [s.key, s]))
+      const reordered: ContentSection[] = []
+      savedKeys.forEach((k) => {
+        const item = byKey.get(k as ContentSection["key"])
+        if (item) {
+          reordered.push(item)
+          byKey.delete(k as ContentSection["key"])
+        }
+      })
+      // Append any new sections that weren't in saved order
+      byKey.forEach((item) => reordered.push(item))
+      if (reordered.length) {
+        setSections(reordered)
+      }
+    } catch {
+      // ignore corrupted localStorage
+    }
+  }, [])
+
+  // Persist order whenever it changes
+  useEffect(() => {
+    const keys = sections.map((s) => s.key)
+    window.localStorage.setItem("content_sections_order", JSON.stringify(keys))
+  }, [sections])
+
+  const handleDropOn = (targetKey: string) => {
+    if (!dragKey || dragKey === targetKey) return
+    setSections((prev) => {
+      const currentIndex = prev.findIndex((s) => s.key === dragKey)
+      const targetIndex = prev.findIndex((s) => s.key === targetKey)
+      if (currentIndex === -1 || targetIndex === -1) return prev
+      const copy = [...prev]
+      const [moved] = copy.splice(currentIndex, 1)
+      copy.splice(targetIndex, 0, moved)
+      return copy
+    })
+    setDragKey(null)
+  }
 
   return (
     <div className="space-y-8">
@@ -120,72 +201,161 @@ export function ContentOverviewPage() {
         </div>
       </div>
 
-      {/* Cards Grid */}
+      {/* Cards Grid (course builder style – draggable sections) */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {contentSections.map((section) => {
+        {sections.map((section) => {
           const Icon = section.icon
           return (
-            <Link
+            <div
               key={section.key}
-              to={section.pathFn(categoryId)}
               className="group"
+              draggable
+              onDragStart={() => setDragKey(section.key)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDropOn(section.key)}
             >
-              <Card
-                className={`relative h-full overflow-hidden border border-grayScale-100 bg-white transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.02] ${section.accentBorder} group-hover:shadow-lg`}
-                style={{
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-                }}
-              >
-                {/* Subtle gradient background on icon area */}
-                <div
-                  className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${section.gradient} pointer-events-none`}
-                />
+              <Link to={section.pathFn(categoryId)} className="block">
+                <Card
+                  className={`relative h-full overflow-hidden border border-grayScale-100 bg-white transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.02] ${section.accentBorder} group-hover:shadow-lg ${
+                    dragKey === section.key ? "ring-2 ring-brand-300" : ""
+                  }`}
+                  style={{
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  {/* Subtle gradient background on icon area */}
+                  <div
+                    className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${section.gradient} pointer-events-none`}
+                  />
 
-                <CardHeader className="relative pb-2">
-                  <div className="mb-4 flex items-start justify-between">
-                    {/* Icon with gradient ring */}
-                    <div className="relative">
-                      <div
-                        className="grid h-12 w-12 place-items-center rounded-xl bg-white text-brand-600 shadow-sm ring-1 ring-grayScale-100 transition-all duration-300 group-hover:ring-brand-300 group-hover:shadow-md"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(158,40,145,0.08) 0%, rgba(106,27,154,0.04) 100%)",
-                        }}
-                      >
-                        <Icon className="h-5.5 w-5.5 transition-transform duration-300 group-hover:scale-110" />
+                  <CardHeader className="relative pb-2">
+                    <div className="mb-4 flex items-start justify-between">
+                      {/* Icon with gradient ring */}
+                      <div className="relative">
+                        <div
+                          className="grid h-12 w-12 place-items-center rounded-xl bg-white text-brand-600 shadow-sm ring-1 ring-grayScale-100 transition-all duration-300 group-hover:ring-brand-300 group-hover:shadow-md"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, rgba(158,40,145,0.08) 0%, rgba(106,27,154,0.04) 100%)",
+                          }}
+                        >
+                          <Icon className="h-5.5 w-5.5 transition-transform duration-300 group-hover:scale-110" />
+                        </div>
+                        {/* Decorative dot */}
+                        <div className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                       </div>
-                      {/* Decorative dot */}
-                      <div className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                      {/* Count Badge */}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-grayScale-50 px-2.5 py-1 text-xs font-medium text-grayScale-500 ring-1 ring-inset ring-grayScale-100 transition-all duration-300 group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-200">
+                        {section.count} {section.countLabel}
+                      </span>
                     </div>
 
-                    {/* Count Badge */}
-                    <span className="inline-flex items-center gap-1 rounded-full bg-grayScale-50 px-2.5 py-1 text-xs font-medium text-grayScale-500 ring-1 ring-inset ring-grayScale-100 transition-all duration-300 group-hover:bg-brand-50 group-hover:text-brand-600 group-hover:ring-brand-200">
-                      {section.count} {section.countLabel}
+                    <CardTitle className="text-[15px] font-semibold text-grayScale-700 transition-colors duration-200 group-hover:text-brand-600">
+                      {section.title}
+                    </CardTitle>
+                    <CardDescription className="mt-1 text-[13px] leading-relaxed text-grayScale-400">
+                      {section.description}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="relative pt-0">
+                    {/* Thin separator */}
+                    <div className="mb-3 h-px w-full bg-gradient-to-r from-transparent via-grayScale-100 to-transparent" />
+
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 transition-colors duration-200 group-hover:text-brand-600">
+                      {section.action}
+                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" />
                     </span>
-                  </div>
-
-                  <CardTitle className="text-[15px] font-semibold text-grayScale-700 transition-colors duration-200 group-hover:text-brand-600">
-                    {section.title}
-                  </CardTitle>
-                  <CardDescription className="mt-1 text-[13px] leading-relaxed text-grayScale-400">
-                    {section.description}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="relative pt-0">
-                  {/* Thin separator */}
-                  <div className="mb-3 h-px w-full bg-gradient-to-r from-transparent via-grayScale-100 to-transparent" />
-
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 transition-colors duration-200 group-hover:text-brand-600">
-                    {section.action}
-                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" />
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           )
         })}
       </div>
+      {/* Category flow sequence (if defined) */}
+      {flowSteps.length > 0 && (
+        <Card className="shadow-soft">
+          <CardHeader className="border-b border-grayScale-200 pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base font-semibold text-grayScale-600">
+                  Learning flow
+                </CardTitle>
+                <CardDescription className="mt-0.5 text-xs text-grayScale-400">
+                  Sequence of lessons, practice, exams, and feedback for this category.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:auto-cols-fr md:grid-flow-col md:overflow-visible">
+              {flowSteps.map((step, index) => (
+                <div
+                  key={step.id}
+                  className="flex min-w-[200px] flex-col justify-between rounded-xl border border-grayScale-100 bg-white p-3.5 shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                        step.type === "lesson" && "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200",
+                        step.type === "practice" &&
+                          "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+                        step.type === "exam" &&
+                          "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+                        step.type === "feedback" &&
+                          "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+                        step.type === "course" &&
+                          "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200",
+                        step.type === "speaking" &&
+                          "bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200",
+                        step.type === "new_course" &&
+                          "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
+                      )}
+                    >
+                      {step.type === "lesson"
+                        ? "Lesson"
+                        : step.type === "practice"
+                          ? "Practice"
+                          : step.type === "exam"
+                            ? "Exam / Questions"
+                            : step.type === "feedback"
+                              ? "Feedback"
+                              : step.type === "course"
+                                ? "Course"
+                                : step.type === "speaking"
+                                  ? "Speaking section"
+                                  : "New course (category)"}
+                      <span className="text-[10px] text-grayScale-400">#{index + 1}</span>
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm font-semibold text-grayScale-700 line-clamp-2">
+                      {step.title}
+                    </p>
+                    <p className="text-xs text-grayScale-500 line-clamp-3">
+                      {step.description ||
+                        (step.type === "exam"
+                          ? "Place exams and question sets here."
+                          : step.type === "feedback"
+                            ? "Collect feedback or run follow‑up surveys."
+                            : step.type === "course"
+                              ? "Link or add an existing course to this flow."
+                              : step.type === "speaking"
+                                ? "Speaking or oral practice section."
+                                : step.type === "new_course"
+                                  ? "Add a new course within this category."
+                                  : "Configure this step in the flow builder.")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -26,14 +26,19 @@ export function UsersListPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [toggledStatuses, setToggledStatuses] = useState<Record<number, boolean>>({})
-  const [countryFilter, setCountryFilter] = useState("")
-  const [regionFilter, setRegionFilter] = useState("")
-  const [subscriptionFilter, setSubscriptionFilter] = useState("")
+  const [roleFilter, setRoleFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await getUsers(page, pageSize)
+        const res = await getUsers(
+          page,
+          pageSize,
+          roleFilter || undefined,
+          statusFilter || undefined,
+          search || undefined,
+        )
         const apiUsers = res.data.data.users
 
         const mapped = apiUsers.map(mapUserApiToUser)
@@ -53,7 +58,7 @@ export function UsersListPage() {
     }
 
     fetchUsers()
-  }, [page, pageSize, setUsers, setTotal])
+  }, [page, pageSize, roleFilter, statusFilter, search, setUsers, setTotal])
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const safePage = Math.min(page, pageCount)
@@ -134,45 +139,27 @@ export function UsersListPage() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-full sm:w-auto">
                 <select
-                  value={countryFilter}
-                  onChange={(e) => setCountryFilter(e.target.value)}
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
                   className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 >
-                  <option value="">Country</option>
-                  <option value="USA">USA</option>
-                  <option value="UK">UK</option>
-                  <option value="Canada">Canada</option>
+                  <option value="">All roles</option>
+                  <option value="STUDENT">Student</option>
+                  <option value="TEACHER">Teacher</option>
+                  <option value="ADMIN">Admin</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
               </div>
 
               <div className="relative w-full sm:w-auto">
                 <select
-                  value={regionFilter}
-                  onChange={(e) => setRegionFilter(e.target.value)}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                   className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 >
-                  <option value="">Region</option>
-                  <option value="North">North</option>
-                  <option value="South">South</option>
-                  <option value="East">East</option>
-                  <option value="West">West</option>
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-              </div>
-
-              <div className="relative w-full sm:w-auto">
-                <select
-                  value={subscriptionFilter}
-                  onChange={(e) => setSubscriptionFilter(e.target.value)}
-                  className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                >
-                  <option value="">Subscription</option>
-                  <option value="Monthly">Monthly</option>
-                  <option value="Free">Free</option>
-                  <option value="3-Month">3-Month</option>
-                  <option value="6-Month">6-Month</option>
-                  <option value="Expired">Expired</option>
+                  <option value="">All statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
               </div>

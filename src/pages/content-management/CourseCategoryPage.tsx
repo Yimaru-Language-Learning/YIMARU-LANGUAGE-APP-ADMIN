@@ -291,15 +291,12 @@ export function CourseCategoryPage() {
                 setCreating(true)
                 try {
                   const name = newCategoryName.trim()
-                  const parentPayloadId = parentCategoryId ?? null
-                  const parentRes = await createCourseCategory({
-                    name: newCategoryName.trim(),
-                    parent_id: parentPayloadId,
-                  })
+                  const parentRes = await createCourseCategory({ name })
                   let createdCategoryId: number | null = null
                   try {
                     const data: any = parentRes?.data
                     createdCategoryId =
+                      data?.data?.id ??
                       data?.data?.category?.id ??
                       data?.data?.id ??
                       data?.category?.id ??
@@ -312,10 +309,7 @@ export function CourseCategoryPage() {
                   if (createdCategoryId && pendingSubCategories.length > 0) {
                     await Promise.all(
                       pendingSubCategories.map((subName) =>
-                        createCourseCategory({
-                          name: subName,
-                          parent_id: createdCategoryId,
-                        }),
+                        createCourseCategory({ name: subName }),
                       ),
                     )
                   }

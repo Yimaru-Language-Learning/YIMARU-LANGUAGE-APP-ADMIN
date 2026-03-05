@@ -1,9 +1,18 @@
 import http from "./http";
 import { type UserProfileResponse, type GetUsersResponse } from "../types/user.types";
 
-export const getUsers = (page?: number, pageSize?: number) =>
+export const getUsers = (
+  page?: number,
+  pageSize?: number,
+  role?: string,
+  status?: string,
+  query?: string,
+) =>
   http.get<GetUsersResponse>("/users", {
     params: {
+      role,
+      status,
+      query,
       page,
       page_size: pageSize,
     },

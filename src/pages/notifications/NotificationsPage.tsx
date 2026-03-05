@@ -44,10 +44,14 @@ import {
   markAsUnread,
   markAllRead,
   markAllUnread,
+  sendBulkSms,
+  sendBulkEmail,
+  sendBulkPush,
 } from "../../api/notifications.api"
 import { getTeamMembers } from "../../api/team.api"
 import type { Notification } from "../../types/notification.types"
 import type { TeamMember } from "../../types/team.types"
+import { toast } from "sonner"
 
 const PAGE_SIZE = 10
 
@@ -261,6 +265,16 @@ export function NotificationsPage() {
   const [composeOpen, setComposeOpen] = useState(false)
   const [composeImage, setComposeImage] = useState<File | null>(null)
 
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkChannel, setBulkChannel] = useState<"sms" | "email" | "push">("sms")
+  const [bulkTitle, setBulkTitle] = useState("")
+  const [bulkMessage, setBulkMessage] = useState("")
+  const [bulkRole, setBulkRole] = useState("")
+  const [bulkUserIds, setBulkUserIds] = useState("")
+  const [bulkScheduledAt, setBulkScheduledAt] = useState("")
+  const [bulkFile, setBulkFile] = useState<File | null>(null)
+  const [bulkSending, setBulkSending] = useState(false)
+
   const fetchData = useCallback(async (currentOffset: number) => {
     setLoading(true)
     setError(false)
@@ -418,10 +432,10 @@ export function NotificationsPage() {
               <Button
                 size="sm"
                 className="bg-brand-500 text-white hover:bg-brand-600"
-                onClick={() => setComposeOpen(true)}
+                onClick={() => setBulkOpen(true)}
               >
-                <Megaphone className="mr-2 h-3.5 w-3.5" />
-                New notification
+                <Mail className="mr-2 h-3.5 w-3.5" />
+                Send notification
               </Button>
               {notifications.length > 0 && (
                 <>
@@ -1069,6 +1083,243 @@ export function NotificationsPage() {
                   )}
                 </Button>
               </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk send dialog */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-brand-500" />
+              <span>Send notification</span>
+            </DialogTitle>
+            <DialogDescription>
+              Send a bulk SMS, email, or push notification to users.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            className="space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!bulkMessage.trim()) {
+                toast.error("Message is required")
+                return
+              }
+              const trimmedIds = bulkUserIds
+                .split(",")
+                .map((id) => id.trim())
+                .filter(Boolean)
+              const userIds = trimmedIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id))
+
+              try {
+                setBulkSending(true)
+
+                if (bulkChannel === "sms") {
+                  if (userIds.length === 0) {
+                    toast.error("User IDs are required for bulk SMS")
+                    setBulkSending(false)
+                    return
+                  }
+                  await sendBulkSms({
+                    message: bulkMessage.trim(),
+                    user_ids: userIds,
+                    ...(bulkScheduledAt ? { scheduled_at: bulkScheduledAt } : {}),
+                  })
+                } else if (bulkChannel === "email") {
+                  const form = new FormData()
+                  if (!bulkTitle.trim()) {
+                    toast.error("Subject is required for bulk email")
+                    setBulkSending(false)
+                    return
+                  }
+                  form.append("subject", bulkTitle.trim())
+                  form.append("message", bulkMessage.trim())
+                  if (bulkRole.trim()) form.append("role", bulkRole.trim())
+                  if (userIds.length > 0) {
+                    form.append("user_ids", JSON.stringify(userIds))
+                  }
+                  if (bulkScheduledAt) form.append("scheduled_at", bulkScheduledAt)
+                  if (bulkFile) form.append("file", bulkFile)
+                  await sendBulkEmail(form)
+                } else {
+                  const form = new FormData()
+                  if (!bulkTitle.trim()) {
+                    toast.error("Title is required for bulk push")
+                    setBulkSending(false)
+                    return
+                  }
+                  form.append("title", bulkTitle.trim())
+                  form.append("message", bulkMessage.trim())
+                  if (bulkRole.trim()) form.append("role", bulkRole.trim())
+                  if (userIds.length > 0) {
+                    form.append("user_ids", JSON.stringify(userIds))
+                  }
+                  if (bulkScheduledAt) form.append("scheduled_at", bulkScheduledAt)
+                  if (bulkFile) form.append("file", bulkFile)
+                  await sendBulkPush(form)
+                }
+
+                toast.success("Notification scheduled", {
+                  description: bulkScheduledAt
+                    ? "Notification has been scheduled successfully."
+                    : "Notification has been sent successfully.",
+                })
+
+                setBulkTitle("")
+                setBulkMessage("")
+                setBulkRole("")
+                setBulkUserIds("")
+                setBulkScheduledAt("")
+                setBulkFile(null)
+                setBulkChannel("sms")
+                setBulkOpen(false)
+              } catch (err: any) {
+                const msg =
+                  err?.response?.data?.message ||
+                  "Failed to send notification. Please try again."
+                toast.error("Failed to send notification", { description: msg })
+              } finally {
+                setBulkSending(false)
+              }
+            }}
+          >
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)]">
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                    Channel
+                  </label>
+                  <Select
+                    value={bulkChannel}
+                    onChange={(e) => setBulkChannel(e.target.value as typeof bulkChannel)}
+                  >
+                    <option value="sms">Bulk SMS</option>
+                    <option value="email">Bulk email</option>
+                    <option value="push">Bulk push</option>
+                  </Select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                    {bulkChannel === "email" ? "Subject" : "Title (push only)"}
+                  </label>
+                  <Input
+                    placeholder={
+                      bulkChannel === "email"
+                        ? `e.g. "System Update"`
+                        : `e.g. "System Update"`
+                    }
+                    value={bulkTitle}
+                    onChange={(e) => setBulkTitle(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                    Message
+                  </label>
+                  <Textarea
+                    rows={3}
+                    placeholder={
+                      bulkChannel === "sms"
+                        ? "Text body to send by SMS."
+                        : "Notification body for email or push."
+                    }
+                    value={bulkMessage}
+                    onChange={(e) => setBulkMessage(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                      Role (optional)
+                    </label>
+                    <Input
+                      placeholder='e.g. "student"'
+                      value={bulkRole}
+                      onChange={(e) => setBulkRole(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                      User IDs (comma separated)
+                    </label>
+                    <Input
+                      placeholder="e.g. 1,2,3"
+                      value={bulkUserIds}
+                      onChange={(e) => setBulkUserIds(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)]">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                  File attachment (optional)
+                </label>
+                <FileUpload
+                  accept="image/*"
+                  onFileSelect={setBulkFile}
+                  label="Upload image or file"
+                  description="Optional image or asset to attach"
+                  className="min-h-[110px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                  Scheduled at (optional)
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={bulkScheduledAt}
+                  onChange={(e) => setBulkScheduledAt(e.target.value)}
+                />
+                <p className="text-[11px] text-grayScale-400">
+                  Leave empty to send immediately. When set, the notification is stored in{" "}
+                  <code>scheduled_notifications</code> and sent at the specified time.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBulkTitle("")
+                  setBulkMessage("")
+                  setBulkRole("")
+                  setBulkUserIds("")
+                  setBulkScheduledAt("")
+                  setBulkFile(null)
+                  setBulkChannel("sms")
+                  setBulkOpen(false)
+                }}
+                disabled={bulkSending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={bulkSending || !bulkMessage.trim()}>
+                {bulkSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <MailOpen className="mr-2 h-3.5 w-3.5" />
+                    Send
+                  </>
+                )}
+              </Button>
             </div>
           </form>
         </DialogContent>

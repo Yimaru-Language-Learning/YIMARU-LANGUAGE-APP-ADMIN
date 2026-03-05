@@ -1,15 +1,15 @@
 import { useEffect, useState, useRef } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, ToggleLeft, ToggleRight, MoreVertical, X, Trash2, AlertCircle, Edit } from "lucide-react"
+import { ArrowLeft, ToggleLeft, ToggleRight, MoreVertical, X, Trash2, AlertCircle, Edit, Link2, Plus, Loader2, LayoutGrid, GitBranch, ChevronDown, Lock, ArrowRight } from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card, CardContent } from "../../components/ui/card"
 import alertSrc from "../../assets/Alert.svg"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
-import { getSubCoursesByCourse, getCoursesByCategory, getCourseCategories, createSubCourse, updateSubCourse, updateSubCourseStatus, deleteSubCourse } from "../../api/courses.api"
+import { getSubCoursesByCourse, getCoursesByCategory, getCourseCategories, createSubCourse, updateSubCourse, updateSubCourseStatus, deleteSubCourse, getSubCoursePrerequisites, addSubCoursePrerequisite, removeSubCoursePrerequisite } from "../../api/courses.api"
 import { Input } from "../../components/ui/input"
-import type { SubCourse, Course, CourseCategory } from "../../types/course.types"
+import type { SubCourse, Course, CourseCategory, SubCoursePrerequisite } from "../../types/course.types"
 
 export function SubCoursesPage() {
   const { categoryId, courseId } = useParams<{ categoryId: string; courseId: string }>()
@@ -36,6 +36,22 @@ export function SubCoursesPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  // View mode
+  const [viewMode, setViewMode] = useState<"grid" | "flow">("grid")
+
+  // All prerequisites map: subCourseId -> prerequisites[]
+  const [allPrereqMap, setAllPrereqMap] = useState<Record<number, SubCoursePrerequisite[]>>({})
+  const [allPrereqLoading, setAllPrereqLoading] = useState(false)
+
+  // Prerequisites state
+  const [showPrereqModal, setShowPrereqModal] = useState(false)
+  const [prereqSubCourse, setPrereqSubCourse] = useState<SubCourse | null>(null)
+  const [prerequisites, setPrerequisites] = useState<SubCoursePrerequisite[]>([])
+  const [prereqLoading, setPrereqLoading] = useState(false)
+  const [prereqAdding, setPrereqAdding] = useState(false)
+  const [prereqRemoving, setPrereqRemoving] = useState<number | null>(null)
+  const [selectedPrereqId, setSelectedPrereqId] = useState<number | 0>(0)
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -57,6 +73,25 @@ export function SubCoursesPage() {
       setSubCourses(subCoursesRes.data.data.sub_courses ?? [])
     } catch (err) {
       console.error("Failed to fetch sub-courses:", err)
+    }
+  }
+
+  const fetchAllPrerequisites = async (scs: SubCourse[]) => {
+    if (scs.length === 0) return
+    setAllPrereqLoading(true)
+    try {
+      const results = await Promise.all(
+        scs.map((sc) => getSubCoursePrerequisites(sc.id).then((res) => ({ id: sc.id, data: res.data.data ?? [] })))
+      )
+      const map: Record<number, SubCoursePrerequisite[]> = {}
+      for (const r of results) {
+        map[r.id] = r.data
+      }
+      setAllPrereqMap(map)
+    } catch (err) {
+      console.error("Failed to fetch all prerequisites:", err)
+    } finally {
+      setAllPrereqLoading(false)
     }
   }
 
@@ -92,6 +127,12 @@ export function SubCoursesPage() {
 
     fetchData()
   }, [courseId, categoryId])
+
+  useEffect(() => {
+    if (subCourses.length > 0) {
+      fetchAllPrerequisites(subCourses)
+    }
+  }, [subCourses])
 
   const handleToggleStatus = async (subCourse: SubCourse) => {
     setTogglingId(subCourse.id)
@@ -199,6 +240,112 @@ export function SubCoursesPage() {
     navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`)
   }
 
+  const handlePrereqClick = async (subCourse: SubCourse) => {
+    setPrereqSubCourse(subCourse)
+    setShowPrereqModal(true)
+    setPrereqLoading(true)
+    setSelectedPrereqId(0)
+    try {
+      const res = await getSubCoursePrerequisites(subCourse.id)
+      setPrerequisites(res.data.data ?? [])
+    } catch (err) {
+      console.error("Failed to fetch prerequisites:", err)
+      setPrerequisites([])
+    } finally {
+      setPrereqLoading(false)
+    }
+  }
+
+  const handleAddPrerequisite = async () => {
+    if (!prereqSubCourse || !selectedPrereqId) return
+    setPrereqAdding(true)
+    try {
+      await addSubCoursePrerequisite(prereqSubCourse.id, {
+        prerequisite_sub_course_id: selectedPrereqId,
+      })
+      const res = await getSubCoursePrerequisites(prereqSubCourse.id)
+      setPrerequisites(res.data.data ?? [])
+      setSelectedPrereqId(0)
+    } catch (err) {
+      console.error("Failed to add prerequisite:", err)
+    } finally {
+      setPrereqAdding(false)
+    }
+  }
+
+  const handleRemovePrerequisite = async (prereqId: number) => {
+    if (!prereqSubCourse) return
+    setPrereqRemoving(prereqId)
+    try {
+      await removeSubCoursePrerequisite(prereqSubCourse.id, prereqId)
+      const res = await getSubCoursePrerequisites(prereqSubCourse.id)
+      setPrerequisites(res.data.data ?? [])
+    } catch (err) {
+      console.error("Failed to remove prerequisite:", err)
+    } finally {
+      setPrereqRemoving(null)
+    }
+  }
+
+  // Build flow layers using topological sort
+  const flowLayers = (() => {
+    if (subCourses.length === 0) return []
+
+    // Find sub-courses with no prerequisites (roots)
+    const hasPrereqs = new Set<number>()
+    const isPrereqOf = new Map<number, number[]>() // prereqId -> [subCourseIds that depend on it]
+
+    for (const sc of subCourses) {
+      const prereqs = allPrereqMap[sc.id] ?? []
+      if (prereqs.length > 0) {
+        hasPrereqs.add(sc.id)
+      }
+      for (const p of prereqs) {
+        const dependents = isPrereqOf.get(p.prerequisite_sub_course_id) ?? []
+        dependents.push(sc.id)
+        isPrereqOf.set(p.prerequisite_sub_course_id, dependents)
+      }
+    }
+
+    // BFS-based layering
+    const layers: SubCourse[][] = []
+    const placed = new Set<number>()
+
+    // Layer 0: no prerequisites
+    const roots = subCourses.filter((sc) => !hasPrereqs.has(sc.id))
+    if (roots.length > 0) {
+      layers.push(roots)
+      roots.forEach((sc) => placed.add(sc.id))
+    }
+
+    // Subsequent layers: all prereqs already placed
+    let maxIterations = subCourses.length
+    while (placed.size < subCourses.length && maxIterations-- > 0) {
+      const nextLayer = subCourses.filter((sc) => {
+        if (placed.has(sc.id)) return false
+        const prereqs = allPrereqMap[sc.id] ?? []
+        return prereqs.every((p) => placed.has(p.prerequisite_sub_course_id))
+      })
+      if (nextLayer.length === 0) {
+        // Remaining have circular deps or missing prereqs — just add them
+        const remaining = subCourses.filter((sc) => !placed.has(sc.id))
+        if (remaining.length > 0) layers.push(remaining)
+        break
+      }
+      layers.push(nextLayer)
+      nextLayer.forEach((sc) => placed.add(sc.id))
+    }
+
+    return layers
+  })()
+
+  const availablePrerequisites = subCourses.filter(
+    (sc) =>
+      prereqSubCourse &&
+      sc.id !== prereqSubCourse.id &&
+      !prerequisites.some((p) => p.prerequisite_sub_course_id === sc.id)
+  )
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
@@ -243,9 +390,37 @@ export function SubCoursesPage() {
             <p className="mt-0.5 text-sm text-grayScale-400">{subCourses.length} sub-course{subCourses.length !== 1 ? "s" : ""} available</p>
           </div>
         </div>
-        <Button className="w-full rounded-xl bg-brand-500 px-5 shadow-sm transition-all hover:bg-brand-600 hover:shadow-md sm:w-auto" onClick={handleAddSubCourse}>
-          Add New Sub-course
-        </Button>
+        <div className="flex items-center gap-2">
+          {subCourses.length > 0 && (
+            <div className="flex rounded-xl border border-grayScale-200 bg-white p-0.5 shadow-sm">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  viewMode === "grid"
+                    ? "bg-brand-500 text-white shadow-sm"
+                    : "text-grayScale-500 hover:text-grayScale-700"
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode("flow")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  viewMode === "flow"
+                    ? "bg-brand-500 text-white shadow-sm"
+                    : "text-grayScale-500 hover:text-grayScale-700"
+                }`}
+              >
+                <GitBranch className="h-3.5 w-3.5" />
+                Flow
+              </button>
+            </div>
+          )}
+          <Button className="w-full rounded-xl bg-brand-500 px-5 shadow-sm transition-all hover:bg-brand-600 hover:shadow-md sm:w-auto" onClick={handleAddSubCourse}>
+            Add New Sub-course
+          </Button>
+        </div>
       </div>
 
       {/* Sub-course grid or empty state */}
@@ -320,6 +495,17 @@ export function SubCoursesPage() {
                       </button>
                       {openMenuId === subCourse.id && (
                         <div className="absolute right-0 top-full z-10 mt-1.5 w-44 overflow-hidden rounded-xl border border-grayScale-100 bg-white py-1 shadow-lg">
+                          <button
+                            onClick={() => {
+                              handlePrereqClick(subCourse)
+                              setOpenMenuId(null)
+                            }}
+                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-grayScale-600 transition-colors hover:bg-grayScale-50"
+                          >
+                            <Link2 className="h-4 w-4" />
+                            Prerequisites
+                          </button>
+                          <div className="mx-3 border-t border-grayScale-100" />
                           <button
                             onClick={() => {
                               handleToggleStatus(subCourse)
@@ -493,6 +679,118 @@ export function SubCoursesPage() {
                 disabled={saving || !title.trim()}
               >
                 {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prerequisites Modal */}
+      {showPrereqModal && prereqSubCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-grayScale-700">Prerequisites</h2>
+                <p className="mt-0.5 text-sm text-grayScale-400">
+                  Manage prerequisites for <span className="font-medium text-grayScale-600">{prereqSubCourse.title}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPrereqModal(false)}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              {/* Add prerequisite */}
+              {availablePrerequisites.length > 0 && (
+                <div className="mb-5">
+                  <label className="mb-1.5 block text-sm font-semibold text-grayScale-600">Add Prerequisite</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedPrereqId}
+                      onChange={(e) => setSelectedPrereqId(Number(e.target.value))}
+                      className="flex-1 rounded-lg border border-grayScale-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    >
+                      <option value={0}>Select a sub-course...</option>
+                      {availablePrerequisites.map((sc) => (
+                        <option key={sc.id} value={sc.id}>
+                          {sc.title} {sc.level ? `(${sc.level})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      className="shrink-0 rounded-lg bg-brand-500 px-4 shadow-sm hover:bg-brand-600"
+                      onClick={handleAddPrerequisite}
+                      disabled={prereqAdding || !selectedPrereqId}
+                    >
+                      {prereqAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Current prerequisites list */}
+              {prereqLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
+                </div>
+              ) : prerequisites.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-grayScale-200 px-4 py-8 text-center">
+                  <Link2 className="mx-auto h-8 w-8 text-grayScale-300" />
+                  <p className="mt-2 text-sm font-medium text-grayScale-500">No prerequisites</p>
+                  <p className="mt-0.5 text-xs text-grayScale-400">This sub-course is accessible without completing others first</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-grayScale-600">
+                    Current Prerequisites ({prerequisites.length})
+                  </p>
+                  {prerequisites.map((prereq) => (
+                    <div
+                      key={prereq.id}
+                      className="flex items-center justify-between rounded-xl border border-grayScale-100 bg-grayScale-25 px-4 py-3 transition-colors hover:border-grayScale-200"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-grayScale-700 truncate">{prereq.prerequisite_title}</p>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          {prereq.prerequisite_level && (
+                            <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[11px] font-medium text-brand-600">
+                              {prereq.prerequisite_level}
+                            </span>
+                          )}
+                          <span className="text-[11px] text-grayScale-400">
+                            Order: {prereq.prerequisite_display_order}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemovePrerequisite(prereq.id)}
+                        disabled={prereqRemoving === prereq.id}
+                        className="ml-3 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                      >
+                        {prereqRemoving === prereq.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-grayScale-100 px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowPrereqModal(false)}
+                className="rounded-lg"
+              >
+                Close
               </Button>
             </div>
           </div>

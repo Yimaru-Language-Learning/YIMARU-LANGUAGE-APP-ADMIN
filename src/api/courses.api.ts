@@ -38,6 +38,10 @@ import type {
   CreateQuestionResponse,
   CreateVimeoVideoRequest,
   CreateCourseCategoryRequest,
+  GetSubCoursePrerequisitesResponse,
+  AddSubCoursePrerequisiteRequest,
+  GetLearningPathResponse,
+  ReorderItem,
 } from "../types/course.types"
 
 export const getCourseCategories = () =>
@@ -195,3 +199,20 @@ export const deleteQuestionSet = (questionSetId: number) =>
 
 export const createVimeoVideo = (data: CreateVimeoVideoRequest) =>
   http.post("/course-management/videos/vimeo", data)
+
+// Sub-course Prerequisite APIs
+export const getSubCoursePrerequisites = (subCourseId: number) =>
+  http.get<GetSubCoursePrerequisitesResponse>(`/course-management/sub-courses/${subCourseId}/prerequisites`)
+
+export const addSubCoursePrerequisite = (subCourseId: number, data: AddSubCoursePrerequisiteRequest) =>
+  http.post(`/course-management/sub-courses/${subCourseId}/prerequisites`, data)
+
+export const removeSubCoursePrerequisite = (subCourseId: number, prerequisiteId: number) =>
+  http.delete(`/course-management/sub-courses/${subCourseId}/prerequisites/${prerequisiteId}`)
+
+// Learning Path APIs
+export const getLearningPath = (courseId: number) =>
+  http.get<GetLearningPathResponse>(`/course-management/courses/${courseId}/learning-path`)
+
+export const reorderSubCourses = (courseId: number, items: ReorderItem[]) =>
+  http.put(`/course-management/courses/${courseId}/reorder-sub-courses`, { items })

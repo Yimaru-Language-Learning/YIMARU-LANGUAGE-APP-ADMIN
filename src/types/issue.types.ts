@@ -32,6 +32,21 @@ export interface GetIssueResponse {
   metadata: null;
 }
 
+export interface CreateIssueRequest {
+  subject: string;
+  description: string;
+  issue_type: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CreateIssueResponse {
+  message: string;
+  data: Issue;
+  success: boolean;
+  status_code: number;
+  metadata: unknown;
+}
+
 export interface UpdateIssueStatusResponse {
   message: string;
   success: boolean;

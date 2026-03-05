@@ -46,6 +46,7 @@ import {
   getIssueById,
   updateIssueStatus,
   deleteIssue,
+  createIssue,
 } from "../../api/issues.api";
 import type { Issue, IssueFilters } from "../../types/issue.types";
 
@@ -207,6 +208,9 @@ export function IssuesPage() {
   const [createSubject, setCreateSubject] = useState("");
   const [createType, setCreateType] = useState<string>("bug");
   const [createDescription, setCreateDescription] = useState("");
+  const [createDevice, setCreateDevice] = useState("");
+  const [createBrowser, setCreateBrowser] = useState("");
+  const [createSubmitting, setCreateSubmitting] = useState(false);
 
   const fetchIssues = useCallback(async () => {
     setLoading(true);
@@ -522,7 +526,6 @@ export function IssuesPage() {
                 const typeConfig = getIssueTypeConfig(issue.issue_type);
                 const statusConfig = getStatusConfig(issue.status);
                 const TypeIcon = typeConfig.icon;
-                const StatusIcon = statusConfig.icon;
 
                 return (
                   <TableRow key={issue.id} className="group">
@@ -907,6 +910,29 @@ export function IssuesPage() {
                 onChange={(e) => setCreateDescription(e.target.value)}
               />
             </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                  Device (optional)
+                </label>
+                <Input
+                  placeholder="e.g. iPhone 14"
+                  value={createDevice}
+                  onChange={(e) => setCreateDevice(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
+                  Browser (optional)
+                </label>
+                <Input
+                  placeholder="e.g. Safari 17"
+                  value={createBrowser}
+                  onChange={(e) => setCreateBrowser(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="mt-5 flex items-center justify-end gap-2">
@@ -917,24 +943,49 @@ export function IssuesPage() {
                 setCreateSubject("");
                 setCreateDescription("");
                 setCreateType("bug");
+                setCreateDevice("");
+                setCreateBrowser("");
               }}
+              disabled={createSubmitting}
             >
               Cancel
             </Button>
             <Button
               className="bg-brand-500 text-white hover:bg-brand-600"
-              onClick={() => {
-                // Hook to create-issue API here; currently UI-only.
-                if (!createSubject.trim() || !createDescription.trim()) {
-                  return;
+              disabled={createSubmitting || !createSubject.trim() || !createDescription.trim()}
+              onClick={async () => {
+                if (!createSubject.trim() || !createDescription.trim()) return;
+                setCreateSubmitting(true);
+                try {
+                  const payload: any = {
+                    subject: createSubject.trim(),
+                    description: createDescription.trim(),
+                    issue_type: createType,
+                  };
+                  const metadata: Record<string, string> = {};
+                  if (createDevice.trim()) metadata.device = createDevice.trim();
+                  if (createBrowser.trim()) metadata.browser = createBrowser.trim();
+                  if (Object.keys(metadata).length > 0) {
+                    payload.metadata = metadata;
+                  }
+
+                  await createIssue(payload);
+
+                  setCreateOpen(false);
+                  setCreateSubject("");
+                  setCreateDescription("");
+                  setCreateType("bug");
+                  setCreateDevice("");
+                  setCreateBrowser("");
+                  fetchIssues();
+                } catch (error) {
+                  console.error("Failed to create issue:", error);
+                } finally {
+                  setCreateSubmitting(false);
                 }
-                setCreateOpen(false);
-                setCreateSubject("");
-                setCreateDescription("");
-                setCreateType("bug");
               }}
             >
-              Create Issue
+              {createSubmitting ? "Creating..." : "Create Issue"}
             </Button>
           </div>
         </DialogContent>

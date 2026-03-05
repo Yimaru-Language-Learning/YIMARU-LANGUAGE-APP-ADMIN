@@ -1,33 +1,23 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, MoreVertical, Edit, AlertCircle } from "lucide-react"
+import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, Edit, AlertCircle } from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
-import { Card, CardContent } from "../../components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import alertSrc from "../../assets/Alert.svg"
 import { Button } from "../../components/ui/button"
 import { Badge } from "../../components/ui/badge"
 import { Input } from "../../components/ui/input"
-import { FileUpload } from "../../components/ui/file-upload"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table"
 import { getCoursesByCategory, getCourseCategories, createCourse, deleteCourse, updateCourseStatus, updateCourse } from "../../api/courses.api"
 import type { Course, CourseCategory } from "../../types/course.types"
-
-function CourseThumbnail({ src, alt, gradient }: { src?: string; alt: string; gradient: string }) {
-  const [imgError, setImgError] = useState(false)
-  
-  if (!src || imgError) {
-    return <div className={`h-full w-full rounded-t-lg ${gradient}`} />
-  }
-  
-  return (
-    <img 
-      src={src} 
-      alt={alt} 
-      className="h-full w-full object-cover rounded-t-lg"
-      onError={() => setImgError(true)}
-    />
-  )
-}
 
 export function CoursesPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
@@ -42,16 +32,10 @@ export function CoursesPage() {
   const [description, setDescription] = useState("")
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null)
-  const [newVideoFile, setNewVideoFile] = useState<File | null>(null)
-
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [togglingId, setTogglingId] = useState<number | null>(null)
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-
   const [showEditModal, setShowEditModal] = useState(false)
   const [courseToEdit, setCourseToEdit] = useState<Course | null>(null)
   const [editTitle, setEditTitle] = useState("")
@@ -59,19 +43,6 @@ export function CoursesPage() {
   const [editThumbnail, setEditThumbnail] = useState("")
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpenMenuId(null)
-      }
-    }
-
-    if (openMenuId !== null) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [openMenuId])
 
   const fetchCourses = async () => {
     if (!categoryId) return
@@ -95,7 +66,7 @@ export function CoursesPage() {
           getCourseCategories(),
         ])
 
-        setCourses(coursesRes.data.data.courses)
+        setCourses(coursesRes.data.data.courses ?? [])
         const foundCategory = categoriesRes.data.data.categories.find(
           (c) => c.id === Number(categoryId)
         )
@@ -115,8 +86,6 @@ export function CoursesPage() {
     setTitle("")
     setDescription("")
     setSaveError(null)
-    setNewThumbnailFile(null)
-    setNewVideoFile(null)
     setShowModal(true)
   }
 
@@ -125,8 +94,6 @@ export function CoursesPage() {
     setTitle("")
     setDescription("")
     setSaveError(null)
-    setNewThumbnailFile(null)
-    setNewVideoFile(null)
   }
 
   const handleSave = async () => {
@@ -296,127 +263,123 @@ export function CoursesPage() {
         </div>
       </div>
 
-      {/* Course grid or empty state */}
-      {courses.length === 0 ? (
-        <Card className="border-dashed border-grayScale-200 shadow-none">
-          <CardContent className="flex flex-col items-center justify-center py-20">
-            <img src={practiceSrc} alt="" className="h-20 w-20" />
-            <h3 className="mt-5 text-base font-semibold text-grayScale-600">No courses yet</h3>
-            <p className="mt-1.5 text-sm text-grayScale-400">No courses found in this category</p>
-            <Button variant="outline" className="mt-6 border-brand-200 text-brand-600 transition-colors hover:bg-brand-50" onClick={handleOpenModal}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add your first course
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {courses.map((course, index) => {
-            const gradients = [
-              "bg-gradient-to-br from-blue-100 to-blue-200",
-              "bg-gradient-to-br from-purple-100 to-purple-200",
-              "bg-gradient-to-br from-green-100 to-green-200",
-              "bg-gradient-to-br from-yellow-100 to-yellow-200",
-            ]
-            return (
-              <Card
-                key={course.id}
-                className="group cursor-pointer overflow-hidden border border-grayScale-100 bg-white shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-grayScale-200"
-                onClick={() => handleCourseClick(course.id)}
+      {/* Course table or empty state */}
+      <Card className="shadow-soft">
+        <CardHeader className="border-b border-grayScale-200 pb-3">
+          <CardTitle className="text-base font-semibold text-grayScale-600">
+            Course Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {courses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-16 text-center">
+              <img src={practiceSrc} alt="" className="h-16 w-16" />
+              <h3 className="mt-4 text-base font-semibold text-grayScale-600">No courses yet</h3>
+              <p className="mt-1.5 text-sm text-grayScale-400">
+                No courses found in this category.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-5 border-brand-200 text-brand-600 transition-colors hover:bg-brand-50"
+                onClick={handleOpenModal}
               >
-                {/* Thumbnail */}
-                <div className="relative aspect-video w-full overflow-hidden">
-                  <CourseThumbnail 
-                    src={course.thumbnail} 
-                    alt={course.title} 
-                    gradient={gradients[index % gradients.length]} 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-                </div>
-                
-                {/* Content */}
-                <div className="space-y-3 border-t border-grayScale-50 p-4">
-                  {/* Status and menu */}
-                  <div className="flex items-center justify-between">
-                    <Badge 
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${
-                        course.is_active 
-                          ? "border-0 bg-emerald-50 text-emerald-700" 
-                          : "border-0 bg-grayScale-100 text-grayScale-500"
+                <Plus className="mr-2 h-4 w-4" />
+                Add your first course
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-grayScale-200">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-grayScale-100 hover:bg-grayScale-100">
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                      Course
+                    </TableHead>
+                    <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
+                      Status
+                    </TableHead>
+                    <TableHead className="py-3 text-right text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {courses.map((course, index) => (
+                    <TableRow
+                      key={course.id}
+                      className={`cursor-pointer transition-colors hover:bg-brand-100/30 ${
+                        index % 2 === 0 ? "bg-white" : "bg-grayScale-100/40"
                       }`}
+                      onClick={() => handleCourseClick(course.id)}
                     >
-                      <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${course.is_active ? "bg-emerald-500" : "bg-grayScale-400"}`} />
-                      {course.is_active ? "ACTIVE" : "INACTIVE"}
-                    </Badge>
-                    <div className="relative" ref={openMenuId === course.id ? menuRef : undefined} onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => setOpenMenuId(openMenuId === course.id ? null : course.id)}
-                        className="grid h-7 w-7 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                      {openMenuId === course.id && (
-                        <div className="absolute right-0 top-full z-10 mt-1.5 w-44 animate-in fade-in slide-in-from-top-1 rounded-xl border border-grayScale-100 bg-white py-1.5 shadow-lg">
-                          <button
-                            onClick={() => {
-                              handleToggleStatus(course)
-                              setOpenMenuId(null)
+                      <TableCell className="max-w-md py-3.5">
+                        <div className="truncate text-sm font-semibold text-grayScale-700">
+                          {course.title}
+                        </div>
+                        {course.description && (
+                          <div className="mt-1 truncate text-xs text-grayScale-400">
+                            {course.description}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden py-3.5 md:table-cell">
+                        <Badge
+                          variant={course.is_active ? "success" : "secondary"}
+                          className="text-[11px] font-semibold"
+                        >
+                          {course.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-700"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditClick(course)
                             }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-700"
                             disabled={togglingId === course.id}
-                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-grayScale-600 transition-colors hover:bg-grayScale-50 disabled:opacity-50"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleToggleStatus(course)
+                            }}
                           >
                             {course.is_active ? (
-                              <>
-                                <ToggleLeft className="h-4 w-4" />
-                                Deactivate
-                              </>
+                              <ToggleLeft className="h-4 w-4" />
                             ) : (
-                              <>
-                                <ToggleRight className="h-4 w-4" />
-                                Activate
-                              </>
+                              <ToggleRight className="h-4 w-4" />
                             )}
-                          </button>
-                          <div className="mx-3 my-1 border-t border-grayScale-100" />
-                          <button
-                            onClick={() => {
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation()
                               handleDeleteClick(course)
-                              setOpenMenuId(null)
                             }}
-                            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-red-500 transition-colors hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
-                            Delete
-                          </button>
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Title */}
-                  <h3 className="font-semibold text-grayScale-700 line-clamp-1">{course.title}</h3>
-                  <p className="text-sm leading-relaxed text-grayScale-400 line-clamp-2">
-                    {course.description || "No description available"}
-                  </p>
-                  
-                  {/* Edit button */}
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-grayScale-200 text-grayScale-600 transition-all hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleEditClick(course)
-                    }}
-                  >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add Course Modal */}
       {showModal && (
@@ -470,29 +433,6 @@ export function CoursesPage() {
                   rows={4}
                   className="flex w-full rounded-xl border border-grayScale-200 bg-white px-3.5 py-2.5 text-sm transition-colors ring-offset-background placeholder:text-grayScale-400 focus-visible:border-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-100"
                 />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="mb-2 text-sm font-medium text-grayScale-600">Thumbnail image</p>
-                  <FileUpload
-                    accept="image/*"
-                    onFileSelect={setNewThumbnailFile}
-                    label="Upload thumbnail"
-                    description="Optional course cover image"
-                    className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
-                  />
-                </div>
-                <div>
-                  <p className="mb-2 text-sm font-medium text-grayScale-600">Intro video</p>
-                  <FileUpload
-                    accept="video/*"
-                    onFileSelect={setNewVideoFile}
-                    label="Upload intro video"
-                    description="Optional overview for this course"
-                    className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
-                  />
-                </div>
               </div>
 
               <div className="rounded-lg bg-grayScale-50 px-3 py-2 text-xs text-grayScale-400">

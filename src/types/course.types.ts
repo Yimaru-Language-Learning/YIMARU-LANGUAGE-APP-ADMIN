@@ -439,3 +439,65 @@ export interface CreateQuestionSetResponse {
   status_code: number
   metadata: unknown
 }
+
+// Sub-course Prerequisites
+export interface SubCoursePrerequisite {
+  id: number
+  sub_course_id: number
+  prerequisite_sub_course_id: number
+  prerequisite_title: string
+  prerequisite_level: string
+  prerequisite_display_order: number
+}
+
+export interface GetSubCoursePrerequisitesResponse {
+  message: string
+  data: SubCoursePrerequisite[]
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface AddSubCoursePrerequisiteRequest {
+  prerequisite_sub_course_id: number
+}
+
+// Learning Path (full tree from GET /courses/:courseId/learning-path)
+export interface LearningPathSubCourse {
+  id: number
+  title: string
+  description: string
+  thumbnail: string
+  display_order: number
+  level: string
+  prerequisite_count: number
+  video_count: number
+  practice_count: number
+  prerequisites: { sub_course_id: number; title: string; level: string }[]
+  videos: unknown[]
+  practices: unknown[]
+}
+
+export interface LearningPath {
+  course_id: number
+  course_title: string
+  description: string
+  thumbnail: string
+  intro_video_url: string
+  category_id: number
+  category_name: string
+  sub_courses: LearningPathSubCourse[]
+}
+
+export interface GetLearningPathResponse {
+  message: string
+  data: LearningPath
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface ReorderItem {
+  sub_course_id: number
+  display_order: number
+}

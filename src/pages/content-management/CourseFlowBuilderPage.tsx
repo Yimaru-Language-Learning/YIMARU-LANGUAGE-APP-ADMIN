@@ -1,357 +1,370 @@
 import { useEffect, useMemo, useState } from "react"
-import { GripVertical, RefreshCw } from "lucide-react"
+import {
+  GripVertical, RefreshCw, Video, BookOpen, ChevronDown, ChevronRight,
+  X, AlertCircle, Loader2,
+} from "lucide-react"
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  verticalListSortingStrategy, useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
-import { Input } from "../../components/ui/input"
+import { Badge } from "../../components/ui/badge"
 import { Select } from "../../components/ui/select"
-import { getCourseCategories } from "../../api/courses.api"
-import type { CourseCategory } from "../../types/course.types"
+import {
+  getCourseCategories, getCoursesByCategory,
+  getLearningPath, reorderSubCourses,
+  addSubCoursePrerequisite, removeSubCoursePrerequisite,
+} from "../../api/courses.api"
+import type {
+  CourseCategory, Course,
+  LearningPathSubCourse, LearningPath,
+} from "../../types/course.types"
 import { cn } from "../../lib/utils"
+import { toast } from "sonner"
 
-type StepType =
-  | "lesson"
-  | "practice"
-  | "exam"
-  | "feedback"
-  | "course"
-  | "speaking"
-  | "new_course"
-
-type FlowStep = {
-  id: string
-  type: StepType
-  title: string
-  description?: string
+// ── Level badge colours ──
+const LEVEL_STYLE: Record<string, string> = {
+  BEGINNER: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+  INTERMEDIATE: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+  ADVANCED: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
 }
 
-const STEP_LABELS: Record<StepType, string> = {
-  lesson: "Lesson",
-  practice: "Practice",
-  exam: "Exam",
-  feedback: "Feedback loop",
-  course: "Course",
-  speaking: "Speaking section",
-  new_course: "New course (category)",
+// ── Sortable sub-course card ──
+function SortableSubCourseCard({
+  subCourse,
+  allSubCourses,
+  onAddPrereq,
+  onRemovePrereq,
+  prereqLoading,
+}: {
+  subCourse: LearningPathSubCourse
+  allSubCourses: LearningPathSubCourse[]
+  onAddPrereq: (subCourseId: number, prereqId: number) => void
+  onRemovePrereq: (subCourseId: number, prereqId: number) => void
+  prereqLoading: number | null
+}) {
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: subCourse.id })
+
+  const [expanded, setExpanded] = useState(false)
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  }
+
+  const availablePrereqs = allSubCourses.filter(
+    (sc) =>
+      sc.id !== subCourse.id &&
+      !subCourse.prerequisites.some((p) => p.sub_course_id === sc.id),
+  )
+
+  return (
+    <div ref={setNodeRef} style={style} className="group">
+      {/* Connector line */}
+      <div className="flex justify-center -mb-1">
+        <div className="h-4 w-px bg-grayScale-200" />
+      </div>
+
+      <div
+        className={cn(
+          "rounded-2xl border bg-white shadow-sm transition-all",
+          isDragging ? "ring-2 ring-brand-400 border-brand-200" : "border-grayScale-100",
+        )}
+      >
+        {/* Card header */}
+        <div className="flex items-center gap-3 p-4">
+          {/* Drag handle */}
+          <button
+            type="button"
+            className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500 active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+
+          {/* Order badge */}
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600">
+            {subCourse.display_order}
+          </span>
+
+          {/* Title & level */}
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-semibold text-grayScale-700">
+              {subCourse.title}
+            </p>
+            {subCourse.description && (
+              <p className="truncate text-xs text-grayScale-400 mt-0.5">
+                {subCourse.description}
+              </p>
+            )}
+          </div>
+
+          {/* Level badge */}
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+              LEVEL_STYLE[subCourse.level] ?? "bg-grayScale-100 text-grayScale-600",
+            )}
+          >
+            {subCourse.level}
+          </span>
+
+          {/* Expand toggle */}
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+          >
+            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+        </div>
+
+        {/* Stats row */}
+        <div className="flex items-center gap-4 border-t border-grayScale-50 px-4 py-2.5 text-[11px] text-grayScale-400">
+          <span className="flex items-center gap-1">
+            <Video className="h-3.5 w-3.5" />
+            {subCourse.video_count} videos
+          </span>
+          <span className="flex items-center gap-1">
+            <BookOpen className="h-3.5 w-3.5" />
+            {subCourse.practice_count} practices
+          </span>
+          <span className="flex items-center gap-1">
+            {subCourse.prerequisite_count} prerequisite{subCourse.prerequisite_count !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {/* Expandable prerequisites section */}
+        {expanded && (
+          <div className="border-t border-grayScale-100 p-4 space-y-3">
+            <h4 className="text-xs font-semibold text-grayScale-500 uppercase tracking-wider">
+              Prerequisites
+            </h4>
+
+            {subCourse.prerequisites.length === 0 && (
+              <p className="text-xs text-grayScale-400 italic">No prerequisites set.</p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {subCourse.prerequisites.map((prereq) => (
+                <div
+                  key={prereq.sub_course_id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-grayScale-200 bg-grayScale-50 px-3 py-1 text-xs font-medium text-grayScale-600"
+                >
+                  {prereq.title}
+                  <span className="text-[10px] text-grayScale-400">({prereq.level})</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemovePrereq(subCourse.id, prereq.sub_course_id)}
+                    disabled={prereqLoading === subCourse.id}
+                    className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full text-grayScale-400 hover:bg-red-100 hover:text-red-500 disabled:opacity-50"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add prerequisite dropdown */}
+            {availablePrereqs.length > 0 && (
+              <Select
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    onAddPrereq(subCourse.id, Number(e.target.value))
+                    e.target.value = ""
+                  }
+                }}
+                className="h-9 text-xs"
+                disabled={prereqLoading === subCourse.id}
+              >
+                <option value="">+ Add prerequisite…</option>
+                {availablePrereqs.map((sc) => (
+                  <option key={sc.id} value={sc.id}>
+                    {sc.title} ({sc.level})
+                  </option>
+                ))}
+              </Select>
+            )}
+
+            {prereqLoading === subCourse.id && (
+              <div className="flex items-center gap-2 text-xs text-grayScale-400">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Updating…
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
-const STEP_BADGE: Record<StepType, string> = {
-  lesson: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200",
-  practice: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-  exam: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-  feedback: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-  course: "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200",
-  speaking: "bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200",
-  new_course: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
-}
-
-const PARENT_ORDER_KEY = "parent_categories_order"
-const SUB_ORDER_KEY_PREFIX = "sub_categories_order_"
-
+// ── Main page ──
 export function CourseFlowBuilderPage() {
   const [categories, setCategories] = useState<CourseCategory[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
+  const [learningPath, setLearningPath] = useState<LearningPath | null>(null)
+  const [subCourses, setSubCourses] = useState<LearningPathSubCourse[]>([])
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
+  const [selectedCourseId, setSelectedCourseId] = useState("")
+
   const [loading, setLoading] = useState(true)
+  const [coursesLoading, setCoursesLoading] = useState(false)
+  const [pathLoading, setPathLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [prereqLoading, setPrereqLoading] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [scope, setScope] = useState<"sub" | "parent">("sub")
-  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string>("")
-  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<string>("")
-  const [steps, setSteps] = useState<FlowStep[]>([])
-  const [dragStepId, setDragStepId] = useState<string | null>(null)
-  // Order of parent category ids (scope = parent)
-  const [parentCategoryOrder, setParentCategoryOrder] = useState<string[]>([])
-  // Order of sub category ids for the selected parent (scope = sub)
-  const [subCategoryOrder, setSubCategoryOrder] = useState<string[]>([])
-  const [dragCategoryId, setDragCategoryId] = useState<string | null>(null)
-  const [parentOrderDirty, setParentOrderDirty] = useState(false)
-  const [subOrderDirty, setSubOrderDirty] = useState(false)
-  const [stepsDirty, setStepsDirty] = useState(false)
 
   const parentCategories = useMemo(
     () => categories.filter((c) => !c.parent_id),
     [categories],
   )
 
-  const selectedParentCategory = useMemo(
-    () => (scope === "sub" ? categories.find((c) => String(c.id) === selectedParentCategoryId) : undefined),
-    [categories, selectedParentCategoryId, scope],
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const subCategoriesForParent = useMemo(() => {
-    if (!selectedParentCategoryId) return []
-    return categories.filter((c) => String(c.parent_id) === selectedParentCategoryId)
-  }, [categories, selectedParentCategoryId])
-
-  const selectedSubCategory = useMemo(
-    () => (scope === "sub" ? categories.find((c) => String(c.id) === selectedSubCategoryId) : undefined),
-    [categories, selectedSubCategoryId, scope],
-  )
-
-  // Ordered parent list: use saved order, merge in any new parents from API
-  const orderedParentCategories = useMemo(() => {
-    const byId = new Map(parentCategories.map((c) => [String(c.id), c]))
-    const ordered: CourseCategory[] = []
-    const seen = new Set<string>()
-    for (const id of parentCategoryOrder) {
-      const cat = byId.get(id)
-      if (cat) {
-        ordered.push(cat)
-        seen.add(id)
-      }
-    }
-    for (const c of parentCategories) {
-      if (!seen.has(String(c.id))) ordered.push(c)
-    }
-    return ordered
-  }, [parentCategories, parentCategoryOrder])
-
-  // Ordered sub list for selected parent
-  const orderedSubCategories = useMemo(() => {
-    const byId = new Map(subCategoriesForParent.map((c) => [String(c.id), c]))
-    const ordered: CourseCategory[] = []
-    const seen = new Set<string>()
-    for (const id of subCategoryOrder) {
-      const cat = byId.get(id)
-      if (cat) {
-        ordered.push(cat)
-        seen.add(id)
-      }
-    }
-    for (const c of subCategoriesForParent) {
-      if (!seen.has(String(c.id))) ordered.push(c)
-    }
-    return ordered
-  }, [subCategoriesForParent, subCategoryOrder])
-
-  // Load categories
+  // Load categories on mount
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetch = async () => {
       setLoading(true)
-      setError(null)
       try {
-        const catRes = await getCourseCategories()
-        const cats = catRes.data.data.categories ?? []
-        setCategories(cats)
-      } catch (err) {
-        console.error("Failed to load course flows data:", err)
-        setError("Failed to load categories. Please try again.")
+        const res = await getCourseCategories()
+        setCategories(res.data.data.categories ?? [])
+      } catch {
+        setError("Failed to load categories.")
       } finally {
         setLoading(false)
       }
     }
-
-    fetchAll()
+    fetch()
   }, [])
 
-  // Load parent category order from localStorage (after we have categories)
+  // Load courses when category changes
   useEffect(() => {
-    if (parentCategories.length === 0) return
-    try {
-      const raw = window.localStorage.getItem(PARENT_ORDER_KEY)
-      if (raw) {
-        const parsed: string[] = JSON.parse(raw)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setParentCategoryOrder(parsed)
-          setParentOrderDirty(false)
-          return
-        }
-      }
-    } catch {
-      // ignore
-    }
-    setParentCategoryOrder(parentCategories.map((c) => String(c.id)))
-    setParentOrderDirty(false)
-  }, [parentCategories.length])
-
-  // Load sub category order for selected parent
-  useEffect(() => {
-    if (!selectedParentCategoryId || subCategoriesForParent.length === 0) {
-      setSubCategoryOrder([])
+    if (!selectedCategoryId) {
+      setCourses([])
+      setSelectedCourseId("")
       return
     }
-    const key = `${SUB_ORDER_KEY_PREFIX}${selectedParentCategoryId}`
-    try {
-      const raw = window.localStorage.getItem(key)
-      if (raw) {
-        const parsed: string[] = JSON.parse(raw)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSubCategoryOrder(parsed)
-          setSubOrderDirty(false)
-          return
-        }
+    const fetch = async () => {
+      setCoursesLoading(true)
+      try {
+        const res = await getCoursesByCategory(Number(selectedCategoryId))
+        setCourses(res.data.data.courses ?? [])
+      } catch {
+        toast.error("Failed to load courses.")
+      } finally {
+        setCoursesLoading(false)
       }
-    } catch {
-      // ignore
     }
-    setSubCategoryOrder(subCategoriesForParent.map((c) => String(c.id)))
-    setSubOrderDirty(false)
-  }, [selectedParentCategoryId, subCategoriesForParent.length])
+    fetch()
+  }, [selectedCategoryId])
 
-  // Load flow steps for selected sub category only (sub category structure)
+  // Load learning path when course changes
   useEffect(() => {
-    if (scope !== "sub" || !selectedSubCategoryId) {
-      setSteps([])
-      setStepsDirty(false)
+    if (!selectedCourseId) {
+      setLearningPath(null)
+      setSubCourses([])
       return
     }
-    const key = `subcategory_flow_${selectedSubCategoryId}`
-    try {
-      const raw = window.localStorage.getItem(key)
-      if (raw) {
-        const parsed: FlowStep[] = JSON.parse(raw)
-        setSteps(parsed)
-        setStepsDirty(false)
-        return
+    const fetch = async () => {
+      setPathLoading(true)
+      try {
+        const res = await getLearningPath(Number(selectedCourseId))
+        setLearningPath(res.data.data)
+        setSubCourses(res.data.data.sub_courses ?? [])
+      } catch {
+        toast.error("Failed to load learning path.")
+        setLearningPath(null)
+        setSubCourses([])
+      } finally {
+        setPathLoading(false)
       }
+    }
+    fetch()
+  }, [selectedCourseId])
+
+  // Drag end → reorder
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = subCourses.findIndex((sc) => sc.id === active.id)
+    const newIndex = subCourses.findIndex((sc) => sc.id === over.id)
+    const reordered = arrayMove(subCourses, oldIndex, newIndex)
+    const updated = reordered.map((sc, i) => ({ ...sc, display_order: i + 1 }))
+
+    setSubCourses(updated)
+
+    setSaving(true)
+    try {
+      await reorderSubCourses(
+        Number(selectedCourseId),
+        updated.map((sc) => ({ sub_course_id: sc.id, display_order: sc.display_order })),
+      )
+      toast.success("Order saved.")
     } catch {
-      // ignore and fall through to default
-    }
-
-    const defaults: FlowStep[] = [
-      {
-        id: `${selectedSubCategoryId}-lesson`,
-        type: "lesson",
-        title: "Core lessons",
-        description: "Main learning content for this sub category.",
-      },
-      {
-        id: `${selectedSubCategoryId}-practice`,
-        type: "practice",
-        title: "Practice sessions",
-        description: "Speaking or practice activities to reinforce learning.",
-      },
-      {
-        id: `${selectedSubCategoryId}-exam`,
-        type: "exam",
-        title: "Exam / Assessment",
-        description: "Formal evaluation of student understanding.",
-      },
-      {
-        id: `${selectedSubCategoryId}-feedback`,
-        type: "feedback",
-        title: "Feedback loop",
-        description: "Collect feedback and share results with learners.",
-      },
-    ]
-    setSteps(defaults)
-    setStepsDirty(true)
-  }, [scope, selectedSubCategoryId])
-
-  const handleReorder = (targetId: string) => {
-    if (!dragStepId || dragStepId === targetId) return
-    setSteps((prev) => {
-      const currentIndex = prev.findIndex((s) => s.id === dragStepId)
-      const targetIndex = prev.findIndex((s) => s.id === targetId)
-      if (currentIndex === -1 || targetIndex === -1) return prev
-      const copy = [...prev]
-      const [moved] = copy.splice(currentIndex, 1)
-      copy.splice(targetIndex, 0, moved)
-      return copy
-    })
-    setDragStepId(null)
-    setStepsDirty(true)
-  }
-
-  const handleReorderParentCategory = (targetId: string) => {
-    if (!dragCategoryId || dragCategoryId === targetId) return
-    setParentCategoryOrder((prev) => {
-      const currentIndex = prev.indexOf(dragCategoryId)
-      const targetIndex = prev.indexOf(targetId)
-      if (currentIndex === -1 || targetIndex === -1) return prev
-      const copy = [...prev]
-      const [moved] = copy.splice(currentIndex, 1)
-      copy.splice(targetIndex, 0, moved)
-      return copy
-    })
-    setDragCategoryId(null)
-    setParentOrderDirty(true)
-  }
-
-  const handleReorderSubCategory = (targetId: string) => {
-    if (!dragCategoryId || dragCategoryId === targetId) return
-    setSubCategoryOrder((prev) => {
-      const currentIndex = prev.indexOf(dragCategoryId)
-      const targetIndex = prev.indexOf(targetId)
-      if (currentIndex === -1 || targetIndex === -1) return prev
-      const copy = [...prev]
-      const [moved] = copy.splice(currentIndex, 1)
-      copy.splice(targetIndex, 0, moved)
-      return copy
-    })
-    setDragCategoryId(null)
-    setSubOrderDirty(true)
-  }
-
-  const handleSaveParentOrder = () => {
-    if (orderedParentCategories.length === 0 || parentCategoryOrder.length === 0) return
-    window.localStorage.setItem(PARENT_ORDER_KEY, JSON.stringify(parentCategoryOrder))
-    setParentOrderDirty(false)
-  }
-
-  const handleSaveSubOrder = () => {
-    if (!selectedParentCategoryId || subCategoryOrder.length === 0) return
-    window.localStorage.setItem(
-      `${SUB_ORDER_KEY_PREFIX}${selectedParentCategoryId}`,
-      JSON.stringify(subCategoryOrder),
-    )
-    setSubOrderDirty(false)
-  }
-
-  const handleSaveSteps = () => {
-    if (scope !== "sub" || !selectedSubCategoryId) return
-    window.localStorage.setItem(`subcategory_flow_${selectedSubCategoryId}`, JSON.stringify(steps))
-    setStepsDirty(false)
-  }
-
-  const getDefaultDescription = (type: StepType): string => {
-    switch (type) {
-      case "lesson":
-        return "Add the lessons or modules that introduce key concepts."
-      case "practice":
-        return "Connect speaking or practice activities after lessons."
-      case "exam":
-        return "Place exams or quizzes where you want to assess learners."
-      case "feedback":
-        return "Ask for feedback, NPS, or reflection after the exam or final lesson."
-      case "course":
-        return "Link or add an existing course to this flow."
-      case "speaking":
-        return "Speaking or oral practice section for this flow."
-      case "new_course":
-        return "Add a new course within this category."
-      default:
-        return ""
+      toast.error("Failed to save order. Reverting…")
+      setSubCourses(subCourses)
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleAddStep = (type: StepType) => {
-    const activeId = scope === "sub" ? selectedSubCategoryId : selectedParentCategoryId
-    if (!activeId) return
-    const newStep: FlowStep = {
-      id: `${activeId}-${type}-${Date.now()}`,
-      type,
-      title: STEP_LABELS[type],
-      description: getDefaultDescription(type),
+  // Add prerequisite
+  const handleAddPrereq = async (subCourseId: number, prereqId: number) => {
+    setPrereqLoading(subCourseId)
+    try {
+      await addSubCoursePrerequisite(subCourseId, { prerequisite_sub_course_id: prereqId })
+      // Refresh learning path
+      const res = await getLearningPath(Number(selectedCourseId))
+      setSubCourses(res.data.data.sub_courses ?? [])
+      toast.success("Prerequisite added.")
+    } catch {
+      toast.error("Failed to add prerequisite.")
+    } finally {
+      setPrereqLoading(null)
     }
-    setSteps((prev) => [...prev, newStep])
-    setStepsDirty(true)
   }
 
-  const handleUpdateStep = (id: string, changes: Partial<FlowStep>) => {
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...changes } : s)))
-    setStepsDirty(true)
+  // Remove prerequisite
+  const handleRemovePrereq = async (subCourseId: number, prereqId: number) => {
+    setPrereqLoading(subCourseId)
+    try {
+      await removeSubCoursePrerequisite(subCourseId, prereqId)
+      const res = await getLearningPath(Number(selectedCourseId))
+      setSubCourses(res.data.data.sub_courses ?? [])
+      toast.success("Prerequisite removed.")
+    } catch {
+      toast.error("Failed to remove prerequisite.")
+    } finally {
+      setPrereqLoading(null)
+    }
   }
 
-  const handleRemoveStep = (id: string) => {
-    setSteps((prev) => prev.filter((s) => s.id !== id))
-    setStepsDirty(true)
-  }
-
+  // ── Loading / error states ──
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <div className="rounded-2xl bg-white shadow-sm p-6">
           <RefreshCw className="h-10 w-10 animate-spin text-brand-600" />
         </div>
-        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading course flows…</p>
+        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading…</p>
       </div>
     )
   }
@@ -360,9 +373,7 @@ export function CourseFlowBuilderPage() {
     return (
       <div className="flex items-center justify-center py-32">
         <div className="mx-4 flex w-full max-w-md items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-6 py-5 shadow-sm">
-          <div className="rounded-full bg-red-100 p-2">
-            <RefreshCw className="h-5 w-5 shrink-0 text-red-500" />
-          </div>
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
           <p className="text-sm font-medium text-red-600">{error}</p>
         </div>
       </div>
@@ -372,431 +383,200 @@ export function CourseFlowBuilderPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">Course Flows</h1>
-          <p className="mt-1 text-sm text-grayScale-400">
-            Arrange parent categories and sub categories into flows, including lessons, practice,
-            exams, and feedback steps.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">Learning Path Builder</h1>
+        <p className="mt-1 text-sm text-grayScale-400">
+          Select a course to drag-and-drop reorder its sub-courses and manage prerequisites.
+        </p>
       </div>
 
-      {/* Scope & selector */}
+      {/* Selectors */}
       <Card className="shadow-none border border-grayScale-200">
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
-            <div className="inline-flex rounded-full border border-grayScale-200 bg-grayScale-50 p-0.5 text-xs font-medium">
-              <button
-                type="button"
-                onClick={() => setScope("parent")}
-                className={cn(
-                  "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                  scope === "parent"
-                    ? "bg-white text-brand-600 shadow-sm"
-                    : "text-grayScale-500 hover:text-grayScale-700",
-                )}
-              >
-                Parent categories
-              </button>
-              <button
-                type="button"
-                onClick={() => setScope("sub")}
-                className={cn(
-                  "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                  scope === "sub"
-                    ? "bg-white text-brand-600 shadow-sm"
-                    : "text-grayScale-500 hover:text-grayScale-700",
-                )}
-              >
-                Sub categories
-              </button>
-            </div>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="mb-1 text-xs font-medium uppercase tracking-[0.14em] text-grayScale-400">
+              Category
+            </p>
+            <Select
+              value={selectedCategoryId}
+              onChange={(e) => {
+                setSelectedCategoryId(e.target.value)
+                setSelectedCourseId("")
+              }}
+            >
+              <option value="">Choose category…</option>
+              {parentCategories.map((cat) => (
+                <option key={cat.id} value={String(cat.id)}>
+                  {cat.name}
+                </option>
+              ))}
+            </Select>
+          </div>
 
-            {scope === "sub" && (
-              <>
-                <div className="flex-1 min-w-0">
-                  <p className="mb-1 text-xs font-medium uppercase tracking-[0.14em] text-grayScale-400">
-                    Parent category
-                  </p>
-                  <Select
-                    value={selectedParentCategoryId}
-                    onChange={(e) => {
-                      setSelectedParentCategoryId(e.target.value)
-                      setSelectedSubCategoryId("")
-                    }}
-                  >
-                    <option value="">Choose parent…</option>
-                    {parentCategories.map((cat) => (
-                      <option key={cat.id} value={String(cat.id)}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="mb-1 text-xs font-medium uppercase tracking-[0.14em] text-grayScale-400">
-                    Sub category (structure)
-                  </p>
-                  <Select
-                    value={selectedSubCategoryId}
-                    onChange={(e) => setSelectedSubCategoryId(e.target.value)}
-                  >
-                    <option value="">Choose sub category…</option>
-                    {subCategoriesForParent.map((child) => (
-                      <option key={child.id} value={String(child.id)}>
-                        {child.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </>
-            )}
+          <div className="flex-1 min-w-0">
+            <p className="mb-1 text-xs font-medium uppercase tracking-[0.14em] text-grayScale-400">
+              Course
+            </p>
+            <Select
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
+              disabled={!selectedCategoryId || coursesLoading}
+            >
+              <option value="">
+                {coursesLoading ? "Loading courses…" : "Choose course…"}
+              </option>
+              {courses.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.title}
+                </option>
+              ))}
+            </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Parent scope: sequence of parent categories only */}
-      {scope === "parent" && (
-        <Card className="shadow-soft">
-          <CardHeader className="border-b border-grayScale-200 pb-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-base font-semibold text-grayScale-600">
-                  Parent category sequence
-                </CardTitle>
-                <p className="mt-1 text-xs text-grayScale-400">
-                  Drag to reorder the sequence in which parent categories appear. No courses or
-                  steps—order only.
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 px-3 text-[11px]"
-                disabled={!parentOrderDirty || orderedParentCategories.length === 0}
-                onClick={handleSaveParentOrder}
-              >
-                Save
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2 pt-4">
-            {orderedParentCategories.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/60 px-4 py-6 text-center text-xs text-grayScale-400">
-                No parent categories. Add categories in Content Management first.
-              </div>
-            ) : (
-              orderedParentCategories.map((cat, index) => (
-                <div
-                  key={cat.id}
-                  draggable
-                  onDragStart={() => setDragCategoryId(String(cat.id))}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleReorderParentCategory(String(cat.id))}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl border border-grayScale-100 bg-white p-3 shadow-sm transition-colors",
-                    dragCategoryId === String(cat.id) && "ring-2 ring-brand-300",
-                  )}
-                >
-                  <button type="button" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600">
-                    <GripVertical className="h-4 w-4" />
-                  </button>
-                  <span className="text-[11px] font-medium text-grayScale-400">#{index + 1}</span>
-                  <span className="flex-1 text-sm font-medium text-grayScale-700">{cat.name}</span>
-                </div>
-              ))
-            )}
+      {/* Empty state */}
+      {!selectedCourseId && (
+        <Card className="shadow-none border border-dashed border-grayScale-200 bg-grayScale-50/60">
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <p className="text-sm font-semibold text-grayScale-600">
+              Select a category and course to begin.
+            </p>
+            <p className="max-w-sm text-xs leading-relaxed text-grayScale-400">
+              Once selected, you can drag to reorder sub-courses and manage prerequisite
+              dependencies.
+            </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Sub scope: sub category sequence then structure */}
-      {scope === "sub" && selectedParentCategoryId && (
-        <>
-          <Card className="shadow-soft">
-            <CardHeader className="border-b border-grayScale-200 pb-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-base font-semibold text-grayScale-600">
-                  Sub category sequence
-                </CardTitle>
-                <p className="mt-1 text-xs text-grayScale-400">
-                  Drag to reorder sub categories under this parent.
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 px-3 text-[11px]"
-                disabled={!subOrderDirty || orderedSubCategories.length === 0}
-                onClick={handleSaveSubOrder}
-              >
-                Save
-              </Button>
-            </div>
-            </CardHeader>
-            <CardContent className="space-y-2 pt-4">
-              {orderedSubCategories.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/60 px-4 py-6 text-center text-xs text-grayScale-400">
-                  No sub categories under this parent.
-                </div>
-              ) : (
-                orderedSubCategories.map((sub, index) => (
-                  <div
-                    key={sub.id}
-                    draggable
-                    onDragStart={() => setDragCategoryId(String(sub.id))}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleReorderSubCategory(String(sub.id))}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl border border-grayScale-100 bg-white p-3 shadow-sm transition-colors",
-                      dragCategoryId === String(sub.id) && "ring-2 ring-brand-300",
-                    )}
-                  >
-                    <button type="button" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600">
-                      <GripVertical className="h-4 w-4" />
-                    </button>
-                    <span className="text-[11px] font-medium text-grayScale-400">#{index + 1}</span>
-                    <span className="flex-1 text-sm font-medium text-grayScale-700">{sub.name}</span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+      {/* Loading path */}
+      {selectedCourseId && pathLoading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+        </div>
+      )}
 
-          {/* Sub category structure: flow steps (only when a sub category is selected) */}
-          {selectedSubCategory && (
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-              <Card className="shadow-soft">
-                <CardHeader className="border-b border-grayScale-200 pb-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-base font-semibold text-grayScale-600">
-                        Sub category structure
-                      </CardTitle>
-                      <p className="mt-1 text-xs text-grayScale-400">
-                        Courses, questions, and feedback steps for “{selectedSubCategory.name}”.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 px-3 text-[11px]"
-                      disabled={!stepsDirty || steps.length === 0}
-                      onClick={handleSaveSteps}
-                    >
-                      Save
-                    </Button>
+      {/* Learning path editor */}
+      {selectedCourseId && !pathLoading && learningPath && (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          {/* Left – sortable list */}
+          <div className="space-y-0">
+            <Card className="shadow-soft">
+              <CardHeader className="border-b border-grayScale-200 pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base font-semibold text-grayScale-600">
+                      {learningPath.course_title}
+                    </CardTitle>
+                    <p className="mt-1 text-xs text-grayScale-400">
+                      Drag sub-courses to reorder them. Click the arrow to manage prerequisites.
+                    </p>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-4">
-                  {steps.length === 0 && (
-                    <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/60 px-4 py-6 text-center text-xs text-grayScale-400">
-                      No steps yet. Use the buttons on the right to add lessons, practice, exams, and
-                      feedback loops.
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {steps.map((step, index) => (
-                  <div
-                    key={step.id}
-                    draggable
-                    onDragStart={() => setDragStepId(step.id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleReorder(step.id)}
-                    className={cn(
-                      "flex flex-col gap-2 rounded-xl border border-grayScale-100 bg-white p-3.5 shadow-sm transition-colors md:flex-row md:items-start",
-                      dragStepId === step.id && "ring-2 ring-brand-300",
-                    )}
-                  >
-                    <div className="flex items-center gap-2 md:flex-col md:items-start">
-                      <button
-                        type="button"
-                        className="hidden h-8 w-8 items-center justify-center rounded-lg text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500 md:flex"
-                      >
-                        <GripVertical className="h-4 w-4" />
-                      </button>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                          STEP_BADGE[step.type],
-                        )}
-                      >
-                        {STEP_LABELS[step.type]}
-                        <span className="text-[10px] text-grayScale-400">#{index + 1}</span>
+                  <div className="flex items-center gap-2">
+                    {saving && (
+                      <span className="flex items-center gap-1.5 text-xs text-brand-500">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Saving…
                       </span>
-                    </div>
-
-                    <div className="flex-1 space-y-1">
-                      <Input
-                        value={step.title}
-                        onChange={(e) => handleUpdateStep(step.id, { title: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                      <Input
-                        value={step.description ?? ""}
-                        onChange={(e) =>
-                          handleUpdateStep(step.id, { description: e.target.value })
-                        }
-                        placeholder="Optional description for this step"
-                        className="h-8 text-xs text-grayScale-500"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 md:flex-col md:items-end">
-                      {step.type !== "feedback" && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-2 text-[11px]"
-                          onClick={() => {
-                            const feedbackStep: FlowStep = {
-                              id: `${selectedSubCategoryId}-feedback-${Date.now()}`,
-                              type: "feedback",
-                              title: "Feedback loop",
-                              description: "Collect feedback after this step.",
-                            }
-                            setSteps((prev) => {
-                              const idx = prev.findIndex((s) => s.id === step.id)
-                              if (idx === -1) return prev
-                              const copy = [...prev]
-                              copy.splice(idx + 1, 0, feedbackStep)
-                              return copy
-                            })
-                          }}
-                        >
-                          + Feedback
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-2 text-[11px] text-destructive hover:bg-red-50"
-                        onClick={() => handleRemoveStep(step.id)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
+                    )}
+                    <Badge variant="secondary" className="text-[11px]">
+                      {subCourses.length} sub-course{subCourses.length !== 1 ? "s" : ""}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-2 pb-4">
+                {subCourses.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/60 px-4 py-10 text-center text-xs text-grayScale-400">
+                    No sub-courses in this course yet. Add sub-courses from the Content Management page.
+                  </div>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={subCourses.map((sc) => sc.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {subCourses.map((sc) => (
+                        <SortableSubCourseCard
+                          key={sc.id}
+                          subCourse={sc}
+                          allSubCourses={subCourses}
+                          onAddPrereq={handleAddPrereq}
+                          onRemovePrereq={handleRemovePrereq}
+                          prereqLoading={prereqLoading}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Palette / What this controls */}
+          {/* Right – info panel */}
           <div className="space-y-4">
             <Card className="shadow-soft">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-grayScale-600">
-                  Add steps
+                  Course Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 pt-3">
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 justify-start gap-2 text-xs"
-                    onClick={() => handleAddStep("lesson")}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-sky-500" />
-                    Lesson
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 justify-start gap-2 text-xs"
-                    onClick={() => handleAddStep("practice")}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    Practice section
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 justify-start gap-2 text-xs"
-                    onClick={() => handleAddStep("speaking")}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-teal-500" />
-                    Speaking section
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 justify-start gap-2 text-xs"
-                    onClick={() => handleAddStep("exam")}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-amber-500" />
-                    Exam
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 justify-start gap-2 text-xs"
-                    onClick={() => handleAddStep("feedback")}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-rose-500" />
-                    Feedback
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 justify-start gap-2 text-xs"
-                    onClick={() => handleAddStep("course")}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-violet-500" />
-                    Course
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 col-span-2 justify-start gap-2 text-xs sm:col-span-2"
-                    onClick={() => handleAddStep("new_course")}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-indigo-500" />
-                    New course to category
-                  </Button>
+              <CardContent className="space-y-3 pt-1">
+                {learningPath.thumbnail && (
+                  <img
+                    src={learningPath.thumbnail}
+                    alt={learningPath.course_title}
+                    className="w-full rounded-lg object-cover aspect-video bg-grayScale-100"
+                  />
+                )}
+                <div className="space-y-1.5 text-xs text-grayScale-500">
+                  <div className="flex justify-between">
+                    <span className="text-grayScale-400">Category</span>
+                    <span className="font-medium text-grayScale-600">{learningPath.category_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-grayScale-400">Sub-courses</span>
+                    <span className="font-medium text-grayScale-600">{subCourses.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-grayScale-400">Total videos</span>
+                    <span className="font-medium text-grayScale-600">
+                      {subCourses.reduce((sum, sc) => sum + sc.video_count, 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-grayScale-400">Total practices</span>
+                    <span className="font-medium text-grayScale-600">
+                      {subCourses.reduce((sum, sc) => sum + sc.practice_count, 0)}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-[11px] leading-relaxed text-grayScale-400">
-                  Drag steps in the sequence on the left to change their order. Add feedback loops
-                  after exams or any important milestone to keep learners engaged.
-                </p>
+                {learningPath.description && (
+                  <p className="text-xs leading-relaxed text-grayScale-400 border-t border-grayScale-100 pt-3">
+                    {learningPath.description}
+                  </p>
+                )}
               </CardContent>
             </Card>
 
             <Card className="shadow-none border border-dashed border-grayScale-200 bg-grayScale-50/50">
               <CardContent className="space-y-2 p-4">
-                <p className="text-xs font-semibold text-grayScale-600">How this is used</p>
-                <p className="text-[11px] leading-relaxed text-grayScale-500">
-                  This builder helps you map out the ideal learner journey. You can later connect
-                  each step to actual lessons, speaking practices, exams, or surveys in your
-                  backend. For now, flows are saved locally in your browser.
-                </p>
+                <p className="text-xs font-semibold text-grayScale-600">How it works</p>
+                <ul className="space-y-1.5 text-[11px] leading-relaxed text-grayScale-500 list-disc list-inside">
+                  <li>Drag sub-courses by the grip handle to reorder. Changes save automatically.</li>
+                  <li>Click the arrow on a sub-course to expand and manage its prerequisites.</li>
+                  <li>Prerequisites define which sub-courses a learner must complete first.</li>
+                </ul>
               </CardContent>
             </Card>
           </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {scope === "sub" && !selectedParentCategoryId && (
-        <Card className="shadow-none border border-dashed border-grayScale-200 bg-grayScale-50/60">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <p className="text-sm font-semibold text-grayScale-600">
-              Select a parent category to reorder sub categories and edit a sub category’s structure.
-            </p>
-            <p className="max-w-sm text-xs leading-relaxed text-grayScale-400">
-              Use the dropdowns above to choose a parent, then reorder its sub categories and pick a sub category to define courses, questions, and feedback steps.
-            </p>
-          </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   )
 }
-

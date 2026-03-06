@@ -2,46 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  Briefcase,
-  Building2,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Globe,
   KeyRound,
-  Mail,
-  Phone,
+  MessageCircle,
   Shield,
   User,
-  XCircle,
 } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { cn } from "../../lib/utils";
 import { getTeamMemberById } from "../../api/team.api";
 import type { TeamMember } from "../../types/team.types";
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatRoleLabel(role: string): string {
   return role
@@ -80,16 +52,28 @@ function getRoleBadgeClasses(role: string): string {
   }
 }
 
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-grayScale-400">
+        {label}
+      </label>
+      <div className="rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-2.5 text-sm text-grayScale-600">
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div className="space-y-6">
       <div className="h-5 w-32 animate-pulse rounded bg-grayScale-100" />
       <div className="animate-pulse">
-        <div className="rounded-2xl bg-grayScale-100 h-64" />
+        <div className="rounded-2xl bg-grayScale-100 h-[200px]" />
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <div className="rounded-2xl bg-grayScale-100 h-52" />
-          <div className="rounded-2xl bg-grayScale-100 h-52" />
-          <div className="rounded-2xl bg-grayScale-100 h-52" />
+          <div className="lg:col-span-2 rounded-2xl bg-grayScale-100 h-96" />
+          <div className="rounded-2xl bg-grayScale-100 h-96" />
         </div>
       </div>
     </div>
@@ -157,176 +141,177 @@ export function TeamMemberDetailPage() {
         Back to Team
       </Link>
 
-      <Card className="overflow-hidden">
-        <div className="h-28 bg-gradient-to-r from-brand-600 via-brand-400 to-mint-500" />
-        <CardContent className="-mt-12 px-4 sm:px-8 pb-4 sm:pb-8 pt-0">
-          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-end">
-            <Avatar className="h-24 w-24 ring-4 ring-white shadow-soft">
-              <AvatarImage src={undefined} alt={fullName} />
-              <AvatarFallback className="bg-brand-100 text-brand-600 text-2xl font-bold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1a1f4e] via-[#2d2b6b] to-[#3b3480] px-6 py-12 sm:px-10 sm:py-14">
+        <div className="relative z-10 max-w-2xl">
+          <h1 className="text-3xl font-bold text-white sm:text-4xl">
+            Hello {member.first_name}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-white/70">
+            This is the profile page. You can see the progress made with their
+            work and manage their projects or assigned tasks
+          </p>
+          <Button className="mt-5 rounded-full bg-brand-600 px-6 hover:bg-brand-500">
+            Edit profile
+          </Button>
+        </div>
+        {/* Decorative circles */}
+        <div className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-16 right-20 h-40 w-40 rounded-full bg-white/5" />
+      </div>
 
-            <div className="flex-1 pb-1">
-              <h1 className="text-2xl font-bold text-grayScale-600">{fullName}</h1>
-              <p className="mt-0.5 text-sm text-grayScale-400">{member.job_title} · {member.department}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                    getRoleBadgeClasses(member.team_role)
-                  )}
-                >
-                  <Shield className="h-3 w-3" />
-                  {formatRoleLabel(member.team_role)}
-                </span>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    member.status === "active"
-                      ? "bg-mint-100 text-mint-500"
-                      : "bg-destructive/10 text-destructive"
-                  )}
-                >
+      {/* Two-column layout */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left: My Account Card */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg">My account</CardTitle>
+            <Button
+              size="sm"
+              className="rounded-full bg-brand-600 px-5 hover:bg-brand-500"
+            >
+              Settings
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* User Information */}
+            <div>
+              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-grayScale-400">
+                User Information
+              </h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ReadOnlyField label="Username" value={member.email} />
+                <ReadOnlyField label="Email address" value={member.email} />
+                <ReadOnlyField label="First name" value={member.first_name} />
+                <ReadOnlyField label="Last name" value={member.last_name} />
+                <ReadOnlyField label="Job Title" value={member.job_title} />
+                <ReadOnlyField label="Department" value={member.department} />
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div>
+              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-grayScale-400">
+                Contact Information
+              </h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ReadOnlyField label="Phone" value={member.phone_number} />
+                <ReadOnlyField
+                  label="Employment Type"
+                  value={formatEmploymentType(member.employment_type)}
+                />
+              </div>
+            </div>
+
+            {/* About Me */}
+            <div>
+              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-grayScale-400">
+                About Me
+              </h4>
+              <div className="rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-3 text-sm leading-relaxed text-grayScale-600">
+                {member.bio || "—"}
+              </div>
+            </div>
+
+            {/* Permissions */}
+            {member.permissions.length > 0 && (
+              <div>
+                <h4 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-grayScale-400">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Permissions
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {member.permissions.map((perm) => (
+                    <Badge
+                      key={perm}
+                      className="bg-grayScale-100 text-grayScale-600 border border-grayScale-200 font-mono text-xs"
+                    >
+                      {perm}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right: Profile Card */}
+        <Card>
+          <CardContent className="flex flex-col items-center p-6">
+            {/* Avatar with gradient ring */}
+            <div className="relative mt-2">
+              <div className="rounded-full bg-gradient-to-br from-brand-400 via-brand-600 to-mint-500 p-1">
+                <Avatar className="h-28 w-28 ring-4 ring-white">
+                  <AvatarImage src={undefined} alt={fullName} />
+                  <AvatarFallback className="bg-brand-100 text-brand-600 text-3xl font-bold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold text-grayScale-600">
+              {fullName}
+            </h3>
+            <p className="text-sm text-grayScale-400">{member.job_title}</p>
+
+            {/* Action buttons */}
+            <div className="mt-5 flex w-full gap-3">
+              <Button className="flex-1 rounded-full bg-mint-500 text-white hover:bg-mint-300">
+                Connect
+              </Button>
+              <Button className="flex-1 rounded-full bg-grayScale-600 text-white hover:bg-grayScale-500">
+                <MessageCircle className="h-4 w-4" />
+                Message
+              </Button>
+            </div>
+
+            {/* Stats row */}
+            <div className="mt-6 grid w-full grid-cols-3 divide-x divide-grayScale-200 text-center">
+              <div className="px-2">
+                <p className="text-xs font-medium text-grayScale-400">Role</p>
+                <p className="mt-1">
                   <span
                     className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      member.status === "active" ? "bg-mint-500" : "bg-destructive"
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                      getRoleBadgeClasses(member.team_role)
                     )}
-                  />
-                  {member.status === "active" ? "Active" : "Inactive"}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-grayScale-100 px-2.5 py-0.5 text-xs font-medium text-grayScale-500">
+                  >
+                    <Shield className="h-3 w-3" />
+                    {formatRoleLabel(member.team_role)}
+                  </span>
+                </p>
+              </div>
+              <div className="px-2">
+                <p className="text-xs font-medium text-grayScale-400">Status</p>
+                <p className="mt-1">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
+                      member.status === "active"
+                        ? "bg-mint-100 text-mint-500"
+                        : "bg-destructive/10 text-destructive"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        member.status === "active" ? "bg-mint-500" : "bg-destructive"
+                      )}
+                    />
+                    {member.status === "active" ? "Active" : "Inactive"}
+                  </span>
+                </p>
+              </div>
+              <div className="px-2">
+                <p className="text-xs font-medium text-grayScale-400">Type</p>
+                <p className="mt-1 text-xs font-medium text-grayScale-600">
                   {formatEmploymentType(member.employment_type)}
-                </span>
+                </p>
               </div>
-            </div>
-          </div>
-
-          {member.bio && (
-            <div className="mt-5 rounded-xl bg-grayScale-100 p-4 text-sm leading-relaxed text-grayScale-600">
-              {member.bio}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100/50">
-                <User className="h-4 w-4 text-brand-600" />
-              </div>
-              <CardTitle>Work Details</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <DetailRow icon={Briefcase} label="Job Title" value={member.job_title} />
-            <Separator />
-            <DetailRow icon={Building2} label="Department" value={member.department} />
-            <Separator />
-            <DetailRow icon={Globe} label="Employment" value={formatEmploymentType(member.employment_type)} />
-            <Separator />
-            <DetailRow icon={Calendar} label="Hire Date" value={formatDate(member.hire_date)} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mint-100/60">
-                <Mail className="h-4 w-4 text-mint-500" />
-              </div>
-              <CardTitle>Contact</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <DetailRow
-              icon={Mail}
-              label="Email"
-              value={member.email}
-              extra={
-                member.email_verified ? (
-                  <CheckCircle2 className="h-4 w-4 text-mint-500" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-grayScale-300" />
-                )
-              }
-            />
-            <Separator />
-            <DetailRow icon={Phone} label="Phone" value={member.phone_number} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold-100/60">
-                <Shield className="h-4 w-4 text-gold-600" />
-              </div>
-              <CardTitle>Account</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <DetailRow icon={Shield} label="Role" value={formatRoleLabel(member.team_role)} />
-            <Separator />
-            <DetailRow icon={Clock} label="Last Login" value={formatDateTime(member.last_login)} />
-            <Separator />
-            <DetailRow icon={Calendar} label="Member Since" value={formatDate(member.created_at)} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {member.permissions.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100/50">
-                <KeyRound className="h-4 w-4 text-brand-600" />
-              </div>
-              <CardTitle>Permissions</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {member.permissions.map((perm) => (
-                <Badge
-                  key={perm}
-                  className="bg-grayScale-100 text-grayScale-600 border border-grayScale-200 font-mono text-xs"
-                >
-                  {perm}
-                </Badge>
-              ))}
             </div>
           </CardContent>
         </Card>
-      )}
-    </div>
-  );
-}
-
-function DetailRow({
-  icon: Icon,
-  label,
-  value,
-  extra,
-}: {
-  icon: typeof User;
-  label: string;
-  value: string;
-  extra?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex items-center gap-3 text-sm text-grayScale-400">
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
-      </div>
-      <div className="flex items-center gap-2 text-sm font-medium text-grayScale-600">
-        <span>{value || "—"}</span>
-        {extra}
       </div>
     </div>
   );

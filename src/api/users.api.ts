@@ -1,5 +1,5 @@
 import http from "./http";
-import { type UserProfileResponse, type GetUsersResponse } from "../types/user.types";
+import { type UserProfileResponse, type GetUsersResponse, type UpdateProfileRequest, type UserSummaryResponse } from "../types/user.types";
 
 export const getUsers = (
   page?: number,
@@ -37,3 +37,9 @@ export interface CreateUserRequest {
 
 export const createUser = (payload: CreateUserRequest) =>
   http.post("/users", payload);
+
+export const updateProfile = (data: UpdateProfileRequest) =>
+  http.put<UserProfileResponse>("/user", data);
+
+export const getUserSummary = () =>
+  http.get<UserSummaryResponse>("/users/summary");

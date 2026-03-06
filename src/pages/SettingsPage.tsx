@@ -21,7 +21,7 @@ import { Button } from "../components/ui/button";
 import { Select } from "../components/ui/select";
 import { Separator } from "../components/ui/separator";
 import { cn } from "../lib/utils";
-import { getMyProfile } from "../api/users.api";
+import { getMyProfile, updateProfile } from "../api/users.api";
 import type { UserProfileData } from "../types/user.types";
 import { toast } from "sonner";
 
@@ -127,9 +127,15 @@ function ProfileTab({ profile }: { profile: UserProfileData }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // placeholder — wire up to API when endpoint is ready
-      await new Promise((r) => setTimeout(r, 600));
+      await updateProfile({
+        first_name: firstName,
+        last_name: lastName,
+        nick_name: nickName,
+        preferred_language: language,
+      });
       toast.success("Profile settings saved");
+    } catch {
+      toast.error("Failed to save profile settings.");
     } finally {
       setSaving(false);
     }

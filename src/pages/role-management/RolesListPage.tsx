@@ -2,16 +2,17 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Plus, Search, Shield, ShieldCheck, ChevronLeft, ChevronRight,
-  Loader2, AlertCircle, Eye, X,
+  Loader2, AlertCircle, Eye, X, Pencil, Check,
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Input } from "../../components/ui/input"
+import { Textarea } from "../../components/ui/textarea"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "../../components/ui/dialog"
-import { getRoles, getRoleDetail } from "../../api/rbac.api"
+import { getRoles, getRoleDetail, getAllPermissions, setRolePermissions, updateRole } from "../../api/rbac.api"
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
@@ -33,6 +34,20 @@ export function RolesListPage() {
   const [selectedRole, setSelectedRole] = useState<RoleDetail | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Role info editing state
+  const [editingRole, setEditingRole] = useState(false)
+  const [editName, setEditName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [savingRole, setSavingRole] = useState(false)
+
+  // Permissions editing state
+  const [editingPermissions, setEditingPermissions] = useState(false)
+  const [allPermissionsMap, setAllPermissionsMap] = useState<Record<string, RolePermission[]>>({})
+  const [permLoading, setPermLoading] = useState(false)
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<Set<number>>(new Set())
+  const [permSearch, setPermSearch] = useState("")
+  const [savingPermissions, setSavingPermissions] = useState(false)
 
   // Debounce search query
   useEffect(() => {
@@ -81,6 +96,105 @@ export function RolesListPage() {
     }
   }
 
+  // Enter role info edit mode
+  const handleEditRole = () => {
+    if (!selectedRole) return
+    setEditName(selectedRole.name)
+    setEditDescription(selectedRole.description)
+    setEditingRole(true)
+  }
+
+  const handleCancelEditRole = () => {
+    setEditingRole(false)
+  }
+
+  const handleSaveRole = async () => {
+    if (!selectedRole || !editName.trim()) return
+    setSavingRole(true)
+    try {
+      await updateRole(selectedRole.id, {
+        name: editName.trim(),
+        description: editDescription.trim(),
+      })
+      const res = await getRoleDetail(selectedRole.id)
+      setSelectedRole(res.data.data)
+      setEditingRole(false)
+      toast.success("Role updated successfully.")
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Failed to update role."
+      toast.error(message)
+    } finally {
+      setSavingRole(false)
+    }
+  }
+
+  // Enter edit mode – fetch all permissions
+  const handleEditPermissions = async () => {
+    setEditingPermissions(true)
+    setPermSearch("")
+    setSelectedPermissionIds(new Set(selectedRole?.permissions.map((p) => p.id) ?? []))
+
+    if (Object.keys(allPermissionsMap).length === 0) {
+      setPermLoading(true)
+      try {
+        const res = await getAllPermissions()
+        setAllPermissionsMap(res.data.data ?? {})
+      } catch {
+        toast.error("Failed to load permissions.")
+        setEditingPermissions(false)
+      } finally {
+        setPermLoading(false)
+      }
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingPermissions(false)
+    setPermSearch("")
+  }
+
+  const togglePermission = (id: number) => {
+    setSelectedPermissionIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleGroup = (perms: RolePermission[]) => {
+    const allSelected = perms.every((p) => selectedPermissionIds.has(p.id))
+    setSelectedPermissionIds((prev) => {
+      const next = new Set(prev)
+      for (const p of perms) {
+        if (allSelected) next.delete(p.id)
+        else next.add(p.id)
+      }
+      return next
+    })
+  }
+
+  const handleSavePermissions = async () => {
+    if (!selectedRole) return
+    setSavingPermissions(true)
+    try {
+      await setRolePermissions(selectedRole.id, {
+        permission_ids: Array.from(selectedPermissionIds),
+      })
+      // Refresh role detail
+      const res = await getRoleDetail(selectedRole.id)
+      setSelectedRole(res.data.data)
+      setEditingPermissions(false)
+      toast.success("Permissions updated successfully.")
+    } catch {
+      toast.error("Failed to update permissions.")
+    } finally {
+      setSavingPermissions(false)
+    }
+  }
+
   // Group permissions by group_name
   const permissionGroups = useMemo(() => {
     if (!selectedRole?.permissions) return []
@@ -92,6 +206,24 @@ export function RolesListPage() {
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [selectedRole])
+
+  // Filtered permission groups for edit mode
+  const editPermissionGroups = useMemo(() => {
+    const q = permSearch.toLowerCase()
+    const entries: [string, RolePermission[]][] = []
+    for (const [groupName, perms] of Object.entries(allPermissionsMap)) {
+      const filtered = q
+        ? perms.filter(
+            (p) =>
+              p.name.toLowerCase().includes(q) ||
+              p.key.toLowerCase().includes(q) ||
+              groupName.toLowerCase().includes(q),
+          )
+        : perms
+      if (filtered.length > 0) entries.push([groupName, filtered])
+    }
+    return entries.sort(([a], [b]) => a.localeCompare(b))
+  }, [allPermissionsMap, permSearch])
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
@@ -175,7 +307,7 @@ export function RolesListPage() {
                     className={cn(
                       "h-1.5",
                       role.is_system
-                        ? "bg-gradient-to-r from-amber-400 to-amber-500"
+                        ? "bg-gradient-to-r from-brand-400 to-brand-600"
                         : "bg-gradient-to-r from-brand-500 to-brand-600",
                     )}
                   />
@@ -186,7 +318,7 @@ export function RolesListPage() {
                           className={cn(
                             "flex h-9 w-9 items-center justify-center rounded-lg",
                             role.is_system
-                              ? "bg-amber-50 text-amber-600"
+                              ? "bg-brand-100 text-brand-600"
                               : "bg-brand-50 text-brand-600",
                           )}
                         >
@@ -265,20 +397,89 @@ export function RolesListPage() {
       )}
 
       {/* Role detail dialog */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+      <Dialog open={detailOpen} onOpenChange={(open) => {
+        setDetailOpen(open)
+        if (!open) {
+          setEditingPermissions(false)
+          setEditingRole(false)
+          setPermSearch("")
+        }
+      }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedRole?.is_system ? (
-                <ShieldCheck className="h-5 w-5 text-amber-500" />
-              ) : (
-                <Shield className="h-5 w-5 text-brand-500" />
-              )}
-              {selectedRole?.name ?? "Role Details"}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedRole?.description}
-            </DialogDescription>
+            {!editingRole ? (
+              <>
+                <DialogTitle className="flex items-center gap-2">
+                  {selectedRole?.is_system ? (
+                    <ShieldCheck className="h-5 w-5 text-brand-500" />
+                  ) : (
+                    <Shield className="h-5 w-5 text-brand-500" />
+                  )}
+                  {selectedRole?.name ?? "Role Details"}
+                  {selectedRole && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto h-7 w-7"
+                      onClick={handleEditRole}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedRole?.description}
+                </DialogDescription>
+              </>
+            ) : (
+              <>
+                <DialogTitle>Edit Role</DialogTitle>
+                <DialogDescription>Update the role name and description.</DialogDescription>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-grayScale-500">
+                      Role Name
+                    </label>
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="e.g. CONTENT_MANAGER"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-grayScale-500">
+                      Description
+                    </label>
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Describe what this role can do…"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={handleCancelEditRole}
+                      disabled={savingRole}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 gap-1.5 bg-brand-500 text-xs hover:bg-brand-600"
+                      onClick={handleSaveRole}
+                      disabled={savingRole || !editName.trim()}
+                    >
+                      {savingRole && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {savingRole ? "Saving…" : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </DialogHeader>
 
           {detailLoading && (
@@ -302,31 +503,184 @@ export function RolesListPage() {
                 </span>
               </div>
 
-              {/* Permissions grouped */}
+              {/* Permissions section */}
               <div>
-                <h4 className="mb-3 text-sm font-semibold text-grayScale-600">Permissions</h4>
-                {permissionGroups.length === 0 ? (
-                  <p className="text-xs italic text-grayScale-400">No permissions assigned.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {permissionGroups.map(([groupName, perms]) => (
-                      <div key={groupName}>
-                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-grayScale-400">
-                          {groupName}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {perms.map((p) => (
-                            <span
-                              key={p.id}
-                              title={`${p.key} — ${p.description}`}
-                              className="inline-flex items-center rounded-md border border-grayScale-200 bg-grayScale-50 px-2 py-0.5 text-[11px] font-medium text-grayScale-600"
-                            >
-                              {p.name}
-                            </span>
-                          ))}
-                        </div>
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-grayScale-600">Permissions</h4>
+                  {!editingPermissions && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={handleEditPermissions}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Edit Permissions
+                    </Button>
+                  )}
+                </div>
+
+                {/* VIEW mode */}
+                {!editingPermissions && (
+                  <>
+                    {permissionGroups.length === 0 ? (
+                      <p className="text-xs italic text-grayScale-400">No permissions assigned.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {permissionGroups.map(([groupName, perms]) => (
+                          <div key={groupName}>
+                            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-grayScale-400">
+                              {groupName}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {perms.map((p) => (
+                                <span
+                                  key={p.id}
+                                  title={`${p.key} — ${p.description}`}
+                                  className="inline-flex items-center rounded-md border border-grayScale-200 bg-grayScale-50 px-2 py-0.5 text-[11px] font-medium text-grayScale-600"
+                                >
+                                  {p.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                  </>
+                )}
+
+                {/* EDIT mode */}
+                {editingPermissions && (
+                  <div className="space-y-4">
+                    {/* Search & actions bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+                        <Input
+                          value={permSearch}
+                          onChange={(e) => setPermSearch(e.target.value)}
+                          placeholder="Filter permissions…"
+                          className="pl-9"
+                        />
+                        {permSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setPermSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-grayScale-400 hover:text-grayScale-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-xs text-grayScale-400">
+                        {selectedPermissionIds.size} selected
+                      </span>
+                    </div>
+
+                    {permLoading && (
+                      <div className="flex items-center justify-center py-10">
+                        <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+                      </div>
+                    )}
+
+                    {!permLoading && (
+                      <div className="max-h-[400px] space-y-5 overflow-y-auto pr-1">
+                        {editPermissionGroups.length === 0 ? (
+                          <p className="py-6 text-center text-xs text-grayScale-400">
+                            {permSearch ? "No permissions match your search." : "No permissions available."}
+                          </p>
+                        ) : (
+                          editPermissionGroups.map(([groupName, perms]) => {
+                            const allSelected = perms.every((p) => selectedPermissionIds.has(p.id))
+                            const someSelected = perms.some((p) => selectedPermissionIds.has(p.id))
+
+                            return (
+                              <div key={groupName}>
+                                <div className="mb-2 flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleGroup(perms)}
+                                    className={cn(
+                                      "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                                      allSelected
+                                        ? "border-brand-500 bg-brand-500 text-white"
+                                        : someSelected
+                                          ? "border-brand-300 bg-brand-50"
+                                          : "border-grayScale-300",
+                                    )}
+                                  >
+                                    {allSelected && <Check className="h-3 w-3" />}
+                                    {someSelected && !allSelected && (
+                                      <div className="h-1.5 w-1.5 rounded-sm bg-brand-500" />
+                                    )}
+                                  </button>
+                                  <span className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                                    {groupName}
+                                  </span>
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                    {perms.filter((p) => selectedPermissionIds.has(p.id)).length}/{perms.length}
+                                  </Badge>
+                                </div>
+                                <div className="ml-6 grid gap-1">
+                                  {perms.map((perm) => {
+                                    const isSelected = selectedPermissionIds.has(perm.id)
+                                    return (
+                                      <label
+                                        key={perm.id}
+                                        className={cn(
+                                          "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors",
+                                          isSelected
+                                            ? "border-brand-200 bg-brand-50/50"
+                                            : "border-grayScale-100 hover:bg-grayScale-50",
+                                        )}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => togglePermission(perm.id)}
+                                          className="h-3.5 w-3.5 rounded border-grayScale-300 text-brand-500 focus:ring-brand-500"
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="truncate text-xs font-medium text-grayScale-700">
+                                            {perm.name}
+                                          </p>
+                                          <p className="truncate text-[10px] text-grayScale-400">
+                                            {perm.key}
+                                          </p>
+                                        </div>
+                                      </label>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    )}
+
+                    {/* Save / Cancel */}
+                    <div className="flex items-center justify-end gap-2 border-t border-grayScale-100 pt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={handleCancelEdit}
+                        disabled={savingPermissions}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5 bg-brand-500 text-xs hover:bg-brand-600"
+                        onClick={handleSavePermissions}
+                        disabled={savingPermissions}
+                      >
+                        {savingPermissions && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        {savingPermissions ? "Saving…" : "Save Permissions"}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

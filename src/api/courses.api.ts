@@ -42,6 +42,9 @@ import type {
   AddSubCoursePrerequisiteRequest,
   GetLearningPathResponse,
   ReorderItem,
+  GetRatingsResponse,
+  GetRatingsParams,
+  GetVimeoSampleResponse,
 } from "../types/course.types"
 
 export const getCourseCategories = () =>
@@ -216,3 +219,13 @@ export const getLearningPath = (courseId: number) =>
 
 export const reorderSubCourses = (courseId: number, items: ReorderItem[]) =>
   http.put(`/course-management/courses/${courseId}/reorder-sub-courses`, { items })
+
+// Ratings
+export const getRatings = (params: GetRatingsParams) =>
+  http.get<GetRatingsResponse>("/ratings", { params })
+
+// Vimeo Sample Video
+export const getVimeoSample = (videoId: string, width = 640, height = 360) =>
+  http.get<GetVimeoSampleResponse>("/vimeo/sample", {
+    params: { video_id: videoId, width, height },
+  })

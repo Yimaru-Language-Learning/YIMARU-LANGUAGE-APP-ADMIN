@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -7,6 +7,7 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -20,7 +21,7 @@ import {
 } from "../../components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { cn } from "../../lib/utils";
-import { getTeamMembers } from "../../api/team.api";
+import { getTeamMembers, updateTeamMemberStatus } from "../../api/team.api";
 import type { TeamMember } from "../../types/team.types";
 
 function formatDate(dateStr: string): string {
@@ -88,6 +89,10 @@ export function TeamManagementPage() {
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [toggledStatuses, setToggledStatuses] = useState<Record<number, boolean>>({});
+  const [confirmDialog, setConfirmDialog] = useState<{ id: number; name: string; newStatus: string } | null>(null);
+  const [countdown, setCountdown] = useState(5);
+  const [updating, setUpdating] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -133,7 +138,45 @@ export function TeamManagementPage() {
   };
 
   const handleToggle = (id: number) => {
-    setToggledStatuses((prev) => ({ ...prev, [id]: !prev[id] }));
+    const member = members.find((m) => m.id === id);
+    if (!member) return;
+    const currentlyActive = toggledStatuses[id] ?? false;
+    const newStatus = currentlyActive ? "inactive" : "active";
+    setConfirmDialog({ id, name: `${member.first_name} ${member.last_name}`, newStatus });
+    setCountdown(5);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!confirmDialog) return;
+    const { id, newStatus } = confirmDialog;
+    const previousActive = toggledStatuses[id] ?? false;
+    setUpdating(true);
+    setToggledStatuses((prev) => ({ ...prev, [id]: newStatus === "active" }));
+    try {
+      await updateTeamMemberStatus(id, newStatus);
+    } catch (error) {
+      console.error("Failed to update member status:", error);
+      setToggledStatuses((prev) => ({ ...prev, [id]: previousActive }));
+    } finally {
+      setUpdating(false);
+      handleCancelConfirm();
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setConfirmDialog(null);
+    setCountdown(5);
   };
 
   return (
@@ -372,6 +415,46 @@ export function TeamManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* Status Update Confirmation Modal */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+              <h2 className="text-lg font-semibold text-grayScale-900">Confirm Status Change</h2>
+              <button
+                onClick={handleCancelConfirm}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-sm leading-relaxed text-grayScale-600">
+                Are you sure you want to change the status of{" "}
+                <span className="font-semibold">{confirmDialog.name}</span> to{" "}
+                <span className="font-semibold capitalize">{confirmDialog.newStatus}</span>?
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={handleCancelConfirm} disabled={updating}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-brand-600 hover:bg-brand-500 text-white"
+                onClick={handleConfirmStatusUpdate}
+                disabled={countdown > 0 || updating}
+              >
+                {updating
+                  ? "Updating..."
+                  : countdown > 0
+                    ? `Confirm (${countdown}s)`
+                    : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, Edit, AlertCircle } from "lucide-react"
+import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, Edit, AlertCircle, Star, MessageSquare } from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -16,8 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table"
-import { getCoursesByCategory, getCourseCategories, createCourse, deleteCourse, updateCourseStatus, updateCourse } from "../../api/courses.api"
-import type { Course, CourseCategory } from "../../types/course.types"
+import { getCoursesByCategory, getCourseCategories, createCourse, deleteCourse, updateCourseStatus, updateCourse, getRatings } from "../../api/courses.api"
+import type { Course, CourseCategory, Rating } from "../../types/course.types"
 
 export function CoursesPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
@@ -43,6 +43,10 @@ export function CoursesPage() {
   const [editThumbnail, setEditThumbnail] = useState("")
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
+  const [showRatingsModal, setShowRatingsModal] = useState(false)
+  const [ratingsCourseId, setRatingsCourseId] = useState<number | null>(null)
+  const [courseRatings, setCourseRatings] = useState<Rating[]>([])
+  const [courseRatingsLoading, setCourseRatingsLoading] = useState(false)
 
   const fetchCourses = async () => {
     if (!categoryId) return
@@ -212,6 +216,20 @@ export function CoursesPage() {
     navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses`)
   }
 
+  const handleViewRatings = async (courseId: number) => {
+    setRatingsCourseId(courseId)
+    setShowRatingsModal(true)
+    setCourseRatingsLoading(true)
+    try {
+      const res = await getRatings({ target_type: "course", target_id: courseId, limit: 10 })
+      setCourseRatings(res.data.data ?? [])
+    } catch (err) {
+      console.error("Failed to fetch ratings:", err)
+    } finally {
+      setCourseRatingsLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
@@ -332,6 +350,17 @@ export function CoursesPage() {
                       </TableCell>
                       <TableCell className="py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-amber-400 hover:bg-amber-50 hover:text-amber-500"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleViewRatings(course.id)
+                            }}
+                          >
+                            <Star className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -537,6 +566,120 @@ export function CoursesPage() {
               >
                 {updating ? "Updating..." : "Update Course"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ratings Modal */}
+      {showRatingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-lg animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
+              <h2 className="text-lg font-bold text-grayScale-700">Course Ratings</h2>
+              <button
+                onClick={() => {
+                  setShowRatingsModal(false)
+                  setRatingsCourseId(null)
+                  setCourseRatings([])
+                }}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
+              {courseRatingsLoading ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                  <p className="mt-4 text-sm font-medium text-grayScale-500">Loading ratings…</p>
+                </div>
+              ) : courseRatings.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-grayScale-200 bg-grayScale-50/50 py-16">
+                  <div className="rounded-full bg-amber-50 p-4">
+                    <Star className="h-8 w-8 text-amber-400" />
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-grayScale-700">No ratings yet</p>
+                  <p className="mt-1 text-sm text-grayScale-400">
+                    Ratings will appear here once learners start reviewing this course.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Summary bar */}
+                  <div className="flex flex-wrap items-center gap-6 rounded-xl border border-grayScale-200 px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <Star className="h-5 w-5 text-amber-400" fill="currentColor" />
+                      <span className="text-lg font-bold text-grayScale-800">
+                        {(courseRatings.reduce((sum, r) => sum + r.stars, 0) / courseRatings.length).toFixed(1)}
+                      </span>
+                      <span className="text-sm text-grayScale-400">/ 5</span>
+                    </div>
+                    <div className="h-5 w-px bg-grayScale-200" />
+                    <span className="text-sm text-grayScale-500">
+                      {courseRatings.length} review{courseRatings.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  {/* Rating cards */}
+                  <div className="space-y-3">
+                    {courseRatings.map((rating) => (
+                      <div
+                        key={rating.id}
+                        className="rounded-xl border border-grayScale-200 bg-white p-5 space-y-3"
+                      >
+                        {/* Header row */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-600">
+                              U{rating.user_id}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-grayScale-700">User #{rating.user_id}</p>
+                              <p className="text-[11px] text-grayScale-400">
+                                {new Date(rating.created_at).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                                {rating.updated_at !== rating.created_at && (
+                                  <span className="ml-1.5 text-grayScale-300">· edited</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Stars */}
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={`h-4 w-4 ${
+                                  s <= rating.stars
+                                    ? "text-amber-400"
+                                    : "text-grayScale-200"
+                                }`}
+                                fill={s <= rating.stars ? "currentColor" : "none"}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Review text */}
+                        {rating.review && (
+                          <div className="flex gap-2">
+                            <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-grayScale-300" />
+                            <p className="text-sm leading-relaxed text-grayScale-600">
+                              {rating.review}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

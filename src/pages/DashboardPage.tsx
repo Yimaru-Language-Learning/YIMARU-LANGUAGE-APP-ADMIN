@@ -5,6 +5,8 @@ import {
   // Coins,
   DollarSign,
   HelpCircle,
+  MessageSquare,
+  Star,
   TicketCheck,
   // TrendingUp,
   Users,
@@ -32,8 +34,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
 import { getDashboard } from "../api/analytics.api"
+import { getRatings } from "../api/courses.api"
 import { useEffect, useState } from "react"
 import type { DashboardData } from "../types/analytics.types"
+import type { Rating } from "../types/course.types"
 
 const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444"]
 
@@ -47,6 +51,8 @@ export function DashboardPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeStatTab, setActiveStatTab] = useState<"primary" | "secondary">("primary")
+  const [appRatings, setAppRatings] = useState<Rating[]>([])
+  const [appRatingsLoading, setAppRatingsLoading] = useState(true)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -75,8 +81,20 @@ export function DashboardPage() {
       }
     }
 
+    const fetchAppRatings = async () => {
+      try {
+        const res = await getRatings({ target_type: "app", target_id: 1, limit: 5 })
+        setAppRatings(res.data.data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setAppRatingsLoading(false)
+      }
+    }
+
     fetchUser()
     fetchDashboard()
+    fetchAppRatings()
   }, [])
 
   const registrationData =
@@ -409,6 +427,90 @@ export function DashboardPage() {
                 </Card>
               ))}
             </div>
+
+            {/* App Ratings */}
+            <Card className="shadow-none">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-brand-500" />
+                  <CardTitle>Recent App Reviews</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 pt-2">
+                {appRatingsLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : appRatings.length === 0 ? (
+                  <div className="flex items-center justify-center py-10 text-sm text-grayScale-400">
+                    No app reviews yet
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 flex items-center gap-3 rounded-lg bg-grayScale-50 px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={cn(
+                              "h-4 w-4",
+                              i <
+                                Math.round(
+                                  appRatings.reduce((sum, r) => sum + r.stars, 0) / appRatings.length,
+                                )
+                                ? "fill-amber-400 text-amber-400"
+                                : "fill-grayScale-200 text-grayScale-200",
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-sm font-semibold text-grayScale-600">
+                        {(appRatings.reduce((sum, r) => sum + r.stars, 0) / appRatings.length).toFixed(1)}
+                      </span>
+                      <span className="text-xs text-grayScale-400">
+                        ({appRatings.length} {appRatings.length === 1 ? "review" : "reviews"})
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
+                      {appRatings.map((rating) => (
+                        <div key={rating.id} className="flex gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-600">
+                            U{rating.user_id}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-grayScale-600">
+                                User #{rating.user_id}
+                              </span>
+                              <span className="shrink-0 text-xs text-grayScale-400">
+                                {formatDate(rating.created_at)}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-0.5">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={cn(
+                                    "h-3.5 w-3.5",
+                                    i < rating.stars
+                                      ? "fill-amber-400 text-amber-400"
+                                      : "fill-grayScale-200 text-grayScale-200",
+                                  )}
+                                />
+                              ))}
+                            </div>
+                            {rating.review && (
+                              <p className="mt-1 text-sm text-grayScale-500">{rating.review}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </>
       )}

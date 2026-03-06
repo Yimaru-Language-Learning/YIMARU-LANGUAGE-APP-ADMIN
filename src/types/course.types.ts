@@ -501,3 +501,58 @@ export interface ReorderItem {
   sub_course_id: number
   display_order: number
 }
+
+// Ratings
+export interface Rating {
+  id: number
+  user_id: number
+  target_type: string
+  target_id: number
+  stars: number
+  review: string
+  created_at: string
+  updated_at: string
+}
+
+export interface GetRatingsParams {
+  target_type: string
+  target_id: number
+  limit?: number
+  offset?: number
+}
+
+export interface GetRatingsResponse {
+  message: string
+  data: Rating[]
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+// Vimeo Sample Video
+export interface VimeoSampleVideo {
+  vimeo_id: string
+  uri: string
+  name: string
+  description: string
+  duration: number
+  width: number
+  height: number
+  link: string
+  embed_url: string
+  embed_html: string
+  thumbnail_url: string
+  status: string
+  transcode_status: string
+}
+
+export interface GetVimeoSampleResponse {
+  message: string
+  data: {
+    video: VimeoSampleVideo
+    iframe: string
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}

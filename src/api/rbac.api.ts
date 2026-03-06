@@ -18,6 +18,9 @@ export const getRoleDetail = (roleId: number) =>
 export const createRole = (data: CreateRoleRequest) =>
   http.post<CreateRoleResponse>("/rbac/roles", data)
 
+export const updateRole = (roleId: number, data: CreateRoleRequest) =>
+  http.put<CreateRoleResponse>(`/rbac/roles/${roleId}`, data)
+
 export const setRolePermissions = (roleId: number, data: SetRolePermissionsRequest) =>
   http.put(`/rbac/roles/${roleId}/permissions`, data)
 

@@ -110,3 +110,35 @@ export interface UserProfileResponse {
   data: UserProfileData
   timestamp: string
 }
+
+export interface UserSummary {
+  total_users: number
+  active_users: number
+  joined_this_month: number
+}
+
+export interface UserSummaryResponse {
+  message: string
+  data: UserSummary
+  success: boolean
+  status_code: number
+}
+
+export interface UpdateProfileRequest {
+  first_name?: string
+  last_name?: string
+  gender?: string
+  birth_day?: string
+  age_group?: string
+  education_level?: string
+  country?: string
+  region?: string
+  nick_name?: string
+  occupation?: string
+  learning_goal?: string
+  language_goal?: string
+  language_challange?: string
+  favoutite_topic?: string
+  profile_picture_url?: string
+  preferred_language?: string
+}

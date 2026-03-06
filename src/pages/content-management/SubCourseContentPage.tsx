@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, Plus, FileText, Layers, Edit, Trash2, X, Video, MoreVertical } from "lucide-react"
+import { ArrowLeft, Plus, FileText, Layers, Edit, Trash2, X, Video, MoreVertical, Star, ChevronLeft, ChevronRight, MessageSquare, Play, Loader2 } from "lucide-react"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card } from "../../components/ui/card"
 import alertSrc from "../../assets/Alert.svg"
@@ -15,11 +15,14 @@ import {
   deleteQuestionSet,
   createVimeoVideo,
   updateSubCourseVideo,
-  deleteSubCourseVideo
+  deleteSubCourseVideo,
+  getRatings,
+  getVimeoSample,
 } from "../../api/courses.api"
-import type { SubCourse, QuestionSet, SubCourseVideo } from "../../types/course.types"
+import type { SubCourse, QuestionSet, SubCourseVideo, Rating, VimeoSampleVideo } from "../../types/course.types"
+import { Select } from "../../components/ui/select"
 
-type TabType = "video" | "practice"
+type TabType = "video" | "practice" | "ratings"
 type StatusFilter = "all" | "published" | "draft" | "archived"
 
 export function SubCourseContentPage() {
@@ -62,11 +65,26 @@ export function SubCourseContentPage() {
   const [deletingVideo, setDeletingVideo] = useState(false)
   const [openVideoMenuId, setOpenVideoMenuId] = useState<number | null>(null)
 
+  // Ratings state
+  const [ratings, setRatings] = useState<Rating[]>([])
+  const [ratingsLoading, setRatingsLoading] = useState(false)
+  const [ratingsPage, setRatingsPage] = useState(0)
+  const [ratingsPageSize] = useState(10)
+
   const [videoTitle, setVideoTitle] = useState("")
   const [videoDescription, setVideoDescription] = useState("")
   const [videoUrl, setVideoUrl] = useState("")
   const [videoFileSize, setVideoFileSize] = useState<number>(0)
   const [videoDuration, setVideoDuration] = useState<number>(0)
+
+  // Vimeo preview state
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [previewIframe, setPreviewIframe] = useState("")
+  const [previewVideo, setPreviewVideo] = useState<VimeoSampleVideo | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [sampleVideoId, setSampleVideoId] = useState("")
+  const [modalPreviewIframe, setModalPreviewIframe] = useState("")
+  const [modalPreviewLoading, setModalPreviewLoading] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -115,13 +133,39 @@ export function SubCourseContentPage() {
     }
   }
 
+  const fetchRatings = async (offset = 0) => {
+    if (!subCourseId) return
+    setRatingsLoading(true)
+    try {
+      const res = await getRatings({
+        target_type: "sub_course",
+        target_id: Number(subCourseId),
+        limit: ratingsPageSize,
+        offset,
+      })
+      setRatings(res.data.data ?? [])
+    } catch (err) {
+      console.error("Failed to fetch ratings:", err)
+    } finally {
+      setRatingsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (activeTab === "practice") {
       fetchPractices()
-    } else {
+    } else if (activeTab === "video") {
       fetchVideos()
+    } else if (activeTab === "ratings") {
+      fetchRatings(ratingsPage * ratingsPageSize)
     }
   }, [activeTab, subCourseId])
+
+  useEffect(() => {
+    if (activeTab === "ratings") {
+      fetchRatings(ratingsPage * ratingsPageSize)
+    }
+  }, [ratingsPage])
 
   const handleAddPractice = () => {
     navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}/add-practice`)
@@ -277,6 +321,47 @@ export function SubCourseContentPage() {
     }
   }
 
+  // Preview a video card via Vimeo sample API
+  const handlePreviewVideo = async (video: SubCourseVideo) => {
+    const idMatch = video.video_url?.match(/(\d{5,})/)
+    const vimeoId = idMatch?.[1] ?? "76979871" // fallback to Big Buck Bunny
+    setShowPreviewModal(true)
+    setPreviewLoading(true)
+    setPreviewIframe("")
+    setPreviewVideo(null)
+    try {
+      const res = await getVimeoSample(vimeoId)
+      setPreviewIframe(res.data.data.iframe)
+      setPreviewVideo(res.data.data.video)
+    } catch {
+      setPreviewIframe("")
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  // Preview inside add/edit modal from a sample vimeo ID picker
+  const handleModalPreview = async (vimeoId: string) => {
+    if (!vimeoId) {
+      setModalPreviewIframe("")
+      return
+    }
+    setModalPreviewLoading(true)
+    try {
+      const res = await getVimeoSample(vimeoId)
+      setModalPreviewIframe(res.data.data.iframe)
+      // Auto-fill fields from vimeo metadata
+      const v = res.data.data.video
+      if (!videoTitle) setVideoTitle(v.name)
+      if (!videoDescription) setVideoDescription(v.description?.slice(0, 200) ?? "")
+      if (!videoDuration) setVideoDuration(v.duration)
+    } catch {
+      setModalPreviewIframe("")
+    } finally {
+      setModalPreviewLoading(false)
+    }
+  }
+
   const filteredPractices = practices.filter((practice) => {
     if (statusFilter === "all") return true
     if (statusFilter === "published") return practice.status === "PUBLISHED"
@@ -371,6 +456,19 @@ export function SubCourseContentPage() {
           >
             Practice
             {activeTab === "practice" && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("ratings")}
+            className={`relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all ${
+              activeTab === "ratings"
+                ? "text-brand-600"
+                : "text-grayScale-400 hover:text-grayScale-700"
+            }`}
+          >
+            Ratings
+            {activeTab === "ratings" && (
               <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
             )}
           </button>
@@ -569,15 +667,25 @@ export function SubCourseContentPage() {
                       {/* Title */}
                       <h3 className="font-semibold leading-snug text-grayScale-900 line-clamp-2">{video.title}</h3>
                       
-                      {/* Edit button */}
-                      <Button 
-                        variant="outline" 
-                        className="w-full border-grayScale-200 text-grayScale-700 transition-colors hover:border-grayScale-300 hover:bg-grayScale-50"
-                        onClick={() => handleEditVideoClick(video)}
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
+                      {/* Edit / Preview buttons */}
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 border-grayScale-200 text-grayScale-700 transition-colors hover:border-grayScale-300 hover:bg-grayScale-50"
+                          onClick={() => handleEditVideoClick(video)}
+                        >
+                          <Edit className="mr-1.5 h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 border-brand-200 text-brand-600 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                          onClick={() => handlePreviewVideo(video)}
+                        >
+                          <Play className="mr-1.5 h-4 w-4" />
+                          Preview
+                        </Button>
+                      </div>
                       
                       {/* Publish button */}
                       <Button 
@@ -593,6 +701,135 @@ export function SubCourseContentPage() {
                   </Card>
                 )
               })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Ratings Tab */}
+      {activeTab === "ratings" && (
+        <>
+          {ratingsLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <p className="mt-4 text-sm font-medium text-grayScale-500">Loading ratings…</p>
+            </div>
+          ) : ratings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-grayScale-200 bg-grayScale-50/50 py-16">
+              <div className="rounded-full bg-amber-50 p-4">
+                <Star className="h-8 w-8 text-amber-400" />
+              </div>
+              <p className="mt-4 text-sm font-semibold text-grayScale-700">No ratings yet</p>
+              <p className="mt-1 text-sm text-grayScale-400">
+                Ratings will appear here once learners start reviewing this sub-course.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Summary bar */}
+              <Card className="overflow-hidden border-grayScale-200">
+                <div className="flex flex-wrap items-center gap-6 px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-amber-400" fill="currentColor" />
+                    <span className="text-lg font-bold text-grayScale-800">
+                      {(ratings.reduce((sum, r) => sum + r.stars, 0) / ratings.length).toFixed(1)}
+                    </span>
+                    <span className="text-sm text-grayScale-400">
+                      / 5
+                    </span>
+                  </div>
+                  <div className="h-5 w-px bg-grayScale-200" />
+                  <span className="text-sm text-grayScale-500">
+                    {ratings.length} review{ratings.length !== 1 ? "s" : ""} on this page
+                  </span>
+                </div>
+              </Card>
+
+              {/* Rating cards */}
+              <div className="space-y-3">
+                {ratings.map((rating) => (
+                  <Card
+                    key={rating.id}
+                    className="overflow-hidden border-grayScale-200 bg-white"
+                  >
+                    <div className="p-5 space-y-3">
+                      {/* Header row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-600">
+                            U{rating.user_id}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-grayScale-700">User #{rating.user_id}</p>
+                            <p className="text-[11px] text-grayScale-400">
+                              {new Date(rating.created_at).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                              {rating.updated_at !== rating.created_at && (
+                                <span className="ml-1.5 text-grayScale-300">· edited</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Stars */}
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`h-4 w-4 ${
+                                s <= rating.stars
+                                  ? "text-amber-400"
+                                  : "text-grayScale-200"
+                              }`}
+                              fill={s <= rating.stars ? "currentColor" : "none"}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Review text */}
+                      {rating.review && (
+                        <div className="flex gap-2">
+                          <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-grayScale-300" />
+                          <p className="text-sm leading-relaxed text-grayScale-600">
+                            {rating.review}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between border-t border-grayScale-100 pt-4">
+                <p className="text-xs text-grayScale-400">
+                  Page {ratingsPage + 1}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={ratingsPage <= 0}
+                    onClick={() => setRatingsPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={ratings.length < ratingsPageSize}
+                    onClick={() => setRatingsPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </>
@@ -690,17 +927,48 @@ export function SubCourseContentPage() {
       {/* Add Video Modal */}
       {showAddVideoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
+          <div className="mx-4 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-900">Add Video</h2>
               <button
-                onClick={() => setShowAddVideoModal(false)}
+                onClick={() => { setShowAddVideoModal(false); setSampleVideoId(""); setModalPreviewIframe("") }}
                 className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-5 px-6 py-6">
+            <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-6">
+              {/* Sample Vimeo picker */}
+              <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-brand-600">
+                  Try a sample Vimeo video
+                </p>
+                <div className="flex items-center gap-2">
+                  <Select
+                    className="flex-1 text-sm"
+                    value={sampleVideoId}
+                    onChange={(e) => {
+                      setSampleVideoId(e.target.value)
+                      handleModalPreview(e.target.value)
+                    }}
+                  >
+                    <option value="">Select a sample video…</option>
+                    <option value="76979871">Big Buck Bunny</option>
+                    <option value="1084537">Big Buck Bunny (alt)</option>
+                    <option value="253989945">Vimeo Staff Pick</option>
+                    <option value="305727901">Big Buck Bunny (4K)</option>
+                    <option value="148751763">GoPro Footage</option>
+                  </Select>
+                  {modalPreviewLoading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand-500" />}
+                </div>
+                {modalPreviewIframe && (
+                  <div
+                    className="aspect-video w-full overflow-hidden rounded-lg"
+                    dangerouslySetInnerHTML={{ __html: modalPreviewIframe }}
+                  />
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Title</label>
                 <Input
@@ -851,6 +1119,48 @@ export function SubCourseContentPage() {
               <Button className="bg-red-500 shadow-sm hover:bg-red-600" onClick={handleConfirmDeleteVideo} disabled={deletingVideo}>
                 {deletingVideo ? "Deleting..." : "Delete"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Preview Modal */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-grayScale-900">
+                  {previewVideo?.name ?? "Video Preview"}
+                </h2>
+                {previewVideo && (
+                  <p className="mt-0.5 text-xs text-grayScale-400">
+                    {Math.floor(previewVideo.duration / 60)}:{(previewVideo.duration % 60).toString().padStart(2, "0")} • {previewVideo.width}×{previewVideo.height}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              {previewLoading ? (
+                <div className="flex aspect-video items-center justify-center rounded-xl bg-grayScale-50">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+                </div>
+              ) : previewIframe ? (
+                <div
+                  className="aspect-video w-full overflow-hidden rounded-xl"
+                  dangerouslySetInnerHTML={{ __html: previewIframe }}
+                />
+              ) : (
+                <div className="flex aspect-video items-center justify-center rounded-xl bg-grayScale-50">
+                  <p className="text-sm text-grayScale-400">Failed to load preview.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

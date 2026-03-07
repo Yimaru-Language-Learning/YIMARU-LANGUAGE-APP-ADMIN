@@ -97,8 +97,8 @@ export function SubCourseContentPage() {
         )
         setSubCourse(foundSubCourse ?? null)
       } catch (err) {
-        console.error("Failed to fetch sub-course data:", err)
-        setError("Failed to load sub-course")
+        console.error("Failed to fetch course data:", err)
+        setError("Failed to load course")
       } finally {
         setLoading(false)
       }
@@ -374,7 +374,7 @@ export function SubCourseContentPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
-        <p className="mt-4 text-sm font-medium text-grayScale-500">Loading sub-course…</p>
+        <p className="mt-4 text-sm font-medium text-grayScale-500">Loading course…</p>
       </div>
     )
   }
@@ -396,7 +396,7 @@ export function SubCourseContentPage() {
         className="group inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-grayScale-500 transition-all hover:bg-grayScale-50 hover:text-grayScale-900"
       >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        Back to Sub-courses
+        Back to Courses
       </Link>
 
       {/* SubCourse Header */}
@@ -721,7 +721,7 @@ export function SubCourseContentPage() {
               </div>
               <p className="mt-4 text-sm font-semibold text-grayScale-700">No ratings yet</p>
               <p className="mt-1 text-sm text-grayScale-400">
-                Ratings will appear here once learners start reviewing this sub-course.
+                Ratings will appear here once learners start reviewing this course.
               </p>
             </div>
           ) : (

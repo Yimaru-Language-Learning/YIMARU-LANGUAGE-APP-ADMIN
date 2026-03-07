@@ -76,7 +76,7 @@ export function AllCoursesPage() {
       setCourses(allCourses)
     } catch (err) {
       console.error("Failed to load courses:", err)
-      setError("Failed to load courses")
+      setError("Failed to load sub-categories")
     } finally {
       setLoading(false)
     }
@@ -116,7 +116,7 @@ export function AllCoursesPage() {
         description: createDescription.trim(),
       })
 
-      toast.success("Course created", {
+      toast.success("Sub-category created", {
         description: `"${createTitle.trim()}" has been created.`,
       })
 
@@ -130,7 +130,7 @@ export function AllCoursesPage() {
       await fetchAllCourses()
     } catch (err: any) {
       console.error("Failed to create course:", err)
-      toast.error("Failed to create course", {
+      toast.error("Failed to create sub-category", {
         description: err?.response?.data?.message || "Please try again.",
       })
     } finally {
@@ -145,7 +145,7 @@ export function AllCoursesPage() {
       await fetchAllCourses()
     } catch (err) {
       console.error("Failed to update course status:", err)
-      toast.error("Failed to update course status")
+      toast.error("Failed to update sub-category status")
     } finally {
       setTogglingId(null)
     }
@@ -173,13 +173,13 @@ export function AllCoursesPage() {
         title: editTitle.trim(),
         description: editDescription.trim(),
       })
-      toast.success("Course updated")
+      toast.success("Sub-category updated")
       setEditOpen(false)
       setCourseToEdit(null)
       await fetchAllCourses()
     } catch (err: any) {
       console.error("Failed to update course:", err)
-      toast.error("Failed to update course", {
+      toast.error("Failed to update sub-category", {
         description: err?.response?.data?.message || "Please try again.",
       })
     } finally {
@@ -193,7 +193,7 @@ export function AllCoursesPage() {
         <div className="rounded-2xl bg-white shadow-sm p-6">
           <RefreshCw className="h-10 w-10 animate-spin text-brand-600" />
         </div>
-        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading all courses…</p>
+        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading all sub-categories…</p>
       </div>
     )
   }
@@ -216,9 +216,9 @@ export function AllCoursesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">All Courses</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">All Sub-categories</h1>
           <p className="mt-1 text-sm text-grayScale-400">
-            View and manage courses across all categories.
+            View and manage sub-categories across all categories.
           </p>
         </div>
         <Button
@@ -226,14 +226,14 @@ export function AllCoursesPage() {
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-4 w-4" />
-          Create Course
+          Create Sub-category
         </Button>
       </div>
 
       <Card className="shadow-soft">
         <CardHeader className="border-b border-grayScale-200 pb-4">
           <CardTitle className="text-base font-semibold text-grayScale-600">
-            Course Management
+            Sub-category Management
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 pt-5">
@@ -375,9 +375,9 @@ export function AllCoursesPage() {
               <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-grayScale-100 to-grayScale-200">
                 <BookOpen className="h-8 w-8 text-grayScale-400" />
               </div>
-              <p className="text-base font-semibold text-grayScale-600">No courses found</p>
+              <p className="text-base font-semibold text-grayScale-600">No sub-categories found</p>
               <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-grayScale-400">
-                Try adjusting your search or category filter, or create a new course.
+                Try adjusting your search or category filter, or create a new sub-category.
               </p>
             </div>
           )}
@@ -388,7 +388,7 @@ export function AllCoursesPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create course</DialogTitle>
+            <DialogTitle>Create sub-category</DialogTitle>
             <DialogDescription>
               Choose a category, add basic details, and optionally attach a thumbnail and intro
               video.
@@ -439,7 +439,7 @@ export function AllCoursesPage() {
               </div>
               <div className="sm:col-span-1">
                 <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
-                  Course title
+                  Sub-category title
                 </label>
                 <Input
                   placeholder="e.g. Beginner English A1"
@@ -455,7 +455,7 @@ export function AllCoursesPage() {
               </label>
               <Textarea
                 rows={3}
-                placeholder="Short summary of what this course covers."
+                placeholder="Short summary of what this sub-category covers."
                 value={createDescription}
                 onChange={(e) => setCreateDescription(e.target.value)}
               />
@@ -514,7 +514,7 @@ export function AllCoursesPage() {
               disabled={creating}
               onClick={handleCreateCourse}
             >
-              {creating ? "Creating…" : "Create course"}
+              {creating ? "Creating…" : "Create sub-category"}
             </Button>
           </div>
         </DialogContent>
@@ -524,9 +524,9 @@ export function AllCoursesPage() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit course</DialogTitle>
+            <DialogTitle>Edit sub-category</DialogTitle>
             <DialogDescription>
-              Update the title and description for this course. Status can be toggled from the
+              Update the title and description for this sub-category. Status can be toggled from the
               table.
             </DialogDescription>
           </DialogHeader>
@@ -534,12 +534,12 @@ export function AllCoursesPage() {
           <div className="space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-grayScale-600">
-                Course title
+                Sub-category title
               </label>
               <Input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="Enter course title"
+                placeholder="Enter sub-category title"
               />
             </div>
             <div>
@@ -550,7 +550,7 @@ export function AllCoursesPage() {
                 rows={3}
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Short summary of this course."
+                placeholder="Short summary of this sub-category."
               />
             </div>
           </div>

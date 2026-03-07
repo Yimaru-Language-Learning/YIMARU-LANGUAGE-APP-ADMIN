@@ -77,7 +77,7 @@ export function CoursesPage() {
         setCategory(foundCategory ?? null)
       } catch (err) {
         console.error("Failed to fetch courses:", err)
-        setError("Failed to load courses")
+        setError("Failed to load sub-categories")
       } finally {
         setLoading(false)
       }
@@ -123,7 +123,7 @@ export function CoursesPage() {
       await fetchCourses()
     } catch (err: any) {
       console.error("Failed to create course:", err)
-      setSaveError(err.response?.data?.message || "Failed to create course")
+      setSaveError(err.response?.data?.message || "Failed to create sub-category")
     } finally {
       setSaving(false)
     }
@@ -206,7 +206,7 @@ export function CoursesPage() {
       await fetchCourses()
     } catch (err: any) {
       console.error("Failed to update course:", err)
-      setUpdateError(err.response?.data?.message || "Failed to update course")
+      setUpdateError(err.response?.data?.message || "Failed to update sub-category")
     } finally {
       setUpdating(false)
     }
@@ -267,16 +267,16 @@ export function CoursesPage() {
             </Link>
             <div>
               <h1 className="text-xl font-bold text-grayScale-700 sm:text-2xl">
-                {category?.name} Courses
+                {category?.name} Sub-categories
               </h1>
               <p className="mt-0.5 text-sm text-grayScale-400">
-                <span className="font-medium text-grayScale-500">{courses.length}</span> courses available
+                <span className="font-medium text-grayScale-500">{courses.length}</span> sub-categories available
               </p>
             </div>
           </div>
           <Button className="w-full bg-brand-500 shadow-sm transition-all hover:bg-brand-600 hover:shadow-md sm:w-auto" onClick={handleOpenModal}>
             <Plus className="mr-2 h-4 w-4" />
-            Add New Course
+            Add New Sub-category
           </Button>
         </div>
       </div>
@@ -285,16 +285,16 @@ export function CoursesPage() {
       <Card className="shadow-soft">
         <CardHeader className="border-b border-grayScale-200 pb-3">
           <CardTitle className="text-base font-semibold text-grayScale-600">
-            Course Management
+            Sub-category Management
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
           {courses.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-16 text-center">
               <img src={practiceSrc} alt="" className="h-16 w-16" />
-              <h3 className="mt-4 text-base font-semibold text-grayScale-600">No courses yet</h3>
+              <h3 className="mt-4 text-base font-semibold text-grayScale-600">No sub-categories yet</h3>
               <p className="mt-1.5 text-sm text-grayScale-400">
-                No courses found in this category.
+                No sub-categories found in this category.
               </p>
               <Button
                 variant="outline"
@@ -302,7 +302,7 @@ export function CoursesPage() {
                 onClick={handleOpenModal}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add your first course
+                Add your first sub-category
               </Button>
             </div>
           ) : (
@@ -311,7 +311,7 @@ export function CoursesPage() {
                 <TableHeader>
                   <TableRow className="bg-grayScale-100 hover:bg-grayScale-100">
                     <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Course
+                      Sub-category
                     </TableHead>
                     <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
                       Status
@@ -415,7 +415,7 @@ export function CoursesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-2xl animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
-              <h2 className="text-lg font-bold text-grayScale-700">Add New Course</h2>
+              <h2 className="text-lg font-bold text-grayScale-700">Add New Sub-category</h2>
               <button
                 onClick={handleCloseModal}
                 className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
@@ -441,7 +441,7 @@ export function CoursesPage() {
                 </label>
                 <Input
                   id="course-title"
-                  placeholder="Enter course title"
+                  placeholder="Enter sub-category title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
@@ -456,7 +456,7 @@ export function CoursesPage() {
                 </label>
                 <textarea
                   id="course-description"
-                  placeholder="Enter course description"
+                  placeholder="Enter sub-category description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
@@ -478,7 +478,7 @@ export function CoursesPage() {
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving ? "Saving..." : "Save Course"}
+                {saving ? "Saving..." : "Save Sub-category"}
               </Button>
             </div>
           </div>
@@ -490,7 +490,7 @@ export function CoursesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
-              <h2 className="text-lg font-bold text-grayScale-700">Edit Course</h2>
+              <h2 className="text-lg font-bold text-grayScale-700">Edit Sub-category</h2>
               <button
                 onClick={handleCloseEditModal}
                 className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
@@ -516,7 +516,7 @@ export function CoursesPage() {
                 </label>
                 <Input
                   id="edit-course-title"
-                  placeholder="Enter course title"
+                  placeholder="Enter sub-category title"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                 />
@@ -531,7 +531,7 @@ export function CoursesPage() {
                 </label>
                 <textarea
                   id="edit-course-description"
-                  placeholder="Enter course description"
+                  placeholder="Enter sub-category description"
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={4}
@@ -564,7 +564,7 @@ export function CoursesPage() {
                 onClick={handleUpdate}
                 disabled={updating}
               >
-                {updating ? "Updating..." : "Update Course"}
+                {updating ? "Updating..." : "Update Sub-category"}
               </Button>
             </div>
           </div>
@@ -576,7 +576,7 @@ export function CoursesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-lg animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
-              <h2 className="text-lg font-bold text-grayScale-700">Course Ratings</h2>
+              <h2 className="text-lg font-bold text-grayScale-700">Sub-category Ratings</h2>
               <button
                 onClick={() => {
                   setShowRatingsModal(false)
@@ -602,7 +602,7 @@ export function CoursesPage() {
                   </div>
                   <p className="mt-4 text-sm font-semibold text-grayScale-700">No ratings yet</p>
                   <p className="mt-1 text-sm text-grayScale-400">
-                    Ratings will appear here once learners start reviewing this course.
+                    Ratings will appear here once learners start reviewing this sub-category.
                   </p>
                 </div>
               ) : (
@@ -690,7 +690,7 @@ export function CoursesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
-              <h2 className="text-lg font-bold text-grayScale-700">Delete Course</h2>
+              <h2 className="text-lg font-bold text-grayScale-700">Delete Sub-category</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}
                 className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"

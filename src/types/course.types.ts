@@ -498,8 +498,8 @@ export interface GetLearningPathResponse {
 }
 
 export interface ReorderItem {
-  sub_course_id: number
-  display_order: number
+  id: number
+  position: number
 }
 
 // Ratings

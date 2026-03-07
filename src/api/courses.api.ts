@@ -217,8 +217,41 @@ export const removeSubCoursePrerequisite = (subCourseId: number, prerequisiteId:
 export const getLearningPath = (courseId: number) =>
   http.get<GetLearningPathResponse>(`/course-management/courses/${courseId}/learning-path`)
 
-export const reorderSubCourses = (courseId: number, items: ReorderItem[]) =>
-  http.put(`/course-management/courses/${courseId}/reorder-sub-courses`, { items })
+const buildReorderPayload = (items: ReorderItem[]) => {
+  const normalized = items.map((item, idx) => ({
+    id: Number(item.id),
+    position: Number(item.position ?? idx),
+  }))
+
+  const hasInvalid = normalized.some(
+    (item) =>
+      Number.isNaN(item.id) ||
+      Number.isNaN(item.position) ||
+      !Number.isFinite(item.id) ||
+      !Number.isFinite(item.position),
+  )
+
+  if (hasInvalid) {
+    throw new Error("Invalid reorder payload: ids/positions must be numeric.")
+  }
+
+  return { items: normalized }
+}
+
+export const reorderCategories = (items: ReorderItem[]) =>
+  http.put("/course-management/categories/reorder", buildReorderPayload(items))
+
+export const reorderCourses = (items: ReorderItem[]) =>
+  http.put("/course-management/courses/reorder", buildReorderPayload(items))
+
+export const reorderSubCourses = (items: ReorderItem[]) =>
+  http.put("/course-management/sub-courses/reorder", buildReorderPayload(items))
+
+export const reorderVideos = (items: ReorderItem[]) =>
+  http.put("/course-management/videos/reorder", buildReorderPayload(items))
+
+export const reorderPractices = (items: ReorderItem[]) =>
+  http.put("/course-management/practices/reorder", buildReorderPayload(items))
 
 // Ratings
 export const getRatings = (params: GetRatingsParams) =>

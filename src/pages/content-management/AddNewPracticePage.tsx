@@ -889,7 +889,7 @@ export function AddNewPracticePage() {
                   className="w-full bg-brand-500 hover:bg-brand-600"
                   onClick={() => navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`)}
                 >
-                  Go back to Sub-course
+                  Go back to Course
                 </Button>
                 <Button
                   variant="outline"

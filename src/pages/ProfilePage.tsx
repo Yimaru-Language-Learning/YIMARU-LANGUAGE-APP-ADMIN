@@ -272,20 +272,34 @@ export function ProfilePage() {
   const completionPct = profile.profile_completion_percentage ?? 0;
 
   return (
-    <div className="w-full space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6 pb-8">
       {/* ─── Hero Card ─── */}
-      <div className="relative overflow-hidden rounded-2xl border border-grayScale-100 bg-white shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl border border-grayScale-100 bg-white shadow-sm ring-1 ring-black/5">
         {/* Tall dark gradient banner with content inside */}
-        <div className="relative flex min-h-[200px] flex-col justify-between bg-gradient-to-br from-[#1a1f4e] via-[#2d2b6b] to-[#3b3480] px-6 py-8 sm:px-8">
+        <div className="relative flex min-h-[220px] flex-col justify-between bg-gradient-to-br from-[#1a1f4e] via-[#2d2b6b] to-[#3b3480] px-6 py-8 sm:px-8">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
 
           <div className="relative z-10 space-y-2">
             <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Hello {profile.first_name}
             </h2>
-            <p className="max-w-xl text-sm leading-relaxed text-white/70">
-              This is your profile page. You can see the progress you've made with your work and manage your projects or assigned tasks
+            <p className="max-w-2xl text-sm leading-relaxed text-white/70">
+              Track your account status, keep profile details up to date, and manage your learning preferences from one place.
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90">
+                <Shield className="h-3.5 w-3.5" />
+                {profile.role}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90">
+                <Clock className="h-3.5 w-3.5" />
+                Last login {formatDate(profile.last_login)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90">
+                <Target className="h-3.5 w-3.5" />
+                {completionPct}% complete
+              </span>
+            </div>
           </div>
 
           <div className="relative z-10 mt-6">
@@ -293,7 +307,7 @@ export function ProfilePage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 border-white/30 bg-white/10 text-xs font-medium text-white shadow-sm backdrop-blur-sm hover:bg-white/20 hover:text-white"
+                className="h-8 gap-1.5 border-white/30 bg-white/10 px-3 text-xs font-medium text-white shadow-sm backdrop-blur-sm hover:bg-white/20 hover:text-white"
                 onClick={startEditing}
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -304,7 +318,7 @@ export function ProfilePage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1.5 border-white/30 bg-white/10 text-xs text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+                  className="h-8 gap-1.5 border-white/30 bg-white/10 px-3 text-xs text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
                   onClick={cancelEditing}
                   disabled={saving}
                 >
@@ -330,7 +344,7 @@ export function ProfilePage() {
         </div>
 
         {/* Identity info below banner */}
-        <div className="px-6 py-5 sm:px-8">
+        <div className="bg-gradient-to-b from-white to-grayScale-50/40 px-6 py-5 sm:px-8">
           {editing ? (
             <div className="flex flex-wrap items-center gap-2">
               <Input
@@ -405,7 +419,7 @@ export function ProfilePage() {
       {/* ─── Detail Cards Grid ─── */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ── Contact & Personal ── */}
-        <Card className="overflow-hidden border-grayScale-100 shadow-sm lg:col-span-2">
+        <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md lg:col-span-2">
           <div className="h-1 bg-gradient-to-r from-brand-500 to-brand-400" />
           <CardContent className="p-0">
             <div className="grid divide-y divide-grayScale-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
@@ -569,9 +583,9 @@ export function ProfilePage() {
         </Card>
 
         {/* ── Right Sidebar ── */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           {/* Profile Completion */}
-          <Card className="overflow-hidden border-grayScale-100 shadow-sm">
+          <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
             <div className="h-1 bg-gradient-to-r from-brand-400 to-mint-400" />
             <CardContent className="flex items-center gap-4 p-5">
               <ProgressRing percent={completionPct} />
@@ -585,7 +599,7 @@ export function ProfilePage() {
           </Card>
 
           {/* Activity */}
-          <Card className="overflow-hidden border-grayScale-100 shadow-sm">
+          <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
             <div className="h-1 bg-gradient-to-r from-grayScale-300 to-grayScale-200" />
             <CardContent className="space-y-4 p-5">
               <p className="text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
@@ -613,7 +627,7 @@ export function ProfilePage() {
           </Card>
 
           {/* Quick Account Info */}
-          <Card className="overflow-hidden border-grayScale-100 shadow-sm">
+          <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
             <div className="h-1 bg-gradient-to-r from-brand-500 to-brand-600" />
             <CardContent className="space-y-3 p-5">
               <p className="text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
@@ -675,8 +689,13 @@ export function ProfilePage() {
       </div>
 
       {/* ─── Learning & Goals Card ─── */}
-      <Card className="overflow-hidden border-grayScale-100 shadow-sm">
+      <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
         <div className="h-1 bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400" />
+        <div className="border-b border-grayScale-100 px-5 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
+            Learning & Preferences
+          </p>
+        </div>
         <CardContent className="p-0">
           <div className="grid divide-y divide-grayScale-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
             <div className="p-5">

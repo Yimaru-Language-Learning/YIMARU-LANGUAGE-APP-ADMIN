@@ -139,7 +139,7 @@ export function CourseCategoryPage() {
 
                 <CardContent>
                   <span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 transition-colors group-hover:text-brand-600">
-                    View Courses
+                    View Sub-categories
                     <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
                       →
                     </span>

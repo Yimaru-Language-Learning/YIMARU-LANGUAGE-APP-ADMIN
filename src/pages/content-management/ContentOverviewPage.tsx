@@ -12,7 +12,7 @@ const contentSections = [
     pathFn: (categoryId: string | undefined) => `/content/category/${categoryId}/courses`,
     icon: BookOpen,
     title: "Courses",
-    description: "Manage course videos and educational content",
+    description: "Manage sub-categories, course videos and educational content",
     action: "Manage Courses",
     count: 12,
     countLabel: "courses",

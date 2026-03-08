@@ -41,6 +41,7 @@ import type {
   GetSubCoursePrerequisitesResponse,
   AddSubCoursePrerequisiteRequest,
   GetLearningPathResponse,
+  GetSubCourseEntryAssessmentResponse,
   ReorderItem,
   GetRatingsResponse,
   GetRatingsParams,
@@ -216,6 +217,11 @@ export const removeSubCoursePrerequisite = (subCourseId: number, prerequisiteId:
 // Learning Path APIs
 export const getLearningPath = (courseId: number) =>
   http.get<GetLearningPathResponse>(`/course-management/courses/${courseId}/learning-path`)
+
+export const getSubCourseEntryAssessment = (subCourseId: number) =>
+  http.get<GetSubCourseEntryAssessmentResponse>(
+    `/question-sets/sub-courses/${subCourseId}/entry-assessment`,
+  )
 
 const buildReorderPayload = (items: ReorderItem[]) => {
   const normalized = items.map((item, idx) => ({

@@ -470,12 +470,29 @@ export interface LearningPathSubCourse {
   thumbnail: string
   display_order: number
   level: string
+  sub_level?: string
   prerequisite_count: number
   video_count: number
   practice_count: number
   prerequisites: { sub_course_id: number; title: string; level: string }[]
-  videos: unknown[]
-  practices: unknown[]
+  videos: LearningPathVideo[]
+  practices: LearningPathPractice[]
+}
+
+export interface LearningPathVideo {
+  id: number
+  title: string
+  display_order: number
+  duration: number
+  video_url: string
+}
+
+export interface LearningPathPractice {
+  id: number
+  title: string
+  status: string
+  question_count: number
+  display_order?: number
 }
 
 export interface LearningPath {
@@ -492,6 +509,14 @@ export interface LearningPath {
 export interface GetLearningPathResponse {
   message: string
   data: LearningPath
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetSubCourseEntryAssessmentResponse {
+  message: string
+  data: QuestionSet | null
   success: boolean
   status_code: number
   metadata: unknown

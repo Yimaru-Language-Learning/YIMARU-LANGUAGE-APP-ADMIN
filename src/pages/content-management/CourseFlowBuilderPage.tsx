@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import {
-  BookOpen,
+  BadgeCheck,
   ChevronDown,
+  ChevronRight,
   GripVertical,
   Loader2,
   RefreshCw,
-  Video,
+  Sparkles,
 } from "lucide-react"
 import {
   DndContext,
@@ -32,9 +33,10 @@ import { Badge } from "../../components/ui/badge"
 import {
   getCourseCategories,
   getCoursesByCategory,
-  getSubCoursesByCourse,
-  getVideosBySubCourse,
+  getLearningPath,
   getQuestionSetsByOwner,
+  getSubCourseEntryAssessment,
+  reorderCategories,
   reorderCourses,
   reorderSubCourses,
   reorderVideos,
@@ -43,17 +45,31 @@ import {
 import type {
   Course,
   CourseCategory,
-  Practice,
+  LearningPath,
+  LearningPathPractice,
+  LearningPathVideo,
   QuestionSet,
   ReorderItem,
-  SubCourse,
-  SubCourseVideo,
 } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
 
-type VideoNode = SubCourseVideo & { display_order?: number }
-type PracticeNode = Practice & { display_order?: number }
+type PracticeListItem = LearningPathPractice & { display_order: number }
+
+function mapPracticeSetsToPracticeItems(sets: QuestionSet[]): PracticeListItem[] {
+  return sortByDisplayOrder(
+    sets
+      .filter((set) => set.set_type === "PRACTICE")
+      .map((set, idx) => ({
+        id: set.id,
+        title: set.title,
+        status: set.status,
+        question_count: 0,
+        display_order:
+          typeof (set as any).display_order === "number" ? (set as any).display_order : idx,
+      })),
+  )
+}
 
 function normalizeParentId(value: number | string | null | undefined): number | null {
   if (value === null || value === undefined || value === "") return null
@@ -64,35 +80,70 @@ function normalizeParentId(value: number | string | null | undefined): number | 
 
 function sortByDisplayOrder<T extends { id: number }>(items: T[]) {
   return [...items].sort((a, b) => {
-    const aOrder = typeof (a as any).display_order === "number" ? (a as any).display_order : 0
-    const bOrder = typeof (b as any).display_order === "number" ? (b as any).display_order : 0
-    if (aOrder === bOrder) return a.id - b.id
-    return aOrder - bOrder
+    const ao = typeof (a as any).display_order === "number" ? (a as any).display_order : 0
+    const bo = typeof (b as any).display_order === "number" ? (b as any).display_order : 0
+    if (ao === bo) return a.id - b.id
+    return ao - bo
   })
 }
 
 function toReorderItems<T extends { id: number }>(items: T[]): ReorderItem[] {
-  return items.map((item, index) => ({ id: item.id, position: index }))
+  return items.map((item, index) => ({ id: Number(item.id), position: index }))
 }
 
-function withDisplayOrder<T extends { id: number }>(items: T[]) {
-  return items.map((item, index) => ({ ...(item as any), display_order: index })) as T[]
-}
-
-function SortableNode({
+function SortableChip({
   id,
   label,
   active,
   onClick,
   className,
-  badge,
 }: {
   id: number
   label: string
   active?: boolean
   onClick?: () => void
   className?: string
-  badge?: React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "flex min-w-[180px] items-center gap-2 rounded-xl border bg-white px-3 py-2 shadow-sm",
+        active ? "border-brand-300 bg-brand-50" : "border-grayScale-200",
+        isDragging && "opacity-60 ring-2 ring-brand-300",
+        className,
+      )}
+    >
+      <button
+        type="button"
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-grayScale-700"
+      >
+        {label}
+      </button>
+    </div>
+  )
+}
+
+function SortableRow({
+  id,
+  children,
+}: {
+  id: number
+  children: React.ReactNode
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
@@ -102,49 +153,47 @@ function SortableNode({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "rounded-xl border bg-white px-2.5 py-2 shadow-sm",
-        active ? "border-brand-300 bg-brand-50" : "border-grayScale-200",
+        "rounded-xl border border-grayScale-200 bg-white",
         isDragging && "opacity-60 ring-2 ring-brand-300",
-        className,
       )}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 border-b border-grayScale-100 px-2.5 py-2">
         <button
           type="button"
+          className="grid h-6 w-6 place-items-center rounded-md text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500"
           {...attributes}
           {...listeners}
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500"
         >
           <GripVertical className="h-3.5 w-3.5" />
         </button>
-        <button
-          type="button"
-          onClick={onClick}
-          className="min-w-0 flex-1 text-left text-sm font-semibold text-grayScale-700"
-        >
-          <span className="truncate">{label}</span>
-        </button>
-        {badge}
+        <span className="text-[11px] font-medium uppercase tracking-wide text-grayScale-400">Drag</span>
       </div>
+      <div className="p-3">{children}</div>
     </div>
   )
 }
 
 export function CourseFlowBuilderPage() {
   const [categories, setCategories] = useState<CourseCategory[]>([])
-  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<number | null>(null)
-  const [activeSubCategoryId, setActiveSubCategoryId] = useState<number | null>(null)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
+  const [coursesByCategory, setCoursesByCategory] = useState<Record<number, Course[]>>({})
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null)
+  const [learningPath, setLearningPath] = useState<LearningPath | null>(null)
 
-  const [subCategoriesByParent, setSubCategoriesByParent] = useState<Record<number, Course[]>>({})
-  const [coursesBySubCategory, setCoursesBySubCategory] = useState<Record<number, SubCourse[]>>({})
-  const [videosByCourse, setVideosByCourse] = useState<Record<number, VideoNode[]>>({})
-  const [practicesByCourse, setPracticesByCourse] = useState<Record<number, PracticeNode[]>>({})
+  const [expandedSubCourseIds, setExpandedSubCourseIds] = useState<Set<number>>(new Set())
+  const [practicesBySubCourse, setPracticesBySubCourse] = useState<Record<number, PracticeListItem[]>>(
+    {},
+  )
+  const [entryAssessmentBySubCourse, setEntryAssessmentBySubCourse] = useState<Record<number, QuestionSet | null>>(
+    {},
+  )
 
-  const [expandedCourseIds, setExpandedCourseIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [loadingSubCategories, setLoadingSubCategories] = useState(false)
   const [loadingCourses, setLoadingCourses] = useState(false)
-  const [loadingCourseContent, setLoadingCourseContent] = useState<Record<number, boolean>>({})
+  const [loadingPath, setLoadingPath] = useState(false)
+  const [loadingPracticesBySubCourse, setLoadingPracticesBySubCourse] = useState<Record<number, boolean>>(
+    {},
+  )
   const [savingKey, setSavingKey] = useState<string | null>(null)
 
   const sensors = useSensors(
@@ -152,29 +201,25 @@ export function CourseFlowBuilderPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const parentCategories = useMemo(
+  const topLevelCategories = useMemo(
     () => sortByDisplayOrder(categories.filter((c) => normalizeParentId(c.parent_id as any) === null)),
     [categories],
   )
 
-  const subCategories = useMemo(() => {
-    if (!selectedParentCategoryId) return []
-    return subCategoriesByParent[selectedParentCategoryId] ?? []
-  }, [selectedParentCategoryId, subCategoriesByParent])
-
   const activeCourses = useMemo(() => {
-    if (!activeSubCategoryId) return []
-    return coursesBySubCategory[activeSubCategoryId] ?? []
-  }, [activeSubCategoryId, coursesBySubCategory])
+    if (!selectedCategoryId) return []
+    return coursesByCategory[selectedCategoryId] ?? []
+  }, [selectedCategoryId, coursesByCategory])
 
   useEffect(() => {
     const load = async () => {
       setLoading(true)
       try {
         const res = await getCourseCategories()
-        setCategories(sortByDisplayOrder(res.data.data.categories ?? []))
+        const all = sortByDisplayOrder(res.data.data.categories ?? [])
+        setCategories(all)
       } catch {
-        toast.error("Failed to load categories.")
+        toast.error("Failed to load course categories.")
       } finally {
         setLoading(false)
       }
@@ -183,203 +228,277 @@ export function CourseFlowBuilderPage() {
   }, [])
 
   useEffect(() => {
-    if (selectedParentCategoryId) return
-    if (parentCategories.length > 0) setSelectedParentCategoryId(parentCategories[0].id)
-  }, [parentCategories, selectedParentCategoryId])
+    if (selectedCategoryId) return
+    if (topLevelCategories.length > 0) setSelectedCategoryId(topLevelCategories[0].id)
+  }, [topLevelCategories, selectedCategoryId])
 
   useEffect(() => {
-    if (!selectedParentCategoryId) {
-      setActiveSubCategoryId(null)
+    if (!selectedCategoryId) {
+      setSelectedCourseId(null)
       return
     }
-    if (subCategories.length === 0) {
-      setActiveSubCategoryId(null)
-      return
-    }
-    if (!subCategories.some((c) => c.id === activeSubCategoryId)) {
-      setActiveSubCategoryId(subCategories[0].id)
-    }
-  }, [selectedParentCategoryId, subCategories, activeSubCategoryId])
-
-  useEffect(() => {
-    if (!selectedParentCategoryId) return
-    if (subCategoriesByParent[selectedParentCategoryId]) return
-    const load = async () => {
-      setLoadingSubCategories(true)
-      try {
-        const res = await getCoursesByCategory(selectedParentCategoryId)
-        setSubCategoriesByParent((prev) => ({
-          ...prev,
-          [selectedParentCategoryId]: sortByDisplayOrder(res.data.data.courses ?? []),
-        }))
-      } catch {
-        toast.error("Failed to load sub-categories.")
-      } finally {
-        setLoadingSubCategories(false)
+    if (coursesByCategory[selectedCategoryId]) {
+      const existing = coursesByCategory[selectedCategoryId]
+      if (existing.length > 0 && !existing.some((c) => c.id === selectedCourseId)) {
+        setSelectedCourseId(existing[0].id)
+      } else if (existing.length === 0) {
+        setSelectedCourseId(null)
       }
+      return
     }
-    load()
-  }, [selectedParentCategoryId, subCategoriesByParent])
-
-  useEffect(() => {
-    if (!activeSubCategoryId) return
-    if (coursesBySubCategory[activeSubCategoryId]) return
     const load = async () => {
       setLoadingCourses(true)
       try {
-        const res = await getSubCoursesByCourse(activeSubCategoryId)
-        setCoursesBySubCategory((prev) => ({
-          ...prev,
-          [activeSubCategoryId]: sortByDisplayOrder(res.data.data.sub_courses ?? []),
-        }))
+        const res = await getCoursesByCategory(selectedCategoryId)
+        const items = sortByDisplayOrder(res.data.data.courses ?? [])
+        setCoursesByCategory((prev) => ({ ...prev, [selectedCategoryId]: items }))
+        setSelectedCourseId(items[0]?.id ?? null)
       } catch {
-        toast.error("Failed to load courses.")
+        toast.error("Failed to load course sub-categories.")
       } finally {
         setLoadingCourses(false)
       }
     }
     load()
-  }, [activeSubCategoryId, coursesBySubCategory])
+  }, [selectedCategoryId, coursesByCategory, selectedCourseId])
 
-  const ensureCourseContentLoaded = async (courseId: number) => {
-    if (videosByCourse[courseId] && practicesByCourse[courseId]) return
-    setLoadingCourseContent((prev) => ({ ...prev, [courseId]: true }))
+  useEffect(() => {
+    if (!selectedCourseId) {
+      setLearningPath(null)
+      return
+    }
+    const load = async () => {
+      setLoadingPath(true)
+      try {
+        const res = await getLearningPath(selectedCourseId)
+        const path = res.data.data
+        setLearningPath({
+          ...path,
+          sub_courses: sortByDisplayOrder(path.sub_courses ?? []),
+        })
+
+        // Practices source of truth: question sets by SUB_COURSE owner.
+        const subCourses = path.sub_courses ?? []
+        if (subCourses.length > 0) {
+          const ownerResults = await Promise.all(
+            subCourses.map(async (sc) => {
+              const setsRes = await getQuestionSetsByOwner("SUB_COURSE", sc.id)
+              return [sc.id, mapPracticeSetsToPracticeItems((setsRes.data.data ?? []) as QuestionSet[])] as const
+            }),
+          )
+          const practiceMap: Record<number, PracticeListItem[]> = {}
+          ownerResults.forEach(([subCourseId, practiceItems]) => {
+            practiceMap[subCourseId] = practiceItems
+          })
+          setPracticesBySubCourse(practiceMap)
+        } else {
+          setPracticesBySubCourse({})
+        }
+      } catch {
+        toast.error("Failed to load course sub-category learning path.")
+        setLearningPath(null)
+      } finally {
+        setLoadingPath(false)
+      }
+    }
+    load()
+  }, [selectedCourseId])
+
+  const loadSubCoursePracticeAndEntry = async (subCourseId: number) => {
+    if (practicesBySubCourse[subCourseId] && entryAssessmentBySubCourse[subCourseId] !== undefined) return
+    setLoadingPracticesBySubCourse((prev) => ({ ...prev, [subCourseId]: true }))
     try {
-      const [videosRes, practicesRes] = await Promise.all([
-        getVideosBySubCourse(courseId),
-        getQuestionSetsByOwner("SUB_COURSE", courseId),
+      const [setsRes, entryRes] = await Promise.allSettled([
+        getQuestionSetsByOwner("SUB_COURSE", subCourseId),
+        getSubCourseEntryAssessment(subCourseId),
       ])
-      setVideosByCourse((prev) => ({
+
+      // No practice sets is a valid empty-state scenario; do not toast for 404/empty.
+      let ownerSets: QuestionSet[] = []
+      if (setsRes.status === "fulfilled") {
+        ownerSets = (setsRes.value.data.data ?? []) as QuestionSet[]
+      } else {
+        const status = setsRes.reason?.response?.status
+        if (status !== 404) {
+          throw setsRes.reason
+        }
+      }
+
+      setPracticesBySubCourse((prev) => ({
         ...prev,
-        [courseId]: sortByDisplayOrder((videosRes.data.data.videos ?? []) as VideoNode[]),
+        [subCourseId]: mapPracticeSetsToPracticeItems(ownerSets),
       }))
-      const practiceSets = ((practicesRes.data.data ?? []) as QuestionSet[]).filter(
-        (set) => set.set_type === "PRACTICE",
-      )
-      setPracticesByCourse((prev) => ({
+
+      // Entry assessment may legitimately be absent.
+      let entryAssessment: QuestionSet | null = null
+      if (entryRes.status === "fulfilled") {
+        entryAssessment = (entryRes.value.data.data ?? null) as QuestionSet | null
+      } else {
+        const status = entryRes.reason?.response?.status
+        if (status !== 404) {
+          throw entryRes.reason
+        }
+      }
+
+      setEntryAssessmentBySubCourse((prev) => ({
         ...prev,
-        [courseId]: sortByDisplayOrder(
-          practiceSets.map((set, index) => ({
-            id: set.id,
-            sub_course_id: courseId,
-            title: set.title,
-            description: set.description,
-            banner_image: "",
-            persona: set.persona,
-            is_active: set.status === "PUBLISHED",
-            display_order:
-              typeof (set as any).display_order === "number" ? (set as any).display_order : index,
-          })) as PracticeNode[],
-        ),
+        [subCourseId]: entryAssessment,
       }))
     } catch {
-      toast.error("Failed to load course content.")
+      toast.error("Failed to load practice sets for course.")
     } finally {
-      setLoadingCourseContent((prev) => ({ ...prev, [courseId]: false }))
+      setLoadingPracticesBySubCourse((prev) => ({ ...prev, [subCourseId]: false }))
     }
   }
 
-  const handleSubCategoryDragEnd = async (event: DragEndEvent) => {
+  const onCategoryDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id || !selectedParentCategoryId) return
-    const items = subCategories
+    if (!over || active.id === over.id) return
+    const items = topLevelCategories
+    if (items.length <= 1) return
     const oldIndex = items.findIndex((i) => i.id === Number(active.id))
     const newIndex = items.findIndex((i) => i.id === Number(over.id))
     if (oldIndex < 0 || newIndex < 0) return
 
-    const reordered = withDisplayOrder(arrayMove(items, oldIndex, newIndex))
+    const reordered = arrayMove(items, oldIndex, newIndex).map((item, idx) => ({
+      ...item,
+      display_order: idx,
+    }))
+    const previous = categories
+    const ids = new Set(reordered.map((r) => r.id))
+    setCategories((prev) => [...prev.filter((c) => !ids.has(c.id)), ...reordered])
+    setSavingKey("categories")
+    try {
+      await reorderCategories(toReorderItems(reordered))
+    } catch (err: any) {
+      setCategories(previous)
+      toast.error(err?.response?.data?.message || "Failed to reorder categories.")
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
+  const onCoursesDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id || !selectedCategoryId) return
+    const items = coursesByCategory[selectedCategoryId] ?? []
+    if (items.length <= 1) return
+    const oldIndex = items.findIndex((i) => i.id === Number(active.id))
+    const newIndex = items.findIndex((i) => i.id === Number(over.id))
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const reordered = arrayMove(items, oldIndex, newIndex).map((item, idx) => ({
+      ...item,
+      display_order: idx,
+    }))
     const previous = items
-    setSubCategoriesByParent((prev) => ({ ...prev, [selectedParentCategoryId]: reordered }))
-    setSavingKey("sub-categories")
+    setCoursesByCategory((prev) => ({ ...prev, [selectedCategoryId]: reordered }))
+    setSavingKey("courses")
     try {
       await reorderCourses(toReorderItems(reordered))
     } catch (err: any) {
-      setSubCategoriesByParent((prev) => ({ ...prev, [selectedParentCategoryId]: previous }))
-      const message =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        "Failed to reorder sub-categories."
-      toast.error(message)
+      setCoursesByCategory((prev) => ({ ...prev, [selectedCategoryId]: previous }))
+      toast.error(err?.response?.data?.message || "Failed to reorder courses.")
     } finally {
       setSavingKey(null)
     }
   }
 
-  const handleCoursesDragEnd = async (event: DragEndEvent) => {
+  const onSubCoursesDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id || !activeSubCategoryId) return
-    const items = coursesBySubCategory[activeSubCategoryId] ?? []
+    if (!over || active.id === over.id || !learningPath) return
+    const items = learningPath.sub_courses ?? []
+    if (items.length <= 1) return
     const oldIndex = items.findIndex((i) => i.id === Number(active.id))
     const newIndex = items.findIndex((i) => i.id === Number(over.id))
     if (oldIndex < 0 || newIndex < 0) return
 
-    const reordered = withDisplayOrder(arrayMove(items, oldIndex, newIndex))
+    const reordered = arrayMove(items, oldIndex, newIndex).map((item, idx) => ({
+      ...item,
+      display_order: idx,
+    }))
     const previous = items
-    setCoursesBySubCategory((prev) => ({ ...prev, [activeSubCategoryId]: reordered }))
-    setSavingKey("courses")
+    setLearningPath((prev) => (prev ? { ...prev, sub_courses: reordered } : prev))
+    setSavingKey("sub-courses")
     try {
       await reorderSubCourses(toReorderItems(reordered))
-    } catch {
-      setCoursesBySubCategory((prev) => ({ ...prev, [activeSubCategoryId]: previous }))
-      toast.error("Failed to reorder courses.")
+    } catch (err: any) {
+      setLearningPath((prev) => (prev ? { ...prev, sub_courses: previous } : prev))
+      toast.error(err?.response?.data?.message || "Failed to reorder sub-courses.")
     } finally {
       setSavingKey(null)
     }
   }
 
-  const handleVideosDragEnd = async (courseId: number, event: DragEndEvent) => {
+  const onVideosDragEnd = async (subCourseId: number, event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id) return
-    const items = videosByCourse[courseId] ?? []
-    const oldIndex = items.findIndex((i) => i.id === Number(active.id))
-    const newIndex = items.findIndex((i) => i.id === Number(over.id))
+    if (!over || active.id === over.id || !learningPath) return
+    const subCourses = learningPath.sub_courses ?? []
+    const target = subCourses.find((s) => s.id === subCourseId)
+    if (!target || target.videos.length <= 1) return
+    const oldIndex = target.videos.findIndex((i) => i.id === Number(active.id))
+    const newIndex = target.videos.findIndex((i) => i.id === Number(over.id))
     if (oldIndex < 0 || newIndex < 0) return
 
-    const reordered = withDisplayOrder(arrayMove(items, oldIndex, newIndex))
-    const previous = items
-    setVideosByCourse((prev) => ({ ...prev, [courseId]: reordered }))
-    setSavingKey(`videos-${courseId}`)
+    const reordered = arrayMove(target.videos, oldIndex, newIndex).map((item, idx) => ({
+      ...item,
+      display_order: idx,
+    })) as LearningPathVideo[]
+    const previous = target.videos
+    setLearningPath((prev) =>
+      prev
+        ? {
+            ...prev,
+            sub_courses: prev.sub_courses.map((sc) =>
+              sc.id === subCourseId ? { ...sc, videos: reordered } : sc,
+            ),
+          }
+        : prev,
+    )
+    setSavingKey(`videos-${subCourseId}`)
     try {
       await reorderVideos(toReorderItems(reordered))
-    } catch {
-      setVideosByCourse((prev) => ({ ...prev, [courseId]: previous }))
-      toast.error("Failed to reorder videos.")
+    } catch (err: any) {
+      setLearningPath((prev) =>
+        prev
+          ? {
+              ...prev,
+              sub_courses: prev.sub_courses.map((sc) =>
+                sc.id === subCourseId ? { ...sc, videos: previous } : sc,
+              ),
+            }
+          : prev,
+      )
+      toast.error(err?.response?.data?.message || "Failed to reorder videos.")
     } finally {
       setSavingKey(null)
     }
   }
 
-  const handlePracticesDragEnd = async (courseId: number, event: DragEndEvent) => {
+  const onPracticesDragEnd = async (subCourseId: number, event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const items = practicesByCourse[courseId] ?? []
+    const items = practicesBySubCourse[subCourseId] ?? []
+    if (items.length <= 1) return
     const oldIndex = items.findIndex((i) => i.id === Number(active.id))
     const newIndex = items.findIndex((i) => i.id === Number(over.id))
     if (oldIndex < 0 || newIndex < 0) return
 
-    const reordered = withDisplayOrder(arrayMove(items, oldIndex, newIndex))
+    const reordered = arrayMove(items, oldIndex, newIndex).map((item, idx) => ({
+      ...item,
+      display_order: idx,
+    }))
     const previous = items
-    setPracticesByCourse((prev) => ({ ...prev, [courseId]: reordered }))
-    setSavingKey(`practices-${courseId}`)
+    setPracticesBySubCourse((prev) => ({ ...prev, [subCourseId]: reordered }))
+    setSavingKey(`practices-${subCourseId}`)
     try {
       await reorderPractices(toReorderItems(reordered))
-    } catch {
-      setPracticesByCourse((prev) => ({ ...prev, [courseId]: previous }))
-      toast.error("Failed to reorder practices.")
+    } catch (err: any) {
+      setPracticesBySubCourse((prev) => ({ ...prev, [subCourseId]: previous }))
+      toast.error(err?.response?.data?.message || "Failed to reorder practices.")
     } finally {
       setSavingKey(null)
     }
-  }
-
-  const toggleCourse = async (courseId: number) => {
-    const expanded = expandedCourseIds.has(courseId)
-    if (!expanded) await ensureCourseContentLoaded(courseId)
-    setExpandedCourseIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(courseId)) next.delete(courseId)
-      else next.add(courseId)
-      return next
-    })
   }
 
   if (loading) {
@@ -391,15 +510,15 @@ export function CourseFlowBuilderPage() {
     )
   }
 
-  const selectedParentName =
-    parentCategories.find((c) => c.id === selectedParentCategoryId)?.name ?? "Course Category"
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">Learning Tree Builder</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">
+            Learning Tree + Sequential Access
+          </h1>
           <p className="mt-1 text-sm text-grayScale-400">
-            Arrange as: Course category → Course sub-category → Course (level) → Course videos/practices
+            Course Category → Course Sub-category → Course (level/sub-level) → Videos/Practices
           </p>
         </div>
         <Button variant="outline" className="gap-2" onClick={() => window.location.reload()}>
@@ -412,17 +531,19 @@ export function CourseFlowBuilderPage() {
         <CardContent className="grid gap-3 p-4 md:grid-cols-2">
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-[0.14em] text-grayScale-400">
-              Parent category
+              Active category
             </p>
             <Select
-              value={selectedParentCategoryId ? String(selectedParentCategoryId) : ""}
+              value={selectedCategoryId ? String(selectedCategoryId) : ""}
               onChange={(e) => {
-                setSelectedParentCategoryId(e.target.value ? Number(e.target.value) : null)
-                setActiveSubCategoryId(null)
+                const id = e.target.value ? Number(e.target.value) : null
+                setSelectedCategoryId(id)
+                setSelectedCourseId(null)
+                setLearningPath(null)
               }}
             >
               <option value="">Choose category...</option>
-              {parentCategories.map((cat) => (
+              {topLevelCategories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>
@@ -431,19 +552,19 @@ export function CourseFlowBuilderPage() {
           </div>
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-[0.14em] text-grayScale-400">
-              Active sub-category
+              Active course sub-category
             </p>
             <Select
-              value={activeSubCategoryId ? String(activeSubCategoryId) : ""}
-              onChange={(e) => setActiveSubCategoryId(e.target.value ? Number(e.target.value) : null)}
-              disabled={!selectedParentCategoryId || loadingSubCategories || subCategories.length === 0}
+              value={selectedCourseId ? String(selectedCourseId) : ""}
+              onChange={(e) => setSelectedCourseId(e.target.value ? Number(e.target.value) : null)}
+              disabled={!selectedCategoryId || loadingCourses || activeCourses.length === 0}
             >
               <option value="">
-                {loadingSubCategories ? "Loading sub-categories..." : "Choose sub-category..."}
+                {loadingCourses ? "Loading course sub-categories..." : "Choose course sub-category..."}
               </option>
-              {subCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.title}
+              {activeCourses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title}
                 </option>
               ))}
             </Select>
@@ -451,58 +572,73 @@ export function CourseFlowBuilderPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-soft">
-        <CardHeader className="border-b border-grayScale-200 pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold text-grayScale-600">Tree canvas</CardTitle>
-            {savingKey && (
-              <span className="inline-flex items-center gap-1 text-xs text-brand-500">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Saving order...
-              </span>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-5">
-          <div className="flex flex-col items-center gap-2">
-            <div className="rounded-xl border-2 border-brand-400 bg-white px-5 py-2 text-lg font-semibold text-grayScale-700 shadow-sm">
-              {selectedParentName}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <Card className="min-w-0 shadow-soft">
+          <CardHeader className="border-b border-grayScale-200 pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-grayScale-600">
+                Reorder categories/courses
+                
+              </CardTitle>
+              {savingKey && (
+                <span className="inline-flex items-center gap-1 text-xs text-brand-500">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving...
+                </span>
+              )}
             </div>
-            <div className="h-5 w-px bg-grayScale-300" />
+          </CardHeader>
+          <CardContent className="space-y-5 pt-4">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">
+                Categories
+              </p>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onCategoryDragEnd}>
+                <SortableContext
+                  items={topLevelCategories.map((item) => item.id)}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {topLevelCategories.map((cat) => (
+                      <SortableChip
+                        key={cat.id}
+                        id={cat.id}
+                        label={cat.name}
+                        active={cat.id === selectedCategoryId}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                        className="min-w-[180px] sm:min-w-[220px]"
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
 
-            <div className="w-full">
-              {loadingSubCategories ? (
-                <div className="flex items-center justify-center py-6">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Course sub-categories</p>
+              {loadingCourses ? (
+                <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
                 </div>
-              ) : subCategories.length === 0 ? (
-                <div className="mx-auto max-w-[280px] rounded-xl border border-dashed border-grayScale-200 px-4 py-3 text-center text-xs text-grayScale-400">
-                  No sub-categories available.
-                </div>
+              ) : activeCourses.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-grayScale-200 px-3 py-6 text-center text-xs text-grayScale-400">
+                  No course sub-categories under selected category.
+                </p>
               ) : (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleSubCategoryDragEnd}
-                >
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onCoursesDragEnd}>
                   <SortableContext
-                    items={subCategories.map((item) => item.id)}
-                    strategy={horizontalListSortingStrategy}
+                    items={activeCourses.map((item) => item.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <div className="flex items-center justify-center gap-3 overflow-x-auto pb-2">
-                      {subCategories.map((item) => (
-                        <SortableNode
-                          key={item.id}
-                          id={item.id}
-                          label={item.title}
-                          active={item.id === activeSubCategoryId}
-                          onClick={() => setActiveSubCategoryId(item.id)}
-                          className="min-w-[250px]"
-                          badge={
-                            item.id === activeSubCategoryId ? (
-                              <Badge className="bg-brand-500 text-white">Active</Badge>
-                            ) : undefined
-                          }
+                    <div className="space-y-2">
+                      {activeCourses.map((course) => (
+                        <SortableChip
+                          key={course.id}
+                          id={course.id}
+                          label={course.title}
+                          active={course.id === selectedCourseId}
+                          onClick={() => setSelectedCourseId(course.id)}
+                          className="min-w-0 w-full"
                         />
                       ))}
                     </div>
@@ -510,168 +646,194 @@ export function CourseFlowBuilderPage() {
                 </DndContext>
               )}
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="border-t border-dashed border-grayScale-200 pt-5">
-            {!activeSubCategoryId ? (
-              <p className="rounded-lg border border-dashed border-grayScale-200 px-3 py-8 text-center text-xs text-grayScale-400">
-                Select a course sub-category to arrange its course tree.
+        <Card className="min-w-0 shadow-soft">
+          <CardHeader className="border-b border-grayScale-200 pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-grayScale-600">Learning path detail</CardTitle>
+              {savingKey && (
+                <span className="inline-flex items-center gap-1 text-xs text-brand-500">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving...
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {!selectedCourseId ? (
+              <p className="rounded-lg border border-dashed border-grayScale-200 px-3 py-10 text-center text-xs text-grayScale-400">
+                Select a course sub-category to load courses, videos and practices.
               </p>
-            ) : loadingCourses ? (
-              <div className="flex items-center justify-center py-12">
+            ) : loadingPath ? (
+              <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
               </div>
-            ) : activeCourses.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-grayScale-200 px-3 py-8 text-center text-xs text-grayScale-400">
-                No courses found in this course sub-category.
+            ) : !learningPath || learningPath.sub_courses.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-grayScale-200 px-3 py-10 text-center text-xs text-grayScale-400">
+                No courses found for this course sub-category.
               </p>
             ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleCoursesDragEnd}
-              >
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onSubCoursesDragEnd}>
                 <SortableContext
-                  items={activeCourses.map((item) => item.id)}
-                  strategy={horizontalListSortingStrategy}
+                  items={learningPath.sub_courses.map((item) => item.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <div className="flex gap-4 overflow-x-auto pb-2">
-                    {activeCourses.map((course) => {
-                      const expanded = expandedCourseIds.has(course.id)
-                      const videos = videosByCourse[course.id] ?? []
-                      const practices = practicesByCourse[course.id] ?? []
-                      const pairCount = Math.max(videos.length, practices.length)
+                  <div className="space-y-3">
+                    {learningPath.sub_courses.map((subCourse) => {
+                      const expanded = expandedSubCourseIds.has(subCourse.id)
+                      const practices = practicesBySubCourse[subCourse.id] ?? []
                       return (
-                        <div key={course.id} className="min-w-[320px] max-w-[360px]">
-                          <SortableNode
-                            id={course.id}
-                            label={course.title}
-                            className="border-brand-200 bg-brand-50/30"
-                            badge={
-                              <div className="flex items-center gap-1.5">
+                        <SortableRow key={subCourse.id} id={subCourse.id}>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!expanded) {
+                                await loadSubCoursePracticeAndEntry(subCourse.id)
+                              }
+                              setExpandedSubCourseIds((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(subCourse.id)) next.delete(subCourse.id)
+                                else next.add(subCourse.id)
+                                return next
+                              })
+                            }}
+                            className="flex w-full flex-col items-start gap-2 rounded-lg border border-grayScale-100 bg-grayScale-50 px-3 py-2 text-left sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-grayScale-700">{subCourse.title}</p>
+                              <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-grayScale-400">
+                                <span>Course</span>
                                 <Badge variant="secondary" className="text-[10px]">
-                                  {course.level}
+                                  {subCourse.level}
                                 </Badge>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleCourse(course.id)}
-                                  className="grid h-7 w-7 place-items-center rounded-md text-grayScale-500 hover:bg-grayScale-100"
-                                >
-                                  <ChevronDown
-                                    className={cn("h-4 w-4 transition-transform", !expanded && "-rotate-90")}
-                                  />
-                                </button>
-                              </div>
-                            }
-                          />
-
-                          <div className="ml-5 mt-1 h-5 w-px bg-grayScale-300" />
-
-                          {expanded && (
-                            <div className="ml-1 space-y-3 rounded-xl border border-grayScale-100 bg-grayScale-50/40 p-3">
-                              {loadingCourseContent[course.id] ? (
-                                <div className="flex items-center gap-2 py-6 text-xs text-grayScale-400">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  Loading videos and practices...
-                                </div>
+                                {subCourse.sub_level && (
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {subCourse.sub_level}
+                                  </Badge>
+                                )}
+                                {entryAssessmentBySubCourse[subCourse.id] && (
+                                  <span className="inline-flex items-center gap-1 text-emerald-600">
+                                    <BadgeCheck className="h-3.5 w-3.5" />
+                                    Entry assessment
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+                              <Badge variant="secondary" className="text-[10px]">
+                                {subCourse.videos.length} videos / {practices.length || subCourse.practice_count} practices
+                              </Badge>
+                              {expanded ? (
+                                <ChevronDown className="h-4 w-4 text-grayScale-400" />
                               ) : (
-                                <>
-                                  <div className="space-y-2">
-                                    {pairCount === 0 ? (
-                                      <p className="rounded-lg border border-dashed border-grayScale-200 px-2 py-3 text-[11px] text-grayScale-400">
-                                        No videos/practices
-                                      </p>
-                                    ) : (
-                                      Array.from({ length: pairCount }).map((_, idx) => {
-                                        const v = videos[idx]
-                                        const p = practices[idx]
-                                        return (
-                                          <div key={`pair-${course.id}-${idx}`} className="flex items-center gap-2">
-                                            <div className="w-[58%] rounded-lg border border-violet-200 bg-white px-2 py-1.5 text-sm">
-                                              <span className="inline-flex items-center gap-1 text-violet-600">
-                                                <Video className="h-3.5 w-3.5" />
-                                                {v ? v.title : "—"}
-                                              </span>
-                                            </div>
-                                            <div className="h-px flex-1 bg-grayScale-300" />
-                                            <div className="w-[36%] rounded-lg border border-emerald-200 bg-white px-2 py-1.5 text-sm">
-                                              <span className="inline-flex items-center gap-1 text-emerald-600">
-                                                <BookOpen className="h-3.5 w-3.5" />
-                                                {p ? p.title : "—"}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        )
-                                      })
-                                    )}
-                                  </div>
-
-                                  <div className="grid gap-3 md:grid-cols-2">
-                                    <div>
-                                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-grayScale-400">
-                                        Reorder videos
-                                      </p>
-                                      <DndContext
-                                        sensors={sensors}
-                                        collisionDetection={closestCenter}
-                                        onDragEnd={(event) => handleVideosDragEnd(course.id, event)}
-                                      >
-                                        <SortableContext
-                                          items={videos.map((item) => item.id)}
-                                          strategy={verticalListSortingStrategy}
-                                        >
-                                          <div className="space-y-1.5">
-                                            {videos.map((video) => (
-                                              <SortableNode
-                                                key={video.id}
-                                                id={video.id}
-                                                label={video.title}
-                                                className="py-1.5"
-                                              />
-                                            ))}
-                                          </div>
-                                        </SortableContext>
-                                      </DndContext>
-                                    </div>
-                                    <div>
-                                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-grayScale-400">
-                                        Reorder practices
-                                      </p>
-                                      <DndContext
-                                        sensors={sensors}
-                                        collisionDetection={closestCenter}
-                                        onDragEnd={(event) => handlePracticesDragEnd(course.id, event)}
-                                      >
-                                        <SortableContext
-                                          items={practices.map((item) => item.id)}
-                                          strategy={verticalListSortingStrategy}
-                                        >
-                                          <div className="space-y-1.5">
-                                            {practices.map((practice) => (
-                                              <SortableNode
-                                                key={practice.id}
-                                                id={practice.id}
-                                                label={practice.title}
-                                                className="py-1.5"
-                                              />
-                                            ))}
-                                          </div>
-                                        </SortableContext>
-                                      </DndContext>
-                                    </div>
-                                  </div>
-                                </>
+                                <ChevronRight className="h-4 w-4 text-grayScale-400" />
                               )}
                             </div>
+                          </button>
+
+                          {expanded && (
+                            <div className="mt-3 grid gap-3 md:grid-cols-2">
+                              <div>
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-grayScale-400">
+                                  Videos (sequential)
+                                </p>
+                                <DndContext
+                                  sensors={sensors}
+                                  collisionDetection={closestCenter}
+                                  onDragEnd={(event) => onVideosDragEnd(subCourse.id, event)}
+                                >
+                                  <SortableContext
+                                    items={subCourse.videos.map((item) => item.id)}
+                                    strategy={verticalListSortingStrategy}
+                                  >
+                                    <div className="space-y-1.5">
+                                      {subCourse.videos.length === 0 ? (
+                                        <p className="rounded-lg border border-dashed border-grayScale-200 px-2 py-2 text-[11px] text-grayScale-400">
+                                          No videos
+                                        </p>
+                                      ) : (
+                                        subCourse.videos.map((video) => (
+                                          <SortableChip
+                                            key={video.id}
+                                            id={video.id}
+                                            label={video.title}
+                                            className="min-w-0 w-full"
+                                          />
+                                        ))
+                                      )}
+                                    </div>
+                                  </SortableContext>
+                                </DndContext>
+                              </div>
+
+                              <div>
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-grayScale-400">
+                                  Practices (set_type=PRACTICE)
+                                </p>
+                                {loadingPracticesBySubCourse[subCourse.id] ? (
+                                  <div className="flex items-center gap-2 py-6 text-xs text-grayScale-400">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    Loading sets...
+                                  </div>
+                                ) : (
+                                  <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(event) => onPracticesDragEnd(subCourse.id, event)}
+                                  >
+                                    <SortableContext
+                                      items={practices.map((item) => item.id)}
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      <div className="space-y-1.5">
+                                        {practices.length === 0 ? (
+                                          <p className="rounded-lg border border-dashed border-grayScale-200 px-2 py-2 text-[11px] text-grayScale-400">
+                                            No practices
+                                          </p>
+                                        ) : (
+                                          practices.map((practice) => (
+                                            <SortableChip
+                                              key={practice.id}
+                                              id={practice.id}
+                                              label={practice.title}
+                                              className="min-w-0 w-full"
+                                            />
+                                          ))
+                                        )}
+                                      </div>
+                                    </SortableContext>
+                                  </DndContext>
+                                )}
+                              </div>
+                            </div>
                           )}
-                        </div>
+                        </SortableRow>
                       )
                     })}
                   </div>
                 </SortableContext>
               </DndContext>
             )}
-          </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border border-dashed border-grayScale-200 bg-grayScale-50/60 shadow-none">
+        <CardContent className="space-y-1.5 p-4 text-xs text-grayScale-500">
+          <p className="inline-flex items-center gap-1 font-semibold text-grayScale-600">
+            <Sparkles className="h-3.5 w-3.5 text-brand-500" />
+            Integration notes
+          </p>
+          <p>
+            Reorder payload is strict: <code>{"{ items: [{ id, position }] }"}</code> with
+            0-based full sibling lists.
+          </p>
+          <p>
+            Practices load from <code>/question-sets/by-owner</code> filtered by
+            <code> set_type=PRACTICE</code>; entry assessment loads from dedicated course endpoint.
+          </p>
         </CardContent>
       </Card>
     </div>

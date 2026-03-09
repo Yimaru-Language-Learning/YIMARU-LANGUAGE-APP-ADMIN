@@ -20,7 +20,7 @@ import {
 import { Badge } from "../ui/badge"
 import { cn } from "../../lib/utils"
 import { useNotifications } from "../../hooks/useNotifications"
-import type { Notification } from "../../types/notification.types"
+import { getNotificationMessage, getNotificationTitle, type Notification } from "../../types/notification.types"
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   announcement: { icon: Megaphone, color: "text-brand-600", bg: "bg-brand-100" },
@@ -105,10 +105,10 @@ function NotificationItem({
             !notification.is_read && "font-semibold"
           )}
         >
-          {notification.payload.headline}
+          {getNotificationTitle(notification)}
         </p>
         <p className="mt-0.5 line-clamp-2 text-xs text-grayScale-500">
-          {notification.payload.message}
+          {getNotificationMessage(notification)}
         </p>
         <p className="mt-1 text-[11px] text-grayScale-400">
           {formatTimestamp(notification.timestamp)}

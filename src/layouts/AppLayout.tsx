@@ -5,14 +5,15 @@ import { Topbar } from "../components/topbar/Topbar"
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const token = localStorage.getItem("access_token")
   if (!token) {
     return <Navigate to="/login" replace />
   }
 
-  const handleMenuClick = useCallback(() => {
-    setSidebarOpen(true)
+  const handleSidebarToggle = useCallback(() => {
+    setSidebarOpen((prev) => !prev)
   }, [])
 
   const handleSidebarClose = useCallback(() => {
@@ -21,9 +22,18 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-grayScale-100">
-      <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
-      <div className="flex min-w-0 flex-1 flex-col lg:ml-[264px]">
-        <Topbar onMenuClick={handleMenuClick} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        onClose={handleSidebarClose}
+      />
+      <div
+        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${
+          sidebarCollapsed ? "lg:ml-[88px]" : "lg:ml-[264px]"
+        }`}
+      >
+        <Topbar onSidebarToggle={handleSidebarToggle} />
         <main className="min-w-0 flex-1 overflow-y-auto px-4 pb-8 pt-4 lg:px-6">
           <Outlet />
         </main>

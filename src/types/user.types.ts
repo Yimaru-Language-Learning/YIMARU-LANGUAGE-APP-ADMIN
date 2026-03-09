@@ -53,6 +53,7 @@ export interface User {
   region: string
   country: string
   lastLogin: string | null
+  status: string
 }
 
 export const mapUserApiToUser = (u: UserApiDTO): User => ({
@@ -65,6 +66,7 @@ export const mapUserApiToUser = (u: UserApiDTO): User => ({
   region: u.region,
   country: u.country,
   lastLogin: null,
+  status: u.status,
 })
 
 export interface UserProfileData {

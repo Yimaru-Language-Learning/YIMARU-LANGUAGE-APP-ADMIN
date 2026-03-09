@@ -18,6 +18,16 @@ export const getUsers = (
     },
   });
 
+export type UserStatus = "ACTIVE" | "DEACTIVATED" | "SUSPENDED" | "PENDING";
+
+export interface UpdateUserStatusRequest {
+  user_id: number;
+  status: UserStatus;
+}
+
+export const updateUserStatus = (payload: UpdateUserStatusRequest) =>
+  http.patch("/user/status", payload);
+
 export const getUserById = (id: number) =>
   http.get<UserProfileResponse>(`/user/single/${id}`);
 

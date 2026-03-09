@@ -1,11 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  BarChart3,
   BookOpen,
   Calendar,
   CheckCircle2,
   Globe,
   GraduationCap,
+  Lock,
   Mail,
   MapPin,
   Phone,
@@ -23,6 +25,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 import { cn } from "../../lib/utils";
 import { useUsersStore } from "../../zustand/userStore";
 import { getUserById } from "../../api/users.api";
+import { getCourseCategories, getCoursesByCategory } from "../../api/courses.api";
+import { getAdminLearnerCourseProgress } from "../../api/progress.api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
+import { Select } from "../../components/ui/select";
+import type { LearnerCourseProgressItem } from "../../types/progress.types";
+import type { Course } from "../../types/course.types";
 
 const activityIcons: Record<string, typeof CheckCircle2> = {
   completed: CheckCircle2,
@@ -30,10 +45,18 @@ const activityIcons: Record<string, typeof CheckCircle2> = {
   joined: UserPlus,
 };
 
+type CourseOption = Course & { category_name: string };
+
 export function UserDetailPage() {
   const { id } = useParams();
   const userProfile = useUsersStore((s) => s.userProfile);
   const setUserProfile = useUsersStore((s) => s.setUserProfile);
+  const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
+  const [loadingCourseOptions, setLoadingCourseOptions] = useState(false);
+  const [selectedProgressCourseId, setSelectedProgressCourseId] = useState<number | null>(null);
+  const [progressItems, setProgressItems] = useState<LearnerCourseProgressItem[]>([]);
+  const [loadingProgress, setLoadingProgress] = useState(false);
+  const [progressError, setProgressError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -48,6 +71,87 @@ export function UserDetailPage() {
     };
     fetchUser();
   }, [id, setUserProfile]);
+
+  useEffect(() => {
+    const loadCourseOptions = async () => {
+      setLoadingCourseOptions(true);
+      try {
+        const categoriesRes = await getCourseCategories();
+        const categories = categoriesRes.data?.data?.categories ?? [];
+        const options: CourseOption[] = [];
+
+        for (const category of categories) {
+          const coursesRes = await getCoursesByCategory(category.id);
+          const courses = coursesRes.data?.data?.courses ?? [];
+          options.push(
+            ...courses.map((course) => ({
+              ...course,
+              category_name: category.name,
+            })),
+          );
+        }
+
+        setCourseOptions(options);
+        if (options.length > 0 && !selectedProgressCourseId) {
+          setSelectedProgressCourseId(options[0].id);
+        }
+      } catch {
+        setCourseOptions([]);
+      } finally {
+        setLoadingCourseOptions(false);
+      }
+    };
+
+    loadCourseOptions();
+  }, []);
+
+  useEffect(() => {
+    if (!id || !selectedProgressCourseId) return;
+
+    const userId = Number(id);
+    if (Number.isNaN(userId)) return;
+
+    const loadProgress = async () => {
+      setLoadingProgress(true);
+      setProgressError(null);
+      try {
+        const res = await getAdminLearnerCourseProgress(userId, selectedProgressCourseId);
+        const ordered = [...(res.data?.data ?? [])].sort(
+          (a, b) => a.display_order - b.display_order || a.sub_course_id - b.sub_course_id,
+        );
+        setProgressItems(ordered);
+      } catch (err: any) {
+        setProgressItems([]);
+        const status = err?.response?.status;
+        if (status === 403) {
+          setProgressError("Missing permission: progress.get_any_user");
+        } else if (status === 400) {
+          setProgressError("Invalid learner or course selection.");
+        } else {
+          setProgressError(err?.response?.data?.message || "Failed to load learner progress.");
+        }
+      } finally {
+        setLoadingProgress(false);
+      }
+    };
+
+    loadProgress();
+  }, [id, selectedProgressCourseId]);
+
+  const progressMetrics = useMemo(() => {
+    const total = progressItems.length;
+    const completed = progressItems.filter((item) => item.progress_status === "COMPLETED").length;
+    const inProgress = progressItems.filter((item) => item.progress_status === "IN_PROGRESS").length;
+    const locked = progressItems.filter((item) => item.is_locked).length;
+    const averageProgress =
+      total === 0
+        ? 0
+        : Math.round(
+            progressItems.reduce((sum, item) => sum + Number(item.progress_percentage || 0), 0) / total,
+          );
+
+    return { total, completed, inProgress, locked, averageProgress };
+  }, [progressItems]);
 
   if (!userProfile) {
     return (
@@ -86,6 +190,25 @@ export function UserDetailPage() {
     { icon: Globe, label: "Country", value: user.country || "Ethiopia" },
     { icon: MapPin, label: "Region", value: user.region },
   ];
+
+  const statusVariant = (status: LearnerCourseProgressItem["progress_status"]) => {
+    if (status === "COMPLETED") return "success" as const;
+    if (status === "IN_PROGRESS") return "warning" as const;
+    return "secondary" as const;
+  };
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "—";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "—";
+    return parsed.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -285,6 +408,132 @@ export function UserDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Learner course progress */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100/70">
+                    <BarChart3 className="h-4 w-4 text-sky-600" />
+                  </div>
+                  <CardTitle>Learner Course Progress</CardTitle>
+                </div>
+                <div className="w-full sm:w-72">
+                  <Select
+                    value={selectedProgressCourseId ? String(selectedProgressCourseId) : ""}
+                    onChange={(e) =>
+                      setSelectedProgressCourseId(e.target.value ? Number(e.target.value) : null)
+                    }
+                    disabled={loadingCourseOptions || courseOptions.length === 0}
+                  >
+                    <option value="">
+                      {loadingCourseOptions ? "Loading course sub-categories..." : "Select course sub-category..."}
+                    </option>
+                    {courseOptions.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.title} ({course.category_name})
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                <Metric label="Total Courses" value={progressMetrics.total} />
+                <Metric label="Completed" value={progressMetrics.completed} />
+                <Metric label="In Progress" value={progressMetrics.inProgress} />
+                <Metric label="Locked" value={progressMetrics.locked} />
+                <Metric label="Avg Progress" value={`${progressMetrics.averageProgress}%`} />
+              </div>
+
+              {progressError && (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  {progressError}
+                </div>
+              )}
+
+              {!progressError && loadingProgress && (
+                <div className="flex items-center gap-2 rounded-lg border border-grayScale-200 bg-grayScale-100 px-3 py-2 text-xs text-grayScale-500">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  Loading learner progress...
+                </div>
+              )}
+
+              {!progressError && !loadingProgress && selectedProgressCourseId && progressItems.length === 0 && (
+                <div className="rounded-lg border border-dashed border-grayScale-200 px-3 py-5 text-center text-xs text-grayScale-400">
+                  No learner progress records found for this course sub-category.
+                </div>
+              )}
+
+              {!progressError && !loadingProgress && progressItems.length > 0 && (
+                <div className="overflow-x-auto rounded-lg border border-grayScale-200">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-grayScale-100/70">
+                        <TableHead>Course</TableHead>
+                        <TableHead>Level</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Progress</TableHead>
+                        <TableHead>Started</TableHead>
+                        <TableHead>Completed</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {progressItems.map((item) => (
+                        <TableRow key={item.sub_course_id}>
+                          <TableCell className="min-w-[220px]">
+                            <div className="flex items-start gap-2">
+                              {item.is_locked && <Lock className="mt-0.5 h-3.5 w-3.5 text-gold-600" />}
+                              <div>
+                                <p className="text-sm font-medium text-grayScale-700">{item.title}</p>
+                                {item.description && (
+                                  <p className="mt-0.5 line-clamp-1 text-xs text-grayScale-400">{item.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{item.level}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={statusVariant(item.progress_status)}>{item.progress_status}</Badge>
+                          </TableCell>
+                          <TableCell className="min-w-[170px]">
+                            <div className="space-y-1">
+                              <div className="h-2 w-full rounded-full bg-grayScale-200">
+                                <div
+                                  className={cn(
+                                    "h-2 rounded-full transition-all",
+                                    item.progress_status === "COMPLETED"
+                                      ? "bg-mint-500"
+                                      : item.progress_status === "IN_PROGRESS"
+                                        ? "bg-gold-600"
+                                        : "bg-grayScale-300",
+                                  )}
+                                  style={{
+                                    width: `${Math.min(100, Math.max(0, item.progress_percentage || 0))}%`,
+                                  }}
+                                />
+                              </div>
+                              <p className="text-[11px] text-grayScale-500">{item.progress_percentage}%</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-grayScale-500">
+                            {formatDateTime(item.started_at)}
+                          </TableCell>
+                          <TableCell className="text-xs text-grayScale-500">
+                            {formatDateTime(item.completed_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Recent activity */}
           <Card>
             <CardHeader className="pb-3">
@@ -342,6 +591,15 @@ function InfoItem({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div className="text-sm text-grayScale-600">{value}</div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-grayScale-400">{label}</div>
+      <div className="mt-1 text-sm font-semibold text-grayScale-700">{value}</div>
     </div>
   );
 }

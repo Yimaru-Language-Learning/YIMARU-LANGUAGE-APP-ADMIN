@@ -2,6 +2,8 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   ClipboardList,
   LayoutDashboard,
@@ -39,10 +41,12 @@ const navItems: NavItem[] = [
 
 type SidebarProps = {
   isOpen: boolean
+  isCollapsed: boolean
+  onToggleCollapse: () => void
   onClose: () => void
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: SidebarProps) {
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
@@ -76,12 +80,31 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar panel */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-screen w-[264px] flex-col border-r bg-grayScale-50 px-4 py-5 transition-transform duration-300 lg:translate-x-0",
+          "group fixed left-0 top-0 z-50 flex h-screen flex-col border-r bg-grayScale-50 py-5 transition-all duration-300",
+          "w-[264px] px-4 lg:translate-x-0",
+          isCollapsed && "lg:w-[88px] lg:px-2",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between px-2">
-          <BrandLogo />
+        <div className={cn("flex items-center justify-between px-2", isCollapsed && "justify-center")}>
+          {isCollapsed ? (
+            <span className="h-10 w-10 overflow-hidden">
+              <BrandLogo className="h-10 w-auto max-w-none" />
+            </span>
+          ) : (
+            <BrandLogo />
+          )}
+          <button
+            type="button"
+            className={cn(
+              "hidden h-8 w-8 place-items-center rounded-lg text-grayScale-500 transition-opacity hover:bg-grayScale-100 hover:text-brand-600 lg:grid lg:opacity-0 lg:pointer-events-none lg:group-hover:opacity-100 lg:group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
+              isCollapsed && "translate-x-2",
+            )}
+            onClick={onToggleCollapse}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+          </button>
           <button
             type="button"
             className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600 lg:hidden"
@@ -103,31 +126,36 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   cn(
                     "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-grayScale-600 transition",
+                    isCollapsed && "justify-center px-2",
                     "hover:bg-grayScale-100 hover:text-brand-600",
                     isActive &&
                       "bg-brand-100/40 text-brand-600 shadow-[0_1px_0_rgba(0,0,0,0.02)] ring-1 ring-brand-100",
                   )
                 }
+                title={isCollapsed ? item.label : undefined}
               >
                 {({ isActive }) => (
                   <>
                     <span
                       className={cn(
-                        "grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
+                        "relative grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
                         isActive && "bg-brand-500 text-white",
                       )}
                     >
                       <Icon className="h-4 w-4" />
+                      {isCollapsed && item.to === "/notifications" && unreadCount > 0 && (
+                        <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-destructive" />
+                      )}
                     </span>
-                    <span className="truncate">{item.label}</span>
-                    {item.to === "/notifications" && unreadCount > 0 && (
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                    {!isCollapsed && item.to === "/notifications" && unreadCount > 0 && (
                       <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
                         {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     )}
-                    {item.to !== "/notifications" && isActive ? (
+                    {!isCollapsed && item.to !== "/notifications" && isActive ? (
                       <span className="ml-auto h-6 w-1 rounded-full bg-brand-500" />
-                    ) : item.to === "/notifications" && unreadCount === 0 && isActive ? (
+                    ) : !isCollapsed && item.to === "/notifications" && unreadCount === 0 && isActive ? (
                       <span className="ml-auto h-6 w-1 rounded-full bg-brand-500" />
                     ) : null}
                   </>
@@ -144,10 +172,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               localStorage.clear()
               window.location.href = "/login"
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600"
+            className={cn(
+              "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600",
+              isCollapsed && "justify-center px-2",
+            )}
+            title={isCollapsed ? "Logout" : undefined}
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            {!isCollapsed && "Logout"}
           </button>
         </div>
       </aside>

@@ -9,10 +9,10 @@ import { cn } from "../../lib/utils"
 import { NotificationDropdown } from "./NotificationDropdown"
 
 type TopbarProps = {
-  onMenuClick: () => void
+  onSidebarToggle: () => void
 }
 
-export function Topbar({ onMenuClick }: TopbarProps) {
+export function Topbar({ onSidebarToggle }: TopbarProps) {
   const navigate = useNavigate()
   const [shortName, setShortName] = useState("AA")
 
@@ -46,11 +46,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-3 border-b bg-grayScale-50/85 px-4 backdrop-blur lg:justify-end lg:px-6">
-      {/* Mobile hamburger */}
+      {/* Sidebar toggle */}
       <button
         type="button"
         className="grid h-10 w-10 place-items-center rounded-full border bg-white text-grayScale-500 transition-colors hover:text-brand-600 lg:hidden"
-        onClick={onMenuClick}
+        onClick={onSidebarToggle}
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />

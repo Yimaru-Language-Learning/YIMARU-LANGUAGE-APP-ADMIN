@@ -1,6 +1,8 @@
 export interface NotificationPayload {
-  headline: string
-  message: string
+  headline?: string
+  title?: string
+  message?: string
+  body?: string
   tags: string[] | null
 }
 
@@ -18,6 +20,28 @@ export interface Notification {
   timestamp: string
   expires: string
   image: string
+}
+
+export function getNotificationTitle(notification: Notification): string {
+  const payload: any = notification?.payload ?? {}
+  return (
+    payload.headline ??
+    payload.title ??
+    (notification as any)?.headline ??
+    (notification as any)?.title ??
+    ""
+  )
+}
+
+export function getNotificationMessage(notification: Notification): string {
+  const payload: any = notification?.payload ?? {}
+  return (
+    payload.message ??
+    payload.body ??
+    (notification as any)?.message ??
+    (notification as any)?.body ??
+    ""
+  )
 }
 
 export interface GetNotificationsResponse {

@@ -11,18 +11,19 @@ import {
   Loader2,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
-import { getUserSummary } from "../../api/users.api"
-import type { UserSummary } from "../../types/user.types"
+import { getDashboard } from "../../api/analytics.api"
+import type { DashboardUsers } from "../../types/analytics.types"
 
 export function UserManagementDashboard() {
-  const [stats, setStats] = useState<UserSummary | null>(null)
+  const [stats, setStats] = useState<DashboardUsers | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await getUserSummary()
-        setStats(res.data.data)
+        const res = await getDashboard()
+        const usersData = (res.data as any)?.users ?? (res.data as any)?.data?.users ?? null
+        setStats(usersData)
       } catch {
         // silently fail — cards will show "—"
       } finally {
@@ -33,6 +34,8 @@ export function UserManagementDashboard() {
   }, [])
 
   const formatNum = (n: number) => n.toLocaleString()
+  const activeUsers =
+    stats?.by_status?.find((item) => item.label?.toUpperCase() === "ACTIVE")?.count ?? null
 
   return (
     <div className="space-y-8">
@@ -68,7 +71,13 @@ export function UserManagementDashboard() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-white/80">Active Users</p>
               <p className="text-2xl font-bold text-white">
-                {statsLoading ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : stats ? formatNum(stats.active_users) : "—"}
+                {statsLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                ) : activeUsers !== null ? (
+                  formatNum(activeUsers)
+                ) : (
+                  "—"
+                )}
               </p>
             </div>
           </CardContent>
@@ -82,7 +91,13 @@ export function UserManagementDashboard() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-white/80">New This Month</p>
               <p className="text-2xl font-bold text-white">
-                {statsLoading ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : stats ? formatNum(stats.joined_this_month) : "—"}
+                {statsLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                ) : stats ? (
+                  formatNum(stats.new_month)
+                ) : (
+                  "—"
+                )}
               </p>
             </div>
           </CardContent>

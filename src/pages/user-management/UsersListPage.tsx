@@ -1,13 +1,15 @@
-import { ChevronDown, ChevronLeft, ChevronRight, Search, Users } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Search, Users, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Input } from "../../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
+import { Button } from "../../components/ui/button"
 import { cn } from "../../lib/utils"
-import { getUsers } from "../../api/users.api"
+import { getUsers, updateUserStatus, type UserStatus } from "../../api/users.api"
 import { mapUserApiToUser } from "../../types/user.types"
 import { useUsersStore } from "../../zustand/userStore"
+import { toast } from "sonner"
 
 export function UsersListPage() {
   const navigate = useNavigate()
@@ -26,6 +28,12 @@ export function UsersListPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [toggledStatuses, setToggledStatuses] = useState<Record<number, boolean>>({})
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<number>>(new Set())
+  const [confirmDialog, setConfirmDialog] = useState<{
+    id: number
+    name: string
+    nextStatus: UserStatus
+  } | null>(null)
   const [roleFilter, setRoleFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
 
@@ -47,7 +55,7 @@ export function UsersListPage() {
 
         const initialStatuses: Record<number, boolean> = {}
         mapped.forEach((u) => {
-          initialStatuses[u.id] = true
+          initialStatuses[u.id] = u.status === "ACTIVE"
         })
         setToggledStatuses((prev) => ({ ...prev, ...initialStatuses }))
       } catch (error) {
@@ -107,7 +115,46 @@ export function UsersListPage() {
   }
 
   const handleToggle = (id: number) => {
-    setToggledStatuses((prev) => ({ ...prev, [id]: !prev[id] }))
+    if (updatingStatusIds.has(id)) return
+    const user = users.find((u) => u.id === id)
+    if (!user) return
+
+    const isCurrentlyActive = toggledStatuses[id] ?? false
+    const nextStatus: UserStatus = isCurrentlyActive ? "DEACTIVATED" : "ACTIVE"
+    setConfirmDialog({
+      id,
+      name: `${user.firstName} ${user.lastName}`.trim(),
+      nextStatus,
+    })
+  }
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!confirmDialog) return
+    const { id, nextStatus } = confirmDialog
+    const nextActive = nextStatus === "ACTIVE"
+    const previousActive = toggledStatuses[id] ?? false
+
+    setToggledStatuses((prev) => ({ ...prev, [id]: nextActive }))
+    setUpdatingStatusIds((prev) => new Set(prev).add(id))
+    try {
+      await updateUserStatus({ user_id: id, status: nextStatus })
+      setUsers(
+        users.map((user) => (user.id === id ? { ...user, status: nextStatus } : user)),
+      )
+      toast.success(`User ${nextActive ? "activated" : "deactivated"} successfully`)
+    } catch (err: any) {
+      setToggledStatuses((prev) => ({ ...prev, [id]: previousActive }))
+      toast.error("Failed to update user status", {
+        description: err?.response?.data?.message || "Please try again.",
+      })
+    } finally {
+      setUpdatingStatusIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+      setConfirmDialog(null)
+    }
   }
 
   const handleRowClick = (userId: number) => {
@@ -159,7 +206,9 @@ export function UsersListPage() {
                 >
                   <option value="">All statuses</option>
                   <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
+                  <option value="DEACTIVATED">Deactivated</option>
+                  <option value="SUSPENDED">Suspended</option>
+                  <option value="PENDING">Pending</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
               </div>
@@ -205,6 +254,7 @@ export function UsersListPage() {
             ) : (
               users.map((u) => {
                 const isActive = toggledStatuses[u.id] ?? false
+                const isUpdatingStatus = updatingStatusIds.has(u.id)
                 return (
                   <TableRow
                     key={u.id}
@@ -240,14 +290,19 @@ export function UsersListPage() {
                       <button
                         type="button"
                         onClick={() => handleToggle(u.id)}
+                        disabled={isUpdatingStatus}
                         className={cn(
-                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                          isActive ? "bg-brand-500" : "bg-grayScale-200"
+                          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border p-0.5 transition-all duration-200",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-1",
+                          isActive
+                            ? "border-brand-500 bg-brand-500 shadow-[0_6px_16px_rgba(168,85,247,0.35)]"
+                            : "border-grayScale-300 bg-grayScale-200 hover:bg-grayScale-300/80",
+                          isUpdatingStatus && "cursor-not-allowed opacity-60",
                         )}
                       >
                         <span
                           className={cn(
-                            "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform",
+                            "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-out",
                             isActive ? "translate-x-5" : "translate-x-0"
                           )}
                         />
@@ -331,6 +386,41 @@ export function UsersListPage() {
           </div>
         </div>
       </div>
+
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+              <h2 className="text-lg font-semibold text-grayScale-900">Confirm Status Change</h2>
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-sm leading-relaxed text-grayScale-600">
+                Are you sure you want to change the status of{" "}
+                <span className="font-semibold">{confirmDialog.name || "this user"}</span> to{" "}
+                <span className="font-semibold capitalize">{confirmDialog.nextStatus.toLowerCase()}</span>?
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => setConfirmDialog(null)}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-brand-600 text-white hover:bg-brand-500"
+                onClick={handleConfirmStatusUpdate}
+                disabled={updatingStatusIds.has(confirmDialog.id)}
+              >
+                {updatingStatusIds.has(confirmDialog.id) ? "Updating..." : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

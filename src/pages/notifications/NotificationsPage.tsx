@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import {
   Bell,
   BellOff,
@@ -20,6 +20,9 @@ import {
   CheckCheck,
   MailX,
   Search,
+  ChevronDown,
+  Calendar,
+  Clock3,
 } from "lucide-react"
 import { Card, CardContent } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
@@ -35,6 +38,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu"
 import { FileUpload } from "../../components/ui/file-upload"
 import { cn } from "../../lib/utils"
 import {
@@ -48,9 +62,13 @@ import {
   sendBulkEmail,
   sendBulkPush,
 } from "../../api/notifications.api"
+import { getRoles } from "../../api/rbac.api"
 import { getTeamMembers } from "../../api/team.api"
-import type { Notification } from "../../types/notification.types"
+import { getUsers } from "../../api/users.api"
+import { getNotificationMessage, getNotificationTitle, type Notification } from "../../types/notification.types"
+import type { Role } from "../../types/rbac.types"
 import type { TeamMember } from "../../types/team.types"
+import type { UserApiDTO } from "../../types/user.types"
 import { toast } from "sonner"
 
 const PAGE_SIZE = 10
@@ -117,6 +135,10 @@ function formatTypeLabel(type: string) {
     .join(" ")
 }
 
+function digitsOnly(value: string, maxLength: number) {
+  return value.replace(/\D/g, "").slice(0, maxLength)
+}
+
 function NotificationItem({
   notification,
   onToggleRead,
@@ -165,7 +187,7 @@ function NotificationItem({
                   notification.is_read ? "text-grayScale-600" : "text-grayScale-800",
                 )}
               >
-                {notification.payload.headline}
+                {getNotificationTitle(notification)}
               </span>
               <Badge variant={getLevelBadge(notification.level)} className="text-[10px] px-1.5 py-0">
                 {notification.level}
@@ -177,7 +199,7 @@ function NotificationItem({
                 notification.is_read ? "text-grayScale-400" : "text-grayScale-600",
               )}
             >
-              {notification.payload.message}
+              {getNotificationMessage(notification)}
             </p>
           </div>
 
@@ -270,10 +292,146 @@ export function NotificationsPage() {
   const [bulkTitle, setBulkTitle] = useState("")
   const [bulkMessage, setBulkMessage] = useState("")
   const [bulkRole, setBulkRole] = useState("")
-  const [bulkUserIds, setBulkUserIds] = useState("")
+  const [bulkUserIds, setBulkUserIds] = useState<number[]>([])
   const [bulkScheduledAt, setBulkScheduledAt] = useState("")
   const [bulkFile, setBulkFile] = useState<File | null>(null)
   const [bulkSending, setBulkSending] = useState(false)
+  const [bulkRoles, setBulkRoles] = useState<Role[]>([])
+  const [bulkUsers, setBulkUsers] = useState<UserApiDTO[]>([])
+  const [bulkRolesLoading, setBulkRolesLoading] = useState(false)
+  const [bulkUsersLoading, setBulkUsersLoading] = useState(false)
+  const [scheduleMenuOpen, setScheduleMenuOpen] = useState(false)
+  const [scheduleYear, setScheduleYear] = useState("")
+  const [scheduleMonth, setScheduleMonth] = useState("")
+  const [scheduleDay, setScheduleDay] = useState("")
+  const [scheduleHour, setScheduleHour] = useState("")
+  const [scheduleMinute, setScheduleMinute] = useState("")
+
+  const filteredBulkUsers = useMemo(() => {
+    if (!bulkRole.trim()) return bulkUsers
+    const selectedRole = bulkRole.trim().toLowerCase()
+    return bulkUsers.filter((user) => user.role?.toLowerCase() === selectedRole)
+  }, [bulkUsers, bulkRole])
+
+  const scheduledAtLabel = useMemo(() => {
+    if (!bulkScheduledAt) return "Set date & time"
+    const parsed = new Date(bulkScheduledAt)
+    if (Number.isNaN(parsed.getTime())) return bulkScheduledAt
+    return parsed.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }, [bulkScheduledAt])
+
+  const loadBulkOptions = useCallback(async () => {
+    if (!bulkOpen) return
+
+    const needsRoles = bulkRoles.length === 0
+    const needsUsers = bulkUsers.length === 0
+    if (!needsRoles && !needsUsers) return
+
+    try {
+      if (needsRoles) setBulkRolesLoading(true)
+      if (needsUsers) setBulkUsersLoading(true)
+
+      const tasks: Promise<unknown>[] = []
+      if (needsRoles) {
+        tasks.push(
+          getRoles({ page: 1, page_size: 20 })
+            .then(async (res) => {
+              const firstBatch = res.data?.data?.roles ?? []
+              const total = res.data?.data?.total ?? firstBatch.length
+              const pageSize = 20
+              const totalPages = Math.max(1, Math.ceil(total / pageSize))
+              if (totalPages <= 1) {
+                setBulkRoles(firstBatch)
+                return
+              }
+
+              const remainingRequests: Array<ReturnType<typeof getRoles>> = []
+              for (let page = 2; page <= totalPages; page += 1) {
+                remainingRequests.push(getRoles({ page, page_size: pageSize }))
+              }
+
+              try {
+                const responses = await Promise.all(remainingRequests)
+                const rest = responses.flatMap((r) => r.data?.data?.roles ?? [])
+                setBulkRoles([...firstBatch, ...rest])
+              } catch {
+                setBulkRoles(firstBatch)
+              }
+            })
+            .catch(() => {
+              setBulkRoles([])
+            }),
+        )
+      }
+
+      if (needsUsers) {
+        tasks.push(
+          getUsers(1, 20)
+            .then(async (res) => {
+              const firstBatch = res.data?.data?.users ?? []
+              const total = res.data?.data?.total ?? firstBatch.length
+              const pageSize = 20
+              const totalPages = Math.max(1, Math.ceil(total / pageSize))
+              if (totalPages <= 1) {
+                setBulkUsers(firstBatch)
+                return
+              }
+
+              const remainingRequests: Array<ReturnType<typeof getUsers>> = []
+              for (let page = 2; page <= totalPages; page += 1) {
+                remainingRequests.push(getUsers(page, pageSize))
+              }
+
+              try {
+                const responses = await Promise.all(remainingRequests)
+                const rest = responses.flatMap((r) => r.data?.data?.users ?? [])
+                setBulkUsers([...firstBatch, ...rest])
+              } catch {
+                setBulkUsers(firstBatch)
+              }
+            })
+            .catch(() => {
+              setBulkUsers([])
+            }),
+        )
+      }
+
+      await Promise.all(tasks)
+    } finally {
+      setBulkRolesLoading(false)
+      setBulkUsersLoading(false)
+    }
+  }, [bulkOpen, bulkRoles.length, bulkUsers.length])
+
+  useEffect(() => {
+    loadBulkOptions()
+  }, [loadBulkOptions])
+
+  useEffect(() => {
+    if (!scheduleMenuOpen) return
+    if (!bulkScheduledAt) {
+      setScheduleYear("")
+      setScheduleMonth("")
+      setScheduleDay("")
+      setScheduleHour("")
+      setScheduleMinute("")
+      return
+    }
+    const [datePart = "", timePart = ""] = bulkScheduledAt.split("T")
+    const [y = "", m = "", d = ""] = datePart.split("-")
+    const [hh = "", mm = ""] = timePart.split(":")
+    setScheduleYear(y)
+    setScheduleMonth(m)
+    setScheduleDay(d)
+    setScheduleHour(hh)
+    setScheduleMinute(mm.slice(0, 2))
+  }, [scheduleMenuOpen, bulkScheduledAt])
 
   const fetchData = useCallback(async (currentOffset: number) => {
     setLoading(true)
@@ -358,8 +516,8 @@ export function NotificationsPage() {
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase()
       const haystack = [
-        n.payload.headline,
-        n.payload.message,
+        getNotificationTitle(n),
+        getNotificationMessage(n),
         formatTypeLabel(n.type),
         n.delivery_channel,
         n.level,
@@ -699,12 +857,12 @@ export function NotificationsPage() {
                                 n.is_read ? "text-grayScale-600" : "text-grayScale-800",
                               )}
                             >
-                              {n.payload.headline}
+                              {getNotificationTitle(n)}
                             </p>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <p className="max-w-sm truncate text-xs text-grayScale-500">
-                              {n.payload.message}
+                              {getNotificationMessage(n)}
                             </p>
                           </TableCell>
                           <TableCell>
@@ -811,7 +969,7 @@ export function NotificationsPage() {
                   })()}
                 </span>
                 <span className="truncate text-base">
-                  {selectedNotification.payload.headline}
+                  {getNotificationTitle(selectedNotification)}
                 </span>
               </DialogTitle>
               <DialogDescription>
@@ -823,7 +981,7 @@ export function NotificationsPage() {
             <div className="space-y-4">
               <div className="rounded-lg bg-grayScale-50 p-3">
                 <p className="text-sm text-grayScale-600">
-                  {selectedNotification.payload.message}
+                  {getNotificationMessage(selectedNotification)}
                 </p>
               </div>
 
@@ -1109,11 +1267,7 @@ export function NotificationsPage() {
                 toast.error("Message is required")
                 return
               }
-              const trimmedIds = bulkUserIds
-                .split(",")
-                .map((id) => id.trim())
-                .filter(Boolean)
-              const userIds = trimmedIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id))
+              const userIds = bulkUserIds
 
               try {
                 setBulkSending(true)
@@ -1172,7 +1326,7 @@ export function NotificationsPage() {
                 setBulkTitle("")
                 setBulkMessage("")
                 setBulkRole("")
-                setBulkUserIds("")
+                setBulkUserIds([])
                 setBulkScheduledAt("")
                 setBulkFile(null)
                 setBulkChannel("sms")
@@ -1239,23 +1393,119 @@ export function NotificationsPage() {
                     <label className="mb-1 block text-xs font-medium text-grayScale-500">
                       Role (optional)
                     </label>
-                    <Input
-                      placeholder='e.g. "student"'
-                      value={bulkRole}
-                      onChange={(e) => setBulkRole(e.target.value)}
-                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={bulkRolesLoading}
+                          className={cn(
+                            "flex h-10 w-full items-center justify-between rounded-lg border bg-white px-3 text-sm",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            bulkRolesLoading && "cursor-not-allowed opacity-50",
+                          )}
+                        >
+                          <span className="truncate text-left">
+                            {bulkRolesLoading ? "Loading roles..." : bulkRole || "All roles"}
+                          </span>
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-grayScale-400" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-[220px]">
+                        <DropdownMenuLabel>Roles</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup
+                          value={bulkRole}
+                          onValueChange={(value) => {
+                            setBulkRole(value)
+                            setBulkUserIds([])
+                          }}
+                        >
+                          <DropdownMenuRadioItem value="">All roles</DropdownMenuRadioItem>
+                          {bulkRoles.map((role) => (
+                            <DropdownMenuRadioItem key={role.id} value={role.name}>
+                              {role.name}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                      User IDs (comma separated)
+                      Users (optional)
                     </label>
-                    <Input
-                      placeholder="e.g. 1,2,3"
-                      value={bulkUserIds}
-                      onChange={(e) => setBulkUserIds(e.target.value)}
-                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={bulkUsersLoading}
+                          className={cn(
+                            "flex h-10 w-full items-center justify-between rounded-lg border bg-white px-3 text-sm",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            bulkUsersLoading && "cursor-not-allowed opacity-50",
+                          )}
+                        >
+                          <span className="truncate text-left">
+                            {bulkUsersLoading
+                              ? "Loading users..."
+                              : bulkUserIds.length === 0
+                                ? "Select users"
+                                : `${bulkUserIds.length} user(s) selected`}
+                          </span>
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-grayScale-400" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-[320px]">
+                        <DropdownMenuLabel>Users</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            setBulkUserIds(filteredBulkUsers.map((u) => u.id))
+                          }}
+                          disabled={filteredBulkUsers.length === 0}
+                        >
+                          Select all
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault()
+                            setBulkUserIds([])
+                          }}
+                          disabled={bulkUserIds.length === 0}
+                        >
+                          Deselect all
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <div className="max-h-64 overflow-y-auto">
+                          {filteredBulkUsers.length === 0 ? (
+                            <p className="px-2 py-2 text-xs text-grayScale-400">No users available</p>
+                          ) : (
+                            filteredBulkUsers.map((user) => {
+                              const isChecked = bulkUserIds.includes(user.id)
+                              return (
+                                <DropdownMenuCheckboxItem
+                                  key={user.id}
+                                  checked={isChecked}
+                                  onSelect={(e) => e.preventDefault()}
+                                  onCheckedChange={(checked) => {
+                                    setBulkUserIds((prev) => {
+                                      if (checked) return prev.includes(user.id) ? prev : [...prev, user.id]
+                                      return prev.filter((id) => id !== user.id)
+                                    })
+                                  }}
+                                >
+                                  {user.first_name} {user.last_name} ({user.id})
+                                </DropdownMenuCheckboxItem>
+                              )
+                            })
+                          )}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
+                <p className="text-[11px] text-grayScale-400">Choose one or more users from the dropdown list.</p>
               </div>
             </div>
 
@@ -1276,11 +1526,163 @@ export function NotificationsPage() {
                 <label className="mb-1 block text-xs font-medium text-grayScale-500">
                   Scheduled at (optional)
                 </label>
-                <Input
-                  type="datetime-local"
-                  value={bulkScheduledAt}
-                  onChange={(e) => setBulkScheduledAt(e.target.value)}
-                />
+                <DropdownMenu open={scheduleMenuOpen} onOpenChange={setScheduleMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex h-11 w-full items-center justify-between rounded-xl border border-grayScale-200 bg-grayScale-50/70 px-3 text-sm text-grayScale-700 shadow-sm transition-all",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-100",
+                      )}
+                    >
+                      <span className="truncate text-left">{scheduledAtLabel}</span>
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-md border border-grayScale-200 bg-white px-2 py-1 text-[11px] text-grayScale-500">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <Clock3 className="h-3.5 w-3.5" />
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[320px] p-3">
+                    <p className="mb-2 text-xs font-semibold text-grayScale-500">Schedule notification</p>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="mb-1 block text-[11px] font-medium text-grayScale-500">Date</label>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="text"
+                            placeholder="YYYY"
+                            value={scheduleYear}
+                            onChange={(e) => setScheduleYear(digitsOnly(e.target.value, 4))}
+                            inputMode="numeric"
+                            maxLength={4}
+                            className="h-9 rounded-lg border-grayScale-200 bg-white text-center text-sm"
+                          />
+                          <span className="text-grayScale-400">-</span>
+                          <Input
+                            type="text"
+                            placeholder="MM"
+                            value={scheduleMonth}
+                            onChange={(e) => setScheduleMonth(digitsOnly(e.target.value, 2))}
+                            inputMode="numeric"
+                            maxLength={2}
+                            className="h-9 w-16 rounded-lg border-grayScale-200 bg-white text-center text-sm"
+                          />
+                          <span className="text-grayScale-400">-</span>
+                          <Input
+                            type="text"
+                            placeholder="DD"
+                            value={scheduleDay}
+                            onChange={(e) => setScheduleDay(digitsOnly(e.target.value, 2))}
+                            inputMode="numeric"
+                            maxLength={2}
+                            className="h-9 w-16 rounded-lg border-grayScale-200 bg-white text-center text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] font-medium text-grayScale-500">Time</label>
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="text"
+                            placeholder="HH"
+                            value={scheduleHour}
+                            onChange={(e) => setScheduleHour(digitsOnly(e.target.value, 2))}
+                            inputMode="numeric"
+                            maxLength={2}
+                            className="h-9 w-16 rounded-lg border-grayScale-200 bg-white text-center text-sm"
+                          />
+                          <span className="text-grayScale-400">:</span>
+                          <Input
+                            type="text"
+                            placeholder="MM"
+                            value={scheduleMinute}
+                            onChange={(e) => setScheduleMinute(digitsOnly(e.target.value, 2))}
+                            inputMode="numeric"
+                            maxLength={2}
+                            className="h-9 w-16 rounded-lg border-grayScale-200 bg-white text-center text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => {
+                            const now = new Date()
+                            setScheduleYear(String(now.getFullYear()))
+                            setScheduleMonth(String(now.getMonth() + 1).padStart(2, "0"))
+                            setScheduleDay(String(now.getDate()).padStart(2, "0"))
+                          }}
+                        >
+                          Today
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => {
+                            setScheduleYear("")
+                            setScheduleMonth("")
+                            setScheduleDay("")
+                            setScheduleHour("")
+                            setScheduleMinute("")
+                            setBulkScheduledAt("")
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          const year = Number(scheduleYear)
+                          const month = Number(scheduleMonth)
+                          const day = Number(scheduleDay)
+                          const hour = Number(scheduleHour)
+                          const minute = Number(scheduleMinute)
+
+                          const formatOk =
+                            scheduleYear.length === 4 &&
+                            scheduleMonth.length === 2 &&
+                            scheduleDay.length === 2 &&
+                            scheduleHour.length === 2 &&
+                            scheduleMinute.length === 2
+                          const dateValue = new Date(year, month - 1, day)
+                          const dateOk =
+                            formatOk &&
+                            month >= 1 &&
+                            month <= 12 &&
+                            day >= 1 &&
+                            day <= 31 &&
+                            dateValue.getFullYear() === year &&
+                            dateValue.getMonth() === month - 1 &&
+                            dateValue.getDate() === day
+                          const timeOk = hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59
+
+                          if (!dateOk || !timeOk) {
+                            toast.error("Use valid date/time format", {
+                              description: "Date: YYYY-MM-DD, Time: HH:MM (24h).",
+                            })
+                            return
+                          }
+                          setBulkScheduledAt(
+                            `${scheduleYear}-${scheduleMonth}-${scheduleDay}T${scheduleHour}:${scheduleMinute}`,
+                          )
+                          setScheduleMenuOpen(false)
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <p className="text-[11px] text-grayScale-400">
                   Leave empty to send immediately. When set, the notification is stored in{" "}
                   <code>scheduled_notifications</code> and sent at the specified time.
@@ -1297,7 +1699,7 @@ export function NotificationsPage() {
                   setBulkTitle("")
                   setBulkMessage("")
                   setBulkRole("")
-                  setBulkUserIds("")
+                  setBulkUserIds([])
                   setBulkScheduledAt("")
                   setBulkFile(null)
                   setBulkChannel("sms")

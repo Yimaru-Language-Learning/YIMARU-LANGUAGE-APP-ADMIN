@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -23,6 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 import { cn } from "../../lib/utils";
 import { getTeamMembers, updateTeamMemberStatus } from "../../api/team.api";
 import type { TeamMember } from "../../types/team.types";
+import { toast } from "sonner";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -90,9 +91,7 @@ export function TeamManagementPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [toggledStatuses, setToggledStatuses] = useState<Record<number, boolean>>({});
   const [confirmDialog, setConfirmDialog] = useState<{ id: number; name: string; newStatus: string } | null>(null);
-  const [countdown, setCountdown] = useState(5);
   const [updating, setUpdating] = useState(false);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -143,30 +142,23 @@ export function TeamManagementPage() {
     const currentlyActive = toggledStatuses[id] ?? false;
     const newStatus = currentlyActive ? "inactive" : "active";
     setConfirmDialog({ id, name: `${member.first_name} ${member.last_name}`, newStatus });
-    setCountdown(5);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    countdownRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          if (countdownRef.current) clearInterval(countdownRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   };
 
   const handleConfirmStatusUpdate = async () => {
     if (!confirmDialog) return;
-    const { id, newStatus } = confirmDialog;
+    const { id, newStatus, name } = confirmDialog;
     const previousActive = toggledStatuses[id] ?? false;
     setUpdating(true);
     setToggledStatuses((prev) => ({ ...prev, [id]: newStatus === "active" }));
     try {
       await updateTeamMemberStatus(id, newStatus);
+      toast.success(
+        `${name || "Team member"} ${newStatus === "active" ? "activated" : "deactivated"} successfully`,
+      );
     } catch (error) {
       console.error("Failed to update member status:", error);
       setToggledStatuses((prev) => ({ ...prev, [id]: previousActive }));
+      toast.error("Failed to update team member status. Please try again.");
     } finally {
       setUpdating(false);
       handleCancelConfirm();
@@ -174,9 +166,7 @@ export function TeamManagementPage() {
   };
 
   const handleCancelConfirm = () => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
     setConfirmDialog(null);
-    setCountdown(5);
   };
 
   return (
@@ -252,6 +242,8 @@ export function TeamManagementPage() {
             <TableRow>
               <TableHead>USER</TableHead>
               <TableHead>ROLE</TableHead>
+              <TableHead className="hidden md:table-cell">DEPARTMENT</TableHead>
+              <TableHead className="hidden lg:table-cell">JOB TITLE</TableHead>
               <TableHead className="hidden sm:table-cell">LAST LOGIN</TableHead>
               <TableHead>STATUS</TableHead>
             </TableRow>
@@ -260,7 +252,7 @@ export function TeamManagementPage() {
           <TableBody>
             {members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-grayScale-400">
+                <TableCell colSpan={6} className="text-center text-grayScale-400">
                   No team members found
                 </TableCell>
               </TableRow>
@@ -304,6 +296,12 @@ export function TeamManagementPage() {
                         {formatRoleLabel(member.team_role)}
                       </span>
                     </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-grayScale-600">
+                      {member.department || "—"}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-grayScale-600">
+                      {member.job_title || "—"}
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {member.last_login ? (
                         <div>
@@ -326,13 +324,16 @@ export function TeamManagementPage() {
                         type="button"
                         onClick={() => handleToggle(member.id)}
                         className={cn(
-                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-                          isActive ? "bg-brand-500" : "bg-grayScale-200"
+                          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border p-0.5 transition-all duration-200",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-1",
+                          isActive
+                            ? "border-brand-500 bg-brand-500 shadow-[0_6px_16px_rgba(168,85,247,0.35)]"
+                            : "border-grayScale-300 bg-grayScale-200 hover:bg-grayScale-300/80"
                         )}
                       >
                         <span
                           className={cn(
-                            "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform",
+                            "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-out",
                             isActive ? "translate-x-5" : "translate-x-0"
                           )}
                         />
@@ -443,13 +444,9 @@ export function TeamManagementPage() {
               <Button
                 className="bg-brand-600 hover:bg-brand-500 text-white"
                 onClick={handleConfirmStatusUpdate}
-                disabled={countdown > 0 || updating}
+                disabled={updating}
               >
-                {updating
-                  ? "Updating..."
-                  : countdown > 0
-                    ? `Confirm (${countdown}s)`
-                    : "Confirm"}
+                {updating ? "Updating..." : "Confirm"}
               </Button>
             </div>
           </div>

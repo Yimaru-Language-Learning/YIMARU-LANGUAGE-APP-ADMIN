@@ -318,6 +318,8 @@ export interface PracticeQuestion {
   id: number
   practice_id: number
   question: string
+  points?: number
+  difficulty_level?: string
   question_voice_prompt: string
   sample_answer_voice_prompt: string
   sample_answer: string
@@ -343,6 +345,11 @@ export interface CreatePracticeQuestionRequest {
   sample_answer_voice_prompt?: string
   sample_answer: string
   tips?: string
+  explanation?: string
+  difficulty_level?: string
+  points?: number
+  options?: QuestionOption[]
+  short_answers?: string[]
   type: "MCQ" | "TRUE_FALSE" | "SHORT"
 }
 
@@ -352,6 +359,11 @@ export interface UpdatePracticeQuestionRequest {
   sample_answer_voice_prompt?: string
   sample_answer: string
   tips?: string
+  explanation?: string
+  difficulty_level?: string
+  points?: number
+  options?: QuestionOption[]
+  short_answers?: string[]
   type: "MCQ" | "TRUE_FALSE" | "SHORT"
 }
 
@@ -375,7 +387,65 @@ export interface QuestionSet {
 
 export interface GetQuestionSetsResponse {
   message: string
-  data: QuestionSet[]
+  data: QuestionSet[] | { question_sets: QuestionSet[]; total_count?: number }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetQuestionSetsParams {
+  set_type?: "PRACTICE" | "INITIAL_ASSESSMENT" | "EXAM" | string
+  owner_type?: "SUB_COURSE" | "COURSE" | string
+  owner_id?: number
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED" | string
+  limit?: number
+  offset?: number
+}
+
+export interface QuestionSetDetail {
+  id: number
+  title: string
+  description: string
+  set_type: string
+  owner_type: string
+  owner_id: number
+  banner_image?: string | null
+  persona?: string | null
+  time_limit_minutes?: number | null
+  passing_score?: number | null
+  shuffle_questions?: boolean
+  status: string
+  sub_course_video_id?: number | null
+  created_at: string
+  question_count: number
+}
+
+export interface GetQuestionSetDetailResponse {
+  message: string
+  data: QuestionSetDetail
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface QuestionSetQuestion {
+  id: number
+  set_id: number
+  question_id: number
+  display_order: number
+  question_text: string
+  question_type: "MCQ" | "TRUE_FALSE" | "SHORT" | string
+  difficulty_level?: string | null
+  points?: number
+  explanation?: string | null
+  tips?: string | null
+  voice_prompt?: string | null
+  question_status?: string
+}
+
+export interface GetQuestionSetQuestionsResponse {
+  message: string
+  data: QuestionSetQuestion[]
   success: boolean
   status_code: number
   metadata: unknown
@@ -396,7 +466,7 @@ export interface CreateQuestionSetRequest {
 }
 
 export interface AddQuestionToSetRequest {
-  display_order: number
+  display_order?: number
   question_id: number
 }
 
@@ -409,15 +479,16 @@ export interface QuestionOption {
 export interface CreateQuestionRequest {
   question_text: string
   question_type: string
-  difficulty_level: string
-  points: number
+  difficulty_level?: string
+  points?: number
   tips?: string
   explanation?: string
   status?: string
   options?: QuestionOption[]
   voice_prompt?: string
   sample_answer_voice_prompt?: string
-  short_answers?: string[]
+  audio_correct_answer_text?: string
+  short_answers?: string[] | { acceptable_answer: string; match_type: "EXACT" | "CASE_INSENSITIVE" }[]
 }
 
 export interface CreateQuestionResponse {
@@ -425,6 +496,52 @@ export interface CreateQuestionResponse {
   data: {
     id: number
   }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface QuestionShortAnswer {
+  acceptable_answer: string
+  match_type?: "EXACT" | "CASE_INSENSITIVE" | string
+}
+
+export interface QuestionDetail {
+  id: number
+  question_text: string
+  question_type: "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "SHORT" | string
+  difficulty_level?: string | null
+  points?: number | null
+  status?: string
+  created_at?: string
+  options?: ({ id?: number } & QuestionOption)[]
+  short_answers?: string[] | QuestionShortAnswer[]
+  tips?: string | null
+  explanation?: string | null
+  voice_prompt?: string | null
+  sample_answer_voice_prompt?: string | null
+  audio_correct_answer_text?: string | null
+}
+
+export interface GetQuestionDetailResponse {
+  message: string
+  data: QuestionDetail
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetQuestionsParams {
+  question_type?: "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO" | string
+  difficulty?: "EASY" | "MEDIUM" | "HARD" | string
+  status?: "DRAFT" | "PUBLISHED" | "INACTIVE" | string
+  limit?: number
+  offset?: number
+}
+
+export interface GetQuestionsResponse {
+  message: string
+  data: QuestionDetail[] | { questions: QuestionDetail[]; total_count?: number }
   success: boolean
   status_code: number
   metadata: unknown

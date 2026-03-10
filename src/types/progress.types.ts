@@ -18,3 +18,19 @@ export interface LearnerCourseProgressResponse {
   message: string
   data: LearnerCourseProgressItem[]
 }
+
+export interface LearnerCourseProgressSummary {
+  course_id: number
+  learner_user_id: number
+  overall_progress_percentage: number
+  total_sub_courses: number
+  completed_sub_courses: number
+  in_progress_sub_courses: number
+  not_started_sub_courses: number
+  locked_sub_courses: number
+}
+
+export interface LearnerCourseProgressSummaryResponse {
+  message: string
+  data: LearnerCourseProgressSummary
+}

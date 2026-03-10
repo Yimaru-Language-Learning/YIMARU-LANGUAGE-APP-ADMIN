@@ -15,7 +15,6 @@ import type {
   CreatePracticeRequest,
   UpdatePracticeRequest,
   UpdatePracticeStatusRequest,
-  GetPracticeQuestionsResponse,
   CreatePracticeQuestionRequest,
   UpdatePracticeQuestionRequest,
   GetProgramsResponse,
@@ -31,11 +30,17 @@ import type {
   UpdateModuleRequest,
   UpdateModuleStatusRequest,
   GetQuestionSetsResponse,
+  GetQuestionSetsParams,
+  GetQuestionSetDetailResponse,
+  GetQuestionSetQuestionsResponse,
   CreateQuestionSetRequest,
   CreateQuestionSetResponse,
   AddQuestionToSetRequest,
   CreateQuestionRequest,
   CreateQuestionResponse,
+  GetQuestionDetailResponse,
+  GetQuestionsParams,
+  GetQuestionsResponse,
   CreateVimeoVideoRequest,
   CreateCourseCategoryRequest,
   GetSubCoursePrerequisitesResponse,
@@ -119,7 +124,7 @@ export const deletePractice = (practiceId: number) =>
 
 // Practice Questions APIs
 export const getPracticeQuestions = (practiceId: number) =>
-  http.get<GetPracticeQuestionsResponse>(`/course-management/practices/${practiceId}/questions`)
+  http.get<GetQuestionSetQuestionsResponse>(`/question-sets/${practiceId}/questions`)
 
 export const createPracticeQuestion = (data: CreatePracticeQuestionRequest) =>
   http.post("/course-management/practice-questions", data)
@@ -187,10 +192,19 @@ export const getPracticesByModule = (moduleId: number) =>
   http.get<GetPracticesResponse>(`/course-management/modules/${moduleId}/practices`)
 
 // Question Sets API
+export const getQuestionSets = (params?: GetQuestionSetsParams) =>
+  http.get<GetQuestionSetsResponse>("/question-sets", { params })
+
 export const getQuestionSetsByOwner = (ownerType: string, ownerId: number) =>
   http.get<GetQuestionSetsResponse>("/question-sets/by-owner", {
     params: { owner_type: ownerType, owner_id: ownerId },
   })
+
+export const getQuestionSetById = (questionSetId: number) =>
+  http.get<GetQuestionSetDetailResponse>(`/question-sets/${questionSetId}`)
+
+export const getQuestionSetQuestions = (questionSetId: number) =>
+  http.get<GetQuestionSetQuestionsResponse>(`/question-sets/${questionSetId}/questions`)
 
 export const createQuestionSet = (data: CreateQuestionSetRequest) =>
   http.post<CreateQuestionSetResponse>("/question-sets", data)
@@ -200,6 +214,18 @@ export const addQuestionToSet = (questionSetId: number, data: AddQuestionToSetRe
 
 export const createQuestion = (data: CreateQuestionRequest) =>
   http.post<CreateQuestionResponse>("/questions", data)
+
+export const getQuestions = (params: GetQuestionsParams) =>
+  http.get<GetQuestionsResponse>("/questions", { params })
+
+export const getQuestionById = (questionId: number) =>
+  http.get<GetQuestionDetailResponse>(`/questions/${questionId}`)
+
+export const deleteQuestion = (questionId: number) =>
+  http.delete(`/questions/${questionId}`)
+
+export const updateQuestion = (questionId: number, data: CreateQuestionRequest) =>
+  http.put(`/questions/${questionId}`, data)
 
 export const deleteQuestionSet = (questionSetId: number) =>
   http.delete(`/question-sets/${questionSetId}`)

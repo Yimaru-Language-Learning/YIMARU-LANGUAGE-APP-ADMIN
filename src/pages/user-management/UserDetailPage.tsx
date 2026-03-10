@@ -26,7 +26,10 @@ import { cn } from "../../lib/utils";
 import { useUsersStore } from "../../zustand/userStore";
 import { getUserById } from "../../api/users.api";
 import { getCourseCategories, getCoursesByCategory } from "../../api/courses.api";
-import { getAdminLearnerCourseProgress } from "../../api/progress.api";
+import {
+  getAdminLearnerCourseProgress,
+  getAdminLearnerCourseProgressSummary,
+} from "../../api/progress.api";
 import {
   Table,
   TableBody,
@@ -36,7 +39,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { Select } from "../../components/ui/select";
-import type { LearnerCourseProgressItem } from "../../types/progress.types";
+import type { LearnerCourseProgressItem, LearnerCourseProgressSummary } from "../../types/progress.types";
 import type { Course } from "../../types/course.types";
 
 const activityIcons: Record<string, typeof CheckCircle2> = {
@@ -55,6 +58,7 @@ export function UserDetailPage() {
   const [loadingCourseOptions, setLoadingCourseOptions] = useState(false);
   const [selectedProgressCourseId, setSelectedProgressCourseId] = useState<number | null>(null);
   const [progressItems, setProgressItems] = useState<LearnerCourseProgressItem[]>([]);
+  const [progressSummary, setProgressSummary] = useState<LearnerCourseProgressSummary | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [progressError, setProgressError] = useState<string | null>(null);
 
@@ -115,12 +119,18 @@ export function UserDetailPage() {
       setLoadingProgress(true);
       setProgressError(null);
       try {
-        const res = await getAdminLearnerCourseProgress(userId, selectedProgressCourseId);
-        const ordered = [...(res.data?.data ?? [])].sort(
+        const [summaryRes, detailRes] = await Promise.all([
+          getAdminLearnerCourseProgressSummary(userId, selectedProgressCourseId),
+          getAdminLearnerCourseProgress(userId, selectedProgressCourseId),
+        ]);
+
+        setProgressSummary(summaryRes.data?.data ?? null);
+        const ordered = [...(detailRes.data?.data ?? [])].sort(
           (a, b) => a.display_order - b.display_order || a.sub_course_id - b.sub_course_id,
         );
         setProgressItems(ordered);
       } catch (err: any) {
+        setProgressSummary(null);
         setProgressItems([]);
         const status = err?.response?.status;
         if (status === 403) {
@@ -139,6 +149,16 @@ export function UserDetailPage() {
   }, [id, selectedProgressCourseId]);
 
   const progressMetrics = useMemo(() => {
+    if (progressSummary) {
+      return {
+        total: progressSummary.total_sub_courses ?? 0,
+        completed: progressSummary.completed_sub_courses ?? 0,
+        inProgress: progressSummary.in_progress_sub_courses ?? 0,
+        locked: progressSummary.locked_sub_courses ?? 0,
+        averageProgress: Math.round(progressSummary.overall_progress_percentage ?? 0),
+      };
+    }
+
     const total = progressItems.length;
     const completed = progressItems.filter((item) => item.progress_status === "COMPLETED").length;
     const inProgress = progressItems.filter((item) => item.progress_status === "IN_PROGRESS").length;
@@ -151,7 +171,7 @@ export function UserDetailPage() {
           );
 
     return { total, completed, inProgress, locked, averageProgress };
-  }, [progressItems]);
+  }, [progressItems, progressSummary]);
 
   if (!userProfile) {
     return (
@@ -214,7 +234,7 @@ export function UserDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Link
-          to="/users"
+          to="/users/list"
           className="inline-flex items-center gap-2 text-sm font-medium text-grayScale-500 transition-colors hover:text-brand-600"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -440,7 +460,7 @@ export function UserDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                <Metric label="Total Courses" value={progressMetrics.total} />
+                <Metric label="Total Sub-courses" value={progressMetrics.total} />
                 <Metric label="Completed" value={progressMetrics.completed} />
                 <Metric label="In Progress" value={progressMetrics.inProgress} />
                 <Metric label="Locked" value={progressMetrics.locked} />

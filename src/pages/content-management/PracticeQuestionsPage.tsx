@@ -1,18 +1,47 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ArrowLeft, Plus, Edit, Trash2, X } from "lucide-react"
+import { ArrowLeft, Plus, Edit, Trash2, X, Check, ChevronDown, ChevronUp, SlidersHorizontal, ArrowUpDown } from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import alertSrc from "../../assets/Alert.svg"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
-import { getPracticeQuestions, createPracticeQuestion, updatePracticeQuestion, deletePracticeQuestion } from "../../api/courses.api"
+import {
+  getQuestionSetById,
+  getQuestionSetQuestions,
+  getQuestionById,
+  deleteQuestion,
+  updateQuestion,
+  createQuestion,
+  addQuestionToSet,
+} from "../../api/courses.api"
 import { Input } from "../../components/ui/input"
 import { Select } from "../../components/ui/select"
-import type { PracticeQuestion } from "../../types/course.types"
+import { Textarea } from "../../components/ui/textarea"
+import type { PracticeQuestion, QuestionSetQuestion, QuestionDetail } from "../../types/course.types"
 
 type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT"
+type DifficultyLevel = "EASY" | "MEDIUM" | "HARD"
+type GroupByOption = "none" | "type" | "difficulty"
+type PointsSortOption = "asc" | "desc"
+
+interface DraftOption {
+  text: string
+  isCorrect: boolean
+}
+
+interface QuestionDraft {
+  questionText: string
+  questionType: QuestionType
+  difficultyLevel: DifficultyLevel
+  points: number
+  options: DraftOption[]
+  tips: string
+  explanation: string
+  questionVoicePrompt: string
+  sampleAnswerVoicePrompt: string
+}
 
 const typeLabels: Record<QuestionType, string> = {
   MCQ: "Multiple Choice",
@@ -30,6 +59,8 @@ export function PracticeQuestionsPage() {
   const { categoryId, courseId, subCourseId, practiceId } = useParams()
   
   const [questions, setQuestions] = useState<PracticeQuestion[]>([])
+  const [practiceTitle, setPracticeTitle] = useState("Practice Questions")
+  const [practiceDescription, setPracticeDescription] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,24 +70,164 @@ export function PracticeQuestionsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [questionToDelete, setQuestionToDelete] = useState<PracticeQuestion | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [expandedQuestionId, setExpandedQuestionId] = useState<number | null>(null)
+  const [questionDetailsById, setQuestionDetailsById] = useState<Record<number, QuestionDetail>>({})
+  const [loadingDetailIds, setLoadingDetailIds] = useState<Record<number, boolean>>({})
+  const [groupBy, setGroupBy] = useState<GroupByOption>("none")
+  const [pointsSort, setPointsSort] = useState<PointsSortOption>("desc")
 
-  const [questionText, setQuestionText] = useState("")
-  const [questionType, setQuestionType] = useState<QuestionType>("MCQ")
-  const [sampleAnswer, setSampleAnswer] = useState("")
-  const [tips, setTips] = useState("")
-  const [questionVoicePrompt, setQuestionVoicePrompt] = useState("")
-  const [sampleAnswerVoicePrompt, setSampleAnswerVoicePrompt] = useState("")
+  const [draft, setDraft] = useState<QuestionDraft>({
+    questionText: "",
+    questionType: "MCQ",
+    difficultyLevel: "EASY",
+    points: 1,
+    options: [
+      { text: "", isCorrect: true },
+      { text: "", isCorrect: false },
+      { text: "", isCorrect: false },
+      { text: "", isCorrect: false },
+    ],
+    tips: "",
+    explanation: "",
+    questionVoicePrompt: "",
+    sampleAnswerVoicePrompt: "",
+  })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const backLink = `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`
 
+  const buildDefaultOptions = (type: QuestionType, sampleAnswerText?: string): DraftOption[] => {
+    if (type === "TRUE_FALSE") {
+      const normalized = sampleAnswerText?.trim().toLowerCase()
+      const isTrue = normalized === "true"
+      const isFalse = normalized === "false"
+      return [
+        { text: "True", isCorrect: isTrue },
+        { text: "False", isCorrect: isFalse },
+      ]
+    }
+
+    return [
+      { text: sampleAnswerText?.trim() || "", isCorrect: !!sampleAnswerText?.trim() },
+      { text: "", isCorrect: false },
+      { text: "", isCorrect: false },
+      { text: "", isCorrect: false },
+    ]
+  }
+
+  const resetDraft = () => {
+    setDraft({
+      questionText: "",
+      questionType: "MCQ",
+      difficultyLevel: "EASY",
+      points: 1,
+      options: buildDefaultOptions("MCQ"),
+      tips: "",
+      explanation: "",
+      questionVoicePrompt: "",
+      sampleAnswerVoicePrompt: "",
+    })
+  }
+
+  const getResolvedSampleAnswer = () => {
+    // For SHORT questions, backend still expects sample_answer.
+    // Use explanation when provided, otherwise send a neutral placeholder.
+    if (draft.questionType === "SHORT") return draft.explanation.trim() || "N/A"
+    const correctOption = draft.options.find((opt) => opt.isCorrect && opt.text.trim())
+    return correctOption?.text.trim() || ""
+  }
+
+  const toCreateQuestionType = (type: QuestionType) =>
+    type === "SHORT" ? "SHORT_ANSWER" : type
+
+  const isDraftValid = () => {
+    if (!draft.questionText.trim()) return false
+    if (draft.questionType === "SHORT") return true
+    if (draft.questionType === "MCQ") {
+      const nonEmpty = draft.options.filter((opt) => opt.text.trim())
+      if (nonEmpty.length < 2) return false
+    }
+    return !!getResolvedSampleAnswer()
+  }
+
+  const handleDraftTypeChange = (type: QuestionType) => {
+    setDraft((prev) => ({
+      ...prev,
+      questionType: type,
+      options: buildDefaultOptions(type),
+    }))
+  }
+
+  const updateDraftOption = (index: number, patch: Partial<DraftOption>) => {
+    setDraft((prev) => ({
+      ...prev,
+      options: prev.options.map((opt, idx) => (idx === index ? { ...opt, ...patch } : opt)),
+    }))
+  }
+
+  const setDraftCorrectOption = (index: number) => {
+    setDraft((prev) => ({
+      ...prev,
+      options: prev.options.map((opt, idx) => ({ ...opt, isCorrect: idx === index })),
+    }))
+  }
+
+  const addDraftOption = () => {
+    setDraft((prev) => ({
+      ...prev,
+      options: [...prev.options, { text: "", isCorrect: false }],
+    }))
+  }
+
+  const removeDraftOption = (index: number) => {
+    setDraft((prev) => {
+      if (prev.options.length <= 2) return prev
+      const nextOptions = prev.options.filter((_, idx) => idx !== index)
+      const hasCorrect = nextOptions.some((opt) => opt.isCorrect)
+      return {
+        ...prev,
+        options: hasCorrect
+          ? nextOptions
+          : nextOptions.map((opt, idx) => ({ ...opt, isCorrect: idx === 0 })),
+      }
+    })
+  }
+
   const fetchQuestions = async () => {
     if (!practiceId) return
 
     try {
-      const res = await getPracticeQuestions(Number(practiceId))
-      setQuestions(res.data.data.questions ?? [])
+      const [detailRes, questionsRes] = await Promise.all([
+        getQuestionSetById(Number(practiceId)),
+        getQuestionSetQuestions(Number(practiceId)),
+      ])
+      const detail = detailRes.data?.data
+      setPracticeTitle(detail?.title || "Practice Questions")
+      setPracticeDescription(detail?.description || "")
+
+      const mappedQuestions: PracticeQuestion[] = (questionsRes.data?.data ?? []).map(
+        (question: QuestionSetQuestion) => ({
+          id: question.question_id || question.id,
+          practice_id: question.set_id,
+          question: question.question_text || "",
+          points: question.points ?? 0,
+          difficulty_level: question.difficulty_level || "",
+          question_voice_prompt: question.voice_prompt || "",
+          sample_answer_voice_prompt: "",
+          sample_answer: question.explanation || "",
+          tips: question.tips || "",
+          type:
+            question.question_type === "MCQ" ||
+            question.question_type === "TRUE_FALSE" ||
+            question.question_type === "SHORT"
+              ? question.question_type
+              : question.question_type === "SHORT_ANSWER"
+                ? "SHORT"
+              : "MCQ",
+        }),
+      )
+      setQuestions(mappedQuestions)
     } catch (err) {
       console.error("Failed to fetch questions:", err)
       setError("Failed to load questions")
@@ -70,12 +241,7 @@ export function PracticeQuestionsPage() {
   }, [practiceId])
 
   const handleAddQuestion = () => {
-    setQuestionText("")
-    setQuestionType("MCQ")
-    setSampleAnswer("")
-    setTips("")
-    setQuestionVoicePrompt("")
-    setSampleAnswerVoicePrompt("")
+    resetDraft()
     setSaveError(null)
     setShowAddModal(true)
   }
@@ -85,17 +251,46 @@ export function PracticeQuestionsPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      await createPracticeQuestion({
-        practice_id: Number(practiceId),
-        question: questionText,
-        type: questionType,
-        sample_answer: sampleAnswer,
-        tips,
-        question_voice_prompt: questionVoicePrompt,
-        sample_answer_voice_prompt: sampleAnswerVoicePrompt,
+      const resolvedSampleAnswer = getResolvedSampleAnswer()
+      const createRes = await createQuestion({
+        question_text: draft.questionText,
+        question_type: toCreateQuestionType(draft.questionType),
+        status: "PUBLISHED",
+        difficulty_level: draft.difficultyLevel,
+        points: draft.points,
+        tips: draft.tips || undefined,
+        explanation: draft.explanation || undefined,
+        voice_prompt: draft.questionVoicePrompt || undefined,
+        sample_answer_voice_prompt: draft.sampleAnswerVoicePrompt || undefined,
+        options:
+          draft.questionType === "SHORT"
+            ? undefined
+            : draft.options
+                .filter((opt) => opt.text.trim())
+                .map((opt, idx) => ({
+                  option_order: idx + 1,
+                  option_text: opt.text.trim(),
+                  is_correct: opt.isCorrect,
+                })),
+        short_answers:
+          draft.questionType === "SHORT"
+            ? [
+                {
+                  acceptable_answer: resolvedSampleAnswer,
+                  match_type: "EXACT",
+                },
+                {
+                  acceptable_answer: resolvedSampleAnswer,
+                  match_type: "CASE_INSENSITIVE",
+                },
+              ]
+            : undefined,
       })
+      const createdQuestionId = createRes.data?.data?.id
+      if (!createdQuestionId) throw new Error("Question created but no question ID returned.")
+      await addQuestionToSet(Number(practiceId), { question_id: createdQuestionId })
       setShowAddModal(false)
-      resetForm()
+      resetDraft()
       await fetchQuestions()
     } catch (err) {
       console.error("Failed to create question:", err)
@@ -105,16 +300,72 @@ export function PracticeQuestionsPage() {
     }
   }
 
-  const handleEditClick = (question: PracticeQuestion) => {
+  const handleEditClick = async (question: PracticeQuestion) => {
     setQuestionToEdit(question)
-    setQuestionText(question.question)
-    setQuestionType(question.type)
-    setSampleAnswer(question.sample_answer)
-    setTips(question.tips || "")
-    setQuestionVoicePrompt(question.question_voice_prompt || "")
-    setSampleAnswerVoicePrompt(question.sample_answer_voice_prompt || "")
+    const fallbackDraft: QuestionDraft = {
+      questionText: question.question,
+      questionType: question.type,
+      difficultyLevel: "EASY",
+      points: 1,
+      options: buildDefaultOptions(question.type, question.sample_answer),
+      tips: question.tips || "",
+      explanation: question.sample_answer || "",
+      questionVoicePrompt: question.question_voice_prompt || "",
+      sampleAnswerVoicePrompt: question.sample_answer_voice_prompt || "",
+    }
+    setDraft(fallbackDraft)
     setSaveError(null)
-    setShowEditModal(true)
+    try {
+      const detailRes = await getQuestionById(question.id)
+      const detail = detailRes.data?.data
+      if (detail) {
+        const normalizedType: QuestionType =
+          detail.question_type === "MCQ" ||
+          detail.question_type === "TRUE_FALSE" ||
+          detail.question_type === "SHORT"
+            ? detail.question_type
+            : detail.question_type === "SHORT_ANSWER"
+              ? "SHORT"
+              : "MCQ"
+        const detailOptions = (detail.options ?? [])
+          .slice()
+          .sort((a, b) => (a.option_order ?? 0) - (b.option_order ?? 0))
+          .map((opt) => ({
+            text: opt.option_text || "",
+            isCorrect: !!opt.is_correct,
+          }))
+        const shortAnswerFromDetail = Array.isArray(detail.short_answers)
+          ? typeof detail.short_answers[0] === "string"
+            ? String(detail.short_answers[0] || "")
+            : String((detail.short_answers[0] as { acceptable_answer?: string })?.acceptable_answer || "")
+          : ""
+        setDraft({
+          questionText: detail.question_text || fallbackDraft.questionText,
+          questionType: normalizedType,
+          difficultyLevel:
+            detail.difficulty_level === "EASY" ||
+            detail.difficulty_level === "MEDIUM" ||
+            detail.difficulty_level === "HARD"
+              ? detail.difficulty_level
+              : "EASY",
+          points: detail.points && detail.points > 0 ? detail.points : 1,
+          options:
+            normalizedType === "SHORT"
+              ? buildDefaultOptions("SHORT")
+              : detailOptions.length > 0
+                ? detailOptions
+                : buildDefaultOptions(normalizedType, question.sample_answer),
+          tips: detail.tips || "",
+          explanation: detail.explanation || shortAnswerFromDetail || fallbackDraft.explanation,
+          questionVoicePrompt: detail.voice_prompt || "",
+          sampleAnswerVoicePrompt: detail.sample_answer_voice_prompt || "",
+        })
+      }
+    } catch (err) {
+      console.error("Failed to fetch question details:", err)
+    } finally {
+      setShowEditModal(true)
+    }
   }
 
   const handleSaveEditQuestion = async () => {
@@ -122,17 +373,44 @@ export function PracticeQuestionsPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      await updatePracticeQuestion(questionToEdit.id, {
-        question: questionText,
-        type: questionType,
-        sample_answer: sampleAnswer,
-        tips,
-        question_voice_prompt: questionVoicePrompt,
-        sample_answer_voice_prompt: sampleAnswerVoicePrompt,
+      const resolvedSampleAnswer = getResolvedSampleAnswer()
+      await updateQuestion(questionToEdit.id, {
+        question_text: draft.questionText,
+        question_type: toCreateQuestionType(draft.questionType),
+        status: "PUBLISHED",
+        difficulty_level: draft.difficultyLevel,
+        points: draft.points,
+        tips: draft.tips || undefined,
+        explanation: draft.explanation || undefined,
+        voice_prompt: draft.questionVoicePrompt || undefined,
+        sample_answer_voice_prompt: draft.sampleAnswerVoicePrompt || undefined,
+        options:
+          draft.questionType === "SHORT"
+            ? undefined
+            : draft.options
+                .filter((opt) => opt.text.trim())
+                .map((opt, idx) => ({
+                  option_order: idx + 1,
+                  option_text: opt.text.trim(),
+                  is_correct: opt.isCorrect,
+                })),
+        short_answers:
+          draft.questionType === "SHORT"
+            ? [
+                {
+                  acceptable_answer: resolvedSampleAnswer,
+                  match_type: "EXACT",
+                },
+                {
+                  acceptable_answer: resolvedSampleAnswer,
+                  match_type: "CASE_INSENSITIVE",
+                },
+              ]
+            : undefined,
       })
       setShowEditModal(false)
       setQuestionToEdit(null)
-      resetForm()
+      resetDraft()
       await fetchQuestions()
     } catch (err) {
       console.error("Failed to update question:", err)
@@ -147,11 +425,63 @@ export function PracticeQuestionsPage() {
     setShowDeleteModal(true)
   }
 
+  const loadQuestionDetails = async (questionId: number) => {
+    if (questionDetailsById[questionId] || loadingDetailIds[questionId]) return
+    setLoadingDetailIds((prev) => ({ ...prev, [questionId]: true }))
+    try {
+      const detailRes = await getQuestionById(questionId)
+      const detail = detailRes.data?.data
+      if (detail) {
+        setQuestionDetailsById((prev) => ({ ...prev, [questionId]: detail }))
+      }
+    } catch (err) {
+      console.error("Failed to fetch question details:", err)
+    } finally {
+      setLoadingDetailIds((prev) => ({ ...prev, [questionId]: false }))
+    }
+  }
+
+  const handleToggleDetails = (questionId: number) => {
+    setExpandedQuestionId((prev) => {
+      const next = prev === questionId ? null : questionId
+      if (next === questionId) {
+        void loadQuestionDetails(questionId)
+      }
+      return next
+    })
+  }
+
+  const groupedQuestions = useMemo(() => {
+    const sorted = [...questions].sort((a, b) => {
+      const aPoints = a.points ?? 0
+      const bPoints = b.points ?? 0
+      return pointsSort === "asc" ? aPoints - bPoints : bPoints - aPoints
+    })
+
+    if (groupBy === "none") {
+      return [{ key: "all", label: "All Questions", items: sorted }]
+    }
+
+    const groups = new Map<string, PracticeQuestion[]>()
+    sorted.forEach((question) => {
+      const label =
+        groupBy === "type" ? typeLabels[question.type] : question.difficulty_level || "Unspecified"
+      if (!groups.has(label)) groups.set(label, [])
+      groups.get(label)?.push(question)
+    })
+
+    return Array.from(groups.entries()).map(([label, items], index) => ({
+      key: `${groupBy}-${label}-${index}`,
+      label,
+      items,
+    }))
+  }, [questions, groupBy, pointsSort])
+
   const handleConfirmDelete = async () => {
     if (!questionToDelete) return
     setDeleting(true)
     try {
-      await deletePracticeQuestion(questionToDelete.id)
+      await deleteQuestion(questionToDelete.id)
       setShowDeleteModal(false)
       setQuestionToDelete(null)
       await fetchQuestions()
@@ -160,15 +490,6 @@ export function PracticeQuestionsPage() {
     } finally {
       setDeleting(false)
     }
-  }
-
-  const resetForm = () => {
-    setQuestionText("")
-    setQuestionType("MCQ")
-    setSampleAnswer("")
-    setTips("")
-    setQuestionVoicePrompt("")
-    setSampleAnswerVoicePrompt("")
   }
 
   if (loading) {
@@ -200,7 +521,10 @@ export function PracticeQuestionsPage() {
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-grayScale-900">Practice Questions</h1>
+            <h1 className="text-xl font-bold tracking-tight text-grayScale-900">{practiceTitle}</h1>
+            {practiceDescription && (
+              <p className="mt-0.5 text-sm text-grayScale-500">{practiceDescription}</p>
+            )}
             <p className="mt-0.5 text-sm text-grayScale-500">{questions.length} questions available</p>
           </div>
         </div>
@@ -224,52 +548,164 @@ export function PracticeQuestionsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {questions.map((question, index) => (
-            <Card key={question.id} className="shadow-sm transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-600 shadow-sm">
-                      {index + 1}
+          <div className="rounded-2xl border border-grayScale-200 bg-gradient-to-br from-white to-grayScale-50 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-brand-100 text-brand-600">
+                  <SlidersHorizontal className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-grayScale-700">Question Controls</p>
+                  <p className="text-xs text-grayScale-500">Group and sort the list quickly</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full border border-grayScale-200 bg-white px-2.5 py-1 font-medium text-grayScale-600">
+                  Group: {groupBy === "none" ? "None" : groupBy === "type" ? "Type" : "Difficulty"}
+                </span>
+                <span className="rounded-full border border-grayScale-200 bg-white px-2.5 py-1 font-medium text-grayScale-600">
+                  Points: {pointsSort === "desc" ? "High to Low" : "Low to High"}
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 rounded-xl border border-grayScale-200 bg-white p-3">
+                <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Group Questions By
+                </label>
+                <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupByOption)}>
+                  <option value="none">No Grouping</option>
+                  <option value="type">Type</option>
+                  <option value="difficulty">Difficulty</option>
+                </Select>
+              </div>
+              <div className="space-y-1.5 rounded-xl border border-grayScale-200 bg-white p-3">
+                <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  Sort By Points
+                </label>
+                <Select value={pointsSort} onChange={(e) => setPointsSort(e.target.value as PointsSortOption)}>
+                  <option value="desc">High to Low</option>
+                  <option value="asc">Low to High</option>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {groupedQuestions.map((group) => (
+            <div key={group.key} className="space-y-3">
+              {groupBy !== "none" && (
+                <div className="flex items-center justify-between rounded-md bg-grayScale-100 px-3 py-2">
+                  <p className="text-sm font-semibold text-grayScale-700">{group.label}</p>
+                  <p className="text-xs text-grayScale-500">{group.items.length} question(s)</p>
+                </div>
+              )}
+              {group.items.map((question) => (
+                <Card key={question.id} className="shadow-sm transition-shadow hover:shadow-md">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="line-clamp-2 text-base font-medium leading-relaxed text-grayScale-900">
+                          {question.question}
+                        </CardTitle>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-grayScale-500">
+                          <span className="rounded-md bg-grayScale-100 px-2 py-1">
+                            Type: {typeLabels[question.type]}
+                          </span>
+                          <span className="rounded-md bg-grayScale-100 px-2 py-1">
+                            Points: {question.points ?? 0}
+                          </span>
+                          <span className="rounded-md bg-grayScale-100 px-2 py-1">
+                            Difficulty: {question.difficulty_level || "—"}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => handleToggleDetails(question.id)}
+                      >
+                        {expandedQuestionId === question.id ? "Hide Details" : "Details"}
+                        {expandedQuestionId === question.id ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <Badge className={`${typeColors[question.type]} font-medium`}>
-                      {typeLabels[question.type]}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-lg text-grayScale-400 hover:text-brand-600"
-                      onClick={() => handleEditClick(question)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-lg text-grayScale-400 hover:bg-red-50 hover:text-red-500"
-                      onClick={() => handleDeleteClick(question)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <CardTitle className="mt-3 text-base font-medium leading-relaxed">{question.question}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="rounded-lg border border-grayScale-100 bg-grayScale-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-400">Sample Answer</p>
-                  <p className="mt-2 text-sm leading-relaxed text-grayScale-700">{question.sample_answer}</p>
-                </div>
-                {question.tips && (
-                  <div className="rounded-lg border border-amber-100 bg-amber-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-500">💡 Tips</p>
-                    <p className="mt-2 text-sm leading-relaxed text-amber-700">{question.tips}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  {expandedQuestionId === question.id && (
+                    <CardContent className="space-y-3 border-t border-grayScale-100 pt-4">
+                      <div className="flex items-center justify-between">
+                        <Badge className={`${typeColors[question.type]} font-medium`}>
+                          {typeLabels[question.type]}
+                        </Badge>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-grayScale-400 hover:text-brand-600"
+                            onClick={() => handleEditClick(question)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-grayScale-400 hover:bg-red-50 hover:text-red-500"
+                            onClick={() => handleDeleteClick(question)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-grayScale-100 bg-grayScale-50 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-400">Sample Answer</p>
+                        <p className="mt-2 text-sm leading-relaxed text-grayScale-700">{question.sample_answer}</p>
+                      </div>
+                      {question.type === "MCQ" && (
+                        <div className="rounded-lg border border-grayScale-100 bg-white p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-400">Options</p>
+                          {loadingDetailIds[question.id] ? (
+                            <p className="mt-2 text-sm text-grayScale-500">Loading options...</p>
+                          ) : (questionDetailsById[question.id]?.options ?? []).length > 0 ? (
+                            <div className="mt-3 space-y-2">
+                              {(questionDetailsById[question.id]?.options ?? [])
+                                .slice()
+                                .sort((a, b) => a.option_order - b.option_order)
+                                .map((option) => (
+                                  <div
+                                    key={`${question.id}-${option.option_order}-${option.option_text}`}
+                                    className={`rounded-md border px-3 py-2 text-sm ${
+                                      option.is_correct
+                                        ? "border-green-200 bg-green-50 text-green-700"
+                                        : "border-grayScale-200 bg-grayScale-50 text-grayScale-600"
+                                    }`}
+                                  >
+                                    <span className="font-medium">{option.option_order}.</span>{" "}
+                                    {option.option_text}
+                                  </div>
+                                ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-sm text-grayScale-500">No options available.</p>
+                          )}
+                        </div>
+                      )}
+                      {question.tips && (
+                        <div className="rounded-lg border border-amber-100 bg-amber-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-amber-500">💡 Tips</p>
+                          <p className="mt-2 text-sm leading-relaxed text-amber-700">{question.tips}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>
           ))}
         </div>
       )}
@@ -319,59 +755,183 @@ export function PracticeQuestionsPage() {
             </div>
 
             <div className="space-y-5 px-6 py-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Question Type</label>
-                <Select value={questionType} onChange={(e) => setQuestionType(e.target.value as QuestionType)}>
-                  <option value="MCQ">Multiple Choice</option>
-                  <option value="TRUE_FALSE">True/False</option>
-                  <option value="SHORT">Short Answer</option>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Question</label>
-                <textarea
-                  value={questionText}
-                  onChange={(e) => setQuestionText(e.target.value)}
-                  placeholder="Enter your question"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Sample Answer</label>
-                <textarea
-                  value={sampleAnswer}
-                  onChange={(e) => setSampleAnswer(e.target.value)}
-                  placeholder="Enter the sample answer"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Tips (Optional)</label>
-                <textarea
-                  value={tips}
-                  onChange={(e) => setTips(e.target.value)}
-                  placeholder="Enter helpful tips"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Question Voice Prompt (Optional)</label>
-                <Input
-                  value={questionVoicePrompt}
-                  onChange={(e) => setQuestionVoicePrompt(e.target.value)}
-                  placeholder="Voice prompt for question"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Sample Answer Voice Prompt (Optional)</label>
-                <Input
-                  value={sampleAnswerVoicePrompt}
-                  onChange={(e) => setSampleAnswerVoicePrompt(e.target.value)}
-                  placeholder="Voice prompt for sample answer"
-                />
+              <div className="rounded-xl border-l-2 border-l-brand-500 border border-grayScale-200 p-4">
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                      Question Text
+                    </label>
+                    <Textarea
+                      value={draft.questionText}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, questionText: e.target.value }))}
+                      placeholder="Enter your question..."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Type</label>
+                      <Select value={draft.questionType} onChange={(e) => handleDraftTypeChange(e.target.value as QuestionType)}>
+                        <option value="MCQ">Multiple Choice</option>
+                        <option value="TRUE_FALSE">True/False</option>
+                        <option value="SHORT">Short Answer</option>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Difficulty</label>
+                      <Select
+                        value={draft.difficultyLevel}
+                        onChange={(e) =>
+                          setDraft((prev) => ({ ...prev, difficultyLevel: e.target.value as DifficultyLevel }))
+                        }
+                      >
+                        <option value="EASY">Easy</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HARD">Hard</option>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Points</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={draft.points}
+                        onChange={(e) =>
+                          setDraft((prev) => ({ ...prev, points: Number(e.target.value) || 1 }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {draft.questionType === "MCQ" && (
+                    <div className="space-y-3 rounded-lg bg-grayScale-50/50 p-4">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Options</label>
+                      <div className="space-y-2.5">
+                        {draft.options.map((option, index) => (
+                          <div
+                            key={index}
+                            className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors ${
+                              option.isCorrect ? "border-green-200 bg-green-50/50" : "border-grayScale-200 bg-white"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setDraftCorrectOption(index)}
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 ${
+                                option.isCorrect
+                                  ? "border-green-500 bg-green-500 text-white shadow-sm"
+                                  : "border-grayScale-300 hover:border-brand-400 hover:shadow-sm"
+                              }`}
+                            >
+                              {option.isCorrect && <Check className="h-3 w-3" />}
+                            </button>
+                            <Input
+                              value={option.text}
+                              onChange={(e) => updateDraftOption(index, { text: e.target.value })}
+                              placeholder={`Option ${index + 1}`}
+                              className="flex-1 border-0 bg-transparent shadow-none focus:ring-0"
+                            />
+                            {draft.options.length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => removeDraftOption(index)}
+                                className="rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={addDraftOption}
+                          className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Option
+                        </button>
+                      </div>
+                      <p className="text-xs text-grayScale-400">Click the circle to mark the correct answer.</p>
+                    </div>
+                  )}
+
+                  {draft.questionType === "TRUE_FALSE" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Correct Answer
+                      </label>
+                      <div className="flex gap-3">
+                        {["True", "False"].map((val, i) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() =>
+                              setDraft((prev) => ({
+                                ...prev,
+                                options: [
+                                  { text: "True", isCorrect: i === 0 },
+                                  { text: "False", isCorrect: i === 1 },
+                                ],
+                              }))
+                            }
+                            className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                              draft.options[i]?.isCorrect
+                                ? "border-green-500 bg-green-50 text-green-700"
+                                : "border-grayScale-200 text-grayScale-600 hover:border-grayScale-300"
+                            }`}
+                          >
+                            {val}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Tips (Optional)</label>
+                      <Input
+                        value={draft.tips}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, tips: e.target.value }))}
+                        placeholder="Helpful tip for the student"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Explanation (Optional)
+                      </label>
+                      <Input
+                        value={draft.explanation}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, explanation: e.target.value }))}
+                        placeholder="Why this is the correct answer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Voice Prompt (Optional)
+                      </label>
+                      <Input
+                        value={draft.questionVoicePrompt}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, questionVoicePrompt: e.target.value }))}
+                        placeholder="Voice prompt text"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Sample Answer Voice Prompt (Optional)
+                      </label>
+                      <Input
+                        value={draft.sampleAnswerVoicePrompt}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, sampleAnswerVoicePrompt: e.target.value }))}
+                        placeholder="Sample answer voice prompt"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               {saveError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
@@ -387,7 +947,7 @@ export function PracticeQuestionsPage() {
               <Button
                 className="bg-brand-500 hover:bg-brand-600"
                 onClick={handleSaveNewQuestion}
-                disabled={saving || !questionText.trim() || !sampleAnswer.trim()}
+                disabled={saving || !isDraftValid()}
               >
                 {saving ? "Saving..." : "Save"}
               </Button>
@@ -411,59 +971,183 @@ export function PracticeQuestionsPage() {
             </div>
 
             <div className="space-y-5 px-6 py-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Question Type</label>
-                <Select value={questionType} onChange={(e) => setQuestionType(e.target.value as QuestionType)}>
-                  <option value="MCQ">Multiple Choice</option>
-                  <option value="TRUE_FALSE">True/False</option>
-                  <option value="SHORT">Short Answer</option>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Question</label>
-                <textarea
-                  value={questionText}
-                  onChange={(e) => setQuestionText(e.target.value)}
-                  placeholder="Enter your question"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Sample Answer</label>
-                <textarea
-                  value={sampleAnswer}
-                  onChange={(e) => setSampleAnswer(e.target.value)}
-                  placeholder="Enter the sample answer"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Tips (Optional)</label>
-                <textarea
-                  value={tips}
-                  onChange={(e) => setTips(e.target.value)}
-                  placeholder="Enter helpful tips"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Question Voice Prompt (Optional)</label>
-                <Input
-                  value={questionVoicePrompt}
-                  onChange={(e) => setQuestionVoicePrompt(e.target.value)}
-                  placeholder="Voice prompt for question"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Sample Answer Voice Prompt (Optional)</label>
-                <Input
-                  value={sampleAnswerVoicePrompt}
-                  onChange={(e) => setSampleAnswerVoicePrompt(e.target.value)}
-                  placeholder="Voice prompt for sample answer"
-                />
+              <div className="rounded-xl border-l-2 border-l-brand-500 border border-grayScale-200 p-4">
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                      Question Text
+                    </label>
+                    <Textarea
+                      value={draft.questionText}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, questionText: e.target.value }))}
+                      placeholder="Enter your question..."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Type</label>
+                      <Select value={draft.questionType} onChange={(e) => handleDraftTypeChange(e.target.value as QuestionType)}>
+                        <option value="MCQ">Multiple Choice</option>
+                        <option value="TRUE_FALSE">True/False</option>
+                        <option value="SHORT">Short Answer</option>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Difficulty</label>
+                      <Select
+                        value={draft.difficultyLevel}
+                        onChange={(e) =>
+                          setDraft((prev) => ({ ...prev, difficultyLevel: e.target.value as DifficultyLevel }))
+                        }
+                      >
+                        <option value="EASY">Easy</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HARD">Hard</option>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Points</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={draft.points}
+                        onChange={(e) =>
+                          setDraft((prev) => ({ ...prev, points: Number(e.target.value) || 1 }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {draft.questionType === "MCQ" && (
+                    <div className="space-y-3 rounded-lg bg-grayScale-50/50 p-4">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Options</label>
+                      <div className="space-y-2.5">
+                        {draft.options.map((option, index) => (
+                          <div
+                            key={index}
+                            className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors ${
+                              option.isCorrect ? "border-green-200 bg-green-50/50" : "border-grayScale-200 bg-white"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setDraftCorrectOption(index)}
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 ${
+                                option.isCorrect
+                                  ? "border-green-500 bg-green-500 text-white shadow-sm"
+                                  : "border-grayScale-300 hover:border-brand-400 hover:shadow-sm"
+                              }`}
+                            >
+                              {option.isCorrect && <Check className="h-3 w-3" />}
+                            </button>
+                            <Input
+                              value={option.text}
+                              onChange={(e) => updateDraftOption(index, { text: e.target.value })}
+                              placeholder={`Option ${index + 1}`}
+                              className="flex-1 border-0 bg-transparent shadow-none focus:ring-0"
+                            />
+                            {draft.options.length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => removeDraftOption(index)}
+                                className="rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={addDraftOption}
+                          className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Option
+                        </button>
+                      </div>
+                      <p className="text-xs text-grayScale-400">Click the circle to mark the correct answer.</p>
+                    </div>
+                  )}
+
+                  {draft.questionType === "TRUE_FALSE" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Correct Answer
+                      </label>
+                      <div className="flex gap-3">
+                        {["True", "False"].map((val, i) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() =>
+                              setDraft((prev) => ({
+                                ...prev,
+                                options: [
+                                  { text: "True", isCorrect: i === 0 },
+                                  { text: "False", isCorrect: i === 1 },
+                                ],
+                              }))
+                            }
+                            className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                              draft.options[i]?.isCorrect
+                                ? "border-green-500 bg-green-50 text-green-700"
+                                : "border-grayScale-200 text-grayScale-600 hover:border-grayScale-300"
+                            }`}
+                          >
+                            {val}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Tips (Optional)</label>
+                      <Input
+                        value={draft.tips}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, tips: e.target.value }))}
+                        placeholder="Helpful tip for the student"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Explanation (Optional)
+                      </label>
+                      <Input
+                        value={draft.explanation}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, explanation: e.target.value }))}
+                        placeholder="Why this is the correct answer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Voice Prompt (Optional)
+                      </label>
+                      <Input
+                        value={draft.questionVoicePrompt}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, questionVoicePrompt: e.target.value }))}
+                        placeholder="Voice prompt text"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Sample Answer Voice Prompt (Optional)
+                      </label>
+                      <Input
+                        value={draft.sampleAnswerVoicePrompt}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, sampleAnswerVoicePrompt: e.target.value }))}
+                        placeholder="Sample answer voice prompt"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               {saveError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
@@ -479,7 +1163,7 @@ export function PracticeQuestionsPage() {
               <Button
                 className="bg-brand-500 hover:bg-brand-600"
                 onClick={handleSaveEditQuestion}
-                disabled={saving || !questionText.trim() || !sampleAnswer.trim()}
+                disabled={saving || !isDraftValid()}
               >
                 {saving ? "Saving..." : "Save"}
               </Button>

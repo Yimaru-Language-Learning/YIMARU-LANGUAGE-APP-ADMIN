@@ -50,6 +50,7 @@ export interface User {
   nickName: string
   email: string
   phoneNumber: string
+  role: string
   region: string
   country: string
   lastLogin: string | null
@@ -63,6 +64,7 @@ export const mapUserApiToUser = (u: UserApiDTO): User => ({
   nickName: u.nick_name,
   email: u.email,
   phoneNumber: u.phone_number ?? "",
+  role: u.role,
   region: u.region,
   country: u.country,
   lastLogin: null,

@@ -229,6 +229,7 @@ export function UsersListPage() {
                 />
               </TableHead>
               <TableHead>USER</TableHead>
+              <TableHead className="hidden md:table-cell">Role</TableHead>
               <TableHead className="hidden md:table-cell">Phone</TableHead>
               <TableHead className="hidden md:table-cell">Country</TableHead>
               <TableHead className="hidden md:table-cell">Region</TableHead>
@@ -239,7 +240,7 @@ export function UsersListPage() {
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-grayScale-100">
                       <Users className="h-7 w-7 text-grayScale-400" />
@@ -283,6 +284,7 @@ export function UsersListPage() {
                         </div>
                       </div>
                     </TableCell>
+                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.role || "-"}</TableCell>
                     <TableCell className="hidden md:table-cell text-grayScale-500">{u.phoneNumber || "-"}</TableCell>
                     <TableCell className="hidden md:table-cell text-grayScale-500">{u.country || "-"}</TableCell>
                     <TableCell className="hidden md:table-cell text-grayScale-500">{u.region || "-"}</TableCell>

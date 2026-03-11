@@ -113,15 +113,20 @@ function SortableChip({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "flex min-w-[180px] items-center gap-2 rounded-xl border bg-white px-3 py-2 shadow-sm",
-        active ? "border-brand-300 bg-brand-50" : "border-grayScale-200",
+        "flex min-w-[180px] items-center gap-2 rounded-xl border px-3 py-2 shadow-sm",
+        active
+          ? "border-brand-500 bg-brand-500/90 text-white"
+          : "border-grayScale-200 bg-white text-grayScale-700",
         isDragging && "opacity-60 ring-2 ring-brand-300",
         className,
       )}
     >
       <button
         type="button"
-        className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500"
+        className={cn(
+          "grid h-6 w-6 shrink-0 place-items-center rounded-md text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500",
+          active && "text-white/80 hover:bg-white/10 hover:text-white",
+        )}
         {...attributes}
         {...listeners}
       >
@@ -130,7 +135,7 @@ function SortableChip({
       <button
         type="button"
         onClick={onClick}
-        className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-grayScale-700"
+        className="min-w-0 flex-1 truncate text-left text-sm font-semibold"
       >
         {label}
       </button>

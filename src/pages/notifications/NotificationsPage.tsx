@@ -644,7 +644,7 @@ export function NotificationsPage() {
                   {totalCount.toLocaleString()}
                 </p>
               </div>
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500 text-white">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/90 text-white">
                 <Bell className="h-5 w-5" />
               </div>
             </CardContent>

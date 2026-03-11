@@ -139,7 +139,7 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
                     <span
                       className={cn(
                         "relative grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
-                        isActive && "bg-brand-500 text-white",
+                        isActive && "bg-brand-500/90 text-white",
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -154,9 +154,9 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
                       </span>
                     )}
                     {!isCollapsed && item.to !== "/notifications" && isActive ? (
-                      <span className="ml-auto h-6 w-1 rounded-full bg-brand-500" />
+                      <span className="ml-auto h-6 w-1 rounded-full bg-brand-500/80" />
                     ) : !isCollapsed && item.to === "/notifications" && unreadCount === 0 && isActive ? (
-                      <span className="ml-auto h-6 w-1 rounded-full bg-brand-500" />
+                      <span className="ml-auto h-6 w-1 rounded-full bg-brand-500/80" />
                     ) : null}
                   </>
                 )}

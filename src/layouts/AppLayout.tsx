@@ -41,12 +41,12 @@ export function AppLayout() {
           <div className="flex items-center justify-center gap-1.5 text-xs text-grayScale-400">
             <span>Powered by</span>
             <a
-              href="https://yaltopia.com"
+              href="https://tech.yaltopia.com"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-brand-500 transition-colors hover:text-brand-600"
             >
-              Yaltopia
+              Yaltopia Tech
             </a>
             <span>·</span>
             <span>© {new Date().getFullYear()}</span>

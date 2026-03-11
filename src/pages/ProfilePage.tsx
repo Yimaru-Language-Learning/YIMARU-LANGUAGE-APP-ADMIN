@@ -153,7 +153,7 @@ function DetailItem({
 }) {
   return (
     <div className="group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-grayScale-50/80">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-100/80 text-grayScale-400 transition-colors group-hover:bg-brand-50 group-hover:text-brand-500">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-100/80 text-grayScale-400 transition-colors group-hover:bg-brand-500/90 group-hover:text-white">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">

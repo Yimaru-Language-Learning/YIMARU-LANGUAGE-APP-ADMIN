@@ -17,6 +17,7 @@ import { AddVideoPage } from "../pages/content-management/AddVideoPage"
 import { AddPracticePage } from "../pages/content-management/AddPracticePage"
 import { NotFoundPage } from "../pages/NotFoundPage"
 import { NotificationsPage } from "../pages/notifications/NotificationsPage"
+import { CreateNotificationPage } from "../pages/notifications/CreateNotificationPage"
 import { UserDetailPage } from "../pages/user-management/UserDetailPage"
 import { UserManagementLayout } from "../pages/user-management/UserManagementLayout"
 import { UsersListPage } from "../pages/user-management/UsersListPage"
@@ -93,6 +94,7 @@ export function AppRoutes() {
         </Route>
 
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notifications/create" element={<CreateNotificationPage />} />
         <Route path="/user-log" element={<UserLogPage />} />
         <Route path="/issues" element={<IssuesPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />

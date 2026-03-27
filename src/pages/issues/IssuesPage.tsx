@@ -116,7 +116,7 @@ function getIssueTypeConfig(type: string): {
     case "course":
       return {
         label: "Course",
-        classes: "bg-brand-50 text-brand-700 border-brand-200",
+        classes: "bg-brand-500 text-white border-brand-500",
         icon: BookOpen,
       };
     case "account":

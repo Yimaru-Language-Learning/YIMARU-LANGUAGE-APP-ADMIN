@@ -76,7 +76,6 @@ function NotificationItem({
       type="button"
       className={cn(
         "group relative flex w-full gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-grayScale-100",
-        !notification.is_read && "bg-brand-100/30"
       )}
       onClick={() => {
         if (!notification.is_read) onMarkRead(notification.id)
@@ -84,13 +83,13 @@ function NotificationItem({
     >
       {/* Unread dot */}
       {!notification.is_read && (
-        <span className="absolute left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-brand-500" />
+        <span className="absolute left-0.5 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-brand-500" />
       )}
 
       {/* Type icon */}
       <span
         className={cn(
-          "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
+          "ml-3 grid h-9 w-9 shrink-0 place-items-center rounded-lg",
           cfg.bg
         )}
       >
@@ -101,16 +100,16 @@ function NotificationItem({
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "text-sm leading-snug text-grayScale-800",
+            "text-sm leading-snug text-grayScale-900",
             !notification.is_read && "font-semibold"
           )}
         >
-          {getNotificationTitle(notification)}
+          {getNotificationTitle(notification) || "Notification"}
         </p>
-        <p className="mt-0.5 line-clamp-2 text-xs text-grayScale-500">
-          {getNotificationMessage(notification)}
+        <p className="mt-0.5 line-clamp-2 text-xs text-grayScale-700">
+          {getNotificationMessage(notification) || "No preview text available."}
         </p>
-        <p className="mt-1 text-[11px] text-grayScale-400">
+        <p className="mt-1 text-[11px] text-grayScale-600">
           {formatTimestamp(notification.timestamp)}
         </p>
       </div>
@@ -170,14 +169,11 @@ export function NotificationDropdown() {
       {/* Bell button */}
       <button
         type="button"
-        className="relative inline-flex h-10 items-center gap-2 rounded-full border bg-white px-3 text-grayScale-500 transition-colors hover:text-brand-600"
+        className="relative grid h-10 w-10 place-items-center rounded-full border bg-white text-grayScale-500 transition-colors hover:text-brand-600"
         aria-label="Notifications"
         onClick={() => setOpen((prev) => !prev)}
       >
         <Bell className="h-5 w-5" />
-        <span className="hidden text-xs font-medium text-grayScale-600 sm:inline">
-          Notifications
-        </span>
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
             {unreadCount > 99 ? "99+" : unreadCount}

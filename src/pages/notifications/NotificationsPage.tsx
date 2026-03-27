@@ -51,6 +51,8 @@ import {
 import { FileUpload } from "../../components/ui/file-upload"
 import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { useNavigate } from "react-router-dom"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
   getNotifications,
   getUnreadCount,
@@ -259,6 +261,7 @@ function NotificationItem({
 }
 
 export function NotificationsPage() {
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [globalUnread, setGlobalUnread] = useState(0)
@@ -275,17 +278,6 @@ export function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | string>("all")
   const [levelFilter, setLevelFilter] = useState<"all" | string>("all")
-
-  const [composeChannels, setComposeChannels] = useState<Array<"push" | "sms">>(["push"])
-  const [composeAudience, setComposeAudience] = useState<"all" | "selected">("all")
-  const [teamRecipients, setTeamRecipients] = useState<TeamMember[]>([])
-  const [recipientsLoading, setRecipientsLoading] = useState(false)
-  const [selectedRecipientIds, setSelectedRecipientIds] = useState<number[]>([])
-  const [composeTitle, setComposeTitle] = useState("")
-  const [composeMessage, setComposeMessage] = useState("")
-  const [sending, setSending] = useState(false)
-  const [composeOpen, setComposeOpen] = useState(false)
-  const [composeImage, setComposeImage] = useState<File | null>(null)
 
   const [bulkOpen, setBulkOpen] = useState(false)
   const [bulkChannel, setBulkChannel] = useState<"sms" | "email" | "push">("sms")
@@ -551,45 +543,8 @@ export function NotificationsPage() {
     setDetailOpen(true)
   }
 
-  const handleComposeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!composeTitle.trim() || !composeMessage.trim()) return
-    if (composeChannels.length === 0) return
-    setSending(true)
-    try {
-      // Hook up to backend send API here when available.
-      // For now, we just reset the form after a short delay for UI feedback.
-      await new Promise((resolve) => setTimeout(resolve, 400))
-      setComposeTitle("")
-      setComposeMessage("")
-      setComposeAudience("all")
-      setComposeChannels(["push"])
-      setSelectedRecipientIds([])
-      setComposeImage(null)
-      setComposeOpen(false)
-    } finally {
-      setSending(false)
-    }
-  }
-
-  // Lazy-load users for recipient selection when compose dialog first opens
-  useEffect(() => {
-    if (!composeOpen || teamRecipients.length > 0 || recipientsLoading) return
-    setRecipientsLoading(true)
-    getTeamMembers(1, 50)
-      .then((res) => {
-        setTeamRecipients(res.data.data ?? [])
-      })
-      .catch(() => {
-        setTeamRecipients([])
-      })
-      .finally(() => {
-        setRecipientsLoading(false)
-      })
-  }, [composeOpen, teamRecipients.length, recipientsLoading])
-
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="mx-auto w-full max-w-6xl bg-grayScale-50/60 rounded-2xl px-3 py-4 sm:px-4 sm:py-5">
       {/* Header */}
       <div className="mb-5">
         <div className="mb-1 text-sm font-semibold text-grayScale-500">Notifications</div>
@@ -606,7 +561,7 @@ export function NotificationsPage() {
               <Button
                 size="sm"
                 className="bg-brand-500 text-white hover:bg-brand-600"
-                onClick={() => setBulkOpen(true)}
+                onClick={() => navigate("/notifications/create")}
               >
                 <Mail className="mr-2 h-3.5 w-3.5" />
                 Send notification
@@ -884,7 +839,7 @@ export function NotificationsPage() {
                           key={n.id}
                           className={cn(
                             "cursor-pointer",
-                            !n.is_read && "bg-brand-50/40 hover:bg-brand-50/70",
+                            !n.is_read && "bg-brand-50/10 hover:bg-brand-50/25",
                           )}
                           onClick={() => handleOpenDetail(n)}
                         >
@@ -1104,236 +1059,6 @@ export function NotificationsPage() {
           </DialogContent>
         </Dialog>
       )}
-
-      {/* Compose dialog */}
-      <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-brand-500" />
-              <span>Create notification</span>
-            </DialogTitle>
-            <DialogDescription>
-              Send a one-off push or SMS notification to your users.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleComposeSubmit} className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)]">
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
-                  Channel
-                </p>
-                <div className="inline-flex rounded-full border border-grayScale-200 bg-grayScale-50 p-0.5 text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setComposeChannels((prev) =>
-                        prev.includes("push")
-                          ? prev.filter((c) => c !== "push")
-                          : [...prev, "push"],
-                      )
-                    }
-                    className={cn(
-                      "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                      composeChannels.includes("push")
-                        ? "bg-white text-brand-600 shadow-sm"
-                        : "text-grayScale-500 hover:text-grayScale-700",
-                    )}
-                  >
-                    <Bell className="h-3.5 w-3.5" />
-                    Push
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setComposeChannels((prev) =>
-                        prev.includes("sms")
-                          ? prev.filter((c) => c !== "sms")
-                          : [...prev, "sms"],
-                      )
-                    }
-                    className={cn(
-                      "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                      composeChannels.includes("sms")
-                        ? "bg-white text-brand-600 shadow-sm"
-                        : "text-grayScale-500 hover:text-grayScale-700",
-                    )}
-                  >
-                    <Mail className="h-3.5 w-3.5" />
-                    SMS
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
-                  Audience
-                </p>
-                <div className="inline-flex rounded-full border border-grayScale-200 bg-grayScale-50 p-0.5 text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setComposeAudience("all")}
-                    className={cn(
-                      "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                      composeAudience === "all"
-                        ? "bg-white text-brand-600 shadow-sm"
-                        : "text-grayScale-500 hover:text-grayScale-700",
-                    )}
-                  >
-                    All users
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setComposeAudience("selected")}
-                    className={cn(
-                      "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                      composeAudience === "selected"
-                        ? "bg-white text-brand-600 shadow-sm"
-                        : "text-grayScale-500 hover:text-grayScale-700",
-                    )}
-                  >
-                    Selected users
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)]">
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-grayScale-500">Title</label>
-                  <Input
-                    placeholder="Short headline for this notification"
-                    value={composeTitle}
-                    onChange={(e) => setComposeTitle(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                    Message
-                  </label>
-                  <Textarea
-                    rows={3}
-                    placeholder={
-                      composeChannels.includes("sms") && !composeChannels.includes("push")
-                        ? "Concise SMS body. Keep it clear and under 160 characters where possible."
-                        : "Notification body shown inside the app."
-                    }
-                    value={composeMessage}
-                    onChange={(e) => setComposeMessage(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="mb-1 block text-xs font-medium text-grayScale-500">
-                  Image (push only)
-                </p>
-                <FileUpload
-                  accept="image/*"
-                  onFileSelect={setComposeImage}
-                  label="Upload notification image"
-                  description="Shown with push notification where supported"
-                  className="min-h-[110px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
-                />
-                <p className="text-[10px] text-grayScale-400">
-                  Image will be ignored for SMS-only sends. Connect your push provider to attach it
-                  to real notifications.
-                </p>
-              </div>
-            </div>
-
-            {composeAudience === "selected" && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-grayScale-500">Recipients</p>
-                <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-2">
-                  {recipientsLoading && (
-                    <div className="flex items-center justify-center py-6 text-xs text-grayScale-400">
-                      <SpinnerIcon className="mr-2 h-4 w-4" />
-                      Loading users…
-                    </div>
-                  )}
-                  {!recipientsLoading && teamRecipients.length === 0 && (
-                    <div className="py-4 text-center text-xs text-grayScale-400">
-                      No users available to select.
-                    </div>
-                  )}
-                  {!recipientsLoading &&
-                    teamRecipients.map((member) => (
-                      <label
-                        key={member.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-grayScale-100"
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-3.5 w-3.5 rounded border-grayScale-300"
-                          checked={selectedRecipientIds.includes(member.id)}
-                          onChange={(e) => {
-                            setSelectedRecipientIds((prev) =>
-                              e.target.checked
-                                ? [...prev, member.id]
-                                : prev.filter((id) => id !== member.id),
-                            )
-                          }}
-                        />
-                        <span className="truncate">
-                          {member.first_name} {member.last_name}
-                          <span className="ml-1 text-[10px] text-grayScale-400">
-                            · {member.email}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                </div>
-                <p className="text-[11px] text-grayScale-400">
-                  Only the selected users will receive this notification.
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-              <p className="text-[11px] text-grayScale-400">
-                This is a UI-only preview. Hook into your notification API to deliver messages.
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setComposeTitle("")
-                    setComposeMessage("")
-                    setComposeAudience("all")
-                    setComposeChannels(["push"])
-                    setSelectedRecipientIds([])
-                    setComposeImage(null)
-                  }}
-                >
-                  Clear
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={sending || !composeTitle.trim() || !composeMessage.trim()}
-                >
-                  {sending ? (
-                    <>
-                      <SpinnerIcon className="mr-2 h-3.5 w-3.5" />
-                      Sending…
-                    </>
-                  ) : (
-                    <>
-                      <MailOpen className="mr-2 h-3.5 w-3.5" />
-                      Send notification
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Bulk send dialog */}
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>

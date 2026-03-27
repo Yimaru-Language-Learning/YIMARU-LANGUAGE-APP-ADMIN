@@ -652,37 +652,45 @@ export function NotificationsPage() {
       {/* Summary cards */}
       {!loading && !error && (
         <div className="mb-5 grid gap-4 sm:grid-cols-3">
-          <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-brand-100 text-brand-600">
-              <Bell className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-grayScale-600">{totalCount.toLocaleString()}</p>
-              <p className="text-xs text-grayScale-400">Total notifications</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-50 text-amber-600">
-              <BellOff className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-grayScale-600">{globalUnread.toLocaleString()}</p>
-              <p className="text-xs text-grayScale-400">Unread</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-grayScale-50 text-grayScale-500">
-              <MailOpen className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-grayScale-600">
-                {Array.from(new Set(notifications.map((n) => n.delivery_channel))).length || "—"}
-              </p>
-              <p className="text-xs text-grayScale-400">Channels used</p>
-            </div>
-          </div>
+          <Card className="shadow-none border border-grayScale-100">
+            <CardContent className="flex items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-xs font-medium text-grayScale-500">Total notifications</p>
+                <p className="mt-1 text-xl font-semibold text-grayScale-700">
+                  {totalCount.toLocaleString()}
+                </p>
+              </div>
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/90 text-white">
+                <Bell className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-none border border-grayScale-100">
+            <CardContent className="flex items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-xs font-medium text-grayScale-500">Unread</p>
+                <p className="mt-1 text-xl font-semibold text-grayScale-700">
+                  {globalUnread.toLocaleString()}
+                </p>
+              </div>
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
+                <BellOff className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-none border border-grayScale-100">
+            <CardContent className="flex items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-xs font-medium text-grayScale-500">Channels used</p>
+                <p className="mt-1 text-xl font-semibold text-grayScale-700">
+                  {Array.from(new Set(notifications.map((n) => n.delivery_channel))).length || "—"}
+                </p>
+              </div>
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-grayScale-50 text-grayScale-500">
+                <MailOpen className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 

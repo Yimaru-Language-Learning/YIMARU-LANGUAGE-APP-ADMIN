@@ -52,7 +52,6 @@ import { FileUpload } from "../../components/ui/file-upload"
 import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { useNavigate } from "react-router-dom"
-import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
   getNotifications,
   getUnreadCount,

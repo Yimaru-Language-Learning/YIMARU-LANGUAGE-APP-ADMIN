@@ -14,7 +14,6 @@ import {
   BookOpen,
   Video,
   ShieldAlert,
-  Loader2,
   MailOpen,
   Mail,
   CheckCheck,
@@ -51,6 +50,7 @@ import {
 } from "../../components/ui/dropdown-menu"
 import { FileUpload } from "../../components/ui/file-upload"
 import { cn } from "../../lib/utils"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
   getNotifications,
   getUnreadCount,
@@ -222,7 +222,7 @@ function NotificationItem({
               title={notification.is_read ? "Mark as unread" : "Mark as read"}
             >
               {toggling ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <SpinnerIcon className="h-3.5 w-3.5" />
               ) : notification.is_read ? (
                 <Mail className="h-3.5 w-3.5" />
               ) : (
@@ -506,6 +506,22 @@ export function NotificationsPage() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+  const startEntry = totalCount === 0 ? 0 : offset + 1
+  const endEntry = Math.min(offset + PAGE_SIZE, totalCount)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1, 2, 3)
+      if (currentPage > 4) pages.push("...")
+      if (currentPage > 3 && currentPage < totalPages - 2) pages.push(currentPage)
+      if (currentPage < totalPages - 3) pages.push("...")
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   const filteredNotifications = notifications.filter((n) => {
     if (channelFilter !== "all" && n.delivery_channel !== channelFilter) return false
@@ -605,7 +621,7 @@ export function NotificationsPage() {
                       onClick={handleMarkAllRead}
                     >
                       {bulkLoading ? (
-                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        <SpinnerIcon className="mr-2 h-3.5 w-3.5" />
                       ) : (
                         <CheckCheck className="mr-2 h-3.5 w-3.5" />
                       )}
@@ -619,7 +635,7 @@ export function NotificationsPage() {
                       onClick={handleMarkAllUnread}
                     >
                       {bulkLoading ? (
-                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        <SpinnerIcon className="mr-2 h-3.5 w-3.5" />
                       ) : (
                         <MailX className="mr-2 h-3.5 w-3.5" />
                       )}
@@ -636,52 +652,44 @@ export function NotificationsPage() {
       {/* Summary cards */}
       {!loading && !error && (
         <div className="mb-5 grid gap-4 sm:grid-cols-3">
-          <Card className="shadow-none border border-grayScale-100">
-            <CardContent className="flex items-center justify-between gap-3 p-4">
-              <div>
-                <p className="text-xs font-medium text-grayScale-500">Total notifications</p>
-                <p className="mt-1 text-xl font-semibold text-grayScale-700">
-                  {totalCount.toLocaleString()}
-                </p>
-              </div>
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500 text-white">
-                <Bell className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-none border border-grayScale-100">
-            <CardContent className="flex items-center justify-between gap-3 p-4">
-              <div>
-                <p className="text-xs font-medium text-grayScale-500">Unread</p>
-                <p className="mt-1 text-xl font-semibold text-grayScale-700">
-                  {globalUnread.toLocaleString()}
-                </p>
-              </div>
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
-                <BellOff className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-none border border-grayScale-100">
-            <CardContent className="flex items-center justify-between gap-3 p-4">
-              <div>
-                <p className="text-xs font-medium text-grayScale-500">Channels used</p>
-                <p className="mt-1 text-xl font-semibold text-grayScale-700">
-                  {Array.from(new Set(notifications.map((n) => n.delivery_channel))).length || "—"}
-                </p>
-              </div>
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-grayScale-50 text-grayScale-500">
-                <MailOpen className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-brand-100 text-brand-600">
+              <Bell className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-grayScale-600">{totalCount.toLocaleString()}</p>
+              <p className="text-xs text-grayScale-400">Total notifications</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-50 text-amber-600">
+              <BellOff className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-grayScale-600">{globalUnread.toLocaleString()}</p>
+              <p className="text-xs text-grayScale-400">Unread</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-grayScale-50 text-grayScale-500">
+              <MailOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-grayScale-600">
+                {Array.from(new Set(notifications.map((n) => n.delivery_channel))).length || "—"}
+              </p>
+              <p className="text-xs text-grayScale-400">Channels used</p>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+          <SpinnerIcon className="h-6 w-6" />
         </div>
       )}
 
@@ -755,51 +763,83 @@ export function NotificationsPage() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-grayScale-500">Channel</span>
-                  <Select
-                    value={channelFilter}
-                    onChange={(e) => setChannelFilter(e.target.value as typeof channelFilter)}
-                    className="h-8 w-[130px] text-xs"
-                  >
-                    <option value="all">All</option>
-                    <option value="push">Push</option>
-                    <option value="sms">SMS</option>
-                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                      >
+                        <span className="truncate">{channelFilter === "all" ? "All" : channelFilter.toUpperCase()}</span>
+                        <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[130px]">
+                      <DropdownMenuRadioGroup
+                        value={channelFilter}
+                        onValueChange={(value) => setChannelFilter(value as typeof channelFilter)}
+                      >
+                        <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="push">Push</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="sms">SMS</DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-grayScale-500">Type</span>
-                  <Select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="h-8 w-[150px] text-xs"
-                  >
-                    <option value="all">All types</option>
-                    {Array.from(new Set(notifications.map((n) => n.type))).map((t) => (
-                      <option key={t} value={t}>
-                        {formatTypeLabel(t)}
-                      </option>
-                    ))}
-                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-[150px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                      >
+                        <span className="truncate">
+                          {typeFilter === "all" ? "All types" : formatTypeLabel(typeFilter)}
+                        </span>
+                        <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[220px]">
+                      <DropdownMenuRadioGroup value={typeFilter} onValueChange={setTypeFilter}>
+                        <DropdownMenuRadioItem value="all">All types</DropdownMenuRadioItem>
+                        {Array.from(new Set(notifications.map((n) => n.type))).map((t) => (
+                          <DropdownMenuRadioItem key={t} value={t}>
+                            {formatTypeLabel(t)}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-grayScale-500">Level</span>
-                  <Select
-                    value={levelFilter}
-                    onChange={(e) => setLevelFilter(e.target.value)}
-                    className="h-8 w-[130px] text-xs"
-                  >
-                    <option value="all">All levels</option>
-                    {Array.from(new Set(notifications.map((n) => n.level))).map((lvl) => (
-                      <option key={lvl} value={lvl}>
-                        {lvl}
-                      </option>
-                    ))}
-                  </Select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                      >
+                        <span className="truncate">{levelFilter === "all" ? "All levels" : levelFilter}</span>
+                        <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[150px]">
+                      <DropdownMenuRadioGroup value={levelFilter} onValueChange={setLevelFilter}>
+                        <DropdownMenuRadioItem value="all">All levels</DropdownMenuRadioItem>
+                        {Array.from(new Set(notifications.map((n) => n.level))).map((lvl) => (
+                          <DropdownMenuRadioItem key={lvl} value={lvl}>
+                            {lvl}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
+          <Card className="overflow-hidden rounded-xl border bg-white shadow-none">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -816,8 +856,14 @@ export function NotificationsPage() {
                 <TableBody>
                   {filteredNotifications.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-10 text-center text-sm text-grayScale-400">
-                        No notifications match your filters.
+                      <TableCell colSpan={7} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <BellOff className="h-8 w-8 text-grayScale-200" />
+                          <div>
+                            <p className="text-sm font-medium text-grayScale-500">No notifications match your filters</p>
+                            <p className="mt-1 text-xs text-grayScale-400">Try adjusting your filters</p>
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -897,7 +943,7 @@ export function NotificationsPage() {
                                 title={n.is_read ? "Mark as unread" : "Mark as read"}
                               >
                                 {isToggling ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-grayScale-400" />
+                                  <SpinnerIcon className="h-3.5 w-3.5" />
                                 ) : n.is_read ? (
                                   <Mail className="h-3.5 w-3.5 text-grayScale-400" />
                                 ) : (
@@ -921,37 +967,72 @@ export function NotificationsPage() {
                 </TableBody>
               </Table>
             </CardContent>
-          </Card>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-xs text-grayScale-400">
-                Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, totalCount)} of {totalCount}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
+              <div className="flex items-center gap-2">
+                <span>Showing</span>
+                <span className="font-medium text-grayScale-600">
+                  {startEntry}-{endEntry}
+                </span>
+                <span>of</span>
+                <span className="font-medium text-grayScale-600">{totalCount}</span>
+                <span className="mr-4">entries</span>
+                <span className="border-l pl-4">Rows per page</span>
+                <div className="relative">
+                  <select
+                    value={PAGE_SIZE}
+                    disabled
+                    className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                  >
+                    <option value={PAGE_SIZE}>{PAGE_SIZE}</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                </div>
+              </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
+                  onClick={() => currentPage > 1 && setOffset(Math.max(0, offset - PAGE_SIZE))}
                   disabled={currentPage <= 1}
-                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    currentPage <= 1 && "cursor-not-allowed opacity-50",
+                  )}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="px-3 text-xs font-medium text-grayScale-600">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                {getPageNumbers().map((n, idx) =>
+                  typeof n === "string" ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setOffset((n - 1) * PAGE_SIZE)}
+                      className={cn(
+                        "h-8 w-8 rounded-md border text-sm font-medium",
+                        n === currentPage
+                          ? "border-brand-500 bg-brand-500 text-white"
+                          : "bg-white text-grayScale-600 hover:bg-grayScale-50",
+                      )}
+                    >
+                      {n}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() => currentPage < totalPages && setOffset(offset + PAGE_SIZE)}
                   disabled={currentPage >= totalPages}
-                  onClick={() => setOffset(offset + PAGE_SIZE)}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    currentPage >= totalPages && "cursor-not-allowed opacity-50",
+                  )}
                 >
                   <ChevronRight className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             </div>
-          )}
+          </Card>
         </>
       )}
 
@@ -1161,7 +1242,7 @@ export function NotificationsPage() {
                 <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-2">
                   {recipientsLoading && (
                     <div className="flex items-center justify-center py-6 text-xs text-grayScale-400">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <SpinnerIcon className="mr-2 h-4 w-4" />
                       Loading users…
                     </div>
                   )}
@@ -1230,7 +1311,7 @@ export function NotificationsPage() {
                 >
                   {sending ? (
                     <>
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      <SpinnerIcon className="mr-2 h-3.5 w-3.5" />
                       Sending…
                     </>
                   ) : (
@@ -1712,7 +1793,7 @@ export function NotificationsPage() {
               <Button type="submit" size="sm" disabled={bulkSending || !bulkMessage.trim()}>
                 {bulkSending ? (
                   <>
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    <SpinnerIcon className="mr-2 h-3.5 w-3.5" />
                     Sending…
                   </>
                 ) : (

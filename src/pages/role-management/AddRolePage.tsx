@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, Loader2, Search, X, Check } from "lucide-react"
+import { ArrowLeft, Search, X, Check } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -10,6 +10,7 @@ import { createRole, setRolePermissions, getAllPermissions } from "../../api/rba
 import type { RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 export function AddRolePage() {
   const navigate = useNavigate()
@@ -186,7 +187,7 @@ export function AddRolePage() {
               disabled={saving || !roleName.trim()}
               className="w-full bg-brand-500 hover:bg-brand-600"
             >
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving && <SpinnerIcon className="h-4 w-4" />}
               {saving ? "Creating…" : "Create Role"}
             </Button>
           </CardContent>
@@ -246,7 +247,7 @@ export function AddRolePage() {
             {/* Loading */}
             {permLoading && (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+                <SpinnerIcon className="h-6 w-6" />
               </div>
             )}
 

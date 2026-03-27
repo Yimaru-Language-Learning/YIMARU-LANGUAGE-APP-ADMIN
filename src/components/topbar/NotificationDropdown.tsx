@@ -12,13 +12,13 @@ import {
   BookOpen,
   Video,
   ShieldAlert,
-  Loader2,
   MailOpen,
   Mail,
   CheckCheck,
 } from "lucide-react"
 import { Badge } from "../ui/badge"
 import { cn } from "../../lib/utils"
+import { SpinnerIcon } from "../ui/spinner-icon"
 import { useNotifications } from "../../hooks/useNotifications"
 import { getNotificationMessage, getNotificationTitle, type Notification } from "../../types/notification.types"
 
@@ -213,7 +213,7 @@ export function NotificationDropdown() {
           <div className="max-h-[480px] overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-grayScale-400" />
+                <SpinnerIcon className="h-6 w-6" />
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-12 text-grayScale-400">

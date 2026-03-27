@@ -51,6 +51,7 @@ import type {
   GetRatingsResponse,
   GetRatingsParams,
   GetVimeoSampleResponse,
+  CreateCourseVideoRequest,
 } from "../types/course.types"
 
 export const getCourseCategories = () =>
@@ -64,6 +65,11 @@ export const getCoursesByCategory = (categoryId: number) =>
 
 export const createCourse = (data: CreateCourseRequest) =>
   http.post("/course-management/courses", data)
+
+export const updateCourseThumbnail = (courseId: number, thumbnailUrl: string) =>
+  http.post(`/course-management/courses/${courseId}/thumbnail`, {
+    thumbnail_url: thumbnailUrl,
+  })
 
 export const deleteCourse = (courseId: number) =>
   http.delete(`/course-management/courses/${courseId}`)
@@ -81,6 +87,11 @@ export const getSubCoursesByCourse = (courseId: number) =>
 export const createSubCourse = (data: CreateSubCourseRequest) =>
   http.post("/course-management/sub-courses", data)
 
+export const updateSubCourseThumbnail = (subCourseId: number, thumbnailUrl: string) =>
+  http.post(`/course-management/sub-courses/${subCourseId}/thumbnail`, {
+    thumbnail_url: thumbnailUrl,
+  })
+
 export const updateSubCourse = (subCourseId: number, data: UpdateSubCourseRequest) =>
   http.patch(`/course-management/sub-courses/${subCourseId}`, data)
 
@@ -96,6 +107,9 @@ export const getVideosBySubCourse = (subCourseId: number) =>
 
 export const createSubCourseVideo = (data: CreateSubCourseVideoRequest) =>
   http.post("/course-management/sub-course-videos", data)
+
+export const createCourseVideo = (data: CreateCourseVideoRequest) =>
+  http.post("/course-management/videos", data)
 
 export const updateSubCourseVideo = (videoId: number, data: UpdateSubCourseVideoRequest) =>
   http.put(`/course-management/sub-course-videos/${videoId}`, data)
@@ -226,6 +240,15 @@ export const deleteQuestion = (questionId: number) =>
 
 export const updateQuestion = (questionId: number, data: CreateQuestionRequest) =>
   http.put(`/questions/${questionId}`, data)
+
+export interface SubmitAudioAnswerRequest {
+  question_id: number
+  question_set_id: number
+  object_key: string
+}
+
+export const submitAudioAnswer = (data: SubmitAudioAnswerRequest) =>
+  http.post("/questions/audio-answer", data)
 
 export const deleteQuestionSet = (questionSetId: number) =>
   http.delete(`/question-sets/${questionSetId}`)

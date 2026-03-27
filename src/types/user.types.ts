@@ -146,3 +146,85 @@ export interface UpdateProfileRequest {
   profile_picture_url?: string
   preferred_language?: string
 }
+
+export type DeletionUserStatus = "ACTIVE" | "PENDING" | "SUSPENDED" | "DEACTIVATED"
+export type DeletionState = "PENDING" | "DUE" | "CANCELLED"
+
+export interface DeletionRequestApiItem {
+  UserID?: number
+  FirstName?: string
+  LastName?: string
+  Email?: string
+  PhoneNumber?: string
+  Role?: string
+  Status?: DeletionUserStatus | string
+  DeletionRequestedAt?: string | null
+  DeletionScheduledAt?: string | null
+  DeletionCancelledAt?: string | null
+  DeletionState?: DeletionState | string
+
+  user_id?: number
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone_number?: string
+  role?: string
+  status?: DeletionUserStatus | string
+  deletion_requested_at?: string | null
+  deletion_scheduled_at?: string | null
+  deletion_cancelled_at?: string | null
+  deletion_state?: DeletionState | string
+}
+
+export interface DeletionRequest {
+  user_id: number
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  role: string
+  status: string
+  deletion_requested_at: string | null
+  deletion_scheduled_at: string | null
+  deletion_cancelled_at: string | null
+  deletion_state: string
+}
+
+export interface GetDeletionRequestsParams {
+  query?: string
+  role?: string
+  status?: DeletionUserStatus
+  state?: DeletionState
+  requested_before?: string
+  requested_after?: string
+  scheduled_before?: string
+  scheduled_after?: string
+  page?: number
+  page_size?: number
+}
+
+export interface GetDeletionRequestsResponse {
+  status: string
+  message: string
+  data: {
+    items: DeletionRequestApiItem[]
+    total: number
+    page: number
+    page_size: number
+  }
+  timestamp: string
+}
+
+export const mapDeletionRequestApiItem = (item: DeletionRequestApiItem): DeletionRequest => ({
+  user_id: item.user_id ?? item.UserID ?? 0,
+  first_name: item.first_name ?? item.FirstName ?? "",
+  last_name: item.last_name ?? item.LastName ?? "",
+  email: item.email ?? item.Email ?? "",
+  phone_number: item.phone_number ?? item.PhoneNumber ?? "",
+  role: item.role ?? item.Role ?? "",
+  status: item.status ?? item.Status ?? "",
+  deletion_requested_at: item.deletion_requested_at ?? item.DeletionRequestedAt ?? null,
+  deletion_scheduled_at: item.deletion_scheduled_at ?? item.DeletionScheduledAt ?? null,
+  deletion_cancelled_at: item.deletion_cancelled_at ?? item.DeletionCancelledAt ?? null,
+  deletion_state: item.deletion_state ?? item.DeletionState ?? "",
+})

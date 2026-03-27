@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Search, Plus, RefreshCw, Edit2, ToggleLeft, ToggleRight } from "lucide-react"
+import { Search, Plus, RefreshCw, Edit2, ToggleLeft, ToggleRight, BookOpen, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -15,7 +15,8 @@ import {
 } from "../../components/ui/table"
 import { Badge } from "../../components/ui/badge"
 import { FileUpload } from "../../components/ui/file-upload"
-import { getCourseCategories, getCoursesByCategory, createCourse, updateCourseStatus, updateCourse } from "../../api/courses.api"
+import { getCourseCategories, getCoursesByCategory, createCourse, updateCourseStatus, updateCourse, updateCourseThumbnail } from "../../api/courses.api"
+import { uploadImageFile } from "../../api/files.api"
 import type { Course, CourseCategory } from "../../types/course.types"
 import {
   Dialog,
@@ -26,6 +27,8 @@ import {
 } from "../../components/ui/dialog"
 import { Textarea } from "../../components/ui/textarea"
 import { toast } from "sonner"
+import { cn } from "../../lib/utils"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 type CourseWithCategory = Course & { category_name: string }
 
@@ -53,6 +56,8 @@ export function AllCoursesPage() {
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [updating, setUpdating] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const fetchAllCourses = async () => {
     setLoading(true)
@@ -97,6 +102,26 @@ export function AllCoursesPage() {
     }
     return true
   })
+  const totalCount = filteredCourses.length
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const paginatedCourses = filteredCourses.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const endEntry = Math.min(safePage * pageSize, totalCount)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1, 2, 3)
+      if (safePage > 4) pages.push("...")
+      if (safePage > 3 && safePage < totalPages - 2) pages.push(safePage)
+      if (safePage < totalPages - 3) pages.push("...")
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   const handleCreateCourse = async () => {
     const effectiveCategoryId = createSubCategoryId || createCategoryId
@@ -110,11 +135,26 @@ export function AllCoursesPage() {
 
     setCreating(true)
     try {
-      await createCourse({
+      const createdRes = await createCourse({
         category_id: Number(effectiveCategoryId),
         title: createTitle.trim(),
         description: createDescription.trim(),
       })
+
+      const createdIdRaw =
+        (createdRes.data?.data as any)?.id ??
+        (createdRes.data?.data as any)?.course?.id ??
+        (createdRes.data?.data as any)?.data?.id
+
+      const createdId = Number(createdIdRaw)
+
+      if (createThumbnail && Number.isFinite(createdId)) {
+        const uploadRes = await uploadImageFile(createThumbnail)
+        const thumbnailUrl = uploadRes.data?.data?.url?.trim()
+        if (thumbnailUrl) {
+          await updateCourseThumbnail(createdId, thumbnailUrl)
+        }
+      }
 
       toast.success("Sub-category created", {
         description: `"${createTitle.trim()}" has been created.`,
@@ -191,7 +231,7 @@ export function AllCoursesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <div className="rounded-2xl bg-white shadow-sm p-6">
-          <RefreshCw className="h-10 w-10 animate-spin text-brand-600" />
+          <SpinnerIcon className="h-10 w-10" />
         </div>
         <p className="mt-4 text-sm font-medium text-grayScale-400">Loading all sub-categories…</p>
       </div>
@@ -244,14 +284,20 @@ export function AllCoursesPage() {
               <Input
                 placeholder="Search by title, description, or category…"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-10 transition-colors focus:border-brand-300 focus:ring-brand-200"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value as typeof categoryFilter)}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value as typeof categoryFilter)
+                  setPage(1)
+                }}
               >
                 <option value="all">All Categories</option>
                 {categories.map((cat) => (
@@ -269,31 +315,21 @@ export function AllCoursesPage() {
 
           {/* Courses Table */}
           {filteredCourses.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-grayScale-200">
+            <div className="rounded-xl border bg-white">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-grayScale-100 hover:bg-grayScale-100">
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Course
-                    </TableHead>
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Category
-                    </TableHead>
-                    <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
-                      Status
-                    </TableHead>
-                    <TableHead className="py-3 text-right text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Actions
-                    </TableHead>
+                  <TableRow>
+                    <TableHead>Course</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="hidden md:table-cell">Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourses.map((course, index) => (
+                  {paginatedCourses.map((course) => (
                     <TableRow
                       key={course.id}
-                      className={`cursor-pointer transition-colors hover:bg-brand-100/30 ${
-                        index % 2 === 0 ? "bg-white" : "bg-grayScale-100/40"
-                      }`}
+                      className="group cursor-pointer"
                       onClick={() =>
                         navigate(
                           `/content/category/${course.category_id}/courses/${course.id}/sub-courses`,
@@ -369,6 +405,79 @@ export function AllCoursesPage() {
                   ))}
                 </TableBody>
               </Table>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
+                <div className="flex items-center gap-2">
+                  <span>Showing</span>
+                  <span className="font-medium text-grayScale-600">
+                    {startEntry}-{endEntry}
+                  </span>
+                  <span>of</span>
+                  <span className="font-medium text-grayScale-600">{totalCount}</span>
+                  <span className="mr-4">entries</span>
+                  <span className="border-l pl-4">Rows per page</span>
+                  <div className="relative">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                        setPage(1)
+                      }}
+                      className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                    >
+                      {[10, 20, 50].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => safePage > 1 && setPage(safePage - 1)}
+                    disabled={safePage === 1}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                      safePage === 1 && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  {getPageNumbers().map((n, idx) =>
+                    typeof n === "string" ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setPage(n)}
+                        className={cn(
+                          "h-8 w-8 rounded-md border text-sm font-medium",
+                          n === safePage
+                            ? "border-brand-500 bg-brand-500 text-white"
+                            : "bg-white text-grayScale-600 hover:bg-grayScale-50",
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ),
+                  )}
+                  <button
+                    onClick={() => safePage < totalPages && setPage(safePage + 1)}
+                    disabled={safePage === totalPages}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                      safePage === totalPages && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-20 text-center">

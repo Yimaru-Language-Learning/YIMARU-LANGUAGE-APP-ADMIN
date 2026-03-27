@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, Edit, AlertCircle, Star, MessageSquare } from "lucide-react"
+import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, Edit, AlertCircle, Star, MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -8,6 +8,7 @@ import alertSrc from "../../assets/Alert.svg"
 import { Button } from "../../components/ui/button"
 import { Badge } from "../../components/ui/badge"
 import { Input } from "../../components/ui/input"
+import { FileUpload } from "../../components/ui/file-upload"
 import {
   Table,
   TableBody,
@@ -16,13 +17,26 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table"
-import { getCoursesByCategory, getCourseCategories, createCourse, deleteCourse, updateCourseStatus, updateCourse, getRatings } from "../../api/courses.api"
+import {
+  getCoursesByCategory,
+  getCourseCategories,
+  createCourse,
+  deleteCourse,
+  updateCourseStatus,
+  updateCourse,
+  updateCourseThumbnail,
+  getRatings,
+} from "../../api/courses.api"
+import { uploadImageFile } from "../../api/files.api"
 import type { Course, CourseCategory, Rating } from "../../types/course.types"
+import { cn } from "../../lib/utils"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 export function CoursesPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
   const navigate = useNavigate()
   const [courses, setCourses] = useState<Course[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
   const [category, setCategory] = useState<CourseCategory | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -41,12 +55,15 @@ export function CoursesPage() {
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [editThumbnail, setEditThumbnail] = useState("")
+  const [editThumbnailFile, setEditThumbnailFile] = useState<File | null>(null)
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [showRatingsModal, setShowRatingsModal] = useState(false)
   const [ratingsCourseId, setRatingsCourseId] = useState<number | null>(null)
   const [courseRatings, setCourseRatings] = useState<Rating[]>([])
   const [courseRatingsLoading, setCourseRatingsLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const fetchCourses = async () => {
     if (!categoryId) return
@@ -85,6 +102,10 @@ export function CoursesPage() {
 
     fetchData()
   }, [categoryId])
+
+  useEffect(() => {
+    setPage(1)
+  }, [categoryId, searchQuery])
 
   const handleOpenModal = () => {
     setTitle("")
@@ -167,6 +188,7 @@ export function CoursesPage() {
     setEditTitle(course.title || "")
     setEditDescription(course.description || "")
     setEditThumbnail(course.thumbnail || "")
+    setEditThumbnailFile(null)
     setUpdateError(null)
     setShowEditModal(true)
   }
@@ -177,6 +199,7 @@ export function CoursesPage() {
     setEditTitle("")
     setEditDescription("")
     setEditThumbnail("")
+    setEditThumbnailFile(null)
     setUpdateError(null)
   }
 
@@ -199,9 +222,18 @@ export function CoursesPage() {
       await updateCourse(courseToEdit.id, {
         title: editTitle.trim(),
         description: editDescription.trim(),
-        thumbnail: editThumbnail.trim() || undefined,
         is_active: courseToEdit.is_active,
       })
+
+      const thumbnailUrl =
+        editThumbnailFile
+          ? (await uploadImageFile(editThumbnailFile)).data?.data?.url?.trim()
+          : editThumbnail.trim() || ""
+
+      if (thumbnailUrl) {
+        await updateCourseThumbnail(courseToEdit.id, thumbnailUrl)
+      }
+
       handleCloseEditModal()
       await fetchCourses()
     } catch (err: any) {
@@ -230,14 +262,19 @@ export function CoursesPage() {
     }
   }
 
+  const filteredCourses = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return courses
+    return courses.filter((course) => {
+      const haystack = `${course.title} ${course.description ?? ""} ${course.id}`.toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [courses, searchQuery])
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
-        {/* <div className="rounded-2xl bg-white shadow-sm p-6">
-          <RefreshCw className="h-10 w-10 animate-spin text-brand-600" />
-        </div>
-        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading courses...</p> */}
       </div>
     )
   }
@@ -251,6 +288,27 @@ export function CoursesPage() {
         </div>
       </div>
     )
+  }
+
+  const totalCount = filteredCourses.length
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const paginatedCourses = filteredCourses.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const endEntry = Math.min(safePage * pageSize, totalCount)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1, 2, 3)
+      if (safePage > 4) pages.push("...")
+      if (safePage > 3 && safePage < totalPages - 2) pages.push(safePage)
+      if (safePage < totalPages - 3) pages.push("...")
+      pages.push(totalPages)
+    }
+    return pages
   }
 
   return (
@@ -284,9 +342,20 @@ export function CoursesPage() {
       {/* Course table or empty state */}
       <Card className="shadow-soft">
         <CardHeader className="border-b border-grayScale-200 pb-3">
-          <CardTitle className="text-base font-semibold text-grayScale-600">
-            Sub-category Management
-          </CardTitle>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base font-semibold text-grayScale-600">
+              Sub-category Management
+            </CardTitle>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search sub-categories..."
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="pt-4">
           {courses.length === 0 ? (
@@ -305,29 +374,28 @@ export function CoursesPage() {
                 Add your first sub-category
               </Button>
             </div>
+          ) : filteredCourses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-16 text-center">
+              <p className="text-base font-semibold text-grayScale-600">No matching sub-categories</p>
+              <p className="mt-1.5 text-sm text-grayScale-400">
+                Try a different search term.
+              </p>
+            </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-grayScale-200">
+            <div className="rounded-xl border bg-white">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-grayScale-100 hover:bg-grayScale-100">
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Sub-category
-                    </TableHead>
-                    <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
-                      Status
-                    </TableHead>
-                    <TableHead className="py-3 text-right text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Actions
-                    </TableHead>
+                  <TableRow>
+                    <TableHead>Sub-category</TableHead>
+                    <TableHead className="hidden md:table-cell">Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {courses.map((course, index) => (
+                  {paginatedCourses.map((course) => (
                     <TableRow
                       key={course.id}
-                      className={`cursor-pointer transition-colors hover:bg-brand-100/30 ${
-                        index % 2 === 0 ? "bg-white" : "bg-grayScale-100/40"
-                      }`}
+                      className="group cursor-pointer"
                       onClick={() => handleCourseClick(course.id)}
                     >
                       <TableCell className="max-w-md py-3.5">
@@ -405,6 +473,79 @@ export function CoursesPage() {
                   ))}
                 </TableBody>
               </Table>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
+                <div className="flex items-center gap-2">
+                  <span>Showing</span>
+                  <span className="font-medium text-grayScale-600">
+                    {startEntry}-{endEntry}
+                  </span>
+                  <span>of</span>
+                  <span className="font-medium text-grayScale-600">{totalCount}</span>
+                  <span className="mr-4">entries</span>
+                  <span className="border-l pl-4">Rows per page</span>
+                  <div className="relative">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                        setPage(1)
+                      }}
+                      className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                    >
+                      {[10, 20, 50].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => safePage > 1 && setPage(safePage - 1)}
+                    disabled={safePage === 1}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                      safePage === 1 && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  {getPageNumbers().map((n, idx) =>
+                    typeof n === "string" ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setPage(n)}
+                        className={cn(
+                          "h-8 w-8 rounded-md border text-sm font-medium",
+                          n === safePage
+                            ? "border-brand-500 bg-brand-500 text-white"
+                            : "bg-white text-grayScale-600 hover:bg-grayScale-50",
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ),
+                  )}
+                  <button
+                    onClick={() => safePage < totalPages && setPage(safePage + 1)}
+                    disabled={safePage === totalPages}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                      safePage === totalPages && "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
@@ -544,14 +685,23 @@ export function CoursesPage() {
                   htmlFor="edit-course-thumbnail"
                   className="mb-2 block text-sm font-medium text-grayScale-600"
                 >
-                  Thumbnail URL
+                  Thumbnail
                 </label>
-                <Input
-                  id="edit-course-thumbnail"
-                  placeholder="Enter thumbnail URL (e.g., https://example.com/image.jpg)"
-                  value={editThumbnail}
-                  onChange={(e) => setEditThumbnail(e.target.value)}
-                />
+                <div className="space-y-2">
+                  <FileUpload
+                    accept="image/*"
+                    onFileSelect={(file) => setEditThumbnailFile(file)}
+                    label="Upload thumbnail"
+                    description="JPEG, PNG, WEBP"
+                    className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+                  />
+                  <Input
+                    id="edit-course-thumbnail"
+                    placeholder="Or paste thumbnail URL (https://...)"
+                    value={editThumbnail}
+                    onChange={(e) => setEditThumbnail(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -592,7 +742,7 @@ export function CoursesPage() {
             <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
               {courseRatingsLoading ? (
                 <div className="flex flex-col items-center justify-center py-16">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                  <SpinnerIcon className="h-8 w-8" />
                   <p className="mt-4 text-sm font-medium text-grayScale-500">Loading ratings…</p>
                 </div>
               ) : courseRatings.length === 0 ? (

@@ -1,5 +1,12 @@
 import http from "./http";
-import { type UserProfileResponse, type GetUsersResponse, type UpdateProfileRequest, type UserSummaryResponse } from "../types/user.types";
+import {
+  type UserProfileResponse,
+  type GetUsersResponse,
+  type UpdateProfileRequest,
+  type UserSummaryResponse,
+  type GetDeletionRequestsParams,
+  type GetDeletionRequestsResponse,
+} from "../types/user.types";
 
 export const getUsers = (
   page?: number,
@@ -53,3 +60,11 @@ export const updateProfile = (data: UpdateProfileRequest) =>
 
 export const getUserSummary = () =>
   http.get<UserSummaryResponse>("/users/summary");
+
+export const getDeletionRequests = (params: GetDeletionRequestsParams) =>
+  http.get<GetDeletionRequestsResponse>("/admin/users/deletion-requests", { params });
+
+export const updateUserProfilePicture = (id: number, profilePictureUrl: string) =>
+  http.post(`/user/${id}/profile-picture`, {
+    profile_picture_url: profilePictureUrl,
+  });

@@ -38,6 +38,7 @@ import {
 import { cn } from "../../lib/utils";
 import { getActivityLogs, getActivityLogById } from "../../api/activity-logs.api";
 import type { ActivityLog, ActivityLogFilters } from "../../types/activity-log.types";
+import { SpinnerIcon } from "../../components/ui/spinner-icon";
 
 // ── Action type configuration ──────────────────────────────────────
 const ACTION_TYPES = [
@@ -250,7 +251,7 @@ export function UserLogPage() {
             fetchLogs();
           }}
         >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          {loading ? <SpinnerIcon className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
           Refresh
         </Button>
       </div>
@@ -566,7 +567,7 @@ export function UserLogPage() {
 
           {detailLoading ? (
             <div className="flex items-center justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin text-grayScale-300" />
+              <SpinnerIcon className="h-6 w-6" />
             </div>
           ) : selectedLog ? (
             <div className="space-y-4">

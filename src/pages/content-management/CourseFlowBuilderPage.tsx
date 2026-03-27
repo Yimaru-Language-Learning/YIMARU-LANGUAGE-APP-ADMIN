@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
-  Loader2,
   RefreshCw,
   Sparkles,
 } from "lucide-react"
@@ -53,6 +52,7 @@ import type {
 } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 type PracticeListItem = LearningPathPractice & { display_order: number }
 
@@ -504,7 +504,7 @@ export function CourseFlowBuilderPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <RefreshCw className="h-8 w-8 animate-spin text-brand-500" />
+        <SpinnerIcon className="h-8 w-8" />
         <p className="mt-3 text-sm text-grayScale-400">Loading learning tree...</p>
       </div>
     )
@@ -582,7 +582,7 @@ export function CourseFlowBuilderPage() {
               </CardTitle>
               {savingKey && (
                 <span className="inline-flex items-center gap-1 text-xs text-brand-500">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <SpinnerIcon className="h-3.5 w-3.5" />
                   Saving...
                 </span>
               )}
@@ -618,7 +618,7 @@ export function CourseFlowBuilderPage() {
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Course sub-categories</p>
               {loadingCourses ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
+                  <SpinnerIcon className="h-5 w-5" />
                 </div>
               ) : activeCourses.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-grayScale-200 px-3 py-6 text-center text-xs text-grayScale-400">
@@ -655,7 +655,7 @@ export function CourseFlowBuilderPage() {
               <CardTitle className="text-base font-semibold text-grayScale-600">Learning path detail</CardTitle>
               {savingKey && (
                 <span className="inline-flex items-center gap-1 text-xs text-brand-500">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <SpinnerIcon className="h-3.5 w-3.5" />
                   Saving...
                 </span>
               )}
@@ -668,7 +668,7 @@ export function CourseFlowBuilderPage() {
               </p>
             ) : loadingPath ? (
               <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+                <SpinnerIcon className="h-6 w-6" />
               </div>
             ) : !learningPath || learningPath.sub_courses.length === 0 ? (
               <p className="rounded-lg border border-dashed border-grayScale-200 px-3 py-10 text-center text-xs text-grayScale-400">
@@ -774,7 +774,7 @@ export function CourseFlowBuilderPage() {
                                 </p>
                                 {loadingPracticesBySubCourse[subCourse.id] ? (
                                   <div className="flex items-center gap-2 py-6 text-xs text-grayScale-400">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <SpinnerIcon className="h-3.5 w-3.5" />
                                     Loading sets...
                                   </div>
                                 ) : (

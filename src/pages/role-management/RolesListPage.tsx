@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Plus, Search, Shield, ShieldCheck, ChevronLeft, ChevronRight,
-  Loader2, AlertCircle, Eye, X, Pencil, Check,
+  AlertCircle, Eye, X, Pencil, Check,
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
@@ -16,6 +16,7 @@ import { getRoles, getRoleDetail, getAllPermissions, setRolePermissions, updateR
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 export function RolesListPage() {
   const navigate = useNavigate()
@@ -277,7 +278,7 @@ export function RolesListPage() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+          <SpinnerIcon className="h-8 w-8" />
         </div>
       )}
 
@@ -473,7 +474,7 @@ export function RolesListPage() {
                       onClick={handleSaveRole}
                       disabled={savingRole || !editName.trim()}
                     >
-                      {savingRole && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {savingRole && <SpinnerIcon className="h-3.5 w-3.5" />}
                       {savingRole ? "Saving…" : "Save"}
                     </Button>
                   </div>
@@ -484,7 +485,7 @@ export function RolesListPage() {
 
           {detailLoading && (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+              <SpinnerIcon className="h-6 w-6" />
             </div>
           )}
 
@@ -580,7 +581,7 @@ export function RolesListPage() {
 
                     {permLoading && (
                       <div className="flex items-center justify-center py-10">
-                        <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+                        <SpinnerIcon className="h-6 w-6" />
                       </div>
                     )}
 
@@ -677,7 +678,7 @@ export function RolesListPage() {
                         onClick={handleSavePermissions}
                         disabled={savingPermissions}
                       >
-                        {savingPermissions && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        {savingPermissions && <SpinnerIcon className="h-3.5 w-3.5" />}
                         {savingPermissions ? "Saving…" : "Save Permissions"}
                       </Button>
                     </div>

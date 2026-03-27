@@ -260,6 +260,21 @@ export interface CreateSubCourseVideoRequest {
   video_url: string
 }
 
+export type VideoVisibility = "PUBLISHED" | "DRAFT" | "PRIVATE" | "UNLISTED" | string
+export type VideoStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED" | string
+
+export interface CreateCourseVideoRequest {
+  sub_course_id: number
+  title: string
+  description: string
+  video_url: string
+  duration: number
+  resolution?: string
+  visibility?: VideoVisibility
+  display_order?: number
+  status?: VideoStatus
+}
+
 export interface CreateVimeoVideoRequest {
   sub_course_id: number
   title: string
@@ -484,6 +499,7 @@ export interface CreateQuestionRequest {
   tips?: string
   explanation?: string
   status?: string
+  image_url?: string
   options?: QuestionOption[]
   voice_prompt?: string
   sample_answer_voice_prompt?: string
@@ -518,6 +534,7 @@ export interface QuestionDetail {
   short_answers?: string[] | QuestionShortAnswer[]
   tips?: string | null
   explanation?: string | null
+  image_url?: string | null
   voice_prompt?: string | null
   sample_answer_voice_prompt?: string | null
   audio_correct_answer_text?: string | null

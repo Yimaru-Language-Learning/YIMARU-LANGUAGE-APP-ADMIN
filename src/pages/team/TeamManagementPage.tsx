@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
   Plus,
   ChevronDown,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
   X,
@@ -80,44 +79,85 @@ function formatRoleLabel(role: string): string {
     .join(" ");
 }
 
+function normalizeFilterValue(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
 export function TeamManagementPage() {
   const navigate = useNavigate();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
-  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [toggledStatuses, setToggledStatuses] = useState<Record<number, boolean>>({});
   const [confirmDialog, setConfirmDialog] = useState<{ id: number; name: string; newStatus: string } | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchMembers = async () => {
+      setLoading(true);
       try {
-        const res = await getTeamMembers(page, pageSize);
-        const data = res.data.data;
-        setMembers(data);
-        setTotal(res.data.metadata.total);
+        const batchSize = 100;
+        const firstRes = await getTeamMembers(1, batchSize);
+        const firstBatch = firstRes.data.data ?? [];
+        const totalPages = firstRes.data.metadata?.total_pages ?? 1;
+        let allMembers = firstBatch;
+        if (totalPages > 1) {
+          const restResponses = await Promise.all(
+            Array.from({ length: totalPages - 1 }, (_, idx) => getTeamMembers(idx + 2, batchSize)),
+          );
+          const restBatches = restResponses.flatMap((res) => res.data.data ?? []);
+          allMembers = [...firstBatch, ...restBatches];
+        }
+        setMembers(allMembers);
 
         const initialStatuses: Record<number, boolean> = {};
-        data.forEach((m) => {
+        allMembers.forEach((m) => {
           initialStatuses[m.id] = m.status === "active";
         });
         setToggledStatuses((prev) => ({ ...prev, ...initialStatuses }));
       } catch (error) {
         console.error("Failed to fetch team members:", error);
         setMembers([]);
-        setTotal(0);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchMembers();
-  }, [page, pageSize]);
+  }, []);
 
+  const filteredMembers = useMemo(() => {
+    return members.filter((member) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        `${member.first_name} ${member.last_name}`.toLowerCase().includes(q) ||
+        member.email.toLowerCase().includes(q);
+      const roleValue = normalizeFilterValue(member.team_role || "");
+      const statusValue = normalizeFilterValue(member.status || "");
+      const matchesRole = !roleFilter || roleValue === normalizeFilterValue(roleFilter);
+      const matchesStatus = !statusFilter || statusValue === normalizeFilterValue(statusFilter);
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [members, search, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, statusFilter, pageSize]);
+
+  const total = filteredMembers.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, pageCount);
+  const startEntry = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endEntry = Math.min(safePage * pageSize, total);
+  const paginatedMembers = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredMembers.slice(start, start + pageSize);
+  }, [filteredMembers, safePage, pageSize]);
 
   const handlePrev = () => safePage > 1 && setPage(safePage - 1);
   const handleNext = () => safePage < pageCount && setPage(safePage + 1);
@@ -152,6 +192,9 @@ export function TeamManagementPage() {
     setToggledStatuses((prev) => ({ ...prev, [id]: newStatus === "active" }));
     try {
       await updateTeamMemberStatus(id, newStatus);
+      setMembers((prev) =>
+        prev.map((member) => (member.id === id ? { ...member, status: newStatus } : member)),
+      );
       toast.success(
         `${name || "Team member"} ${newStatus === "active" ? "activated" : "deactivated"} successfully`,
       );
@@ -230,13 +273,9 @@ export function TeamManagementPage() {
           <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
         </div>
 
-        <Button variant="outline" className="shrink-0">
-          <SlidersHorizontal className="h-4 w-4" />
-          More Filters
-        </Button>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-xl border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -250,21 +289,30 @@ export function TeamManagementPage() {
           </TableHeader>
 
           <TableBody>
-            {members.length === 0 ? (
+            {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-grayScale-400">
-                  No team members found
+                <TableCell colSpan={6} className="py-12 text-center text-sm text-grayScale-400">
+                  Loading team members...
+                </TableCell>
+              </TableRow>
+            ) : filteredMembers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-12 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-sm font-medium text-grayScale-500">No team members found</p>
+                    <p className="text-xs text-grayScale-400">Try adjusting your filters</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
-              members.map((member) => {
+              paginatedMembers.map((member) => {
                 const initials = `${member.first_name?.[0] ?? ""}${member.last_name?.[0] ?? ""}`.toUpperCase();
                 const isActive = toggledStatuses[member.id] ?? false;
 
                 return (
                   <TableRow
                     key={member.id}
-                    className="cursor-pointer hover:bg-grayScale-50"
+                    className="group cursor-pointer"
                     onClick={() => navigate(`/team/${member.id}`)}
                   >
                     <TableCell>
@@ -348,7 +396,14 @@ export function TeamManagementPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
           <div className="flex items-center gap-2">
-            <span>Row Per Page</span>
+            <span>Showing</span>
+            <span className="font-medium text-grayScale-600">
+              {startEntry}-{endEntry}
+            </span>
+            <span>of</span>
+            <span className="font-medium text-grayScale-600">{total}</span>
+            <span className="mr-4">entries</span>
+            <span className="border-l pl-4">Rows per page</span>
             <div className="relative">
               <select
                 value={pageSize}
@@ -366,7 +421,6 @@ export function TeamManagementPage() {
               </select>
               <ChevronDown className="absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
             </div>
-            <span>Entries</span>
           </div>
 
           <div className="flex items-center gap-1">

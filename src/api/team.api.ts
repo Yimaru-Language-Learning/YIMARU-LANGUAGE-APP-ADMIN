@@ -1,5 +1,10 @@
 import http from "./http"
-import type { GetTeamMembersResponse, GetTeamMemberResponse, CreateTeamMemberRequest } from "../types/team.types"
+import type {
+  GetTeamMembersResponse,
+  GetTeamMemberResponse,
+  CreateTeamMemberRequest,
+  UpdateTeamMemberRequest,
+} from "../types/team.types"
 
 export const getTeamMembers = (page?: number, pageSize?: number) =>
   http.get<GetTeamMembersResponse>("/team/members", {
@@ -17,3 +22,6 @@ export const createTeamMember = (data: CreateTeamMemberRequest) =>
 
 export const updateTeamMemberStatus = (id: number, status: string) =>
   http.patch(`/team/members/${id}/status`, { status })
+
+export const updateTeamMember = (id: number, data: UpdateTeamMemberRequest) =>
+  http.put(`/team/members/${id}`, data)

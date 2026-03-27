@@ -1,35 +1,23 @@
-import { useEffect, useState } from "react";
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Globe,
-  Loader2,
-  Mail,
-  MapPin,
-  Pencil,
-  Phone,
-  Save,
-  Shield,
-  User,
-  X,
-  XCircle,
-  Briefcase,
-  BookOpen,
-  Target,
-  Languages,
-  Heart,
-  MessageCircle,
-} from "lucide-react";
+import { useEffect, useState, type ChangeEvent } from "react";
+import { BadgeCheck, Briefcase, CalendarDays, Mail, Phone, Shield, User } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
-import { Select } from "../components/ui/select";
-
-import { cn } from "../lib/utils";
-import { getMyProfile, updateProfile } from "../api/users.api";
-import type { UserProfileData, UpdateProfileRequest } from "../types/user.types";
+import { Textarea } from "../components/ui/textarea";
+import { FileUpload } from "../components/ui/file-upload";
+import { getMyProfile } from "../api/users.api";
+import { updateTeamMember } from "../api/team.api";
+import { uploadImageFile } from "../api/files.api";
+import { SpinnerIcon } from "../components/ui/spinner-icon";
+import type { UpdateTeamMemberRequest } from "../types/team.types";
 import { toast } from "sonner";
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -50,6 +38,28 @@ function formatDateTime(dateStr: string | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+interface TeamMeProfile {
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  team_role: string
+  department: string
+  job_title: string
+  employment_type: string
+  hire_date: string
+  bio: string
+  status: string
+  email_verified: boolean
+  permissions: string[]
+  last_login: string | null
+  created_at: string
+  emergency_contact?: string
+  work_phone?: string
+  profile_picture_url?: string
 }
 
 function LoadingSkeleton() {
@@ -89,103 +99,26 @@ function LoadingSkeleton() {
   );
 }
 
-function VerifiedIcon({ verified }: { verified: boolean }) {
-  return verified ? (
-    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-mint-100">
-      <CheckCircle2 className="h-3.5 w-3.5 text-mint-500" />
-    </div>
-  ) : (
-    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-grayScale-100">
-      <XCircle className="h-3.5 w-3.5 text-grayScale-300" />
-    </div>
-  );
-}
-
-function ProgressRing({ percent }: { percent: number }) {
-  const radius = 18;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percent / 100) * circumference;
-
-  return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg className="h-12 w-12 -rotate-90" viewBox="0 0 44 44">
-        <circle
-          cx="22"
-          cy="22"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          className="text-grayScale-200"
-        />
-        <circle
-          cx="22"
-          cy="22"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="text-brand-500 transition-all duration-700"
-        />
-      </svg>
-      <span className="absolute text-[10px] font-bold text-brand-600">{percent}%</span>
-    </div>
-  );
-}
-
-function DetailItem({
-  icon: Icon,
-  label,
-  value,
-  extra,
-  editNode,
-  editing,
-}: {
-  icon: typeof User;
-  label: string;
-  value: string;
-  extra?: React.ReactNode;
-  editNode?: React.ReactNode;
-  editing?: boolean;
-}) {
-  return (
-    <div className="group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-grayScale-50/80">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-100/80 text-grayScale-400 transition-colors group-hover:bg-brand-50 group-hover:text-brand-500">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
-          {label}
-        </p>
-        {editing && editNode ? (
-          <div className="mt-1">{editNode}</div>
-        ) : (
-          <div className="mt-0.5 flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-grayScale-700">{value || "—"}</p>
-            {extra}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfileData | null>(null);
+  const [profile, setProfile] = useState<TeamMeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editForm, setEditForm] = useState<UpdateProfileRequest>({});
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [editForm, setEditForm] = useState<UpdateTeamMemberRequest>({
+    first_name: "",
+    last_name: "",
+    phone_number: "",
+    profile_picture_url: "",
+    bio: "",
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const res = await getMyProfile();
-        setProfile(res.data.data);
+        setProfile((res.data?.data ?? null) as unknown as TeamMeProfile | null);
       } catch (err) {
         console.error("Failed to fetch profile", err);
         setError("Failed to load profile. Please try again later.");
@@ -198,50 +131,66 @@ export function ProfilePage() {
 
   const startEditing = () => {
     if (!profile) return;
-    setEditForm({
+    const nextForm: UpdateTeamMemberRequest = {
       first_name: profile.first_name ?? "",
       last_name: profile.last_name ?? "",
-      nick_name: profile.nick_name ?? "",
-      gender: profile.gender ?? "",
-      birth_day: profile.birth_day ?? "",
-      age_group: profile.age_group ?? "",
-      education_level: profile.education_level ?? "",
-      country: profile.country ?? "",
-      region: profile.region ?? "",
-      occupation: profile.occupation ?? "",
-      learning_goal: profile.learning_goal ?? "",
-      language_goal: profile.language_goal ?? "",
-      language_challange: profile.language_challange ?? "",
-      favoutite_topic: profile.favoutite_topic ?? "",
-      preferred_language: profile.preferred_language ?? "",
-    });
+      phone_number: profile.phone_number ?? "",
+      profile_picture_url: profile.profile_picture_url ?? "",
+      bio: profile.bio ?? "",
+    };
+    setEditForm(nextForm);
+    setProfilePictureFile(null);
     setEditing(true);
   };
 
   const cancelEditing = () => {
+    setProfilePictureFile(null);
     setEditing(false);
-    setEditForm({});
+  };
+
+  const updateField = (field: keyof UpdateTeamMemberRequest, value: string) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
+    if (!profile) return;
+
+    let nextProfilePictureUrl = editForm.profile_picture_url ?? "";
+    if (profilePictureFile) {
+      try {
+        const uploadRes = await uploadImageFile(profilePictureFile);
+        const uploadedUrl = uploadRes.data?.data?.url?.trim();
+        if (!uploadedUrl) throw new Error("Missing uploaded image url");
+        nextProfilePictureUrl = uploadedUrl;
+      } catch (err) {
+        console.error("Failed to upload profile picture:", err);
+        toast.error("Failed to upload profile picture");
+        return;
+      }
+    }
+
+    const payload: UpdateTeamMemberRequest = {
+      bio: editForm.bio ?? "",
+      first_name: editForm.first_name ?? "",
+      last_name: editForm.last_name ?? "",
+      phone_number: editForm.phone_number ?? "",
+      profile_picture_url: nextProfilePictureUrl,
+    };
+
     setSaving(true);
     try {
-      await updateProfile(editForm);
-      const res = await getMyProfile();
-      setProfile(res.data.data);
+      await updateTeamMember(profile.id, payload);
+      const refreshed = await getMyProfile();
+      setProfile((refreshed.data?.data ?? null) as unknown as TeamMeProfile | null);
       setEditing(false);
-      setEditForm({});
+      setProfilePictureFile(null);
       toast.success("Profile updated successfully");
     } catch (err) {
-      console.error("Failed to update profile", err);
-      toast.error("Failed to update profile. Please try again.");
+      console.error("Failed to update team member profile", err);
+      toast.error("Failed to update profile");
     } finally {
       setSaving(false);
     }
-  };
-
-  const updateField = (field: keyof UpdateProfileRequest, value: string) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
   if (loading) return <LoadingSkeleton />;
@@ -269,502 +218,216 @@ export function ProfilePage() {
   }
 
   const fullName = `${profile.first_name} ${profile.last_name}`;
-  const completionPct = profile.profile_completion_percentage ?? 0;
+  const initials = `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`.toUpperCase();
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 pb-8">
-      {/* ─── Hero Card ─── */}
-      <div className="relative overflow-hidden rounded-3xl border border-grayScale-100 bg-white shadow-sm ring-1 ring-black/5">
-        {/* Tall dark gradient banner with content inside */}
-        <div className="relative flex min-h-[220px] flex-col justify-between bg-gradient-to-br from-[#1a1f4e] via-[#2d2b6b] to-[#3b3480] px-6 py-8 sm:px-8">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
+    <div className="mx-auto w-full max-w-7xl rounded-2xl bg-[#f7f1f8] p-4 pb-8 sm:p-6">
+      <div className="overflow-hidden rounded-2xl border border-[#d9bddb] bg-white">
+        <div className="h-40 w-full bg-gradient-to-r from-[#d6aed6] via-[#e4cce4] to-[#cba0cd]" />
 
-          <div className="relative z-10 space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Hello {profile.first_name}
-            </h2>
-            <p className="max-w-2xl text-sm leading-relaxed text-white/70">
-              Track your account status, keep profile details up to date, and manage your learning preferences from one place.
-            </p>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90">
-                <Shield className="h-3.5 w-3.5" />
-                {profile.role}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90">
-                <Clock className="h-3.5 w-3.5" />
-                Last login {formatDate(profile.last_login)}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90">
-                <Target className="h-3.5 w-3.5" />
-                {completionPct}% complete
-              </span>
+        <div className="grid gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="border-r border-[#eadbea] bg-white px-5 pb-6">
+            <div className="-mt-16">
+              <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-[#d6aed6] text-2xl font-bold text-[#6f2aa8]">
+                {initials}
+              </div>
+              <h2 className="mt-3 text-2xl font-bold text-grayScale-700">{fullName}</h2>
+              <p className="text-sm text-grayScale-400">{profile.job_title || "Team Member"}</p>
             </div>
-          </div>
 
-          <div className="relative z-10 mt-6">
-            {!editing ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 border-white/30 bg-white/10 px-3 text-xs font-medium text-white shadow-sm backdrop-blur-sm hover:bg-white/20 hover:text-white"
-                onClick={startEditing}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit Profile
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 border-white/30 bg-white/10 px-3 text-xs text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
-                  onClick={cancelEditing}
-                  disabled={saving}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-8 gap-1.5 bg-white text-xs text-[#1a1f4e] hover:bg-white/90"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <div className="mt-4">
+              <div className="flex w-full items-center justify-between rounded-lg border border-[#d9bddb] bg-[#f4e8f4] px-3 py-2">
+                <span className="text-sm font-medium text-[#6f2aa8]">Account Status</span>
+                <span className="text-sm font-semibold uppercase text-[#5e2390]">{profile.status}</span>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-5 text-sm">
+              <section>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">About</p>
+                <div className="space-y-2 text-grayScale-600">
+                  <div className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#6f2aa8]" />{profile.job_title || "Job title not set"}</div>
+                  <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-[#6f2aa8]" />{profile.team_role || "Role not set"}</div>
+                  <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#6f2aa8]" />Hire date: {formatDate(profile.hire_date)}</div>
+                  <div className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-[#6f2aa8]" />{profile.department || "Department not set"}</div>
+                </div>
+              </section>
+
+              <section>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Contact</p>
+                <div className="space-y-2 text-grayScale-600">
+                  <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#6f2aa8]" />{profile.email}</div>
+                  <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-[#6f2aa8]" />{profile.phone_number || "—"}</div>
+                </div>
+              </section>
+
+              <section>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Access</p>
+                <p className="text-xs text-grayScale-500">Permissions from `/team/me`</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(profile.permissions ?? []).length === 0 ? (
+                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">No permissions listed</Badge>
                   ) : (
-                    <Save className="h-3.5 w-3.5" />
+                    profile.permissions.map((permission) => (
+                      <Badge key={permission} className="bg-[#ecd9ec] text-[#6f2aa8]">
+                        {permission}
+                      </Badge>
+                    ))
                   )}
-                  {saving ? "Saving…" : "Save Changes"}
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Identity info below banner */}
-        <div className="bg-gradient-to-b from-white to-grayScale-50/40 px-6 py-5 sm:px-8">
-          {editing ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                className="h-9 w-40 text-sm font-semibold"
-                value={editForm.first_name ?? ""}
-                onChange={(e) => updateField("first_name", e.target.value)}
-                placeholder="First name"
-              />
-              <Input
-                className="h-9 w-40 text-sm font-semibold"
-                value={editForm.last_name ?? ""}
-                onChange={(e) => updateField("last_name", e.target.value)}
-                placeholder="Last name"
-              />
-              <span className="rounded-full bg-grayScale-50 px-2.5 py-0.5 text-xs font-medium text-grayScale-500">
-                #{profile.id}
-              </span>
+                </div>
+              </section>
             </div>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-xl font-bold tracking-tight text-grayScale-800 sm:text-2xl">
-                {fullName}
-              </h2>
-              {profile.nick_name && (
-                <span className="text-sm font-medium text-grayScale-400">
-                  @{profile.nick_name}
-                </span>
-              )}
-              <span className="rounded-full bg-grayScale-50 px-2.5 py-0.5 text-xs font-medium text-grayScale-500">
-                #{profile.id}
-              </span>
+          </aside>
+
+          <main className="bg-[#fdf8fd] px-5 py-6 sm:px-7">
+            <div className="space-y-5">
+              <Card className="border-[#d9bddb] bg-white shadow-none">
+                <CardContent className="p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-grayScale-700">Summary</h3>
+                    <button
+                      type="button"
+                      onClick={startEditing}
+                      className="inline-flex items-center rounded-md border border-[#d9bddb] bg-[#f4e8f4] px-3 py-1.5 text-sm font-medium text-[#6f2aa8] transition-colors hover:bg-[#ecd9ec] hover:text-[#5e2390] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c39bd4]"
+                    >
+                      Edit profile
+                    </button>
+                  </div>
+                  <div className="space-y-2 text-sm text-grayScale-600">
+                    <div className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#6f2aa8]" />{profile.job_title || "Role-focused work item"}</div>
+                    <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-[#6f2aa8]" />{profile.team_role || "Team responsibility"}</div>
+                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#6f2aa8]" />{profile.email}</div>
+                    <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-[#6f2aa8]" />{profile.phone_number || "No phone number"}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-[#d9bddb] bg-white shadow-none">
+                <CardContent className="p-5">
+                  <h3 className="mb-3 text-base font-semibold text-grayScale-700">Employment</h3>
+                  <div className="rounded-lg border border-[#dcc3df] bg-[#f4e8f4] p-3">
+                    <p className="text-sm font-medium text-grayScale-700">{profile.department || "Department not set"}</p>
+                    <p className="text-xs text-grayScale-500">Employment type: {profile.employment_type || "—"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-[#d9bddb] bg-white shadow-none">
+                <CardContent className="p-5">
+                  <h3 className="mb-3 text-base font-semibold text-grayScale-700">More about me</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Status {profile.status}</Badge>
+                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Email {profile.email_verified ? "verified" : "not verified"}</Badge>
+                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Joined {formatDate(profile.created_at)}</Badge>
+                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Last login {formatDateTime(profile.last_login)}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-[#d9bddb] bg-white shadow-none">
+                <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-grayScale-500">First Name</p>
+                    <p className="text-sm font-medium text-grayScale-700">{profile.first_name}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-grayScale-500">Last Name</p>
+                    <p className="text-sm font-medium text-grayScale-700">{profile.last_name}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-grayScale-500">Department</p>
+                    <p className="text-sm font-medium text-grayScale-700">{profile.department || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-grayScale-500">Team Role</p>
+                    <p className="text-sm font-medium text-grayScale-700">{profile.team_role || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-grayScale-500">Job Title</p>
+                    <p className="text-sm font-medium text-grayScale-700">{profile.job_title || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-grayScale-500">Hire Date</p>
+                    <p className="text-sm font-medium text-grayScale-700">{formatDate(profile.hire_date) || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-grayScale-500">Phone Number</p>
+                    <p className="text-sm font-medium text-grayScale-700">{profile.phone_number || "—"}</p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
-
-          {/* Badges row */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge
-              className={cn(
-                "px-2.5 py-0.5 text-xs font-semibold",
-                profile.role === "ADMIN"
-                  ? "bg-brand-500/10 text-brand-600 border border-brand-500/20"
-                  : "bg-grayScale-50 text-grayScale-600 border border-grayScale-200",
-              )}
-            >
-              <Shield className="mr-1 h-3 w-3" />
-              {profile.role}
-            </Badge>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                profile.status === "ACTIVE"
-                  ? "bg-mint-50 text-mint-600"
-                  : "bg-destructive/10 text-destructive",
-              )}
-            >
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  profile.status === "ACTIVE" ? "bg-mint-500" : "bg-destructive",
-                )}
-              />
-              {profile.status}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-grayScale-50 px-2.5 py-0.5 text-xs font-medium text-grayScale-500">
-              <Calendar className="h-3 w-3" />
-              Joined {formatDate(profile.created_at)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Detail Cards Grid ─── */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* ── Contact & Personal ── */}
-        <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md lg:col-span-2">
-          <div className="h-1 bg-gradient-to-r from-brand-500 to-brand-400" />
-          <CardContent className="p-0">
-            <div className="grid divide-y divide-grayScale-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-              {/* Contact */}
-              <div className="p-5">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
-                  Contact
-                </p>
-                <div className="space-y-1">
-                  <DetailItem
-                    icon={Mail}
-                    label="Email"
-                    value={profile.email}
-                    extra={<VerifiedIcon verified={profile.email_verified} />}
-                  />
-                  <DetailItem
-                    icon={Phone}
-                    label="Phone"
-                    value={profile.phone_number}
-                    extra={<VerifiedIcon verified={profile.phone_verified} />}
-                  />
-                  <DetailItem
-                    icon={MapPin}
-                    label="Location"
-                    value={[profile.region, profile.country].filter(Boolean).join(", ") || "—"}
-                    editing={editing}
-                    editNode={
-                      <div className="flex gap-2">
-                        <Input
-                          className="h-8 text-sm"
-                          value={editForm.region ?? ""}
-                          onChange={(e) => updateField("region", e.target.value)}
-                          placeholder="Region"
-                        />
-                        <Input
-                          className="h-8 text-sm"
-                          value={editForm.country ?? ""}
-                          onChange={(e) => updateField("country", e.target.value)}
-                          placeholder="Country"
-                        />
-                      </div>
-                    }
-                  />
-                  <DetailItem
-                    icon={Globe}
-                    label="Preferred Language"
-                    value={
-                      { en: "English", am: "Amharic", or: "Oromiffa", ti: "Tigrinya" }[
-                        profile.preferred_language
-                      ] ?? profile.preferred_language ?? "—"
-                    }
-                    editing={editing}
-                    editNode={
-                      <Select
-                        className="h-8 text-sm"
-                        value={editForm.preferred_language ?? ""}
-                        onChange={(e) => updateField("preferred_language", e.target.value)}
-                      >
-                        <option value="">Select</option>
-                        <option value="en">English</option>
-                        <option value="am">Amharic</option>
-                        <option value="or">Oromiffa</option>
-                        <option value="ti">Tigrinya</option>
-                      </Select>
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Personal */}
-              <div className="p-5">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
-                  Personal
-                </p>
-                <div className="space-y-1">
-                  <DetailItem
-                    icon={Calendar}
-                    label="Date of Birth"
-                    value={formatDate(profile.birth_day)}
-                    editing={editing}
-                    editNode={
-                      <Input
-                        type="date"
-                        className="h-8 text-sm"
-                        value={editForm.birth_day ?? ""}
-                        onChange={(e) => updateField("birth_day", e.target.value)}
-                      />
-                    }
-                  />
-                  <DetailItem
-                    icon={User}
-                    label="Gender"
-                    value={profile.gender || "Not specified"}
-                    editing={editing}
-                    editNode={
-                      <Select
-                        className="h-8 text-sm"
-                        value={editForm.gender ?? ""}
-                        onChange={(e) => updateField("gender", e.target.value)}
-                      >
-                        <option value="">Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </Select>
-                    }
-                  />
-                  <DetailItem
-                    icon={User}
-                    label="Age Group"
-                    value={profile.age_group?.replace("_", "–") || "—"}
-                    editing={editing}
-                    editNode={
-                      <Select
-                        className="h-8 text-sm"
-                        value={editForm.age_group ?? ""}
-                        onChange={(e) => updateField("age_group", e.target.value)}
-                      >
-                        <option value="">Select</option>
-                        <option value="18_24">18–24</option>
-                        <option value="25_34">25–34</option>
-                        <option value="35_44">35–44</option>
-                        <option value="45_54">45–54</option>
-                        <option value="55_64">55–64</option>
-                        <option value="65+">65+</option>
-                      </Select>
-                    }
-                  />
-                  <DetailItem
-                    icon={Briefcase}
-                    label="Occupation"
-                    value={profile.occupation || "—"}
-                    editing={editing}
-                    editNode={
-                      <Input
-                        className="h-8 text-sm"
-                        value={editForm.occupation ?? ""}
-                        onChange={(e) => updateField("occupation", e.target.value)}
-                        placeholder="Occupation"
-                      />
-                    }
-                  />
-                  <DetailItem
-                    icon={BookOpen}
-                    label="Education"
-                    value={profile.education_level || "—"}
-                    editing={editing}
-                    editNode={
-                      <Input
-                        className="h-8 text-sm"
-                        value={editForm.education_level ?? ""}
-                        onChange={(e) => updateField("education_level", e.target.value)}
-                        placeholder="Education level"
-                      />
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ── Right Sidebar ── */}
-        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          {/* Profile Completion */}
-          <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
-            <div className="h-1 bg-gradient-to-r from-brand-400 to-mint-400" />
-            <CardContent className="flex items-center gap-4 p-5">
-              <ProgressRing percent={completionPct} />
-              <div>
-                <p className="text-sm font-semibold text-grayScale-700">Profile Completion</p>
-                <p className="mt-0.5 text-xs text-grayScale-400">
-                  {completionPct === 100 ? "All set!" : "Complete your profile for the best experience."}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Activity */}
-          <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
-            <div className="h-1 bg-gradient-to-r from-grayScale-300 to-grayScale-200" />
-            <CardContent className="space-y-4 p-5">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
-                Activity
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-500">
-                  <Clock className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-grayScale-600">Last Login</p>
-                  <p className="text-[11px] text-grayScale-400">{formatDateTime(profile.last_login)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-grayScale-50 text-grayScale-400">
-                  <User className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-grayScale-600">Account Created</p>
-                  <p className="text-[11px] text-grayScale-400">{formatDateTime(profile.created_at)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Account Info */}
-          <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
-            <div className="h-1 bg-gradient-to-r from-brand-500 to-brand-600" />
-            <CardContent className="space-y-3 p-5">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
-                Account
-              </p>
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-grayScale-400">Role</span>
-                  <Badge
-                    className={cn(
-                      "text-[10px] font-semibold",
-                      profile.role === "ADMIN"
-                        ? "bg-brand-500/10 text-brand-600 border border-brand-500/20"
-                        : "bg-grayScale-50 text-grayScale-600 border border-grayScale-200",
-                    )}
-                  >
-                    {profile.role}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-grayScale-400">Status</span>
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 text-xs font-semibold",
-                      profile.status === "ACTIVE" ? "text-mint-600" : "text-destructive",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        profile.status === "ACTIVE" ? "bg-mint-500" : "bg-destructive",
-                      )}
-                    />
-                    {profile.status}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-grayScale-400">Email</span>
-                  <span className="flex items-center gap-1">
-                    <span className="max-w-[130px] truncate text-xs text-grayScale-600">
-                      {profile.email}
-                    </span>
-                    <VerifiedIcon verified={profile.email_verified} />
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-grayScale-400">Phone</span>
-                  <span className="flex items-center gap-1">
-                    <span className="max-w-[110px] truncate text-xs text-grayScale-600">
-                      {profile.phone_number || "—"}
-                    </span>
-                    <VerifiedIcon verified={profile.phone_verified} />
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          </main>
         </div>
       </div>
+      <Dialog open={editing} onOpenChange={(open) => !saving && setEditing(open)}>
+        <DialogContent className="max-h-[88vh] overflow-y-auto border-[#d9bddb] bg-[#fdf8fd] sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-[#6f2aa8]">Edit profile</DialogTitle>
+          </DialogHeader>
 
-      {/* ─── Learning & Goals Card ─── */}
-      <Card className="overflow-hidden rounded-2xl border-grayScale-100 shadow-sm transition-shadow hover:shadow-md">
-        <div className="h-1 bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400" />
-        <div className="border-b border-grayScale-100 px-5 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-grayScale-400">
-            Learning & Preferences
-          </p>
-        </div>
-        <CardContent className="p-0">
-          <div className="grid divide-y divide-grayScale-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
-            <div className="p-5">
-              <DetailItem
-                icon={Target}
-                label="Learning Goal"
-                value={profile.learning_goal || "—"}
-                editing={editing}
-                editNode={
-                  <Input
-                    className="h-8 text-sm"
-                    value={editForm.learning_goal ?? ""}
-                    onChange={(e) => updateField("learning_goal", e.target.value)}
-                    placeholder="Your learning goal"
-                  />
-                }
-              />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="mb-1 text-xs font-medium text-grayScale-500">First Name</p>
+              <Input value={editForm.first_name ?? ""} onChange={(e) => updateField("first_name", e.target.value)} />
             </div>
-            <div className="p-5">
-              <DetailItem
-                icon={Languages}
-                label="Language Goal"
-                value={profile.language_goal || "—"}
-                editing={editing}
-                editNode={
-                  <Input
-                    className="h-8 text-sm"
-                    value={editForm.language_goal ?? ""}
-                    onChange={(e) => updateField("language_goal", e.target.value)}
-                    placeholder="Language goal"
-                  />
-                }
-              />
+            <div>
+              <p className="mb-1 text-xs font-medium text-grayScale-500">Last Name</p>
+              <Input value={editForm.last_name ?? ""} onChange={(e) => updateField("last_name", e.target.value)} />
             </div>
-            <div className="p-5">
-              <DetailItem
-                icon={MessageCircle}
-                label="Language Challenge"
-                value={profile.language_challange || "—"}
-                editing={editing}
-                editNode={
-                  <Input
-                    className="h-8 text-sm"
-                    value={editForm.language_challange ?? ""}
-                    onChange={(e) => updateField("language_challange", e.target.value)}
-                    placeholder="Language challenge"
-                  />
-                }
-              />
+            <div>
+              <p className="mb-1 text-xs font-medium text-grayScale-500">Phone Number</p>
+              <Input value={editForm.phone_number ?? ""} onChange={(e) => updateField("phone_number", e.target.value)} />
             </div>
-            <div className="p-5">
-              <DetailItem
-                icon={Heart}
-                label="Favourite Topic"
-                value={profile.favoutite_topic || "—"}
-                editing={editing}
-                editNode={
-                  <Input
-                    className="h-8 text-sm"
-                    value={editForm.favoutite_topic ?? ""}
-                    onChange={(e) => updateField("favoutite_topic", e.target.value)}
-                    placeholder="Favourite topic"
-                  />
-                }
+            <div>
+              <p className="mb-1 text-xs font-medium text-grayScale-500">Profile Picture</p>
+              <div className="space-y-2">
+                <FileUpload
+                  accept="image/*"
+                  onFileSelect={setProfilePictureFile}
+                  label="Upload profile picture"
+                  description="JPEG, PNG, WEBP"
+                  className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-200 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+                />
+                <Input
+                  value={editForm.profile_picture_url ?? ""}
+                  onChange={(e) => updateField("profile_picture_url", e.target.value)}
+                  placeholder="Or paste image URL (https://...)"
+                />
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="mb-1 text-xs font-medium text-grayScale-500">Bio</p>
+              <Textarea
+                value={editForm.bio ?? ""}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => updateField("bio", e.target.value)}
+                rows={4}
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <DialogFooter className="mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#d9bddb] text-[#6f2aa8]"
+              onClick={cancelEditing}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-[#6f2aa8] text-white hover:bg-[#5e2390]"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? <SpinnerIcon className="mr-1 h-4 w-4" /> : null}
+              {saving ? "Saving..." : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -30,6 +30,22 @@ export interface CreateTeamMemberRequest {
   bio?: string
 }
 
+export interface UpdateTeamMemberRequest {
+  bio?: string
+  department?: string
+  emergency_contact?: string
+  employment_type?: string
+  first_name?: string
+  hire_date?: string
+  job_title?: string
+  last_name?: string
+  permissions?: string[]
+  phone_number?: string
+  profile_picture_url?: string
+  team_role?: string
+  work_phone?: string
+}
+
 export interface TeamMembersMetadata {
   total: number
   total_pages: number

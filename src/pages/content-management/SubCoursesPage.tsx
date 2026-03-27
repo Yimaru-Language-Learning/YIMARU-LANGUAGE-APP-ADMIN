@@ -11,7 +11,6 @@ import {
   Edit,
   Link2,
   Plus,
-  Loader2,
   LayoutGrid,
   GitBranch,
   ChevronDown,
@@ -43,6 +42,7 @@ import type {
   CourseCategory,
   SubCoursePrerequisite,
 } from "../../types/course.types";
+import { SpinnerIcon } from "../../components/ui/spinner-icon";
 
 export function SubCoursesPage() {
   const { categoryId, courseId } = useParams<{
@@ -403,10 +403,6 @@ export function SubCoursesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
-        {/* <div className="rounded-full bg-white shadow-sm p-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-brand-600" />
-        </div>
-        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading sub-courses...</p> */}
       </div>
     );
   }
@@ -831,7 +827,7 @@ export function SubCoursesPage() {
                       disabled={prereqAdding || !selectedPrereqId}
                     >
                       {prereqAdding ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <SpinnerIcon className="h-4 w-4" />
                       ) : (
                         <Plus className="h-4 w-4" />
                       )}
@@ -890,7 +886,7 @@ export function SubCoursesPage() {
                         className="ml-3 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
                       >
                         {prereqRemoving === prereq.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <SpinnerIcon className="h-4 w-4" />
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}

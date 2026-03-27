@@ -22,7 +22,7 @@ import { UserManagementLayout } from "../pages/user-management/UserManagementLay
 import { UsersListPage } from "../pages/user-management/UsersListPage"
 import { UserManagementDashboard } from "../pages/user-management/UserManagementDashboard"
 import { UserGroupsPage } from "../pages/user-management/UserGroupsPage"
-import { RegisterUserPage } from "../pages/user-management/RegisterUserPage"
+import { DeletionRequestsPage } from "../pages/user-management/DeletionRequestsPage"
 import { RoleManagementLayout } from "../pages/role-management/RoleManagementLayout"
 import { RolesListPage } from "../pages/role-management/RolesListPage"
 import { AddRolePage } from "../pages/role-management/AddRolePage"
@@ -40,6 +40,10 @@ import { TeamMemberDetailPage } from "../pages/team/TeamMemberDetailPage"
 import { LoginPage } from "../pages/auth/LoginPage"
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage"
 import { VerificationPage } from "../pages/auth/VerificationPage"
+import { AboutPage } from "../pages/AboutPage"
+import { TermsPage } from "../pages/TermsPage"
+import { PrivacyPage } from "../pages/PrivacyPage"
+import { AccountDeletionPage } from "../pages/AccountDeletionPage"
 
 export function AppRoutes() {
   return (
@@ -47,13 +51,17 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verification" element={<VerificationPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/account-deletion" element={<AccountDeletionPage />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/users" element={<UserManagementLayout />}>
           <Route index element={<UserManagementDashboard />} />
           <Route path="list" element={<UsersListPage />} />
-          <Route path="register" element={<RegisterUserPage />} />
+          <Route path="deletion-requests" element={<DeletionRequestsPage />} />
           <Route path="groups" element={<UserGroupsPage />} />
           <Route path=":id" element={<UserDetailPage />} />
         </Route>

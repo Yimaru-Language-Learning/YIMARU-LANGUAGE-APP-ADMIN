@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Plus, Search, Edit, Trash2, HelpCircle, X } from "lucide-react"
+import { Plus, Search, Edit, Trash2, HelpCircle, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
@@ -17,6 +18,7 @@ import {
 import { Badge } from "../../components/ui/badge"
 import { deleteQuestion, getQuestionById, getQuestions, updateQuestion } from "../../api/courses.api"
 import type { QuestionDetail } from "../../types/course.types"
+import { cn } from "../../lib/utils"
 
 type QuestionTypeFilter = "all" | "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO"
 type DifficultyFilter = "all" | "EASY" | "MEDIUM" | "HARD"
@@ -300,8 +302,23 @@ export function QuestionsPage() {
 
   const totalCount = filteredQuestions.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
-  const canGoPrev = page > 1
-  const canGoNext = page < totalPages
+  const safePage = Math.min(page, totalPages)
+  const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const endEntry = Math.min(safePage * pageSize, totalCount)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1, 2, 3)
+      if (safePage > 4) pages.push("...")
+      if (safePage > 3 && safePage < totalPages - 2) pages.push(safePage)
+      if (safePage < totalPages - 3) pages.push("...")
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   return (
     <div className="space-y-8">
@@ -388,18 +405,6 @@ export function QuestionsPage() {
                 <option value="PUBLISHED">Published</option>
                 <option value="INACTIVE">Inactive</option>
               </Select>
-              <Select
-                value={String(pageSize)}
-                onChange={(e) => {
-                  const next = Number(e.target.value)
-                  setPageSize(next)
-                  setPage(1)
-                }}
-              >
-                <option value="10">10 / page</option>
-                <option value="20">20 / page</option>
-                <option value="50">50 / page</option>
-              </Select>
             </div>
           </div>
 
@@ -408,52 +413,54 @@ export function QuestionsPage() {
             Showing {paginatedQuestions.length} of {totalCount} questions
           </div>
 
-          {/* Questions Table */}
-          {loading ? (
-            <div className="flex items-center justify-center rounded-lg border border-grayScale-200 py-16">
-              <p className="text-sm text-grayScale-500">Loading questions...</p>
-            </div>
-          ) : filteredQuestions.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-grayScale-200">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-grayScale-100 hover:bg-grayScale-100">
-                    <TableHead className="w-10 py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      <input
-                        type="checkbox"
-                        checked={isAllCurrentPageSelected}
-                        onChange={toggleSelectAllCurrentPage}
-                        aria-label="Select all questions on current page"
-                      />
-                    </TableHead>
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Question
-                    </TableHead>
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Type
-                    </TableHead>
-                    <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
-                      Difficulty
-                    </TableHead>
-                    <TableHead className="hidden py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500 md:table-cell">
-                      Status
-                    </TableHead>
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Points
-                    </TableHead>
-                    <TableHead className="py-3 text-right text-xs font-semibold uppercase tracking-wider text-grayScale-500">
-                      Actions
-                    </TableHead>
+          <div className="rounded-xl border bg-white">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      checked={isAllCurrentPageSelected}
+                      onChange={toggleSelectAllCurrentPage}
+                      aria-label="Select all questions on current page"
+                    />
+                  </TableHead>
+                  <TableHead>Question</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="hidden md:table-cell">Difficulty</TableHead>
+                  <TableHead className="hidden md:table-cell">Status</TableHead>
+                  <TableHead>Points</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-12 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <img src={spinnerSrc} alt="" className="h-6 w-6 animate-spin" />
+                        <span className="text-sm text-grayScale-400">Loading questions...</span>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedQuestions.map((question, index) => (
+                ) : filteredQuestions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-12 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <HelpCircle className="h-8 w-8 text-grayScale-200" />
+                        <div>
+                          <p className="text-sm font-medium text-grayScale-500">No questions found</p>
+                          <p className="mt-1 text-xs text-grayScale-400">Try adjusting your filters</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedQuestions.map((question) => (
                     <TableRow
                       key={question.id}
                       onClick={() => openDetails(question.id)}
-                      className={`cursor-pointer transition-colors hover:bg-brand-100/30 ${
-                        index % 2 === 0 ? "bg-white" : "bg-grayScale-100/50"
-                      }`}
+                      className="group cursor-pointer"
                     >
                       <TableCell className="py-3.5">
                         <input
@@ -527,46 +534,83 @@ export function QuestionsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-20 text-center">
-              <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-grayScale-100 to-grayScale-200">
-                <HelpCircle className="h-8 w-8 text-grayScale-400" />
-              </div>
-              <p className="text-base font-semibold text-grayScale-600">
-                No questions found
-              </p>
-              <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-grayScale-400">
-                Try adjusting your search or filter criteria to find what you're
-                looking for.
-              </p>
-            </div>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
 
-          <div className="flex flex-col gap-3 border-t border-grayScale-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-grayScale-500">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!canGoPrev}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!canGoNext}
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              >
-                Next
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
+              <div className="flex items-center gap-2">
+                <span>Showing</span>
+                <span className="font-medium text-grayScale-600">
+                  {startEntry}-{endEntry}
+                </span>
+                <span>of</span>
+                <span className="font-medium text-grayScale-600">{totalCount}</span>
+                <span className="mr-4">entries</span>
+                <span className="border-l pl-4">Rows per page</span>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value))
+                      setPage(1)
+                    }}
+                    className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                  >
+                    {[10, 20, 50].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => safePage > 1 && setPage(safePage - 1)}
+                  disabled={safePage === 1}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    safePage === 1 && "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {getPageNumbers().map((n, idx) =>
+                  typeof n === "string" ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPage(n)}
+                      className={cn(
+                        "h-8 w-8 rounded-md border text-sm font-medium",
+                        n === safePage
+                          ? "border-brand-500 bg-brand-500 text-white"
+                          : "bg-white text-grayScale-600 hover:bg-grayScale-50",
+                      )}
+                    >
+                      {n}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() => safePage < totalPages && setPage(safePage + 1)}
+                  disabled={safePage === totalPages}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    safePage === totalPages && "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -629,11 +673,74 @@ export function QuestionsPage() {
                     <p className="mt-1 text-sm text-grayScale-700">{detailData.question_text}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
+                    <p><span className="font-medium">ID:</span> {detailData.id}</p>
                     <p><span className="font-medium">Type:</span> {typeLabels[detailData.question_type] || detailData.question_type}</p>
                     <p><span className="font-medium">Difficulty:</span> {detailData.difficulty_level || "—"}</p>
                     <p><span className="font-medium">Points:</span> {detailData.points ?? 0}</p>
                     <p><span className="font-medium">Status:</span> {detailData.status || "—"}</p>
+                    <p><span className="font-medium">Created:</span> {detailData.created_at || "—"}</p>
                   </div>
+                  {detailData.explanation ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Explanation</p>
+                      <p className="mt-1 text-sm text-grayScale-700">{detailData.explanation}</p>
+                    </div>
+                  ) : null}
+                  {detailData.tips ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Tips</p>
+                      <p className="mt-1 text-sm text-grayScale-700">{detailData.tips}</p>
+                    </div>
+                  ) : null}
+                  {detailData.audio_correct_answer_text ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Audio Correct Answer Text</p>
+                      <p className="mt-1 text-sm text-grayScale-700">{detailData.audio_correct_answer_text}</p>
+                    </div>
+                  ) : null}
+                  {detailData.voice_prompt ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Voice Prompt</p>
+                      <p className="mt-1 break-all text-xs text-grayScale-500">{detailData.voice_prompt}</p>
+                      <audio controls src={detailData.voice_prompt} className="mt-2 h-10 w-full max-w-md" />
+                    </div>
+                  ) : null}
+                  {detailData.sample_answer_voice_prompt ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Sample Answer Voice Prompt</p>
+                      <p className="mt-1 break-all text-xs text-grayScale-500">{detailData.sample_answer_voice_prompt}</p>
+                      <audio controls src={detailData.sample_answer_voice_prompt} className="mt-2 h-10 w-full max-w-md" />
+                    </div>
+                  ) : null}
+                  {detailData.image_url ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Image</p>
+                      <p className="mt-1 break-all text-xs text-grayScale-500">{detailData.image_url}</p>
+                      <img
+                        src={detailData.image_url}
+                        alt="Question reference"
+                        className="mt-2 h-28 w-28 rounded-md border border-grayScale-200 object-cover"
+                      />
+                    </div>
+                  ) : null}
+                  {Array.isArray(detailData.short_answers) && detailData.short_answers.length > 0 ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Short Answers</p>
+                      <div className="mt-2 space-y-1 text-sm text-grayScale-700">
+                        {detailData.short_answers.map((answer, index) => {
+                          const value =
+                            typeof answer === "string"
+                              ? answer
+                              : (answer as { acceptable_answer?: string }).acceptable_answer || ""
+                          return (
+                            <p key={`${value}-${index}`} className="rounded-md border border-grayScale-200 bg-grayScale-50 px-2 py-1">
+                              {value || "—"}
+                            </p>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                   {(detailData.options ?? []).length > 0 && (
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Options</p>

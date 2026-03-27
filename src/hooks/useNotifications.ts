@@ -78,6 +78,10 @@ export function useNotifications() {
       }
     }
 
+    ws.onerror = () => {
+      ws.close()
+    }
+
     ws.onclose = () => {
       if (!mountedRef.current) return
       reconnectTimer.current = setTimeout(() => {

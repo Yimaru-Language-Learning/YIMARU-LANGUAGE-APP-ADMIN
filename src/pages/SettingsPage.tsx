@@ -6,7 +6,6 @@ import {
   Globe,
   KeyRound,
   Languages,
-  Loader2,
   Lock,
   Moon,
   Palette,
@@ -21,6 +20,7 @@ import { Button } from "../components/ui/button";
 import { Select } from "../components/ui/select";
 import { Separator } from "../components/ui/separator";
 import { cn } from "../lib/utils";
+import { SpinnerIcon } from "../components/ui/spinner-icon";
 import { getMyProfile, updateProfile } from "../api/users.api";
 import type { UserProfileData } from "../types/user.types";
 import { toast } from "sonner";
@@ -212,7 +212,7 @@ function ProfileTab({ profile }: { profile: UserProfileData }) {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} className="min-w-[140px]">
           {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <SpinnerIcon className="h-4 w-4" />
           ) : (
             <Save className="h-4 w-4" />
           )}
@@ -298,7 +298,7 @@ function SecurityTab() {
           <div className="flex justify-end">
             <Button onClick={handleChangePassword} disabled={saving} className="min-w-[160px]">
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <SpinnerIcon className="h-4 w-4" />
               ) : (
                 <Lock className="h-4 w-4" />
               )}

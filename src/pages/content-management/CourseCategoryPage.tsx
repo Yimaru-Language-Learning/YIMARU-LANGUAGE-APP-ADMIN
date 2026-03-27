@@ -28,6 +28,7 @@ export function CourseCategoryPage() {
   const [parentCategoryId, setParentCategoryId] = useState<number | null>(null)
   const [newSubCategoryName, setNewSubCategoryName] = useState("")
   const [pendingSubCategories, setPendingSubCategories] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
 
   const fetchCategories = async () => {
     setLoading(true)
@@ -46,6 +47,11 @@ export function CourseCategoryPage() {
   useEffect(() => {
     fetchCategories()
   }, [])
+
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const filteredCategories = normalizedQuery
+    ? categories.filter((c) => c.name?.toLowerCase().includes(normalizedQuery))
+    : categories
 
   if (loading) {
     return (
@@ -89,6 +95,14 @@ export function CourseCategoryPage() {
             Browse and manage your course categories below
           </p>
         </div>
+        <div className="w-full max-w-sm">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search categories..."
+            aria-label="Search categories"
+          />
+        </div>
         <Button
           className="gap-2 bg-brand-500 text-white hover:bg-brand-600"
           size="sm"
@@ -116,9 +130,21 @@ export function CourseCategoryPage() {
             </p>
           </div>
         </div>
+      ) : filteredCategories.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-5 rounded-2xl border border-dashed border-grayScale-200 bg-grayScale-50/50 py-24">
+          <div className="grid h-20 w-20 place-items-center rounded-2xl bg-grayScale-50 shadow-sm">
+            <FolderOpen className="h-9 w-9 text-grayScale-300" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-grayScale-500">No matching categories</p>
+            <p className="mt-1 max-w-xs text-xs leading-relaxed text-grayScale-400">
+              Try a different search term.
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {categories.map((category) => (
+          {filteredCategories.map((category) => (
             <Link
               key={category.id}
               to={`/content/category/${category.id}/courses`}

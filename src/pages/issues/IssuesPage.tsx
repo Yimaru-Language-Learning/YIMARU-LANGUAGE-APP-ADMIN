@@ -41,6 +41,7 @@ import {
   DialogDescription,
 } from "../../components/ui/dialog";
 import { cn } from "../../lib/utils";
+import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import {
   getIssues,
   getIssueById,
@@ -365,7 +366,7 @@ export function IssuesPage() {
               fetchIssues();
             }}
           >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            {loading ? <SpinnerIcon className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
             Refresh
           </Button>
           <Button
@@ -500,7 +501,7 @@ export function IssuesPage() {
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-12">
                   <div className="flex flex-col items-center gap-3">
-                    <RefreshCw className="h-6 w-6 animate-spin text-grayScale-300" />
+                    <SpinnerIcon className="h-6 w-6" />
                     <span className="text-sm text-grayScale-400">Loading issues...</span>
                   </div>
                 </TableCell>
@@ -720,7 +721,7 @@ export function IssuesPage() {
 
           {detailLoading ? (
             <div className="flex items-center justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin text-grayScale-300" />
+              <SpinnerIcon className="h-6 w-6" />
             </div>
           ) : selectedIssue ? (
             <div className="space-y-4">
@@ -1030,7 +1031,7 @@ export function IssuesPage() {
               onClick={handleDeleteConfirm}
             >
               {deleteLoading ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <SpinnerIcon className="h-3.5 w-3.5" />
               ) : (
                 <Trash2 className="h-3.5 w-3.5" />
               )}

@@ -2,9 +2,9 @@ import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestCo
 
 const http: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // Do not force a Content-Type globally.
+  // Axios will set the correct header based on the request body (JSON vs multipart FormData).
+  headers: {},
 });
 
 let isRefreshing = false;

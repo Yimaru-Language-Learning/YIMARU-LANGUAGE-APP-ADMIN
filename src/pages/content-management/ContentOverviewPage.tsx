@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { BookOpen, Mic, Briefcase, HelpCircle, ArrowLeft, ArrowRight, ChevronRight } from "lucide-react"
+import { BookOpen, Mic, Briefcase, HelpCircle, ArrowLeft, ArrowRight, ChevronRight, Search } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
+import { Input } from "../../components/ui/input"
 import { getCourseCategories } from "../../api/courses.api"
 import type { CourseCategory } from "../../types/course.types"
 
@@ -63,6 +64,7 @@ export function ContentOverviewPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
   const [category, setCategory] = useState<CourseCategory | null>(null)
   const [sections, setSections] = useState<ContentSection[]>(() => [...contentSections])
+  const [searchQuery, setSearchQuery] = useState("")
   const [dragKey, setDragKey] = useState<string | null>(null)
   const [flowSteps, setFlowSteps] = useState<
     {
@@ -158,6 +160,13 @@ export function ContentOverviewPage() {
     setDragKey(null)
   }
 
+  const filteredSections = sections.filter((section) => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
+    const haystack = `${section.title} ${section.description} ${section.action}`.toLowerCase()
+    return haystack.includes(q)
+  })
+
   return (
     <div className="space-y-8">
       {/* Header & Breadcrumb */}
@@ -185,6 +194,15 @@ export function ContentOverviewPage() {
           {category?.name ?? "Content Management"}
         </h1>
       </div>
+      <div className="relative w-full max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search overview sections..."
+          className="pl-9"
+        />
+      </div>
 
       {/* Gradient Divider */}
       <div className="relative">
@@ -203,7 +221,7 @@ export function ContentOverviewPage() {
 
       {/* Cards Grid (course builder style – draggable sections) */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {sections.map((section) => {
+        {filteredSections.map((section) => {
           const Icon = section.icon
           return (
             <div
@@ -274,6 +292,12 @@ export function ContentOverviewPage() {
           )
         })}
       </div>
+      {sections.length > 0 && filteredSections.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-grayScale-200 bg-grayScale-50/50 py-14 text-center">
+          <p className="text-sm font-semibold text-grayScale-500">No matching sections</p>
+          <p className="mt-1 text-xs text-grayScale-400">Try a different search term.</p>
+        </div>
+      )}
       {/* Category flow sequence (if defined) */}
       {flowSteps.length > 0 && (
         <Card className="shadow-soft">

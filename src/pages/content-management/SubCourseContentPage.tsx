@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, Plus, FileText, Layers, Edit, Trash2, X, Video, MoreVertical, Star, ChevronLeft, ChevronRight, MessageSquare, Play, Loader2 } from "lucide-react"
+import { ArrowLeft, Plus, FileText, Layers, Edit, Trash2, X, Video, MoreVertical, Star, ChevronLeft, ChevronRight, MessageSquare, Play } from "lucide-react"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Card } from "../../components/ui/card"
 import alertSrc from "../../assets/Alert.svg"
@@ -13,14 +13,23 @@ import {
   getVideosBySubCourse,
   updatePractice,
   deleteQuestionSet,
-  createVimeoVideo,
+  createCourseVideo,
   updateSubCourseVideo,
   deleteSubCourseVideo,
   getRatings,
   getVimeoSample,
 } from "../../api/courses.api"
-import type { SubCourse, QuestionSet, SubCourseVideo, Rating, VimeoSampleVideo } from "../../types/course.types"
-import { Select } from "../../components/ui/select"
+import { uploadVideoFile } from "../../api/files.api"
+import type {
+  SubCourse,
+  QuestionSet,
+  SubCourseVideo,
+  Rating,
+  VimeoSampleVideo,
+  VideoStatus,
+  VideoVisibility,
+} from "../../types/course.types"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 type TabType = "video" | "practice" | "ratings"
 type StatusFilter = "all" | "published" | "draft" | "archived"
@@ -74,17 +83,19 @@ export function SubCourseContentPage() {
   const [videoTitle, setVideoTitle] = useState("")
   const [videoDescription, setVideoDescription] = useState("")
   const [videoUrl, setVideoUrl] = useState("")
+  const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoFileSize, setVideoFileSize] = useState<number>(0)
   const [videoDuration, setVideoDuration] = useState<number>(0)
+  const [videoResolution, setVideoResolution] = useState("1080p")
+  const [videoVisibility, setVideoVisibility] = useState<VideoVisibility>("PUBLISHED")
+  const [videoStatus, setVideoStatus] = useState<VideoStatus>("PUBLISHED")
+  const [videoDisplayOrder, setVideoDisplayOrder] = useState<number>(1)
 
   // Vimeo preview state
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [previewIframe, setPreviewIframe] = useState("")
   const [previewVideo, setPreviewVideo] = useState<VimeoSampleVideo | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-  const [sampleVideoId, setSampleVideoId] = useState("")
-  const [modalPreviewIframe, setModalPreviewIframe] = useState("")
-  const [modalPreviewLoading, setModalPreviewLoading] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -234,31 +245,83 @@ export function SubCourseContentPage() {
     setVideoTitle("")
     setVideoDescription("")
     setVideoUrl("")
+    setVideoFile(null)
     setVideoFileSize(0)
     setVideoDuration(0)
+    setVideoResolution("1080p")
+    setVideoVisibility("PUBLISHED")
+    setVideoStatus("PUBLISHED")
+    setVideoDisplayOrder(1)
     setSaveError(null)
     setShowAddVideoModal(true)
   }
 
+  const handleVideoFileSelect = (file: File | null) => {
+    setVideoFile(file)
+    if (!file) {
+      setVideoFileSize(0)
+      setVideoDuration(0)
+      return
+    }
+
+    setVideoFileSize(file.size)
+    const video = document.createElement("video")
+    const objectUrl = URL.createObjectURL(file)
+    video.preload = "metadata"
+    video.src = objectUrl
+    video.onloadedmetadata = () => {
+      setVideoDuration(Math.max(0, Math.round(video.duration || 0)))
+      URL.revokeObjectURL(objectUrl)
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }
+
   const handleSaveNewVideo = async () => {
-    if (!subCourseId) return
+    if (!subCourseId || !videoFile) return
     setSaving(true)
     setSaveError(null)
     try {
-      await createVimeoVideo({
+      const uploadRes = await uploadVideoFile(videoFile, {
+        title: videoTitle.trim(),
+        description: videoDescription.trim(),
+      })
+
+      // Per backend guide, use embed_url as the video_url reference.
+      const embedUrl = uploadRes.data?.data?.embed_url?.trim()
+      const vimeoUrl = uploadRes.data?.data?.url?.trim()
+      if (!embedUrl) throw new Error("Missing uploaded video embed_url")
+
+      // Backend requires: https://player.vimeo.com/video/<id>?h=<hash>
+      // where <hash> is the last path segment from `url` (e.g. https://vimeo.com/<id>/<hash>)
+      const hashFromUrl = vimeoUrl ? vimeoUrl.split("/").filter(Boolean).at(-1) : undefined
+      const finalVideoUrl = hashFromUrl ? `${embedUrl}?h=${hashFromUrl}` : embedUrl
+
+      const finalTitle = videoTitle.trim() || videoFile.name
+
+      await createCourseVideo({
         sub_course_id: Number(subCourseId),
-        title: videoTitle,
-        description: videoDescription,
-        source_url: videoUrl,
-        file_size: videoFileSize,
+        title: finalTitle,
+        description: videoDescription.trim(),
+        video_url: finalVideoUrl,
         duration: videoDuration,
+        resolution: videoResolution.trim() || undefined,
+        visibility: videoVisibility,
+        display_order: Number.isFinite(videoDisplayOrder) ? videoDisplayOrder : undefined,
+        status: videoStatus,
       })
       setShowAddVideoModal(false)
       setVideoTitle("")
       setVideoDescription("")
       setVideoUrl("")
+      setVideoFile(null)
       setVideoFileSize(0)
       setVideoDuration(0)
+      setVideoResolution("1080p")
+      setVideoVisibility("PUBLISHED")
+      setVideoStatus("PUBLISHED")
+      setVideoDisplayOrder(1)
       await fetchVideos()
     } catch (err) {
       console.error("Failed to create video:", err)
@@ -321,15 +384,26 @@ export function SubCourseContentPage() {
     }
   }
 
-  // Preview a video card via Vimeo sample API
+  // Preview a video card.
+  // We prefer embedding directly from `video_url` because Vimeo embeds may require the `h=` hash.
   const handlePreviewVideo = async (video: SubCourseVideo) => {
-    const idMatch = video.video_url?.match(/(\d{5,})/)
-    const vimeoId = idMatch?.[1] ?? "76979871" // fallback to Big Buck Bunny
     setShowPreviewModal(true)
     setPreviewLoading(true)
     setPreviewIframe("")
     setPreviewVideo(null)
     try {
+      const directUrl = video.video_url?.trim()
+      if (directUrl) {
+        setPreviewIframe(
+          `<iframe src="${directUrl}" style="width:100%;height:100%;" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`,
+        )
+        setPreviewVideo(null)
+        return
+      }
+
+      // Fallback to sample API when a direct URL is unavailable.
+      const idMatch = video.video_url?.match(/(\d{5,})/)
+      const vimeoId = idMatch?.[1] ?? "76979871" // fallback to Big Buck Bunny
       const res = await getVimeoSample(vimeoId)
       setPreviewIframe(res.data.data.iframe)
       setPreviewVideo(res.data.data.video)
@@ -337,28 +411,6 @@ export function SubCourseContentPage() {
       setPreviewIframe("")
     } finally {
       setPreviewLoading(false)
-    }
-  }
-
-  // Preview inside add/edit modal from a sample vimeo ID picker
-  const handleModalPreview = async (vimeoId: string) => {
-    if (!vimeoId) {
-      setModalPreviewIframe("")
-      return
-    }
-    setModalPreviewLoading(true)
-    try {
-      const res = await getVimeoSample(vimeoId)
-      setModalPreviewIframe(res.data.data.iframe)
-      // Auto-fill fields from vimeo metadata
-      const v = res.data.data.video
-      if (!videoTitle) setVideoTitle(v.name)
-      if (!videoDescription) setVideoDescription(v.description?.slice(0, 200) ?? "")
-      if (!videoDuration) setVideoDuration(v.duration)
-    } catch {
-      setModalPreviewIframe("")
-    } finally {
-      setModalPreviewLoading(false)
     }
   }
 
@@ -482,7 +534,7 @@ export function SubCourseContentPage() {
         <>
           {practicesLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <SpinnerIcon className="h-8 w-8" />
               <p className="mt-4 text-sm font-medium text-grayScale-500">Loading practices…</p>
             </div>
           ) : filteredPractices.length === 0 ? (
@@ -525,7 +577,7 @@ export function SubCourseContentPage() {
                       <p className="text-sm leading-relaxed text-grayScale-500 line-clamp-2">{practice.description}</p>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className="rounded-full bg-brand-50 text-brand-600 text-[11px] font-medium px-2.5 py-0.5 ring-1 ring-inset ring-brand-200">
+                        <Badge className="rounded-full bg-[#f3e8ff] text-[#6b21a8] text-[11px] font-medium px-2.5 py-0.5 ring-1 ring-inset ring-[#d8b4fe]">
                           {practice.set_type}
                         </Badge>
                         {practice.persona && (
@@ -581,7 +633,7 @@ export function SubCourseContentPage() {
         <>
           {videosLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <SpinnerIcon className="h-8 w-8" />
               <p className="mt-4 text-sm font-medium text-grayScale-500">Loading videos…</p>
             </div>
           ) : videos.length === 0 ? (
@@ -711,7 +763,7 @@ export function SubCourseContentPage() {
         <>
           {ratingsLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <SpinnerIcon className="h-8 w-8" />
               <p className="mt-4 text-sm font-medium text-grayScale-500">Loading ratings…</p>
             </div>
           ) : ratings.length === 0 ? (
@@ -931,44 +983,13 @@ export function SubCourseContentPage() {
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-900">Add Video</h2>
               <button
-                onClick={() => { setShowAddVideoModal(false); setSampleVideoId(""); setModalPreviewIframe("") }}
+                onClick={() => { setShowAddVideoModal(false); setVideoFile(null) }}
                 className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-6">
-              {/* Sample Vimeo picker */}
-              <div className="rounded-xl border border-brand-100 bg-brand-50/40 p-4 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-brand-600">
-                  Try a sample Vimeo video
-                </p>
-                <div className="flex items-center gap-2">
-                  <Select
-                    className="flex-1 text-sm"
-                    value={sampleVideoId}
-                    onChange={(e) => {
-                      setSampleVideoId(e.target.value)
-                      handleModalPreview(e.target.value)
-                    }}
-                  >
-                    <option value="">Select a sample video…</option>
-                    <option value="76979871">Big Buck Bunny</option>
-                    <option value="1084537">Big Buck Bunny (alt)</option>
-                    <option value="253989945">Vimeo Staff Pick</option>
-                    <option value="305727901">Big Buck Bunny (4K)</option>
-                    <option value="148751763">GoPro Footage</option>
-                  </Select>
-                  {modalPreviewLoading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand-500" />}
-                </div>
-                {modalPreviewIframe && (
-                  <div
-                    className="aspect-video w-full overflow-hidden rounded-lg"
-                    dangerouslySetInnerHTML={{ __html: modalPreviewIframe }}
-                  />
-                )}
-              </div>
-
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-grayScale-700">Title</label>
                 <Input
@@ -988,12 +1009,17 @@ export function SubCourseContentPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-grayScale-700">Source URL</label>
+                <label className="text-sm font-medium text-grayScale-700">Video File</label>
                 <Input
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://example-storage.com/video.mp4"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => handleVideoFileSelect(e.target.files?.[0] ?? null)}
                 />
+                {videoFile && (
+                  <p className="text-xs text-grayScale-500">
+                    Selected: {videoFile.name}
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -1017,6 +1043,52 @@ export function SubCourseContentPage() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-grayScale-700">Resolution</label>
+                  <Input
+                    value={videoResolution}
+                    onChange={(e) => setVideoResolution(e.target.value)}
+                    placeholder="1080p"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-grayScale-700">Display Order</label>
+                  <Input
+                    type="number"
+                    value={videoDisplayOrder}
+                    onChange={(e) => setVideoDisplayOrder(Number(e.target.value))}
+                    min={1}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-grayScale-700">Visibility</label>
+                  <select
+                    value={videoVisibility}
+                    onChange={(e) => setVideoVisibility(e.target.value)}
+                    className="h-11 w-full rounded-lg border border-grayScale-200 bg-white px-3 text-sm text-grayScale-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  >
+                    <option value="PUBLISHED">PUBLISHED</option>
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="PRIVATE">PRIVATE</option>
+                    <option value="UNLISTED">UNLISTED</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-grayScale-700">Status</label>
+                  <select
+                    value={videoStatus}
+                    onChange={(e) => setVideoStatus(e.target.value)}
+                    className="h-11 w-full rounded-lg border border-grayScale-200 bg-white px-3 text-sm text-grayScale-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  >
+                    <option value="PUBLISHED">PUBLISHED</option>
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                </div>
+              </div>
               {saveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{saveError}</p>}
             </div>
             <div className="flex flex-col-reverse gap-2.5 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
@@ -1026,9 +1098,9 @@ export function SubCourseContentPage() {
               <Button
                 className="bg-brand-500 shadow-sm hover:bg-brand-600"
                 onClick={handleSaveNewVideo}
-                disabled={saving || !videoTitle.trim() || !videoUrl.trim()}
+                disabled={saving || !videoTitle.trim() || !videoFile}
               >
-                {saving ? "Uploading..." : "Upload to Vimeo"}
+                {saving ? "Uploading..." : "Upload Video"}
               </Button>
             </div>
           </div>
@@ -1149,7 +1221,7 @@ export function SubCourseContentPage() {
             <div className="p-6">
               {previewLoading ? (
                 <div className="flex aspect-video items-center justify-center rounded-xl bg-grayScale-50">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+                  <SpinnerIcon className="h-8 w-8" />
                 </div>
               ) : previewIframe ? (
                 <div

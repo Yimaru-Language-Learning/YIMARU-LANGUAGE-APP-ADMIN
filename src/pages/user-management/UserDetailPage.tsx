@@ -39,6 +39,7 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { Select } from "../../components/ui/select";
+import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import type { LearnerCourseProgressItem, LearnerCourseProgressSummary } from "../../types/progress.types";
 import type { Course } from "../../types/course.types";
 
@@ -475,7 +476,7 @@ export function UserDetailPage() {
 
               {!progressError && loadingProgress && (
                 <div className="flex items-center gap-2 rounded-lg border border-grayScale-200 bg-grayScale-100 px-3 py-2 text-xs text-grayScale-500">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <SpinnerIcon className="h-3.5 w-3.5" />
                   Loading learner progress...
                 </div>
               )}
@@ -487,10 +488,10 @@ export function UserDetailPage() {
               )}
 
               {!progressError && !loadingProgress && progressItems.length > 0 && (
-                <div className="overflow-x-auto rounded-lg border border-grayScale-200">
+                <div className="overflow-x-auto rounded-xl border bg-white">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-grayScale-100/70">
+                      <TableRow>
                         <TableHead>Course</TableHead>
                         <TableHead>Level</TableHead>
                         <TableHead>Status</TableHead>

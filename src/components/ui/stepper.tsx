@@ -10,7 +10,7 @@ export interface StepperProps {
 
 export function Stepper({ steps, currentStep, className }: StepperProps) {
   return (
-    <div className={cn("flex items-center justify-between", className)}>
+    <div className={cn("flex w-full items-center", className)}>
       {steps.map((step, index) => {
         const stepNumber = index + 1
         const isCompleted = stepNumber < currentStep
@@ -18,13 +18,14 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
 
         return (
           <React.Fragment key={step}>
-            <div className="flex flex-1 items-center">
+            <div className="flex items-center">
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
                     "grid h-10 w-10 place-items-center rounded-full border-2 text-sm font-semibold transition-colors",
                     isCompleted && "border-brand-500 bg-brand-500 text-white",
-                    isCurrent && "border-brand-500 bg-brand-50 text-brand-600",
+                    // Active step should be visually prominent.
+                    isCurrent && "border-brand-500 bg-brand-500 text-white",
                     !isCompleted && !isCurrent && "border-grayScale-300 bg-white text-grayScale-400",
                   )}
                 >
@@ -44,8 +45,10 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
             {index < steps.length - 1 && (
               <div
                 className={cn(
-                  "mx-4 h-0.5 flex-1",
-                  isCompleted ? "bg-brand-500" : "bg-grayScale-200",
+                  // Keep the connector visually continuous with the step circles.
+                  "mx-2 h-0.5 flex-1",
+                  // Color the track up to the current step.
+                  isCompleted || isCurrent ? "bg-brand-500" : "bg-grayScale-200",
                 )}
               />
             )}

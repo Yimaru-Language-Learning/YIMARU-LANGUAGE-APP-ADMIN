@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, ChevronRight, Search, Users, X } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Search, UserCheck, Users, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Input } from "../../components/ui/input"
@@ -36,9 +36,11 @@ export function UsersListPage() {
   } | null>(null)
   const [roleFilter, setRoleFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const fetchUsers = async () => {
+      setLoading(true)
       try {
         const res = await getUsers(
           page,
@@ -62,6 +64,8 @@ export function UsersListPage() {
         console.error("Failed to fetch users:", error)
         setUsers([])
         setTotal(0)
+      } finally {
+        setLoading(false)
       }
     }
 
@@ -93,6 +97,9 @@ export function UsersListPage() {
   }
 
   const allSelected = users.length > 0 && selectedIds.size === users.length
+  const startEntry = total === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const endEntry = Math.min(safePage * pageSize, total)
+  const activeUsersOnPage = users.filter((u) => (u.status || "").toUpperCase() === "ACTIVE").length
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
@@ -169,6 +176,37 @@ export function UsersListPage() {
         <p className="text-sm text-grayScale-400">View and manage all registered users.</p>
       </div>
 
+      {/* Stats cards (match UserLogPage approach) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-brand-100 text-brand-600">
+            <Users className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-grayScale-600">{total}</p>
+            <p className="text-xs text-grayScale-400">Total Users</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-100 text-emerald-600">
+            <UserCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-grayScale-600">{activeUsersOnPage}</p>
+            <p className="text-xs text-grayScale-400">Active In Current Page</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-100 text-amber-600">
+            <Search className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-grayScale-600">{users.length}</p>
+            <p className="text-xs text-grayScale-400">Showing Results</p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border">
         {/* Search & Filters */}
         <div className="p-4 border-b">
@@ -238,7 +276,13 @@ export function UsersListPage() {
           </TableHeader>
 
           <TableBody>
-            {users.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-12 text-center">
+                  <p className="text-sm text-grayScale-400">Loading users...</p>
+                </TableCell>
+              </TableRow>
+            ) : users.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -259,7 +303,7 @@ export function UsersListPage() {
                 return (
                   <TableRow
                     key={u.id}
-                    className="cursor-pointer hover:bg-grayScale-50"
+                    className="group cursor-pointer"
                     onClick={() => handleRowClick(u.id)}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -318,9 +362,16 @@ export function UsersListPage() {
         </Table>
 
         {/* Pagination */}
-        <div className="flex flex-col items-center gap-3 border-t px-4 py-3 text-sm text-grayScale-500 sm:flex-row sm:justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
           <div className="flex items-center gap-2">
-            <span>Row Per Page</span>
+            <span>Showing</span>
+            <span className="font-medium text-grayScale-600">
+              {startEntry}-{endEntry}
+            </span>
+            <span>of</span>
+            <span className="font-medium text-grayScale-600">{total}</span>
+            <span className="mr-4">entries</span>
+            <span className="border-l pl-4">Rows per page</span>
             <div className="relative">
               <select
                 value={pageSize}
@@ -338,7 +389,6 @@ export function UsersListPage() {
               </select>
               <ChevronDown className="absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
             </div>
-            <span>Entries</span>
           </div>
 
           <div className="flex items-center gap-1">

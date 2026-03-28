@@ -34,7 +34,7 @@ export function AppLayout() {
         }`}
       >
         <Topbar onSidebarToggle={handleSidebarToggle} />
-        <main className="min-w-0 flex-1 overflow-y-auto px-4 pb-8 pt-4 lg:px-6">
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-8 pt-4 sm:px-4 lg:px-6">
           <Outlet />
         </main>
         <footer className="border-t bg-grayScale-50 px-4 py-3 lg:px-6">

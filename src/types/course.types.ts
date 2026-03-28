@@ -196,6 +196,7 @@ export interface SubCourse {
   level: string
   thumbnail: string
   display_order: number
+  sub_level?: string
   is_active: boolean
 }
 
@@ -210,11 +211,15 @@ export interface GetSubCoursesResponse {
   metadata: unknown
 }
 
+/** POST /course-management/sub-courses */
 export interface CreateSubCourseRequest {
   course_id: number
   title: string
   description: string
+  thumbnail: string
+  display_order: number
   level: string
+  sub_level: string
 }
 
 export interface UpdateSubCourseRequest {

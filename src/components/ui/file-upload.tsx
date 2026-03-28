@@ -7,10 +7,12 @@ export interface FileUploadProps extends Omit<React.InputHTMLAttributes<HTMLInpu
   accept?: string
   label?: string
   description?: string
+  /** Shorter, row-oriented layout for wide forms / modals */
+  variant?: "default" | "compact"
 }
 
 export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
-  ({ className, onFileSelect, accept, label, description, ...props }, ref) => {
+  ({ className, onFileSelect, accept, label, description, variant = "default", ...props }, ref) => {
     const [file, setFile] = React.useState<File | null>(null)
     const [dragActive, setDragActive] = React.useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
@@ -48,10 +50,15 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
       }
     }
 
+    const isCompact = variant === "compact"
+
     return (
       <div
         className={cn(
-          "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors",
+          "relative flex rounded-lg border-2 border-dashed transition-colors",
+          isCompact
+            ? "min-h-0 flex-col items-stretch justify-center sm:flex-row sm:items-center"
+            : "flex-col items-center justify-center",
           dragActive ? "border-brand-500 bg-brand-50" : "border-grayScale-200 bg-grayScale-50",
           className,
         )}
@@ -68,27 +75,44 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
           onChange={handleChange}
           {...props}
         />
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-brand-100 text-brand-600">
-            <Upload className="h-8 w-8" />
+        <div
+          className={cn(
+            "flex w-full",
+            isCompact
+              ? "flex-col gap-3 p-4 text-center sm:flex-row sm:items-center sm:gap-4 sm:p-4 sm:text-left"
+              : "flex-col items-center justify-center p-8 text-center",
+          )}
+        >
+          <div
+            className={cn(
+              "grid shrink-0 place-items-center rounded-full bg-brand-100 text-brand-600",
+              isCompact ? "mx-auto h-11 w-11 sm:mx-0" : "mb-4 h-16 w-16",
+            )}
+          >
+            <Upload className={isCompact ? "h-5 w-5" : "h-8 w-8"} />
           </div>
           {file ? (
-            <>
-              <p className="mb-1 text-sm font-medium text-grayScale-900">{file.name}</p>
+            <div className={cn("min-w-0 flex-1", !isCompact && "text-center")}>
+              <p className="mb-1 text-sm font-medium text-grayScale-900 break-all">{file.name}</p>
               <p className="text-xs text-grayScale-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-            </>
+            </div>
           ) : (
             <>
-              <p className="mb-1 text-sm font-medium text-grayScale-900">
-                {label || "Drag & Drop Video Here"}
-              </p>
-              <p className="mb-4 text-xs text-grayScale-500">
-                {description || "or click to browse files"}
-              </p>
+              <div className={cn("min-w-0 flex-1 space-y-1", isCompact && "sm:pr-2")}>
+                <p className="text-sm font-medium text-grayScale-900">
+                  {label || "Drag & Drop Video Here"}
+                </p>
+                <p className="text-xs text-grayScale-500">
+                  {description || "or click to browse files"}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+                className={cn(
+                  "shrink-0 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600",
+                  isCompact ? "mx-auto w-full max-w-[200px] sm:mx-0 sm:w-auto" : "mt-1",
+                )}
               >
                 Browse Files
               </button>

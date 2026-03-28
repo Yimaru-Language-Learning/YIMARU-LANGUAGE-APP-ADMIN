@@ -35,7 +35,9 @@ import {
   addSubCoursePrerequisite,
   removeSubCoursePrerequisite,
 } from "../../api/courses.api";
+import { uploadImageFile } from "../../api/files.api";
 import { Input } from "../../components/ui/input";
+import { FileUpload } from "../../components/ui/file-upload";
 import type {
   SubCourse,
   Course,
@@ -43,6 +45,7 @@ import type {
   SubCoursePrerequisite,
 } from "../../types/course.types";
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
+import { toast } from "sonner";
 
 export function SubCoursesPage() {
   const { categoryId, courseId } = useParams<{
@@ -72,7 +75,11 @@ export function SubCoursesPage() {
   );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [level, setLevel] = useState("");
+  const [level, setLevel] = useState("BEGINNER");
+  const [subLevel, setSubLevel] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [displayOrder, setDisplayOrder] = useState("1");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -222,10 +229,19 @@ export function SubCoursesPage() {
     }
   };
 
+  const nextSubCourseDisplayOrder = () =>
+    subCourses.length === 0
+      ? 1
+      : Math.max(0, ...subCourses.map((s) => s.display_order ?? 0)) + 1;
+
   const handleAddSubCourse = () => {
     setTitle("");
     setDescription("");
-    setLevel("");
+    setLevel("BEGINNER");
+    setSubLevel("");
+    setThumbnailUrl("");
+    setThumbnailFile(null);
+    setDisplayOrder(String(nextSubCourseDisplayOrder()));
     setSaveError(null);
     setShowAddModal(true);
   };
@@ -235,20 +251,45 @@ export function SubCoursesPage() {
     setSaving(true);
     setSaveError(null);
     try {
+      let thumbnail = thumbnailUrl.trim();
+      if (thumbnailFile) {
+        const uploadRes = await uploadImageFile(thumbnailFile);
+        const uploadedUrl = uploadRes.data?.data?.url?.trim();
+        if (!uploadedUrl) throw new Error("Missing uploaded image url");
+        thumbnail = uploadedUrl;
+      }
+
+      const parsedOrder = parseInt(displayOrder, 10);
+      const display_order = Number.isFinite(parsedOrder) && parsedOrder >= 0
+        ? parsedOrder
+        : nextSubCourseDisplayOrder();
+
       await createSubCourse({
         course_id: Number(courseId),
-        title,
-        description,
-        level,
+        title: title.trim(),
+        description: description.trim(),
+        thumbnail,
+        display_order,
+        level: level.trim() || "BEGINNER",
+        sub_level: subLevel.trim(),
       });
       setShowAddModal(false);
       setTitle("");
       setDescription("");
-      setLevel("");
+      setLevel("BEGINNER");
+      setSubLevel("");
+      setThumbnailUrl("");
+      setThumbnailFile(null);
+      setDisplayOrder("1");
       await fetchSubCourses();
-    } catch (err) {
+      toast.success("Course created successfully");
+    } catch (err: unknown) {
       console.error("Failed to create sub-course:", err);
-      setSaveError("Failed to create course");
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Failed to create course";
+      setSaveError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -649,8 +690,8 @@ export function SubCoursesPage() {
 
       {/* Delete Modal */}
       {showDeleteModal && subCourseToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
+          <div className="my-auto w-full max-w-sm rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-grayScale-700">
                 Delete Course
@@ -697,64 +738,127 @@ export function SubCoursesPage() {
         </div>
       )}
 
-      {/* Add Sub-course Modal */}
+      {/* Add Sub-course Modal — POST /course-management/sub-courses */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
-              <h2 className="text-lg font-semibold text-grayScale-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="my-auto w-full max-w-4xl flex-shrink-0 rounded-2xl bg-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-3 sm:px-6 sm:py-4">
+              <h2 className="text-base font-semibold text-grayScale-700 sm:text-lg">
                 Add New Course
               </h2>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-10 w-10 min-h-[44px] min-w-[44px] place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-5 px-6 py-6">
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-grayScale-600">
-                  Title
-                </label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter course title"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-grayScale-600">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter course description"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-grayScale-600">
-                  Level
-                </label>
-                <Input
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  placeholder="e.g., Beginner, Intermediate, Advanced"
-                />
-              </div>
-              {saveError && (
-                <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {saveError}
+            <div className="max-h-[min(78vh,840px)] overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-6 md:gap-y-4">
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Title
+                  </label>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter course title"
+                    className="min-h-[44px]"
+                  />
                 </div>
-              )}
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Description
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter course description"
+                    className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Level
+                  </label>
+                  <select
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value)}
+                    className="min-h-[44px] w-full rounded-lg border border-grayScale-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  >
+                    <option value="BEGINNER">BEGINNER</option>
+                    <option value="INTERMEDIATE">INTERMEDIATE</option>
+                    <option value="ADVANCED">ADVANCED</option>
+                    <option value="EXPERT">EXPERT</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Sub-level
+                  </label>
+                  <Input
+                    value={subLevel}
+                    onChange={(e) => setSubLevel(e.target.value)}
+                    placeholder='e.g. A1, B2 (CEFR or your scale)'
+                    className="min-h-[44px]"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2 md:max-w-xs">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Display order
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={displayOrder}
+                    onChange={(e) => setDisplayOrder(e.target.value)}
+                    placeholder="1"
+                    className="min-h-[44px]"
+                  />
+                </div>
+                <div className="space-y-3 md:col-span-2">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Thumbnail
+                  </label>
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+                    <FileUpload
+                      variant="compact"
+                      accept="image/*"
+                      onFileSelect={setThumbnailFile}
+                      label="Upload thumbnail image"
+                      description="JPEG, PNG, WEBP — or paste a URL"
+                      className="border-grayScale-200 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+                    />
+                    <div className="space-y-1.5">
+                      <span className="text-xs font-medium text-grayScale-500">
+                        Thumbnail URL (optional)
+                      </span>
+                      <Input
+                        value={thumbnailUrl}
+                        onChange={(e) => setThumbnailUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {saveError && (
+                  <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 md:col-span-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {saveError}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
               <Button
                 variant="outline"
                 onClick={() => setShowAddModal(false)}
@@ -912,62 +1016,71 @@ export function SubCoursesPage() {
 
       {/* Edit Sub-course Modal */}
       {showEditModal && subCourseToEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
-              <h2 className="text-lg font-semibold text-grayScale-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="my-auto w-full max-w-3xl flex-shrink-0 rounded-2xl bg-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-3 sm:px-6 sm:py-4">
+              <h2 className="text-base font-semibold text-grayScale-700 sm:text-lg">
                 Edit Course
               </h2>
               <button
+                type="button"
                 onClick={() => setShowEditModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-10 w-10 min-h-[44px] min-w-[44px] place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-5 px-6 py-6">
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-grayScale-600">
-                  Title
-                </label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter course title"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-grayScale-600">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter course description"
-                  className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-grayScale-600">
-                  Level
-                </label>
-                <Input
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  placeholder="e.g., Beginner, Intermediate, Advanced"
-                />
-              </div>
-              {saveError && (
-                <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {saveError}
+            <div className="max-h-[min(78vh,640px)] overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-6 md:gap-y-4">
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Title
+                  </label>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter course title"
+                    className="min-h-[44px]"
+                  />
                 </div>
-              )}
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Description
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter course description"
+                    className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2 md:max-w-md">
+                  <label className="text-sm font-semibold text-grayScale-600">
+                    Level
+                  </label>
+                  <Input
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value)}
+                    placeholder="e.g., BEGINNER, Intermediate, Advanced"
+                    className="min-h-[44px]"
+                  />
+                </div>
+                {saveError && (
+                  <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 md:col-span-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {saveError}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
               <Button
                 variant="outline"
                 onClick={() => setShowEditModal(false)}

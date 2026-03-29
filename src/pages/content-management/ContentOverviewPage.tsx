@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { getCourseCategories } from "../../api/courses.api"
 import type { CourseCategory } from "../../types/course.types"
+import { cn } from "../../lib/utils"
 
 const contentSections = [
   {
@@ -29,8 +30,8 @@ const contentSections = [
     action: "Manage Speaking",
     count: 8,
     countLabel: "sessions",
-    gradient: "from-purple-500/10 via-purple-400/5 to-transparent",
-    accentBorder: "group-hover:border-purple-400",
+    gradient: "from-brand-500/12 via-brand-400/6 to-transparent",
+    accentBorder: "group-hover:border-brand-400",
   },
   {
     key: "practices",
@@ -334,7 +335,7 @@ export function ContentOverviewPage() {
                         step.type === "course" &&
                           "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200",
                         step.type === "speaking" &&
-                          "bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200",
+                          "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200",
                         step.type === "new_course" &&
                           "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200",
                       )}

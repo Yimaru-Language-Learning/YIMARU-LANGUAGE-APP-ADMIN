@@ -436,6 +436,7 @@ export interface QuestionSetDetail {
   shuffle_questions?: boolean
   status: string
   sub_course_video_id?: number | null
+  intro_video_url?: string | null
   created_at: string
   question_count: number
 }
@@ -471,18 +472,21 @@ export interface GetQuestionSetQuestionsResponse {
   metadata: unknown
 }
 
+/** POST /question-sets — practices use set_type: "PRACTICE", owner_type: "SUB_COURSE", owner_id: sub-course id */
 export interface CreateQuestionSetRequest {
   title: string
-  description: string
   set_type: string
-  owner_type: string
-  owner_id: number
-  persona?: string
-  shuffle_questions?: boolean
-  status?: string
-  banner_image?: string
-  passing_score?: number
-  time_limit_minutes?: number
+  description?: string | null
+  owner_type?: string | null
+  owner_id?: number | null
+  banner_image?: string | null
+  persona?: string | null
+  time_limit_minutes?: number | null
+  passing_score?: number | null
+  shuffle_questions?: boolean | null
+  status?: string | null
+  sub_course_video_id?: number | null
+  intro_video_url?: string | null
 }
 
 export interface AddQuestionToSetRequest {

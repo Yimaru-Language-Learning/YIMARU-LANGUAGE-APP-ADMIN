@@ -136,41 +136,46 @@ export function AddPracticePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto w-full max-w-7xl space-y-6 pb-10 sm:space-y-8 sm:pb-12">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-4 border-b border-grayScale-100 pb-6 sm:flex-row sm:items-end sm:justify-between sm:pb-8">
+        <div className="flex items-start gap-3 sm:items-center">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/content/speaking")}
-            className="h-9 w-9 rounded-lg border border-grayScale-200 bg-white shadow-sm transition-colors hover:bg-grayScale-50 hover:border-grayScale-300"
+            className="h-10 w-10 shrink-0 rounded-xl border border-grayScale-200 bg-white shadow-sm transition-colors hover:bg-grayScale-50 hover:border-grayScale-300"
           >
-            <ArrowLeft className="h-4 w-4 text-grayScale-500" />
+            <ArrowLeft className="h-4 w-4 text-grayScale-600" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">Add New Practice</h1>
-            <p className="text-sm text-grayScale-400">Create a new practice session with questions</p>
+            <h1 className="text-2xl font-bold tracking-tight text-grayScale-900 sm:text-3xl">Add practice</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-grayScale-500 sm:text-[15px]">
+              Draft a practice session with questions (demo flow — wire to API when ready).
+            </p>
           </div>
         </div>
-        <Button className="bg-brand-500 shadow-sm hover:bg-brand-600 transition-colors">
+        <Button className="h-11 w-full shrink-0 bg-brand-500 px-5 shadow-sm hover:bg-brand-600 sm:w-auto">
           <Check className="h-4 w-4" />
           Save
         </Button>
       </div>
 
       {/* Stepper */}
-      <Card className="border-grayScale-200 bg-white/80 p-5 shadow-sm sm:p-6">
-        <Stepper steps={STEPS} currentStep={currentStep} />
+      <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+        <div className="rounded-2xl border border-grayScale-100 bg-grayScale-50/40 px-4 py-5 sm:px-6">
+          <Stepper steps={STEPS} currentStep={currentStep} />
+        </div>
       </Card>
 
       {/* Step 1: Details */}
       {currentStep === 1 && (
-        <Card className="mx-auto max-w-3xl border-grayScale-200 p-6 shadow-sm sm:p-8">
-          <h2 className="mb-6 text-lg font-semibold tracking-tight text-grayScale-600">
-            Practice Details
-          </h2>
-          <div className="space-y-5">
+        <Card className="w-full overflow-hidden border-grayScale-200/80 shadow-sm">
+          <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+            <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 1: Details</h2>
+            <p className="mt-1.5 text-sm text-grayScale-500">Basics for this practice session.</p>
+          </div>
+          <div className="space-y-5 p-5 sm:p-8 lg:p-10">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                 Practice Title
@@ -256,11 +261,11 @@ export function AddPracticePage() {
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end border-t border-grayScale-100 pt-6">
+          <div className="flex justify-end border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:px-8 sm:py-5">
             <Button
               onClick={() => setCurrentStep(2)}
               disabled={!canProceedToStep2()}
-              className="bg-brand-500 px-6 shadow-sm hover:bg-brand-600 transition-colors"
+              className="min-w-[140px] bg-brand-500 shadow-sm hover:bg-brand-600"
             >
               Next
             </Button>
@@ -272,10 +277,12 @@ export function AddPracticePage() {
       {currentStep === 2 && (
         <div className="space-y-6">
           {/* Select Participants Section */}
-          <Card className="border-grayScale-200 p-6 shadow-sm">
-            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
-              Select Participants
-            </h2>
+          <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-4 sm:px-8 sm:py-5">
+              <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 2: Participants</h2>
+              <p className="mt-1 text-sm text-grayScale-500">Optional — select who appears in this practice.</p>
+            </div>
+            <div className="p-5 sm:p-8">
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 lg:grid-cols-8">
               {mockParticipants.map((participant) => {
                 const isSelected = formData.participants.includes(participant.id)
@@ -315,13 +322,16 @@ export function AddPracticePage() {
                 )
               })}
             </div>
+            </div>
           </Card>
 
           {/* Add Questions Section */}
-          <Card className="border-grayScale-200 p-6 shadow-sm">
-            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
-              General Practice Questions
-            </h2>
+          <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-4 sm:px-8 sm:py-5">
+              <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Questions</h2>
+              <p className="mt-1 text-sm text-grayScale-500">Build your question bank, then add to the practice.</p>
+            </div>
+            <div className="p-5 sm:p-8">
 
             {/* Existing Questions */}
             {formData.questions.map((q) => (
@@ -459,16 +469,17 @@ export function AddPracticePage() {
                 Add New Question
               </Button>
             </div>
+            </div>
           </Card>
 
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => setCurrentStep(1)} className="px-6">
+          <div className="flex flex-col-reverse gap-3 rounded-2xl border border-grayScale-200/80 bg-grayScale-50/30 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
+            <Button variant="outline" onClick={() => setCurrentStep(1)} className="px-6 sm:w-auto">
               Back
             </Button>
             <Button
               onClick={() => setCurrentStep(3)}
               disabled={!canProceedToStep3()}
-              className="bg-brand-500 px-6 shadow-sm hover:bg-brand-600 transition-colors"
+              className="min-w-[140px] bg-brand-500 px-6 shadow-sm hover:bg-brand-600"
             >
               Next
             </Button>
@@ -478,11 +489,13 @@ export function AddPracticePage() {
 
       {/* Step 3: Review */}
       {currentStep === 3 && (
-        <div className="mx-auto max-w-3xl space-y-6">
-          <Card className="border-grayScale-200 p-6 shadow-sm sm:p-8">
-            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
-              Practice Details
-            </h2>
+        <div className="space-y-6">
+          <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-4 sm:px-8 sm:py-5">
+              <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 3: Review</h2>
+              <p className="mt-1 text-sm text-grayScale-500">Confirm details before creating the practice.</p>
+            </div>
+            <div className="p-5 sm:p-8">
             <div className="divide-y divide-grayScale-100 overflow-hidden rounded-lg border border-grayScale-200">
               {[
                 { label: "Title", value: formData.title },
@@ -505,12 +518,14 @@ export function AddPracticePage() {
                 </div>
               ))}
             </div>
+            </div>
           </Card>
 
-          <Card className="border-grayScale-200 p-6 shadow-sm sm:p-8">
-            <h2 className="mb-5 text-lg font-semibold tracking-tight text-grayScale-600">
-              Questions
-            </h2>
+          <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-4 sm:px-8 sm:py-5">
+              <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Questions</h2>
+            </div>
+            <div className="p-5 sm:p-8">
             <div className="space-y-4">
               {formData.questions.map((q, index) => (
                 <div key={q.id} className="rounded-xl border border-grayScale-200 bg-grayScale-50/50 p-5 transition-colors hover:bg-grayScale-50">
@@ -549,14 +564,15 @@ export function AddPracticePage() {
                 </div>
               ))}
             </div>
+            </div>
           </Card>
 
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => setCurrentStep(2)} className="px-6">
+          <div className="flex flex-col-reverse gap-3 rounded-2xl border border-grayScale-200/80 bg-grayScale-50/30 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
+            <Button variant="outline" onClick={() => setCurrentStep(2)} className="px-6 sm:w-auto">
               Back
             </Button>
-            <Button onClick={handleSubmit} className="bg-brand-500 px-6 shadow-sm hover:bg-brand-600 transition-colors">
-              Create Practice
+            <Button onClick={handleSubmit} className="min-w-[160px] bg-brand-500 px-6 shadow-sm hover:bg-brand-600">
+              Create practice
             </Button>
           </div>
         </div>

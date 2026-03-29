@@ -1,10 +1,12 @@
-import { useState } from "react"
+import { useRef, useState, type ChangeEvent } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, ArrowRight, ChevronDown, Grid3X3, Check, Plus, Trash2, GripVertical, X, Edit, Rocket } from "lucide-react"
+import { ArrowLeft, ArrowRight, ChevronDown, Grid3X3, Check, Plus, Trash2, GripVertical, X, Edit, Rocket, Loader2, Upload } from "lucide-react"
+import { toast } from "sonner"
 import { Card } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { createQuestionSet, createQuestion, addQuestionToSet } from "../../api/courses.api"
+import { uploadVideoFile } from "../../api/files.api"
 import { Select } from "../../components/ui/select"
 import type { QuestionOption } from "../../types/course.types"
 
@@ -56,6 +58,18 @@ const STEPS = [
   { number: 4, label: "Review" },
 ]
 
+/** Prefer direct storage URL; for Vimeo pipeline match SubCourseContentPage player URL shape. */
+function introVideoUrlFromUploadResponse(data: { url?: string; embed_url?: string } | undefined): string | null {
+  if (!data) return null
+  const pageUrl = data.url?.trim()
+  const embedUrl = data.embed_url?.trim()
+  if (embedUrl) {
+    const hashFromUrl = pageUrl ? pageUrl.split("/").filter(Boolean).at(-1) : undefined
+    return hashFromUrl ? `${embedUrl}?h=${hashFromUrl}` : embedUrl
+  }
+  return pageUrl || null
+}
+
 function createEmptyQuestion(id: string): Question {
   return {
     id,
@@ -89,6 +103,9 @@ export function AddNewPracticePage() {
   const [selectedCourse] = useState("B2")
   const [practiceTitle, setPracticeTitle] = useState("")
   const [practiceDescription, setPracticeDescription] = useState("")
+  const [introVideoUrl, setIntroVideoUrl] = useState("")
+  const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false)
+  const introVideoFileInputRef = useRef<HTMLInputElement>(null)
   const [shuffleQuestions, setShuffleQuestions] = useState(false)
   const [passingScore, setPassingScore] = useState(50)
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(60)
@@ -118,6 +135,29 @@ export function AddNewPracticePage() {
 
   const handleCancel = () => {
     navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`)
+  }
+
+  const handleIntroVideoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+
+    setUploadingIntroVideo(true)
+    try {
+      const uploadRes = await uploadVideoFile(file, {
+        title: practiceTitle.trim() || file.name.replace(/\.[^.]+$/, "") || "Practice intro",
+        description: practiceDescription.trim() || undefined,
+      })
+      const finalUrl = introVideoUrlFromUploadResponse(uploadRes.data?.data)
+      if (!finalUrl) throw new Error("Missing uploaded video url")
+      setIntroVideoUrl(finalUrl)
+      toast.success("Intro video uploaded", { description: "The URL has been filled in for you." })
+    } catch (error) {
+      console.error("Failed to upload intro video:", error)
+      toast.error("Failed to upload intro video")
+    } finally {
+      setUploadingIntroVideo(false)
+    }
   }
 
   const addQuestion = () => {
@@ -170,15 +210,16 @@ export function AddNewPracticePage() {
       const persona = PERSONAS.find(p => p.id === selectedPersona)
       const setRes = await createQuestionSet({
         title: practiceTitle || "Untitled Practice",
-        description: practiceDescription,
         set_type: "PRACTICE",
         owner_type: "SUB_COURSE",
         owner_id: Number(subCourseId),
-        persona: persona?.name,
+        ...(practiceDescription.trim() ? { description: practiceDescription.trim() } : {}),
+        ...(persona?.name ? { persona: persona.name } : {}),
         shuffle_questions: shuffleQuestions,
         status,
         passing_score: passingScore,
         time_limit_minutes: timeLimitMinutes,
+        ...(introVideoUrl.trim() ? { intro_video_url: introVideoUrl.trim() } : {}),
       })
 
       const questionSetId = setRes.data?.data?.id
@@ -250,7 +291,8 @@ export function AddNewPracticePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+      <div className="space-y-5 sm:space-y-6">
       {currentStep !== 5 && (
         <>
           {/* Back Link */}
@@ -263,9 +305,9 @@ export function AddNewPracticePage() {
           </Link>
 
           {/* Header */}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-grayScale-900">Add New Practice</h1>
-            <p className="mt-1.5 text-sm text-grayScale-500">
+          <div className="border-b border-grayScale-100 pb-6 sm:pb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-grayScale-900 sm:text-3xl">Add New Practice</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-grayScale-500 sm:text-[15px]">
               Create a new immersive practice session for students.
             </p>
           </div>
@@ -274,12 +316,12 @@ export function AddNewPracticePage() {
 
       {/* Step Tracker */}
       {currentStep !== 5 && (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-center justify-center rounded-2xl border border-grayScale-100 bg-grayScale-50/40 px-3 py-4 sm:px-6 sm:py-5">
         {STEPS.map((step, index) => (
           <div key={step.number} className="flex items-center">
             <div className="flex flex-col items-center">
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold shadow-sm transition-all duration-300 ${
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition-all duration-300 sm:h-10 sm:w-10 sm:text-sm ${
                   currentStep === step.number
                     ? "bg-brand-500 text-white ring-4 ring-brand-100"
                     : currentStep > step.number
@@ -290,7 +332,7 @@ export function AddNewPracticePage() {
                 {currentStep > step.number ? <Check className="h-4 w-4" /> : step.number}
               </div>
               <span
-                className={`mt-2.5 text-xs font-semibold tracking-wide ${
+                className={`mt-2 max-w-[4.5rem] text-center text-[10px] font-semibold uppercase tracking-wide sm:mt-2.5 sm:max-w-none sm:text-xs sm:normal-case sm:tracking-wide ${
                   currentStep === step.number
                     ? "text-brand-600"
                     : currentStep > step.number
@@ -303,7 +345,7 @@ export function AddNewPracticePage() {
             </div>
             {index < STEPS.length - 1 && (
               <div
-                className={`mx-3 h-0.5 w-16 rounded-full transition-colors duration-300 sm:mx-5 sm:w-24 md:w-32 ${
+                className={`mx-2 h-0.5 w-10 shrink-0 rounded-full transition-colors duration-300 sm:mx-4 sm:w-20 md:w-28 lg:w-36 xl:w-44 ${
                   currentStep > step.number ? "bg-brand-500" : "bg-grayScale-200"
                 }`}
               />
@@ -315,111 +357,170 @@ export function AddNewPracticePage() {
 
       {/* Step Content */}
       {currentStep === 1 && (
-        <Card className="mx-auto max-w-2xl p-6 sm:p-10">
-          <h2 className="text-lg font-semibold text-grayScale-900">Step 1: Context Definition</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-grayScale-500">
-            Define the educational level and curriculum module for this practice.
-          </p>
+        <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+          <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+            <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 1: Context</h2>
+            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
+              Define details and rules for this practice. Curriculum context is shown on the right.
+            </p>
+          </div>
 
-          <div className="mt-8 space-y-7">
-            {/* Practice Title */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">Practice Title</label>
-              <Input
-                value={practiceTitle}
-                onChange={(e) => setPracticeTitle(e.target.value)}
-                placeholder="Enter practice title"
-              />
-            </div>
+          <div className="p-5 sm:p-8 lg:p-10">
+            <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
+              <div className="space-y-6 lg:col-span-7">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-grayScale-700">Practice Title</label>
+                  <Input
+                    value={practiceTitle}
+                    onChange={(e) => setPracticeTitle(e.target.value)}
+                    placeholder="Enter practice title"
+                    className="h-11"
+                  />
+                </div>
 
-            {/* Practice Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">Description</label>
-              <textarea
-                value={practiceDescription}
-                onChange={(e) => setPracticeDescription(e.target.value)}
-                placeholder="Enter practice description"
-                className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                rows={3}
-              />
-            </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-grayScale-700">Description</label>
+                  <textarea
+                    value={practiceDescription}
+                    onChange={(e) => setPracticeDescription(e.target.value)}
+                    placeholder="Enter practice description"
+                    className="min-h-[88px] w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                    rows={3}
+                  />
+                </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {/* Passing Score */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Passing Score</label>
-                <Input
-                  type="number"
-                  value={passingScore}
-                  onChange={(e) => setPassingScore(Number(e.target.value))}
-                  placeholder="50"
-                  min={0}
-                  max={100}
-                />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-grayScale-700">
+                    Intro video URL <span className="font-normal text-grayScale-400">(optional)</span>
+                  </label>
+                  <Input
+                    value={introVideoUrl}
+                    onChange={(e) => setIntroVideoUrl(e.target.value)}
+                    placeholder="https://…"
+                    type="url"
+                    inputMode="url"
+                    autoComplete="off"
+                    className="h-11 font-mono text-[13px]"
+                  />
+                  <input
+                    ref={introVideoFileInputRef}
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={handleIntroVideoFileChange}
+                    disabled={uploadingIntroVideo}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploadingIntroVideo}
+                      onClick={() => introVideoFileInputRef.current?.click()}
+                      className="gap-1.5"
+                    >
+                      {uploadingIntroVideo ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      {uploadingIntroVideo ? "Uploading…" : "Upload video from computer"}
+                    </Button>
+                    {introVideoUrl.trim() ? (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setIntroVideoUrl("")}>
+                        Clear URL
+                      </Button>
+                    ) : null}
+                  </div>
+                  <p className="text-xs leading-relaxed text-grayScale-500">
+                    Paste a link or upload from your computer; uploads go through the file service (optional, not tied to sub-course video rows).
+                  </p>
+                </div>
               </div>
 
-              {/* Time Limit */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-grayScale-700">Time Limit (minutes)</label>
-                <Input
-                  type="number"
-                  value={timeLimitMinutes}
-                  onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
-                  placeholder="60"
-                  min={0}
-                />
-              </div>
-            </div>
+              <aside className="space-y-5 lg:col-span-5">
+                <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-5 shadow-sm ring-1 ring-grayScale-100/80">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Scoring & behavior</h3>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-grayScale-700">Passing score</label>
+                      <Input
+                        type="number"
+                        value={passingScore}
+                        onChange={(e) => setPassingScore(Number(e.target.value))}
+                        placeholder="50"
+                        min={0}
+                        max={100}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-grayScale-700">Time (min)</label>
+                      <Input
+                        type="number"
+                        value={timeLimitMinutes}
+                        onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
+                        placeholder="60"
+                        min={0}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-grayScale-200/80 bg-white px-4 py-3">
+                    <label className="text-sm font-medium text-grayScale-700">Shuffle questions</label>
+                    <button
+                      type="button"
+                      onClick={() => setShuffleQuestions(!shuffleQuestions)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                        shuffleQuestions ? "bg-brand-500" : "bg-grayScale-300"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${
+                          shuffleQuestions ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
 
-            {/* Shuffle Questions */}
-            <div className="flex items-center gap-3 rounded-lg bg-grayScale-50 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setShuffleQuestions(!shuffleQuestions)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  shuffleQuestions ? "bg-brand-500" : "bg-grayScale-300"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${
-                    shuffleQuestions ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-              <label className="text-sm font-medium text-grayScale-700">Shuffle Questions</label>
-            </div>
-
-            {/* Program */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Program <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-500">Auto-selected</span>
-              </label>
-              <div className="flex items-center gap-3 rounded-lg border border-dashed border-grayScale-300 bg-grayScale-50/50 px-4 py-3">
-                <Grid3X3 className="h-5 w-5 text-grayScale-400" />
-                <span className="flex-1 text-sm font-medium text-grayScale-600">{selectedProgram}</span>
-                <ChevronDown className="h-5 w-5 text-grayScale-300" />
-              </div>
-            </div>
-
-            {/* Course */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Course <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-500">Auto-selected</span>
-              </label>
-              <div className="flex items-center gap-3 rounded-lg border border-dashed border-grayScale-300 bg-grayScale-50/50 px-4 py-3">
-                <Grid3X3 className="h-5 w-5 text-grayScale-400" />
-                <span className="flex-1 text-sm font-medium text-grayScale-600">{selectedCourse}</span>
-                <ChevronDown className="h-5 w-5 text-grayScale-300" />
-              </div>
+                <div className="rounded-xl border border-grayScale-200 bg-white p-5 shadow-sm ring-1 ring-grayScale-100/80">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Curriculum context</h3>
+                  <p className="mt-1 text-xs text-grayScale-400">Read-only for this flow.</p>
+                  <div className="mt-4 space-y-3">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-grayScale-700">
+                        Program{" "}
+                        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-500">Auto</span>
+                      </label>
+                      <div className="flex items-center gap-3 rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/50 px-3 py-2.5">
+                        <Grid3X3 className="h-4 w-4 shrink-0 text-grayScale-400" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-grayScale-700">{selectedProgram}</span>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-300" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-grayScale-700">
+                        Course{" "}
+                        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-500">Auto</span>
+                      </label>
+                      <div className="flex items-center gap-3 rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/50 px-3 py-2.5">
+                        <Grid3X3 className="h-4 w-4 shrink-0 text-grayScale-400" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-grayScale-700">{selectedCourse}</span>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-300" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
 
-          {/* Navigation */}
-          <div className="mt-10 flex flex-col-reverse items-center justify-between gap-3 border-t border-grayScale-100 pt-6 sm:flex-row">
-            <Button variant="ghost" onClick={handleCancel}>
+          <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:items-center sm:px-8 sm:py-5">
+            <Button variant="ghost" onClick={handleCancel} className="sm:w-auto">
               Cancel
             </Button>
-            <Button className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto" onClick={handleNext}>
+            <Button className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto sm:min-w-[180px]" onClick={handleNext}>
               {getNextButtonLabel()}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -428,13 +529,16 @@ export function AddNewPracticePage() {
       )}
 
       {currentStep === 2 && (
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-xl font-semibold tracking-tight text-grayScale-900">Select Personas</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-grayScale-500">
-            Choose the characters that will participate in this practice scenario. Students will interact with these personas.
-          </p>
+        <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+          <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+            <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 2: Persona</h2>
+            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
+              Choose the character students will interact with in this practice.
+            </p>
+          </div>
 
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="p-5 sm:p-8 lg:p-10">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
             {PERSONAS.map((persona) => (
               <button
                 key={persona.id}
@@ -465,30 +569,32 @@ export function AddNewPracticePage() {
               </button>
             ))}
           </div>
+          </div>
 
-          {/* Navigation */}
-          <div className="mt-10 flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-            <Button variant="outline" onClick={handleBack}>
+          <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:items-center sm:px-8 sm:py-5">
+            <Button variant="outline" onClick={handleBack} className="sm:w-auto">
               Back
             </Button>
-            <Button className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto" onClick={handleNext}>
+            <Button className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto sm:min-w-[180px]" onClick={handleNext}>
               {getNextButtonLabel()}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {currentStep === 3 && (
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-xl font-semibold tracking-tight text-grayScale-900">Create Practice Questions</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-grayScale-500">
-            Add questions to your practice. Support for MCQ, True/False, and Short Answer types.
-          </p>
+        <div className="w-full space-y-6">
+          <div className="rounded-2xl border border-grayScale-200/80 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 shadow-sm sm:px-8 sm:py-6">
+            <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 3: Questions</h2>
+            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
+              Add MCQ, True/False, or Short Answer items. Use the full width for stems and options.
+            </p>
+          </div>
 
-          <div className="mt-6 space-y-5">
+          <div className="space-y-4 sm:space-y-5">
             {questions.map((question, index) => (
-              <Card key={question.id} className="border-l-4 border-l-brand-500 p-5 shadow-sm transition-shadow hover:shadow-md sm:p-7">
+              <Card key={question.id} className="border border-grayScale-200/90 border-l-4 border-l-brand-500 p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6 lg:p-8">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <GripVertical className="h-5 w-5 cursor-grab text-grayScale-300 transition-colors hover:text-grayScale-500" />
@@ -517,7 +623,7 @@ export function AddNewPracticePage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
                     {/* Question Type */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
@@ -643,7 +749,7 @@ export function AddNewPracticePage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
                     {/* Tips */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
@@ -669,7 +775,7 @@ export function AddNewPracticePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
                     {/* Voice Prompt */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
@@ -699,23 +805,22 @@ export function AddNewPracticePage() {
             ))}
           </div>
 
-          {/* Add Button */}
-          <div className="mt-5">
+          <div>
             <button
+              type="button"
               onClick={addQuestion}
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-dashed border-brand-200 px-4 py-2.5 text-sm font-semibold text-brand-500 transition-all hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-200/90 bg-brand-50/20 px-4 py-3.5 text-sm font-semibold text-brand-600 transition-all hover:border-brand-300 hover:bg-brand-50/60 hover:text-brand-700 sm:py-3"
             >
               <Plus className="h-4 w-4" />
-              Add New Question
+              Add another question
             </button>
           </div>
 
-          {/* Navigation */}
-          <div className="mt-10 flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-            <Button variant="outline" onClick={handleBack}>
+          <div className="flex flex-col-reverse items-stretch justify-between gap-3 rounded-2xl border border-grayScale-200/80 bg-grayScale-50/30 px-4 py-4 sm:flex-row sm:items-center sm:px-6 sm:py-5">
+            <Button variant="outline" onClick={handleBack} className="sm:w-auto">
               Back
             </Button>
-            <Button className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto" onClick={handleNext}>
+            <Button className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto sm:min-w-[180px]" onClick={handleNext}>
               {getNextButtonLabel()}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -724,14 +829,17 @@ export function AddNewPracticePage() {
       )}
 
       {currentStep === 4 && (
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-xl font-semibold tracking-tight text-grayScale-900">Review & Publish</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-grayScale-500">
-            Review your practice details before saving.
-          </p>
+        <div className="w-full space-y-6">
+          <div className="rounded-2xl border border-grayScale-200/80 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 shadow-sm sm:px-8 sm:py-6">
+            <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 4: Review & publish</h2>
+            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
+              Confirm context, persona, and questions before saving or publishing.
+            </p>
+          </div>
 
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
           {/* Basic Information Card */}
-          <Card className="mt-6 overflow-hidden p-0">
+          <Card className="overflow-hidden border-grayScale-200/80 p-0 shadow-sm">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <h3 className="font-semibold text-grayScale-900">Basic Information</h3>
               <button
@@ -749,21 +857,27 @@ export function AddNewPracticePage() {
               </div>
               <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
                 <span className="text-sm text-grayScale-500">Description</span>
-                <span className="max-w-sm text-right text-sm text-grayScale-700">{practiceDescription || "—"}</span>
+                <span className="max-w-[min(28rem,55%)] text-right text-sm leading-relaxed text-grayScale-700">{practiceDescription || "—"}</span>
               </div>
               <div className="flex justify-between px-6 py-3.5">
+                <span className="text-sm text-grayScale-500">Intro video URL</span>
+                <span className="max-w-[min(28rem,55%)] break-all text-right text-sm text-grayScale-700">
+                  {introVideoUrl.trim() || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
                 <span className="text-sm text-grayScale-500">Passing Score</span>
                 <span className="text-sm font-medium text-grayScale-900">{passingScore}%</span>
               </div>
-              <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
+              <div className="flex justify-between px-6 py-3.5">
                 <span className="text-sm text-grayScale-500">Time Limit</span>
                 <span className="text-sm font-medium text-grayScale-900">{timeLimitMinutes} minutes</span>
               </div>
-              <div className="flex justify-between px-6 py-3.5">
+              <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
                 <span className="text-sm text-grayScale-500">Shuffle Questions</span>
                 <span className="text-sm font-medium text-grayScale-900">{shuffleQuestions ? "Yes" : "No"}</span>
               </div>
-              <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
+              <div className="flex justify-between px-6 py-3.5">
                 <span className="text-sm text-grayScale-500">Persona</span>
                 <div className="flex items-center gap-2">
                   {selectedPersona && (
@@ -784,7 +898,7 @@ export function AddNewPracticePage() {
           </Card>
 
           {/* Questions Review */}
-          <Card className="mt-6 overflow-hidden p-0">
+          <Card className="overflow-hidden border-grayScale-200/80 p-0 shadow-sm lg:min-h-0">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
               <div className="flex items-center gap-2.5">
                 <h3 className="font-semibold text-grayScale-900">Questions</h3>
@@ -800,9 +914,9 @@ export function AddNewPracticePage() {
                 Edit
               </button>
             </div>
-            <div className="divide-y divide-grayScale-100 px-6 py-4">
+            <div className="max-h-[min(70vh,52rem)] space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
               {questions.map((question, index) => (
-                <div key={question.id} className="rounded-lg border border-grayScale-200 p-4 transition-colors first:mt-0 [&:not(:first-child)]:mt-3 hover:border-grayScale-300">
+                <div key={question.id} className="rounded-xl border border-grayScale-200 bg-grayScale-50/20 p-4 transition-colors hover:border-grayScale-300 sm:p-4">
                   <div className="flex items-start gap-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-600">
                       {index + 1}
@@ -845,23 +959,23 @@ export function AddNewPracticePage() {
               ))}
             </div>
           </Card>
+          </div>
 
           {saveError && (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
               <p className="text-sm font-medium text-red-600">{saveError}</p>
             </div>
           )}
 
-          {/* Navigation */}
-          <div className="mt-10 flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-            <Button variant="outline" onClick={handleBack}>
+          <div className="flex flex-col-reverse items-stretch justify-between gap-3 rounded-2xl border border-grayScale-200/80 bg-grayScale-50/30 px-4 py-4 sm:flex-row sm:items-center sm:px-6 sm:py-5">
+            <Button variant="outline" onClick={handleBack} className="sm:w-auto">
               Back
             </Button>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <Button variant="outline" onClick={handleSaveAsDraft} disabled={saving}>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={handleSaveAsDraft} disabled={saving} className="sm:min-w-[140px]">
                 {saving ? "Saving..." : "Save as Draft"}
               </Button>
-              <Button className="bg-brand-500 hover:bg-brand-600" onClick={handlePublish} disabled={saving}>
+              <Button className="bg-brand-500 hover:bg-brand-600 sm:min-w-[160px]" onClick={handlePublish} disabled={saving}>
                 <Rocket className="mr-2 h-4 w-4" />
                 {saving ? "Publishing..." : "Publish Now"}
               </Button>
@@ -898,6 +1012,7 @@ export function AddNewPracticePage() {
                     setCurrentStep(1)
                     setPracticeTitle("")
                     setPracticeDescription("")
+                    setIntroVideoUrl("")
                     setShuffleQuestions(false)
                     setPassingScore(50)
                     setTimeLimitMinutes(60)
@@ -940,6 +1055,7 @@ export function AddNewPracticePage() {
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }

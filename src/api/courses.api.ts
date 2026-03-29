@@ -118,14 +118,21 @@ export const deleteSubCourseVideo = (videoId: number) =>
   http.delete(`/course-management/sub-course-videos/${videoId}`)
 
 // Practice APIs - for SubCourse practices (New Hierarchy)
-// Practices are sourced from question sets by owner_type=SUB_COURSE.
+// Practices are question sets: POST /question-sets with set_type: "PRACTICE", owner_type: "SUB_COURSE".
 export const getPracticesBySubCourse = (subCourseId: number) =>
   http.get<GetQuestionSetsResponse>("/question-sets/by-owner", {
     params: { owner_type: "SUB_COURSE", owner_id: subCourseId },
   })
 
 export const createPractice = (data: CreatePracticeRequest) =>
-  http.post("/course-management/practices", data)
+  http.post<CreateQuestionSetResponse>("/question-sets", {
+    title: data.title,
+    set_type: "PRACTICE",
+    owner_type: "SUB_COURSE",
+    owner_id: data.sub_course_id,
+    ...(data.description?.trim() ? { description: data.description.trim() } : {}),
+    ...(data.persona ? { persona: data.persona } : {}),
+  })
 
 export const updatePractice = (practiceId: number, data: UpdatePracticeRequest) =>
   http.put(`/course-management/practices/${practiceId}`, data)

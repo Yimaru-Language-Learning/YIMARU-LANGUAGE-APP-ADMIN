@@ -1,5 +1,5 @@
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, ChevronDown, Image as ImageIcon, Mic, Plus, Trash2, Upload } from "lucide-react"
+import { ArrowLeft, ChevronDown, Image as ImageIcon, Loader2, Mic, Plus, Trash2, Upload } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -17,7 +17,7 @@ import {
   getQuestions,
   updateQuestion,
 } from "../../api/courses.api"
-import { resolveFileUrl, uploadAudioFile, uploadImageFile } from "../../api/files.api"
+import { resolveFileUrl, uploadAudioFile, uploadImageFile, uploadVideoFile } from "../../api/files.api"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
   DropdownMenu,
@@ -95,6 +95,18 @@ function normalizeObjectKey(value: string) {
   return trimmed
 }
 
+/** Prefer direct storage URL; for Vimeo pipeline match SubCourseContentPage player URL shape. */
+function introVideoUrlFromUploadResponse(data: { url?: string; embed_url?: string } | undefined): string | null {
+  if (!data) return null
+  const pageUrl = data.url?.trim()
+  const embedUrl = data.embed_url?.trim()
+  if (embedUrl) {
+    const hashFromUrl = pageUrl ? pageUrl.split("/").filter(Boolean).at(-1) : undefined
+    return hashFromUrl ? `${embedUrl}?h=${hashFromUrl}` : embedUrl
+  }
+  return pageUrl || null
+}
+
 export function SpeakingPage() {
   const [audioQuestions, setAudioQuestions] = useState<QuestionDetail[]>([])
   const [audioPreviewByQuestionId, setAudioPreviewByQuestionId] = useState<Record<number, string>>({})
@@ -104,6 +116,9 @@ export function SpeakingPage() {
 
   const [setTitle, setSetTitle] = useState("")
   const [setDescription, setSetDescription] = useState("")
+  const [introVideoUrl, setIntroVideoUrl] = useState("")
+  const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false)
+  const introVideoFileInputRef = useRef<HTMLInputElement>(null)
   const [subCourseId, setSubCourseId] = useState("")
   const [subCourseOptions, setSubCourseOptions] = useState<SubCourseOption[]>([])
   const [subCourseLoading, setSubCourseLoading] = useState(false)
@@ -315,9 +330,33 @@ export function SpeakingPage() {
   const resetCreateForm = () => {
     setSetTitle("")
     setSetDescription("")
+    setIntroVideoUrl("")
     setSubCourseId("")
     setSetStatus("DRAFT")
     setQuestionDrafts([createEmptyDraft()])
+  }
+
+  const handleIntroVideoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+
+    setUploadingIntroVideo(true)
+    try {
+      const uploadRes = await uploadVideoFile(file, {
+        title: setTitle.trim() || file.name.replace(/\.[^.]+$/, "") || "Speaking intro",
+        description: setDescription.trim() || undefined,
+      })
+      const finalUrl = introVideoUrlFromUploadResponse(uploadRes.data?.data)
+      if (!finalUrl) throw new Error("Missing uploaded video url")
+      setIntroVideoUrl(finalUrl)
+      toast.success("Intro video uploaded", { description: "The URL has been filled in for you." })
+    } catch (error) {
+      console.error("Failed to upload intro video:", error)
+      toast.error("Failed to upload intro video")
+    } finally {
+      setUploadingIntroVideo(false)
+    }
   }
 
   const canCreate = useMemo(() => {
@@ -695,11 +734,12 @@ export function SpeakingPage() {
       // 1) Create speaking practice set.
       const setRes = await createQuestionSet({
         title: setTitle.trim(),
-        description: setDescription.trim(),
+        ...(setDescription.trim() ? { description: setDescription.trim() } : {}),
         set_type: "PRACTICE",
         owner_type: "SUB_COURSE",
         owner_id: parsedSubCourseId,
         status: setStatus,
+        ...(introVideoUrl.trim() ? { intro_video_url: introVideoUrl.trim() } : {}),
       })
 
       const setId = setRes.data?.data?.id
@@ -871,18 +911,18 @@ export function SpeakingPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto w-full max-w-7xl space-y-6 pb-10 sm:space-y-8 sm:pb-12">
+      <div className="flex flex-col gap-4 border-b border-grayScale-100 pb-6 sm:flex-row sm:items-end sm:justify-between sm:pb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">
+          <h1 className="text-2xl font-bold tracking-tight text-grayScale-900 sm:text-3xl">
             Speaking
           </h1>
-          <p className="mt-1.5 text-sm leading-relaxed text-grayScale-400">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-grayScale-500 sm:text-[15px]">
             Create and manage speaking practice sessions for your learners.
           </p>
         </div>
         <Button
-          className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto"
+          className="h-11 w-full shrink-0 bg-brand-500 px-5 shadow-sm hover:bg-brand-600 sm:w-auto"
           onClick={() => {
             setOpenCreate(true)
             setCurrentStep(1)
@@ -894,40 +934,43 @@ export function SpeakingPage() {
       </div>
 
       {!openCreate && (
-        <Card className="shadow-soft">
-          <CardHeader className="border-b border-grayScale-200 pb-4">
-            <CardTitle className="text-base font-semibold text-grayScale-600">
-              AUDIO Questions
+        <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+          <CardHeader className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-4 sm:px-6 sm:py-5">
+            <CardTitle className="text-base font-semibold text-grayScale-900 sm:text-lg">
+              AUDIO questions
             </CardTitle>
+            <p className="mt-1 text-xs font-normal text-grayScale-500 sm:text-sm">
+              Tap a row to view details. Speaking practices create AUDIO question sets linked to a sub-course.
+            </p>
           </CardHeader>
-          <CardContent className="pt-5">
+          <CardContent className="px-4 pb-6 pt-5 sm:px-6">
             {loading ? (
               <div className="flex flex-col items-center gap-2 py-14 text-center text-sm text-grayScale-500">
                 <SpinnerIcon className="h-5 w-5" />
                 Loading audio questions...
               </div>
             ) : audioQuestions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-14 text-center">
-                <div className="mb-6 grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-brand-100 to-brand-200">
-                  <Mic className="h-8 w-8 text-brand-500" />
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/30 py-16 text-center">
+                <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-200 shadow-sm ring-4 ring-brand-500/10">
+                  <Mic className="h-8 w-8 text-brand-600" />
                 </div>
-                <h3 className="text-base font-semibold text-grayScale-600">No audio questions yet</h3>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-grayScale-400">
+                <h3 className="text-base font-semibold text-grayScale-800">No audio questions yet</h3>
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-grayScale-500">
                   Create a speaking practice to automatically create and attach an AUDIO question.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {audioQuestions.map((question, idx) => (
                   <div
                     key={question.id}
-                    className={`rounded-lg border px-4 py-3 ${
-                      idx % 2 === 0 ? "border-grayScale-200 bg-white" : "border-grayScale-100 bg-grayScale-50"
-                    } cursor-pointer transition-colors hover:border-brand-300 hover:bg-brand-50/30`}
+                    className={`cursor-pointer rounded-xl border px-4 py-3.5 transition-all sm:px-5 ${
+                      idx % 2 === 0 ? "border-grayScale-200 bg-white" : "border-grayScale-100 bg-grayScale-50/80"
+                    } hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-sm`}
                     onClick={() => handleOpenQuestionDetail(question.id)}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-grayScale-700">{question.question_text}</p>
+                      <p className="text-sm font-medium leading-snug text-grayScale-800">{question.question_text}</p>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -942,7 +985,7 @@ export function SpeakingPage() {
                       </Button>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-md bg-purple-100 px-2 py-1 text-purple-700">AUDIO</span>
+                      <span className="rounded-md bg-brand-100 px-2 py-0.5 font-medium text-brand-800">AUDIO</span>
                       <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
                         Difficulty: {question.difficulty_level || "—"}
                       </span>
@@ -982,9 +1025,12 @@ export function SpeakingPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
           onClick={() => setDetailOpen(false)}
         >
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-5 py-4">
-              <h3 className="text-base font-semibold text-grayScale-700">AUDIO Question Detail</h3>
+          <div
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-grayScale-200/80 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/90 to-white px-5 py-4 sm:px-6">
+              <h3 className="text-base font-semibold text-grayScale-900 sm:text-lg">AUDIO question</h3>
               <div className="flex items-center gap-2">
                 {!detailLoading && selectedQuestionDetail && !detailEditing ? (
                   <Button variant="outline" size="sm" onClick={() => setDetailEditing(true)}>
@@ -1012,7 +1058,7 @@ export function SpeakingPage() {
                 </Button>
               </div>
             </div>
-            <div className="max-h-[72vh] space-y-4 overflow-y-auto px-5 py-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
               {detailLoading ? (
                 <div className="flex items-center justify-center py-10">
                   <SpinnerIcon className="h-5 w-5" />
@@ -1233,19 +1279,19 @@ export function SpeakingPage() {
 
       {confirmDeleteOpen && (deleteTarget || selectedQuestionDetail) && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl">
-            <div className="border-b border-grayScale-100 px-5 py-4">
-              <h3 className="text-base font-semibold text-grayScale-700">Delete AUDIO Question</h3>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-grayScale-200/80 bg-white shadow-2xl">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-red-50/50 to-white px-5 py-4">
+              <h3 className="text-base font-semibold text-grayScale-900">Delete AUDIO question</h3>
             </div>
             <div className="space-y-2 px-5 py-4">
-              <p className="text-sm text-grayScale-600">
-                Are you sure you want to delete this question?
+              <p className="text-sm leading-relaxed text-grayScale-600">
+                This action cannot be undone. The question will be removed permanently.
               </p>
-              <p className="line-clamp-2 text-xs text-grayScale-400">
+              <p className="line-clamp-3 rounded-lg bg-grayScale-50 px-3 py-2 text-xs text-grayScale-600">
                 {deleteTarget?.text ?? selectedQuestionDetail?.question_text}
               </p>
             </div>
-            <div className="flex justify-end gap-2 border-t border-grayScale-100 px-5 py-4">
+            <div className="flex justify-end gap-2 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1270,45 +1316,114 @@ export function SpeakingPage() {
 
       {openCreate && (
         <div className="space-y-6">
-          <Card className="border-grayScale-200 bg-white/80 p-5 shadow-sm sm:p-6">
-            <div className="mb-4">
+          <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+            <div className="flex flex-col gap-4 border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 border-grayScale-200 text-grayScale-600"
+                className="h-10 w-full shrink-0 border-grayScale-200 text-grayScale-700 sm:w-auto"
                 onClick={() => setOpenCreate(false)}
                 disabled={saving}
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to AUDIO Questions
+                Back to list
               </Button>
+              <p className="text-center text-xs text-grayScale-500 sm:text-left sm:text-sm">
+                New speaking practice · {SPEAKING_STEPS[currentStep - 1] ?? ""}
+              </p>
             </div>
-            <Stepper steps={SPEAKING_STEPS} currentStep={currentStep} />
+            <div className="px-4 py-5 sm:px-6 sm:py-6">
+              <div className="rounded-2xl border border-grayScale-100 bg-grayScale-50/40 px-3 py-4 sm:px-5">
+                <Stepper steps={SPEAKING_STEPS} currentStep={currentStep} />
+              </div>
+            </div>
           </Card>
 
           {currentStep === 1 && (
-            <Card className="mx-auto max-w-3xl border-grayScale-200 p-6 shadow-sm sm:p-8">
-              <h2 className="mb-6 text-lg font-semibold text-grayScale-700">Step 1: Practice Context</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-sm font-medium text-grayScale-600">Practice Title</label>
-                  <Input
-                    value={setTitle}
-                    onChange={(e) => setSetTitle(e.target.value)}
-                    placeholder="Speaking practice title"
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-sm font-medium text-grayScale-600">Practice Description (Optional)</label>
-                  <Textarea
-                    value={setDescription}
-                    onChange={(e) => setSetDescription(e.target.value)}
-                    rows={2}
-                    placeholder="Brief description"
-                  />
-                </div>
+            <Card className="w-full overflow-hidden border-grayScale-200/80 shadow-sm">
+              <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+                <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 1: Practice context</h2>
+                <p className="mt-1.5 max-w-3xl text-sm text-grayScale-500">
+                  Title, description, optional intro video, sub-course, and publish status for this speaking practice.
+                </p>
+              </div>
+              <div className="p-5 sm:p-8 lg:p-10">
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
+                  <div className="space-y-5 lg:col-span-7">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-grayScale-700">Practice title</label>
+                      <Input
+                        value={setTitle}
+                        onChange={(e) => setSetTitle(e.target.value)}
+                        placeholder="Speaking practice title"
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-grayScale-700">Description (optional)</label>
+                      <Textarea
+                        value={setDescription}
+                        onChange={(e) => setSetDescription(e.target.value)}
+                        rows={3}
+                        placeholder="Brief description"
+                        className="min-h-[88px]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-grayScale-700">
+                        Intro video URL <span className="font-normal text-grayScale-400">(optional)</span>
+                      </label>
+                      <Input
+                        value={introVideoUrl}
+                        onChange={(e) => setIntroVideoUrl(e.target.value)}
+                        placeholder="https://…"
+                        type="url"
+                        inputMode="url"
+                        autoComplete="off"
+                        className="h-11 font-mono text-[13px]"
+                      />
+                      <input
+                        ref={introVideoFileInputRef}
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={handleIntroVideoFileChange}
+                        disabled={uploadingIntroVideo}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={uploadingIntroVideo}
+                          onClick={() => introVideoFileInputRef.current?.click()}
+                          className="gap-1.5"
+                        >
+                          {uploadingIntroVideo ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          {uploadingIntroVideo ? "Uploading…" : "Upload video from computer"}
+                        </Button>
+                        {introVideoUrl.trim() ? (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setIntroVideoUrl("")}>
+                            Clear URL
+                          </Button>
+                        ) : null}
+                      </div>
+                      <p className="text-xs leading-relaxed text-grayScale-500">
+                        Paste a link or upload from your computer; uploads use the same file service as elsewhere. Optional, not tied to sub-course video rows.
+                      </p>
+                    </div>
+                  </div>
+                  <aside className="space-y-4 lg:col-span-5">
+                    <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-5 shadow-sm ring-1 ring-grayScale-100/80">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Sub-course & status</h3>
+                      <p className="mt-1 text-xs text-grayScale-400">Choose where this practice is attached.</p>
+                      <div className="mt-4 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-grayScale-600">Course</label>
+                  <label className="text-sm font-medium text-grayScale-700">Sub-course</label>
                   <DropdownMenu open={subCourseMenuOpen} onOpenChange={setSubCourseMenuOpen}>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -1361,7 +1476,7 @@ export function SpeakingPage() {
                   </DropdownMenu>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-grayScale-600">Set Status</label>
+                  <label className="text-sm font-medium text-grayScale-700">Set status</label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -1384,45 +1499,56 @@ export function SpeakingPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </div>
-              <div className="mt-8 flex flex-col-reverse gap-3 border-t border-grayScale-100 pt-6 sm:flex-row sm:justify-end">
-                <Button variant="outline" onClick={() => setOpenCreate(false)} disabled={saving}>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+                <div className="mt-8 flex flex-col-reverse gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-0 py-4 sm:flex-row sm:justify-end sm:px-0 sm:py-5">
+                <Button variant="outline" onClick={() => setOpenCreate(false)} disabled={saving} className="sm:w-auto">
                   Cancel
                 </Button>
                 <Button
-                  className="bg-brand-500 hover:bg-brand-600"
+                  className="bg-brand-500 hover:bg-brand-600 sm:min-w-[180px]"
                   onClick={() => setCurrentStep(2)}
                   disabled={!canProceedToQuestions}
                 >
                   Next: Questions
                 </Button>
               </div>
+              </div>
             </Card>
           )}
 
           {currentStep === 2 && (
-            <Card className="mx-auto max-w-4xl border-grayScale-200 p-6 shadow-sm sm:p-8">
-              <h2 className="mb-4 text-lg font-semibold text-grayScale-700">Step 2: AUDIO Questions</h2>
-              <div className="rounded-lg border border-grayScale-200 bg-grayScale-50/50 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-grayScale-700">AUDIO Questions</p>
+            <Card className="w-full overflow-hidden border-grayScale-200/80 shadow-sm">
+              <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 2: AUDIO questions</h2>
+                    <p className="mt-1 max-w-3xl text-sm text-grayScale-500">
+                      Upload or record prompts, add reference image, and set optional tips.
+                    </p>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="shrink-0"
                     onClick={() => setQuestionDrafts((prev) => [...prev, createEmptyDraft()])}
                     disabled={saving}
                   >
                     <Plus className="h-4 w-4" />
-                    Add Question
+                    Add question
                   </Button>
                 </div>
-
-                <div className="space-y-4">
+              </div>
+              <div className="p-5 sm:p-8">
+              <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/30 p-4 sm:p-5">
+                <div className="space-y-5">
                   {questionDrafts.map((draft, draftIndex) => (
-                    <div key={draftIndex} className="rounded-lg border border-grayScale-200 bg-white p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-grayScale-700">Question {draftIndex + 1}</p>
+                    <div key={draftIndex} className="rounded-xl border border-grayScale-200 border-l-4 border-l-brand-500 bg-white p-4 shadow-sm sm:p-6">
+                      <div className="mb-4 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-grayScale-900">Question {draftIndex + 1}</p>
                         {questionDrafts.length > 1 ? (
                           <Button
                             type="button"
@@ -1663,12 +1789,13 @@ export function SpeakingPage() {
                   ))}
                 </div>
               </div>
-              <div className="mt-8 flex flex-col-reverse gap-3 border-t border-grayScale-100 pt-6 sm:flex-row sm:justify-end">
-                <Button variant="outline" onClick={() => setCurrentStep(1)} disabled={saving}>
+              </div>
+              <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:justify-end sm:px-8 sm:py-5">
+                <Button variant="outline" onClick={() => setCurrentStep(1)} disabled={saving} className="sm:w-auto">
                   Back
                 </Button>
                 <Button
-                  className="bg-brand-500 hover:bg-brand-600"
+                  className="bg-brand-500 hover:bg-brand-600 sm:min-w-[180px]"
                   onClick={() => setCurrentStep(3)}
                   disabled={!canProceedToReview}
                 >
@@ -1679,26 +1806,35 @@ export function SpeakingPage() {
           )}
 
           {currentStep === 3 && (
-            <Card className="mx-auto max-w-4xl border-grayScale-200 p-6 shadow-sm sm:p-8">
-              <h2 className="mb-4 text-lg font-semibold text-grayScale-700">Step 3: Review & Publish</h2>
-              <div className="space-y-6">
-                <div className="rounded-lg border border-grayScale-200 bg-white p-4">
-                  <h3 className="mb-2 text-sm font-semibold text-grayScale-700">Practice</h3>
+            <Card className="w-full overflow-hidden border-grayScale-200/80 shadow-sm">
+              <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+                <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 3: Review & publish</h2>
+                <p className="mt-1.5 max-w-3xl text-sm text-grayScale-500">
+                  Confirm practice metadata and each AUDIO question before publishing.
+                </p>
+              </div>
+              <div className="space-y-6 p-5 sm:p-8">
+                <div className="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
+                <div className="rounded-xl border border-grayScale-200 bg-white p-5 shadow-sm">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-grayScale-500">Practice</h3>
                   <div className="grid grid-cols-1 gap-3 text-sm text-grayScale-600 sm:grid-cols-2">
                     <p><span className="font-medium">Title:</span> {setTitle || "—"}</p>
                     <p><span className="font-medium">Course ID:</span> {subCourseId || "—"}</p>
                     <p className="sm:col-span-2"><span className="font-medium">Description:</span> {setDescription || "—"}</p>
+                    <p className="sm:col-span-2 break-all">
+                      <span className="font-medium">Intro video URL:</span> {introVideoUrl.trim() || "—"}
+                    </p>
                     <p><span className="font-medium">Status:</span> {setStatus}</p>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-grayScale-200 bg-white p-4">
-                  <h3 className="mb-3 text-sm font-semibold text-grayScale-700">
-                    Questions to Publish ({questionsWithText.length})
+                <div className="flex max-h-[min(70vh,48rem)] min-h-0 flex-col rounded-xl border border-grayScale-200 bg-grayScale-50/20 p-4 shadow-sm sm:p-5">
+                  <h3 className="mb-3 shrink-0 text-sm font-semibold uppercase tracking-wide text-grayScale-500">
+                    Questions ({questionsWithText.length})
                   </h3>
-                  <div className="space-y-3">
+                  <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                     {questionsWithText.map((draft, idx) => (
-                      <div key={idx} className="rounded-md border border-grayScale-200 bg-grayScale-50 p-3 text-sm">
+                      <div key={idx} className="rounded-lg border border-grayScale-200 bg-white p-3 text-sm shadow-sm">
                         <p className="font-medium text-grayScale-700">
                           {idx + 1}. {draft.questionText}
                         </p>
@@ -1751,13 +1887,14 @@ export function SpeakingPage() {
                     ))}
                   </div>
                 </div>
+                </div>
               </div>
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-grayScale-100 pt-6 sm:flex-row sm:justify-end">
-              <Button variant="outline" onClick={() => setCurrentStep(2)} disabled={saving}>
+              <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:justify-end sm:px-8 sm:py-5">
+              <Button variant="outline" onClick={() => setCurrentStep(2)} disabled={saving} className="sm:w-auto">
                 Back
               </Button>
-              <Button className="bg-brand-500 hover:bg-brand-600" disabled={!canCreate || saving} onClick={handleCreateSpeakingPractice}>
-                {saving ? "Publishing..." : "Publish Speaking Practice"}
+              <Button className="bg-brand-500 hover:bg-brand-600 sm:min-w-[200px]" disabled={!canCreate || saving} onClick={handleCreateSpeakingPractice}>
+                {saving ? "Publishing..." : "Publish speaking practice"}
               </Button>
             </div>
             </Card>
@@ -1766,17 +1903,17 @@ export function SpeakingPage() {
       )}
 
       {recordingModal ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 backdrop-blur-[2px]">
-          <div className="mx-4 w-full max-w-md rounded-2xl border border-[#eee2f7] bg-[#fcf9ff] p-6 shadow-2xl">
-            <p className="text-center text-base font-semibold text-grayScale-700">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-grayScale-200/80 bg-white p-6 shadow-2xl">
+            <p className="text-center text-base font-semibold text-grayScale-900">
               Recording {recordingModal.label}
             </p>
-            <p className="mt-1 text-center text-xs text-grayScale-400">
-              Speak now. The visualizer reacts to your voice volume in real time.
+            <p className="mt-1 text-center text-xs text-grayScale-500">
+              Speak clearly. The bars reflect your input level in real time.
             </p>
             <div className="mt-3 flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#ddc8ee] bg-[#f6ecff] px-3 py-1 text-xs font-medium text-[#7b3ca6]">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-[#a742d5]" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
                 REC{" "}
                 {`${Math.floor(recordingModal.elapsedSeconds / 60)
                   .toString()
@@ -1786,8 +1923,8 @@ export function SpeakingPage() {
               </div>
             </div>
 
-            <div className="mt-5 flex items-center gap-4 rounded-xl border border-[#e3cff3] bg-[#f2e8f8] px-4 py-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#e4d0f3] text-[#8a37b8] shadow-sm">
+            <div className="mt-5 flex items-center gap-4 rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-700 shadow-sm">
                 <Mic className="h-5 w-5" />
               </div>
               <div className="grid h-16 w-full grid-cols-32 items-end gap-[3px] overflow-hidden">
@@ -1803,8 +1940,8 @@ export function SpeakingPage() {
                           style={{
                             background:
                               segmentIdx < activeSegments
-                                ? "linear-gradient(180deg, rgba(142,55,184,0.95) 0%, rgba(206,92,235,0.92) 100%)"
-                                : "rgba(207,177,230,0.38)",
+                                ? "linear-gradient(180deg, #9E2891 0%, #6A1B9A 100%)"
+                                : "rgba(189, 189, 189, 0.35)",
                           }}
                         />
                       ))}
@@ -1814,11 +1951,11 @@ export function SpeakingPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                className="border-[#ddc8ee] text-[#7a6792] hover:bg-[#f4ecfb]"
+                className="border-grayScale-200 text-grayScale-700 hover:bg-grayScale-50"
                 onClick={() => void stopActiveRecording(false)}
               >
                 Cancel
@@ -1826,14 +1963,14 @@ export function SpeakingPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="border-[#ddc8ee] text-[#7a6792] hover:bg-[#f4ecfb]"
+                className="border-grayScale-200 text-grayScale-700 hover:bg-grayScale-50"
                 onClick={togglePauseRecording}
               >
                 {recordingModal.isPaused ? "Continue" : "Pause"}
               </Button>
               <Button
                 type="button"
-                className="bg-[#8f2bc6] text-white hover:bg-[#7f22b2]"
+                className="bg-brand-500 text-white hover:bg-brand-600"
                 onClick={() => void stopActiveRecording(true)}
               >
                 Stop & Save

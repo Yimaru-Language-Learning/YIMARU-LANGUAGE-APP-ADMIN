@@ -62,6 +62,13 @@ export function HumanLanguagePage() {
     return filteredSubCategories.flatMap((s) => s.courses)
   }, [filteredSubCategories])
 
+  /** Explicit course pick, or implicit when filters leave exactly one course (e.g. Course still "All" but only one row). */
+  const resolvedCourseId = useMemo((): number | null => {
+    if (selectedCourseId !== "ALL") return selectedCourseId
+    if (availableCourses.length === 1) return availableCourses[0].course_id
+    return null
+  }, [selectedCourseId, availableCourses])
+
   const selectedCourses = useMemo(
     () =>
       selectedCourseId === "ALL"
@@ -71,11 +78,13 @@ export function HumanLanguagePage() {
   )
 
   const levelsForSelectedCourse = useMemo(() => {
-    if (selectedCourseId === "ALL") return [] as string[]
-    const course = selectedCourses.find((c) => c.course_id === selectedCourseId)
+    if (resolvedCourseId == null) return [] as string[]
+    const course = availableCourses.find((c) => c.course_id === resolvedCourseId)
     if (!course) return []
-    return course.levels.filter((l) => l.modules.length > 0).map((l) => l.level.toUpperCase())
-  }, [selectedCourses, selectedCourseId])
+    return course.levels
+      .filter((l) => (l.modules?.length ?? 0) > 0)
+      .map((l) => l.level.toUpperCase())
+  }, [availableCourses, resolvedCourseId])
 
   /** A1 always; A2–C3 only after that level has at least one module (incremental UI). */
   const visibleCefrLevels = useMemo(() => {
@@ -88,7 +97,7 @@ export function HumanLanguagePage() {
       }
       const hasContent = selectedCourses.some((c) => {
         const node = c.levels.find((item) => item.level.toUpperCase() === level)
-        return node !== undefined && node.modules.length > 0
+        return node !== undefined && (node.modules?.length ?? 0) > 0
       })
       if (hasContent) out.push(level)
     }
@@ -204,8 +213,8 @@ export function HumanLanguagePage() {
   }
 
   const handleCreateNextLevel = async () => {
-    if (selectedCourseId === "ALL") {
-      toast.error("Select a specific course first")
+    if (resolvedCourseId == null) {
+      toast.error("Select a specific course first (or narrow subcategory/course filters to a single course).")
       return
     }
     const existing = new Set(levelsForSelectedCourse)
@@ -214,11 +223,11 @@ export function HumanLanguagePage() {
       toast.error("All CEFR levels are already created")
       return
     }
-    const key = `next-level-${selectedCourseId}-${next}`
+    const key = `next-level-${resolvedCourseId}-${next}`
     setCreatingKey(key)
     try {
       await createHumanLanguageLesson({
-        course_id: selectedCourseId,
+        course_id: resolvedCourseId,
         cefr_level: next,
         title: "Module-1",
         description: `${next} Module-1`,
@@ -341,8 +350,8 @@ export function HumanLanguagePage() {
         <CardContent className="border-t border-grayScale-100 pt-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-grayScale-500">
-              {selectedCourseId === "ALL"
-                ? "Select a specific course above to enable adding the next CEFR level (starts at A1) and to use remove actions."
+              {resolvedCourseId == null
+                ? "Choose one course in the Course dropdown, or filter until only one course is listed—then you can add the next CEFR level (A1 first) and use remove actions."
                 : levelsForSelectedCourse.length >= CEFR_LEVELS.length
                   ? "All CEFR levels (A1–C3) already have content for this course."
                   : `Next level to add: ${CEFR_LEVELS.find((l) => !levelsForSelectedCourse.includes(l)) ?? "—"}`}
@@ -351,7 +360,7 @@ export function HumanLanguagePage() {
               size="sm"
               className="shrink-0"
               onClick={handleCreateNextLevel}
-              disabled={selectedCourseId === "ALL" || levelsForSelectedCourse.length >= CEFR_LEVELS.length || creatingKey?.startsWith("next-level-")}
+              disabled={resolvedCourseId == null || levelsForSelectedCourse.length >= CEFR_LEVELS.length || creatingKey?.startsWith("next-level-")}
             >
               {creatingKey?.startsWith("next-level-") ? "Creating level..." : "Add next CEFR level"}
             </Button>
@@ -359,9 +368,9 @@ export function HumanLanguagePage() {
         </CardContent>
       </Card>
 
-      {categoryId && selectedCourseId !== "ALL" ? (
+      {categoryId && resolvedCourseId != null ? (
         <div className="flex justify-end">
-          <Link to={`/content/category/${categoryId}/courses/${selectedCourseId}/sub-courses`}>
+          <Link to={`/content/category/${categoryId}/courses/${resolvedCourseId}/sub-courses`}>
             <Button variant="outline">Open detailed management</Button>
           </Link>
         </div>
@@ -431,13 +440,13 @@ export function HumanLanguagePage() {
                   }
                 })
                 const levelRemoveIds =
-                  selectedCourseId === "ALL"
+                  resolvedCourseId == null
                     ? []
                     : (() => {
-                        const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === selectedCourseId)
+                        const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === resolvedCourseId)
                         return (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
                       })()
-                const canRemoveLevel = selectedCourseId !== "ALL" && levelRemoveIds.length > 0
+                const canRemoveLevel = resolvedCourseId != null && levelRemoveIds.length > 0
                 return (
                   <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
                     <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3">
@@ -457,19 +466,19 @@ export function HumanLanguagePage() {
                         size="sm"
                         variant="outline"
                         title={
-                          selectedCourseId === "ALL"
-                            ? "Select a specific course to remove this level"
+                          resolvedCourseId == null
+                            ? "Select a course (or narrow to one course) to remove this level"
                             : !canRemoveLevel
                               ? "Nothing to remove at this level"
                               : `Remove all content at ${level} for the selected course`
                         }
                         className="h-8 shrink-0 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                        disabled={!canRemoveLevel || deletingKey === `level-${selectedCourseId}-${level}`}
+                        disabled={!canRemoveLevel || (resolvedCourseId != null && deletingKey === `level-${resolvedCourseId}-${level}`)}
                         onClick={() => {
-                          if (!canRemoveLevel) return
-                          const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === selectedCourseId)
+                          if (!canRemoveLevel || resolvedCourseId == null) return
+                          const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === resolvedCourseId)
                           const ids = (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
-                          handleDeleteSubModules(ids, `level-${selectedCourseId}-${level}`, `Level ${level} removed`)
+                          handleDeleteSubModules(ids, `level-${resolvedCourseId}-${level}`, `Level ${level} removed`)
                         }}
                       >
                         <Trash2 className="h-3 w-3.5" aria-hidden />

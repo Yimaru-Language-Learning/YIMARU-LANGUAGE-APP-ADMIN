@@ -28,6 +28,7 @@ import {
   createHumanLanguageLesson,
   deleteSubCourse,
   getHumanLanguageHierarchy,
+  getPracticeQuestions,
   getPracticeQuestionsByPractice,
 } from "../../api/courses.api"
 import { Badge } from "../../components/ui/badge"
@@ -48,7 +49,7 @@ type SubModuleCardSelection = { lessonId: number | null; practiceId: number | nu
 
 type PracticeQuestionsFetchState =
   | { status: "idle" }
-  | { status: "loading" }
+  | { status: "loading"; startedAt: number }
   | { status: "ok"; questions: QuestionSetQuestion[]; totalCount: number }
   | { status: "error"; message: string }
 
@@ -65,6 +66,48 @@ function practiceStatusStyle(status: string): string {
   if (u === "DRAFT") return "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200"
   if (u === "ARCHIVED") return "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
   return "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200"
+}
+
+const URL_REGEX = /(https?:\/\/[^\s<>"')\]]+)/gi
+
+function extractUrls(text: string): string[] {
+  const out = text.match(URL_REGEX) ?? []
+  return [...new Set(out)]
+}
+
+function normalizeUrl(raw: string): string {
+  return raw.trim().replace(/[),.;!?]+$/, "")
+}
+
+function getVimeoEmbedUrl(url: string): string | null {
+  const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/i)
+  return m?.[1] ? `https://player.vimeo.com/video/${m[1]}` : null
+}
+
+function detectMediaType(url: string, hint?: "audio" | "video" | "image"): "audio" | "video" | "image" | "unknown" {
+  if (hint) return hint
+  const vimeo = getVimeoEmbedUrl(url)
+  if (vimeo) return "video"
+  const clean = url.split("?")[0].toLowerCase()
+  if (/\.(png|jpe?g|gif|webp|svg|avif|bmp)$/.test(clean)) return "image"
+  if (/\.(mp4|webm|ogg|mov|m4v)$/.test(clean)) return "video"
+  if (/\.(mp3|wav|m4a|aac|ogg|webm)$/.test(clean)) return "audio"
+  return "unknown"
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Request timed out")), ms)
+    promise
+      .then((value) => {
+        clearTimeout(timer)
+        resolve(value)
+      })
+      .catch((err) => {
+        clearTimeout(timer)
+        reject(err)
+      })
+  })
 }
 type CefrLevel = (typeof CEFR_LEVELS)[number]
 
@@ -98,6 +141,41 @@ export function HumanLanguagePage() {
   /** Selected lesson / practice card per sub-module (for inline detail panel). */
   const [subModuleCardSelection, setSubModuleCardSelection] = useState<Record<string, SubModuleCardSelection>>({})
   const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
+
+  const renderMediaPreview = (
+    urlRaw: string,
+    hint?: "audio" | "video" | "image",
+    className = "mt-2",
+  ) => {
+    const url = normalizeUrl(urlRaw)
+    if (!url) return null
+    const mediaType = detectMediaType(url, hint)
+    const vimeoEmbed = getVimeoEmbedUrl(url)
+    return (
+      <div className={className}>
+        {mediaType === "image" ? (
+          <img src={url} alt="preview" className="max-h-48 rounded-md border border-grayScale-200 object-contain" />
+        ) : mediaType === "video" ? (
+          vimeoEmbed ? (
+            <iframe
+              src={vimeoEmbed}
+              title="Vimeo preview"
+              className="h-48 w-full rounded-md border border-grayScale-200"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <video controls className="max-h-56 w-full rounded-md border border-grayScale-200" src={url} />
+          )
+        ) : mediaType === "audio" ? (
+          <audio controls className="w-full" src={url} />
+        ) : null}
+        <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs text-brand-600 hover:underline">
+          Open media URL
+        </a>
+      </div>
+    )
+  }
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -352,18 +430,31 @@ export function HumanLanguagePage() {
     let skipFetch = false
     setPracticeQuestionsState((prev) => {
       const ex = prev[practiceId]
-      if (ex?.status === "ok" || ex?.status === "loading") {
+      if (ex?.status === "ok") {
         skipFetch = true
         return prev
       }
-      return { ...prev, [practiceId]: { status: "loading" } }
+      if (ex?.status === "loading" && Date.now() - ex.startedAt < 15000) {
+        skipFetch = true
+        return prev
+      }
+      return { ...prev, [practiceId]: { status: "loading", startedAt: Date.now() } }
     })
     if (skipFetch) return
     try {
-      const res = await getPracticeQuestionsByPractice(practiceId, { limit: 200, offset: 0 })
-      const payload = res.data?.data
-      const questions = payload?.questions ?? []
-      const totalCount = payload?.total_count ?? questions.length
+      let questions: QuestionSetQuestion[] = []
+      let totalCount = 0
+      try {
+        const res = await withTimeout(getPracticeQuestionsByPractice(practiceId, { limit: 200, offset: 0 }), 12000)
+        const payload = res.data?.data
+        questions = payload?.questions ?? []
+        totalCount = payload?.total_count ?? questions.length
+      } catch {
+        // Fallback endpoint for environments where /practices/:id/questions can hang.
+        const fallback = await withTimeout(getPracticeQuestions(practiceId), 12000)
+        questions = fallback.data?.data ?? []
+        totalCount = questions.length
+      }
       setPracticeQuestionsState((prev) => ({
         ...prev,
         [practiceId]: { status: "ok", questions, totalCount },
@@ -860,6 +951,9 @@ export function HumanLanguagePage() {
                                                                     No video URL set — use Open editor to add one.
                                                                   </span>
                                                                 )}
+                                                                {selectedLesson.video_url
+                                                                  ? renderMediaPreview(selectedLesson.video_url, "video", "mt-2")
+                                                                  : null}
                                                               </dd>
                                                             </div>
                                                           </dl>
@@ -948,7 +1042,17 @@ export function HumanLanguagePage() {
                                                             Loading questions…
                                                           </div>
                                                         ) : practiceFetch.status === "error" ? (
-                                                          <p className="mt-3 text-sm text-red-600">{practiceFetch.message}</p>
+                                                          <div className="mt-3 space-y-2">
+                                                            <p className="text-sm text-red-600">{practiceFetch.message}</p>
+                                                            <Button
+                                                              type="button"
+                                                              size="sm"
+                                                              variant="outline"
+                                                              onClick={() => void loadPracticeQuestionsIfNeeded(selectedPracticeMeta.id)}
+                                                            >
+                                                              Retry
+                                                            </Button>
+                                                          </div>
                                                         ) : practiceFetch.questions.length === 0 ? (
                                                           <p className="mt-3 text-sm text-grayScale-500">
                                                             No questions yet. Add them via{" "}
@@ -986,12 +1090,20 @@ export function HumanLanguagePage() {
                                                                 <p className="mt-1.5 text-sm text-grayScale-800">
                                                                   {q.question_text || "—"}
                                                                 </p>
+                                                                {extractUrls(q.question_text || "").map((u) => (
+                                                                  <div key={u}>{renderMediaPreview(u)}</div>
+                                                                ))}
                                                                 {q.tips ? (
                                                                   <p className="mt-1 text-xs text-grayScale-500">
                                                                     <span className="font-medium text-grayScale-600">Tip: </span>
                                                                     {q.tips}
                                                                   </p>
                                                                 ) : null}
+                                                                {q.image_url ? renderMediaPreview(q.image_url, "image") : null}
+                                                                {q.voice_prompt ? renderMediaPreview(q.voice_prompt, "audio") : null}
+                                                                {q.sample_answer_voice_prompt
+                                                                  ? renderMediaPreview(q.sample_answer_voice_prompt, "audio")
+                                                                  : null}
                                                               </li>
                                                             ))}
                                                           </ul>

@@ -13,10 +13,40 @@ import {
 } from "../../components/ui/dialog"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { createCourse, createCourseCategory, createHumanLanguageLesson, deleteSubCourse, getHumanLanguageHierarchy } from "../../api/courses.api"
-import type { HumanLanguageCourseTree, HumanLanguageSubCategoryTree } from "../../types/course.types"
+import { Badge } from "../../components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
+import type {
+  HumanLanguageCourseTree,
+  HumanLanguageSubCategoryTree,
+  LearningPathPractice,
+  LearningPathVideo,
+} from "../../types/course.types"
 import { toast } from "sonner"
 
 const CEFR_LEVELS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"] as const
+type SubModulePanelTab = "lessons" | "practices"
+
+function formatDurationSeconds(total: number): string {
+  const s = Math.max(0, Math.floor(total))
+  const m = Math.floor(s / 60)
+  const r = s % 60
+  return `${m}:${r.toString().padStart(2, "0")}`
+}
+
+function truncateMiddle(str: string, max = 42): string {
+  const t = str.trim()
+  if (t.length <= max) return t
+  const half = Math.floor((max - 3) / 2)
+  return `${t.slice(0, half)}…${t.slice(-half)}`
+}
+
+function practiceStatusStyle(status: string): string {
+  const u = status.toUpperCase()
+  if (u === "PUBLISHED") return "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200"
+  if (u === "DRAFT") return "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200"
+  if (u === "ARCHIVED") return "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
+  return "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200"
+}
 type CefrLevel = (typeof CEFR_LEVELS)[number]
 
 type PendingRemove = {
@@ -44,6 +74,8 @@ export function HumanLanguagePage() {
   /** Course IDs whose path body is collapsed (headers stay visible). */
   const [collapsedPathIds, setCollapsedPathIds] = useState<number[]>([])
   const [pendingRemove, setPendingRemove] = useState<PendingRemove | null>(null)
+  /** Per sub-module panel tab (lessons table vs practices table). */
+  const [subModulePanelTab, setSubModulePanelTab] = useState<Record<string, SubModulePanelTab>>({})
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -575,47 +607,205 @@ export function HumanLanguagePage() {
                                             </Button>
                                           </div>
                                         </div>
-                                        {module.sub_modules.map((subModule) => (
-                                          <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
-                                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                              <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
-                                              {categoryId ? (
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                  <Link
-                                                    to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}`}
-                                                  >
-                                                    <Button size="sm" className="bg-brand-500 hover:bg-brand-600">
-                                                      Manage lesson & practice
+                                        {module.sub_modules.map((subModule) => {
+                                          const smKey = `${course.course_id}-${subModule.id}`
+                                          const panelTab = subModulePanelTab[smKey] ?? "lessons"
+                                          const lessonRows: LearningPathVideo[] = [...subModule.videos].sort(
+                                            (a, b) => a.display_order - b.display_order,
+                                          )
+                                          const practiceRows: LearningPathPractice[] = [...subModule.practices].sort(
+                                            (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+                                          )
+                                          return (
+                                            <div
+                                              key={subModule.id}
+                                              className="mt-2 overflow-hidden rounded-lg border border-grayScale-200/90 bg-white shadow-sm"
+                                            >
+                                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/90 px-3 py-2.5">
+                                                <p className="text-sm font-semibold text-grayScale-800">
+                                                  Sub-module: {subModule.title}
+                                                </p>
+                                                {categoryId ? (
+                                                  <div className="flex flex-wrap items-center gap-2">
+                                                    <Link
+                                                      to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}`}
+                                                    >
+                                                      <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
+                                                        Open editor
+                                                      </Button>
+                                                    </Link>
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="outline"
+                                                      className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                      disabled={deletingKey === `submodule-${subModule.id}`}
+                                                      onClick={() =>
+                                                        requestRemove({
+                                                          ids: [subModule.id],
+                                                          key: `submodule-${subModule.id}`,
+                                                          successMessage: `Sub-module ${subModule.title} removed`,
+                                                          title: `Remove ${subModule.title}?`,
+                                                          description:
+                                                            "This sub-module will be permanently deleted. This action cannot be undone.",
+                                                        })
+                                                      }
+                                                    >
+                                                      <Trash2 className="h-3 w-3.5" aria-hidden />
+                                                      Remove
                                                     </Button>
-                                                  </Link>
-                                                  <Button
+                                                  </div>
+                                                ) : null}
+                                              </div>
+
+                                              <div className="border-b border-grayScale-100 bg-white px-3">
+                                                <div className="-mb-px flex gap-6">
+                                                  <button
                                                     type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                                                    disabled={deletingKey === `submodule-${subModule.id}`}
                                                     onClick={() =>
-                                                      requestRemove({
-                                                        ids: [subModule.id],
-                                                        key: `submodule-${subModule.id}`,
-                                                        successMessage: `Sub-module ${subModule.title} removed`,
-                                                        title: `Remove ${subModule.title}?`,
-                                                        description:
-                                                          "This sub-module will be permanently deleted. This action cannot be undone.",
-                                                      })
+                                                      setSubModulePanelTab((prev) => ({ ...prev, [smKey]: "lessons" }))
                                                     }
+                                                    className={`relative pb-3 pt-2 text-sm font-semibold transition-colors ${
+                                                      panelTab === "lessons"
+                                                        ? "text-brand-600"
+                                                        : "text-grayScale-400 hover:text-grayScale-700"
+                                                    }`}
                                                   >
-                                                    <Trash2 className="h-3 w-3.5" aria-hidden />
-                                                    Remove
-                                                  </Button>
+                                                    Lessons
+                                                    {panelTab === "lessons" ? (
+                                                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+                                                    ) : null}
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setSubModulePanelTab((prev) => ({ ...prev, [smKey]: "practices" }))
+                                                    }
+                                                    className={`relative pb-3 pt-2 text-sm font-semibold transition-colors ${
+                                                      panelTab === "practices"
+                                                        ? "text-brand-600"
+                                                        : "text-grayScale-400 hover:text-grayScale-700"
+                                                    }`}
+                                                  >
+                                                    Practices
+                                                    {panelTab === "practices" ? (
+                                                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+                                                    ) : null}
+                                                  </button>
                                                 </div>
-                                              ) : null}
+                                              </div>
+
+                                              <div className="p-3">
+                                                {panelTab === "lessons" ? (
+                                                  lessonRows.length === 0 ? (
+                                                    <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/40 px-4 py-8 text-center text-sm text-grayScale-500">
+                                                      No lesson videos yet. Use{" "}
+                                                      <span className="font-medium text-grayScale-700">Open editor</span> to add
+                                                      videos.
+                                                    </div>
+                                                  ) : (
+                                                    <Table>
+                                                      <TableHeader>
+                                                        <TableRow className="border-grayScale-100 hover:bg-transparent">
+                                                          <TableHead className="w-10 text-grayScale-500">#</TableHead>
+                                                          <TableHead>Title</TableHead>
+                                                          <TableHead className="whitespace-nowrap">Duration</TableHead>
+                                                          <TableHead className="whitespace-nowrap">Order</TableHead>
+                                                          <TableHead>Video URL</TableHead>
+                                                        </TableRow>
+                                                      </TableHeader>
+                                                      <TableBody>
+                                                        {lessonRows.map((v, idx) => (
+                                                          <TableRow key={v.id} className="border-grayScale-100">
+                                                            <TableCell className="text-xs text-grayScale-500">{idx + 1}</TableCell>
+                                                            <TableCell className="font-medium text-grayScale-900">{v.title}</TableCell>
+                                                            <TableCell className="tabular-nums text-grayScale-600">
+                                                              {formatDurationSeconds(v.duration ?? 0)}
+                                                            </TableCell>
+                                                            <TableCell className="tabular-nums text-grayScale-600">
+                                                              {v.display_order}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                              {v.video_url ? (
+                                                                <a
+                                                                  href={v.video_url}
+                                                                  target="_blank"
+                                                                  rel="noopener noreferrer"
+                                                                  className="font-mono text-xs text-brand-600 hover:underline"
+                                                                  title={v.video_url}
+                                                                >
+                                                                  {truncateMiddle(v.video_url, 48)}
+                                                                </a>
+                                                              ) : (
+                                                                <span className="text-xs text-grayScale-400">—</span>
+                                                              )}
+                                                            </TableCell>
+                                                          </TableRow>
+                                                        ))}
+                                                      </TableBody>
+                                                    </Table>
+                                                  )
+                                                ) : practiceRows.length === 0 ? (
+                                                  <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/40 px-4 py-8 text-center text-sm text-grayScale-500">
+                                                    No practices yet. Use{" "}
+                                                    <span className="font-medium text-grayScale-700">Open editor</span> to create a
+                                                    practice.
+                                                  </div>
+                                                ) : (
+                                                  <Table>
+                                                    <TableHeader>
+                                                      <TableRow className="border-grayScale-100 hover:bg-transparent">
+                                                        <TableHead className="w-10 text-grayScale-500">#</TableHead>
+                                                        <TableHead>Title</TableHead>
+                                                        <TableHead className="whitespace-nowrap">Status</TableHead>
+                                                        <TableHead className="whitespace-nowrap text-right">Questions</TableHead>
+                                                        <TableHead className="whitespace-nowrap">Order</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
+                                                      </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                      {practiceRows.map((p, idx) => (
+                                                        <TableRow key={p.id} className="border-grayScale-100">
+                                                          <TableCell className="text-xs text-grayScale-500">{idx + 1}</TableCell>
+                                                          <TableCell className="max-w-[220px]">
+                                                            <p className="truncate font-medium text-grayScale-900" title={p.title}>
+                                                              {p.title}
+                                                            </p>
+                                                          </TableCell>
+                                                          <TableCell>
+                                                            <Badge
+                                                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${practiceStatusStyle(p.status)}`}
+                                                            >
+                                                              {(p.status ?? "—").replace(/_/g, " ").toLowerCase()}
+                                                            </Badge>
+                                                          </TableCell>
+                                                          <TableCell className="text-right tabular-nums text-grayScale-700">
+                                                            {p.question_count}
+                                                          </TableCell>
+                                                          <TableCell className="tabular-nums text-grayScale-600">
+                                                            {p.display_order ?? "—"}
+                                                          </TableCell>
+                                                          <TableCell className="text-right">
+                                                            {categoryId ? (
+                                                              <Link
+                                                                to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}/practices/${p.id}/questions`}
+                                                                className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                                                              >
+                                                                Questions
+                                                              </Link>
+                                                            ) : (
+                                                              <span className="text-xs text-grayScale-400">—</span>
+                                                            )}
+                                                          </TableCell>
+                                                        </TableRow>
+                                                      ))}
+                                                    </TableBody>
+                                                  </Table>
+                                                )}
+                                              </div>
                                             </div>
-                                            <p className="mt-2 text-xs text-grayScale-500">
-                                              {subModule.videos.length} lesson video(s) · {subModule.practices.length} practice(s)
-                                            </p>
-                                          </div>
-                                        ))}
+                                          )
+                                        })}
                                       </div>
                                     ))
                                   )}

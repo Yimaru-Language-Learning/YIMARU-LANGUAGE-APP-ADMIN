@@ -268,52 +268,45 @@ export function SpeakingPage() {
     fetchAudioQuestions()
   }, [fetchAudioQuestions, audioPageSize, selectedPracticeId])
 
-  useEffect(() => {
-    let cancelled = false
-    const fetchPractices = async () => {
-      try {
-        const batchSize = 100
-        let offset = 0
-        let total = Number.POSITIVE_INFINITY
-        const all: QuestionSet[] = []
-        while (all.length < total) {
-          const res = await getQuestionSets({
-            set_type: "PRACTICE",
-            limit: batchSize,
-            offset,
-          })
-          const payload = res.data?.data
-          let chunk: QuestionSet[] = []
-          let chunkTotal = 0
-          if (Array.isArray(payload)) {
-            chunk = payload
-            chunkTotal = payload.length
-          } else if (payload && typeof payload === "object") {
-            chunk = payload.question_sets ?? []
-            chunkTotal = payload.total_count ?? chunk.length
-          }
-          all.push(...chunk)
-          total = chunkTotal
-          if (chunk.length < batchSize) break
-          offset += chunk.length
-        }
-        if (!cancelled) {
-          setPracticeOptions(
-            all.map((p) => ({
-              id: p.id,
-              title: p.title,
-            })),
-          )
-        }
-      } catch {
-        if (!cancelled) setPracticeOptions([])
+  const fetchPracticeOptions = useCallback(async () => {
+    const batchSize = 100
+    let offset = 0
+    let total = Number.POSITIVE_INFINITY
+    const all: QuestionSet[] = []
+    while (all.length < total) {
+      const res = await getQuestionSets({
+        set_type: "PRACTICE",
+        limit: batchSize,
+        offset,
+      })
+      const payload = res.data?.data
+      let chunk: QuestionSet[] = []
+      let chunkTotal = 0
+      if (Array.isArray(payload)) {
+        chunk = payload
+        chunkTotal = payload.length
+      } else if (payload && typeof payload === "object") {
+        chunk = payload.question_sets ?? []
+        chunkTotal = payload.total_count ?? chunk.length
       }
+      all.push(...chunk)
+      total = chunkTotal
+      if (chunk.length < batchSize) break
+      offset += chunk.length
     }
-    fetchPractices()
-    return () => {
-      cancelled = true
-    }
+    setPracticeOptions(
+      all.map((p) => ({
+        id: p.id,
+        title: p.title,
+      })),
+    )
   }, [])
+
+  useEffect(() => {
+    fetchPracticeOptions().catch(() => {
+      setPracticeOptions([])
+    })
+  }, [fetchPracticeOptions])
 
   useEffect(() => {
     let cancelled = false
@@ -894,6 +887,8 @@ export function SpeakingPage() {
       setOpenCreate(false)
       setCurrentStep(1)
       resetCreateForm()
+      await fetchPracticeOptions()
+      setSelectedPracticeId(String(setId))
       toast.success(`Speaking practice created with ${draftsToCreate.length} AUDIO question(s)`)
       await fetchAudioQuestions()
     } catch (error) {

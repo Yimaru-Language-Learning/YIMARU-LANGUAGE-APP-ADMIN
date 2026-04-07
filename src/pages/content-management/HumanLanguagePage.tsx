@@ -25,6 +25,8 @@ export function HumanLanguagePage() {
   const [quickSearch, setQuickSearch] = useState("")
   const [quickCreating, setQuickCreating] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
+  /** Course IDs whose path body is collapsed (headers stay visible). */
+  const [collapsedPathIds, setCollapsedPathIds] = useState<number[]>([])
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -62,13 +64,6 @@ export function HumanLanguagePage() {
     return filteredSubCategories.flatMap((s) => s.courses)
   }, [filteredSubCategories])
 
-  /** Explicit course pick, or implicit when filters leave exactly one course (e.g. Course still "All" but only one row). */
-  const resolvedCourseId = useMemo((): number | null => {
-    if (selectedCourseId !== "ALL") return selectedCourseId
-    if (availableCourses.length === 1) return availableCourses[0].course_id
-    return null
-  }, [selectedCourseId, availableCourses])
-
   const selectedCourses = useMemo(
     () =>
       selectedCourseId === "ALL"
@@ -76,15 +71,6 @@ export function HumanLanguagePage() {
         : availableCourses.filter((c) => c.course_id === selectedCourseId),
     [availableCourses, selectedCourseId],
   )
-
-  const levelsForSelectedCourse = useMemo(() => {
-    if (resolvedCourseId == null) return [] as string[]
-    const course = availableCourses.find((c) => c.course_id === resolvedCourseId)
-    if (!course) return []
-    return course.levels
-      .filter((l) => (l.modules?.length ?? 0) > 0)
-      .map((l) => l.level.toUpperCase())
-  }, [availableCourses, resolvedCourseId])
 
   /** A1 always; A2–C3 only after that level has at least one module (incremental UI). */
   const visibleCefrLevels = useMemo(() => {
@@ -114,6 +100,15 @@ export function HumanLanguagePage() {
   const toggleLevel = (levelKey: string) => {
     setCollapsedLevels((prev) => (prev.includes(levelKey) ? prev.filter((l) => l !== levelKey) : [...prev, levelKey]))
   }
+
+  const togglePathCollapsed = (courseId: number) => {
+    setCollapsedPathIds((prev) =>
+      prev.includes(courseId) ? prev.filter((id) => id !== courseId) : [...prev, courseId],
+    )
+  }
+
+  const levelsWithContentForCourse = (course: HumanLanguageCourseTree) =>
+    course.levels.filter((l) => (l.modules?.length ?? 0) > 0).map((l) => l.level.toUpperCase())
 
   const parseModuleNumber = (title: string): number | null => {
     const match = title.match(/module-(\d+)/i)
@@ -212,22 +207,23 @@ export function HumanLanguagePage() {
     }
   }
 
-  const handleCreateNextLevel = async () => {
-    if (resolvedCourseId == null) {
-      toast.error("Select a specific course first (or narrow subcategory/course filters to a single course).")
+  const handleCreateNextLevelForCourse = async (courseId: number) => {
+    const course = availableCourses.find((c) => c.course_id === courseId)
+    if (!course) {
+      toast.error("Course not found")
       return
     }
-    const existing = new Set(levelsForSelectedCourse)
+    const existing = new Set(levelsWithContentForCourse(course))
     const next = CEFR_LEVELS.find((level) => !existing.has(level))
     if (!next) {
-      toast.error("All CEFR levels are already created")
+      toast.error("All CEFR levels (A1–C3) already have content for this path")
       return
     }
-    const key = `next-level-${resolvedCourseId}-${next}`
+    const key = `next-level-${courseId}-${next}`
     setCreatingKey(key)
     try {
       await createHumanLanguageLesson({
-        course_id: resolvedCourseId,
+        course_id: courseId,
         cefr_level: next,
         title: "Module-1",
         description: `${next} Module-1`,
@@ -347,34 +343,7 @@ export function HumanLanguagePage() {
             </select>
           </div>
         </CardContent>
-        <CardContent className="border-t border-grayScale-100 pt-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-grayScale-500">
-              {resolvedCourseId == null
-                ? "Choose one course in the Course dropdown, or filter until only one course is listed—then you can add the next CEFR level (A1 first) and use remove actions."
-                : levelsForSelectedCourse.length >= CEFR_LEVELS.length
-                  ? "All CEFR levels (A1–C3) already have content for this course."
-                  : `Next level to add: ${CEFR_LEVELS.find((l) => !levelsForSelectedCourse.includes(l)) ?? "—"}`}
-            </p>
-            <Button
-              size="sm"
-              className="shrink-0"
-              onClick={handleCreateNextLevel}
-              disabled={resolvedCourseId == null || levelsForSelectedCourse.length >= CEFR_LEVELS.length || creatingKey?.startsWith("next-level-")}
-            >
-              {creatingKey?.startsWith("next-level-") ? "Creating level..." : "Add next CEFR level"}
-            </Button>
-          </div>
-        </CardContent>
       </Card>
-
-      {categoryId && resolvedCourseId != null ? (
-        <div className="flex justify-end">
-          <Link to={`/content/category/${categoryId}/courses/${resolvedCourseId}/sub-courses`}>
-            <Button variant="outline">Open detailed management</Button>
-          </Link>
-        </div>
-      ) : null}
 
       {loading ? (
         <div className="flex items-center gap-2 py-8 text-sm text-grayScale-500">
@@ -436,11 +405,54 @@ export function HumanLanguagePage() {
                   return (node?.modules?.length ?? 0) > 0
                 }).filter((level) => selectedLevel === "ALL" || selectedLevel === level)
 
+                const pathCollapsed = collapsedPathIds.includes(course.course_id)
+                const levelsDone = levelsWithContentForCourse(course)
+                const nextCefrForPath = CEFR_LEVELS.find((l) => !levelsDone.includes(l))
+                const pathNextLevelLoading = creatingKey?.startsWith(`next-level-${course.course_id}-`) ?? false
+                const pathLevelsFull = levelsDone.length >= CEFR_LEVELS.length
+
                 return (
                   <Card key={course.course_id} className="overflow-hidden border-grayScale-200/80 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-grayScale-100 bg-white px-4 py-3">
-                      <p className="text-base font-semibold text-brand-700">{course.course_name}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-grayScale-100 bg-white px-4 py-3">
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        onClick={() => togglePathCollapsed(course.course_id)}
+                      >
+                        {pathCollapsed ? (
+                          <ChevronRight className="h-5 w-5 shrink-0 text-grayScale-500" aria-hidden />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 shrink-0 text-grayScale-500" aria-hidden />
+                        )}
+                        <span className="text-base font-semibold text-brand-700">{course.course_name}</span>
+                      </button>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {categoryId ? (
+                          <Link to={`/content/category/${categoryId}/courses/${course.course_id}/sub-courses`}>
+                            <Button type="button" variant="outline" size="sm" className="shrink-0">
+                              Open detailed management
+                            </Button>
+                          </Link>
+                        ) : null}
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="shrink-0"
+                          title={
+                            pathLevelsFull
+                              ? "All CEFR levels already have content for this path"
+                              : nextCefrForPath
+                                ? `Create ${nextCefrForPath} with Module-1`
+                                : undefined
+                          }
+                          disabled={pathLevelsFull || pathNextLevelLoading}
+                          onClick={() => handleCreateNextLevelForCourse(course.course_id)}
+                        >
+                          {pathNextLevelLoading ? "Creating…" : "Add next CEFR level"}
+                        </Button>
+                      </div>
                     </div>
+                    {!pathCollapsed ? (
                     <CardContent className="space-y-3 p-4">
                       {courseLevels.length === 0 ? (
                         <p className="text-sm text-grayScale-500">No levels match the current level filter.</p>
@@ -596,6 +608,7 @@ export function HumanLanguagePage() {
                         })
                       )}
                     </CardContent>
+                    ) : null}
                   </Card>
                 )
               })

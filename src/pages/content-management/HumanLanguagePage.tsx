@@ -77,6 +77,31 @@ export function HumanLanguagePage() {
     return course.levels.filter((l) => l.modules.length > 0).map((l) => l.level.toUpperCase())
   }, [selectedCourses, selectedCourseId])
 
+  /** A1 always; A2–C3 only after that level has at least one module (incremental UI). */
+  const visibleCefrLevels = useMemo(() => {
+    if (availableCourses.length === 0) return [] as CefrLevel[]
+    const out: CefrLevel[] = []
+    for (const level of CEFR_LEVELS) {
+      if (level === "A1") {
+        out.push(level)
+        continue
+      }
+      const hasContent = selectedCourses.some((c) => {
+        const node = c.levels.find((item) => item.level.toUpperCase() === level)
+        return node !== undefined && node.modules.length > 0
+      })
+      if (hasContent) out.push(level)
+    }
+    return out
+  }, [availableCourses.length, selectedCourses])
+
+  useEffect(() => {
+    if (selectedLevel === "ALL") return
+    if (!visibleCefrLevels.includes(selectedLevel)) {
+      setSelectedLevel("ALL")
+    }
+  }, [selectedLevel, visibleCefrLevels])
+
   const toggleLevel = (level: CefrLevel) => {
     setCollapsedLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]))
   }
@@ -305,7 +330,7 @@ export function HumanLanguagePage() {
               onChange={(e) => setSelectedLevel(e.target.value as CefrLevel | "ALL")}
             >
               <option value="ALL">ALL LEVELS</option>
-              {CEFR_LEVELS.map((level) => (
+              {visibleCefrLevels.map((level) => (
                 <option key={level} value={level}>
                   {level}
                 </option>
@@ -395,7 +420,9 @@ export function HumanLanguagePage() {
           ) : null}
 
           {availableCourses.length > 0
-            ? CEFR_LEVELS.filter((l) => selectedLevel === "ALL" || l === selectedLevel).map((level) => {
+            ? visibleCefrLevels
+                .filter((l) => selectedLevel === "ALL" || l === selectedLevel)
+                .map((level) => {
                 const modulesByCourse = selectedCourses.map((course: HumanLanguageCourseTree) => {
                   const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
                   return {
@@ -403,6 +430,14 @@ export function HumanLanguagePage() {
                     modules: levelNode?.modules ?? [],
                   }
                 })
+                const levelRemoveIds =
+                  selectedCourseId === "ALL"
+                    ? []
+                    : (() => {
+                        const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === selectedCourseId)
+                        return (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
+                      })()
+                const canRemoveLevel = selectedCourseId !== "ALL" && levelRemoveIds.length > 0
                 return (
                   <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
                     <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3">
@@ -418,19 +453,27 @@ export function HumanLanguagePage() {
                         </span>
                       </button>
                       <Button
+                        type="button"
                         size="sm"
                         variant="outline"
-                        className="border-red-200 text-red-600 hover:bg-red-50"
-                        disabled={selectedCourseId === "ALL" || deletingKey === `level-${selectedCourseId}-${level}`}
+                        title={
+                          selectedCourseId === "ALL"
+                            ? "Select a specific course to remove this level"
+                            : !canRemoveLevel
+                              ? "Nothing to remove at this level"
+                              : `Remove all content at ${level} for the selected course`
+                        }
+                        className="h-8 shrink-0 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                        disabled={!canRemoveLevel || deletingKey === `level-${selectedCourseId}-${level}`}
                         onClick={() => {
-                          if (selectedCourseId === "ALL") return
+                          if (!canRemoveLevel) return
                           const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === selectedCourseId)
                           const ids = (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
                           handleDeleteSubModules(ids, `level-${selectedCourseId}-${level}`, `Level ${level} removed`)
                         }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Remove level
+                        <Trash2 className="h-3 w-3.5" aria-hidden />
+                        Remove
                       </Button>
                     </div>
                     {!collapsedLevels.includes(level) ? (
@@ -481,9 +524,10 @@ export function HumanLanguagePage() {
                                             Add Sub-module
                                           </Button>
                                           <Button
+                                            type="button"
                                             size="sm"
                                             variant="outline"
-                                            className="border-red-200 text-red-600 hover:bg-red-50"
+                                            className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                             disabled={deletingKey === `module-${module.id}`}
                                             onClick={() =>
                                               handleDeleteSubModules(
@@ -493,8 +537,8 @@ export function HumanLanguagePage() {
                                               )
                                             }
                                           >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                            Remove Module
+                                            <Trash2 className="h-3 w-3.5" aria-hidden />
+                                            Remove
                                           </Button>
                                         </div>
                                       </div>
@@ -511,9 +555,10 @@ export function HumanLanguagePage() {
                                                   <Button size="sm">Add practice/audio questions</Button>
                                                 </Link>
                                                 <Button
+                                                  type="button"
                                                   size="sm"
                                                   variant="outline"
-                                                  className="border-red-200 text-red-600 hover:bg-red-50"
+                                                  className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                                   disabled={deletingKey === `submodule-${subModule.id}`}
                                                   onClick={() =>
                                                     handleDeleteSubModules(
@@ -523,8 +568,8 @@ export function HumanLanguagePage() {
                                                     )
                                                   }
                                                 >
-                                                  <Trash2 className="h-3.5 w-3.5" />
-                                                  Remove Sub-module
+                                                  <Trash2 className="h-3 w-3.5" aria-hidden />
+                                                  Remove
                                                 </Button>
                                               </div>
                                             ) : null}

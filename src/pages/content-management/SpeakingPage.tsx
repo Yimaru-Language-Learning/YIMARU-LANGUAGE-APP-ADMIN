@@ -114,6 +114,29 @@ function introVideoUrlFromUploadResponse(data: { url?: string; embed_url?: strin
   return pageUrl || null
 }
 
+function toVimeoEmbedUrl(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl.trim())
+    const host = parsed.hostname.toLowerCase()
+    if (!host.includes("vimeo.com")) return null
+
+    if (host.includes("player.vimeo.com") && parsed.pathname.includes("/video/")) {
+      return parsed.toString()
+    }
+
+    const segments = parsed.pathname.split("/").filter(Boolean)
+    const videoId = segments.find((segment) => /^\d+$/.test(segment))
+    if (!videoId) return null
+
+    const hash = parsed.searchParams.get("h")
+    return hash
+      ? `https://player.vimeo.com/video/${videoId}?h=${encodeURIComponent(hash)}`
+      : `https://player.vimeo.com/video/${videoId}`
+  } catch {
+    return null
+  }
+}
+
 export function SpeakingPage() {
   const [audioQuestions, setAudioQuestions] = useState<QuestionDetail[]>([])
   const [audioTotalCount, setAudioTotalCount] = useState(0)
@@ -491,6 +514,13 @@ export function SpeakingPage() {
       return haystack.includes(q)
     })
   }, [subCourseOptions, subCourseSearch])
+  const introVideoPreview = useMemo(() => {
+    const value = introVideoUrl.trim()
+    if (!value || !/^https?:\/\//i.test(value)) return null
+    const vimeoEmbedUrl = toVimeoEmbedUrl(value)
+    if (vimeoEmbedUrl) return { kind: "iframe" as const, src: vimeoEmbedUrl }
+    return { kind: "video" as const, src: value }
+  }, [introVideoUrl])
 
   const updateDraft = (index: number, updater: (draft: AudioQuestionDraft) => AudioQuestionDraft) => {
     setQuestionDrafts((prev) => prev.map((draft, idx) => (idx === index ? updater(draft) : draft)))
@@ -1613,6 +1643,22 @@ export function SpeakingPage() {
                       <p className="text-xs leading-relaxed text-grayScale-500">
                         Paste a link or upload from your computer; uploads use the same file service as elsewhere. Optional, not tied to sub-course video rows.
                       </p>
+                      {introVideoPreview ? (
+                        <div className="rounded-xl border border-grayScale-200 bg-black/95 p-2">
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-grayScale-300">Preview</p>
+                          {introVideoPreview.kind === "iframe" ? (
+                            <iframe
+                              src={introVideoPreview.src}
+                              title="Intro video preview"
+                              className="aspect-video w-full rounded-md"
+                              allow="autoplay; fullscreen; picture-in-picture"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <video src={introVideoPreview.src} controls className="aspect-video w-full rounded-md bg-black" />
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   <aside className="space-y-4 lg:col-span-5">

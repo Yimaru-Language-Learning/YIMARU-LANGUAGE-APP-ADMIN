@@ -673,6 +673,33 @@ export interface GetLearningPathResponse {
   metadata: unknown
 }
 
+export interface HumanLanguageLesson {
+  id: number
+  course_id: number
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  display_order: number
+  level: string
+  video_count: number
+  practice_count: number
+  videos: LearningPathVideo[]
+  practices: LearningPathPractice[]
+}
+
+export interface GetHumanLanguageLessonsResponse {
+  message: string
+  data: {
+    course_id: number
+    course_title: string
+    cefr_level: string
+    lessons: HumanLanguageLesson[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
 export interface GetSubCourseEntryAssessmentResponse {
   message: string
   data: QuestionSet | null

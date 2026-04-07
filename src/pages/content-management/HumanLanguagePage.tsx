@@ -4,8 +4,8 @@ import { BookOpen, ChevronDown, ChevronRight, Languages } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
-import { getCourseCategories, getCoursesByCategory, getLearningPath } from "../../api/courses.api"
-import type { Course, CourseCategory, LearningPathSubCourse } from "../../types/course.types"
+import { getCourseCategories, getCoursesByCategory, getHumanLanguageLessonsByCourse } from "../../api/courses.api"
+import type { Course, CourseCategory, HumanLanguageLesson } from "../../types/course.types"
 
 const CEFR_LEVELS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"] as const
 type CefrLevel = (typeof CEFR_LEVELS)[number]
@@ -18,7 +18,9 @@ export function HumanLanguagePage() {
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null)
   const [selectedLevel, setSelectedLevel] = useState<CefrLevel | "ALL">("ALL")
   const [collapsedLevels, setCollapsedLevels] = useState<CefrLevel[]>([])
-  const [subCourses, setSubCourses] = useState<LearningPathSubCourse[]>([])
+  const [lessonsByLevel, setLessonsByLevel] = useState<Record<CefrLevel, HumanLanguageLesson[]>>(
+    Object.fromEntries(CEFR_LEVELS.map((level) => [level, []])) as Record<CefrLevel, HumanLanguageLesson[]>,
+  )
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -57,35 +59,31 @@ export function HumanLanguagePage() {
 
   useEffect(() => {
     if (!selectedCourseId) return
-    const loadPath = async () => {
+    const loadByLevels = async () => {
       setLoading(true)
       try {
-        const res = await getLearningPath(selectedCourseId)
-        setSubCourses(res.data?.data?.sub_courses ?? [])
+        if (selectedLevel === "ALL") {
+          const entries = await Promise.all(
+            CEFR_LEVELS.map(async (level) => {
+              const res = await getHumanLanguageLessonsByCourse(selectedCourseId, level)
+              return [level, res.data?.data?.lessons ?? []] as const
+            }),
+          )
+          setLessonsByLevel(Object.fromEntries(entries) as Record<CefrLevel, HumanLanguageLesson[]>)
+        } else {
+          const res = await getHumanLanguageLessonsByCourse(selectedCourseId, selectedLevel)
+          setLessonsByLevel((prev) => ({ ...prev, [selectedLevel]: res.data?.data?.lessons ?? [] }))
+        }
       } finally {
         setLoading(false)
       }
     }
-    loadPath().catch(() => undefined)
-  }, [selectedCourseId])
-
-  const grouped = useMemo(() => {
-    const base = Object.fromEntries(CEFR_LEVELS.map((level) => [level, [] as LearningPathSubCourse[]])) as Record<
-      CefrLevel,
-      LearningPathSubCourse[]
-    >
-    for (const subCourse of subCourses) {
-      const level = (subCourse.sub_level ?? "").toUpperCase() as CefrLevel
-      if (CEFR_LEVELS.includes(level)) {
-        base[level].push(subCourse)
-      }
-    }
-    return base
-  }, [subCourses])
+    loadByLevels().catch(() => undefined)
+  }, [selectedCourseId, selectedLevel])
 
   const levelRows = useMemo(
-    () => (selectedLevel === "ALL" ? CEFR_LEVELS : [selectedLevel]).map((level) => ({ level, rows: grouped[level] })),
-    [grouped, selectedLevel],
+    () => (selectedLevel === "ALL" ? CEFR_LEVELS : [selectedLevel]).map((level) => ({ level, rows: lessonsByLevel[level] })),
+    [lessonsByLevel, selectedLevel],
   )
 
   const toggleLevel = (level: CefrLevel) => {
@@ -194,14 +192,14 @@ export function HumanLanguagePage() {
                   {rows.length === 0 ? (
                     <p className="text-sm text-grayScale-500">No lessons found for this level.</p>
                   ) : (
-                    rows.map((subCourse) => (
-                      <div key={subCourse.id} className="rounded-xl border border-grayScale-200 bg-white p-3">
-                        <p className="text-sm font-semibold text-grayScale-900">{subCourse.title}</p>
+                    rows.map((lesson) => (
+                      <div key={lesson.id} className="rounded-xl border border-grayScale-200 bg-white p-3">
+                        <p className="text-sm font-semibold text-grayScale-900">{lesson.title}</p>
                         <p className="mt-1 text-xs text-grayScale-500">
-                          {subCourse.videos.length} lesson video(s) • {subCourse.practices.length} practice(s)
+                          {lesson.video_count} lesson video(s) • {lesson.practice_count} practice(s)
                         </p>
                         <div className="mt-2 space-y-1">
-                          {subCourse.videos.map((video) => (
+                          {lesson.videos.map((video) => (
                             <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
                               <BookOpen className="h-3.5 w-3.5" />
                               {video.title}

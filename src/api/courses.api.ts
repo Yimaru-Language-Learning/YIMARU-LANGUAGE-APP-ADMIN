@@ -47,6 +47,7 @@ import type {
   GetSubCoursePrerequisitesResponse,
   AddSubCoursePrerequisiteRequest,
   GetLearningPathResponse,
+  GetHumanLanguageLessonsResponse,
   GetSubCourseEntryAssessmentResponse,
   ReorderItem,
   GetRatingsResponse,
@@ -285,6 +286,11 @@ export const removeSubCoursePrerequisite = (subCourseId: number, prerequisiteId:
 // Learning Path APIs
 export const getLearningPath = (courseId: number) =>
   http.get<GetLearningPathResponse>(`/course-management/courses/${courseId}/learning-path`)
+
+export const getHumanLanguageLessonsByCourse = (courseId: number, cefr_level: string) =>
+  http.get<GetHumanLanguageLessonsResponse>(`/course-management/human-language/courses/${courseId}/lessons`, {
+    params: { cefr_level },
+  })
 
 export const getSubCourseEntryAssessment = (subCourseId: number) =>
   http.get<GetSubCourseEntryAssessmentResponse>(

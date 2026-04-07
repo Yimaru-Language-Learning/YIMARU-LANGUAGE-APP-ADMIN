@@ -136,7 +136,9 @@ export function SpeakingPage() {
   const [subCourseLoading, setSubCourseLoading] = useState(false)
   const [subCourseSearch, setSubCourseSearch] = useState("")
   const [subCourseMenuOpen, setSubCourseMenuOpen] = useState(false)
-  const [setStatus, setSetStatus] = useState<"DRAFT" | "PUBLISHED">("DRAFT")
+  const [setStatus, setSetStatus] = useState<"DRAFT" | "PUBLISHED">("PUBLISHED")
+  const [createdSetId, setCreatedSetId] = useState<number | null>(null)
+  const [creatingSet, setCreatingSet] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -399,8 +401,46 @@ export function SpeakingPage() {
     setSetDescription("")
     setIntroVideoUrl("")
     setSubCourseId("")
-    setSetStatus("DRAFT")
+    setSetStatus("PUBLISHED")
+    setCreatedSetId(null)
     setQuestionDrafts([createEmptyDraft()])
+  }
+
+  const handleProceedToQuestions = async () => {
+    if (!canProceedToQuestions) return
+    if (createdSetId) {
+      setCurrentStep(2)
+      return
+    }
+
+    const parsedSubCourseId = Number(subCourseId)
+    if (!Number.isFinite(parsedSubCourseId) || parsedSubCourseId <= 0) {
+      toast.error("Please select a valid sub-course")
+      return
+    }
+
+    setCreatingSet(true)
+    try {
+      const setRes = await createQuestionSet({
+        title: setTitle.trim(),
+        ...(setDescription.trim() ? { description: setDescription.trim() } : {}),
+        set_type: "PRACTICE",
+        owner_type: "SUB_COURSE",
+        owner_id: parsedSubCourseId,
+        status: setStatus,
+        ...(introVideoUrl.trim() ? { intro_video_url: introVideoUrl.trim() } : {}),
+      })
+      const setId = setRes.data?.data?.id
+      if (!setId) throw new Error("Question set creation failed: missing set ID")
+      setCreatedSetId(setId)
+      setCurrentStep(2)
+      toast.success("Practice created. Continue adding questions.")
+    } catch (error) {
+      console.error("Failed to create speaking practice set:", error)
+      toast.error("Failed to create practice set")
+    } finally {
+      setCreatingSet(false)
+    }
   }
 
   const handleIntroVideoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -844,18 +884,7 @@ export function SpeakingPage() {
 
     setSaving(true)
     try {
-      // 1) Create speaking practice set.
-      const setRes = await createQuestionSet({
-        title: setTitle.trim(),
-        ...(setDescription.trim() ? { description: setDescription.trim() } : {}),
-        set_type: "PRACTICE",
-        owner_type: "SUB_COURSE",
-        owner_id: parsedSubCourseId,
-        status: setStatus,
-        ...(introVideoUrl.trim() ? { intro_video_url: introVideoUrl.trim() } : {}),
-      })
-
-      const setId = setRes.data?.data?.id
+      const setId = createdSetId
       if (!setId) throw new Error("Question set creation failed: missing set ID")
 
       // 2) Create all AUDIO questions then attach in sequence.
@@ -1039,6 +1068,7 @@ export function SpeakingPage() {
         <Button
           className="h-11 w-full shrink-0 bg-brand-500 px-5 shadow-sm hover:bg-brand-600 sm:w-auto"
           onClick={() => {
+            resetCreateForm()
             setOpenCreate(true)
             setCurrentStep(1)
           }}
@@ -1487,7 +1517,10 @@ export function SpeakingPage() {
                 type="button"
                 variant="outline"
                 className="h-10 w-full shrink-0 border-grayScale-200 text-grayScale-700 sm:w-auto"
-                onClick={() => setOpenCreate(false)}
+                onClick={() => {
+                  resetCreateForm()
+                  setOpenCreate(false)
+                }}
                 disabled={saving}
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -1641,7 +1674,7 @@ export function SpeakingPage() {
                   </DropdownMenu>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-grayScale-700">Set status</label>
+                  <label className="text-sm font-medium text-grayScale-700">Status</label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -1669,15 +1702,23 @@ export function SpeakingPage() {
                   </aside>
                 </div>
                 <div className="mt-8 flex flex-col-reverse gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-0 py-4 sm:flex-row sm:justify-end sm:px-0 sm:py-5">
-                <Button variant="outline" onClick={() => setOpenCreate(false)} disabled={saving} className="sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetCreateForm()
+                    setOpenCreate(false)
+                  }}
+                  disabled={saving}
+                  className="sm:w-auto"
+                >
                   Cancel
                 </Button>
                 <Button
                   className="bg-brand-500 hover:bg-brand-600 sm:min-w-[180px]"
-                  onClick={() => setCurrentStep(2)}
-                  disabled={!canProceedToQuestions}
+                  onClick={handleProceedToQuestions}
+                  disabled={!canProceedToQuestions || creatingSet}
                 >
-                  Next: Questions
+                  {creatingSet ? "Creating..." : "Next: Questions"}
                 </Button>
               </div>
               </div>

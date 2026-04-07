@@ -1,5 +1,5 @@
-import { useRef, useState, type ChangeEvent } from "react"
-import { Link, useParams, useNavigate } from "react-router-dom"
+import { useMemo, useRef, useState, type ChangeEvent } from "react"
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, ArrowRight, ChevronDown, Grid3X3, Check, Plus, Trash2, GripVertical, X, Edit, Rocket, Loader2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Card } from "../../components/ui/card"
@@ -12,7 +12,7 @@ import type { QuestionOption } from "../../types/course.types"
 
 type Step = 1 | 2 | 3 | 4 | 5
 type ResultStatus = "success" | "error"
-type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT"
+type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD"
 
 interface Persona {
@@ -37,6 +37,7 @@ interface Question {
   options: MCQOption[]
   voicePrompt: string
   sampleAnswerVoicePrompt: string
+  audioCorrectAnswerText: string
   shortAnswers: string[]
 }
 
@@ -87,13 +88,21 @@ function createEmptyQuestion(id: string): Question {
     ],
     voicePrompt: "",
     sampleAnswerVoicePrompt: "",
+    audioCorrectAnswerText: "",
     shortAnswers: [],
   }
 }
 
 export function AddNewPracticePage() {
   const { categoryId, courseId, subCourseId } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
+  const searchParams = new URLSearchParams(location.search)
+  const source = searchParams.get("source")
+  const backTo = useMemo(() => {
+    if (source === "human-language") return "/content/human-language"
+    return `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`
+  }, [source, categoryId, courseId, subCourseId])
   
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [saving, setSaving] = useState(false)
@@ -134,7 +143,7 @@ export function AddNewPracticePage() {
   }
 
   const handleCancel = () => {
-    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`)
+    navigate(backTo)
   }
 
   const handleIntroVideoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -247,6 +256,7 @@ export function AddNewPracticePage() {
             options: options.length > 0 ? options : undefined,
             voice_prompt: q.voicePrompt || undefined,
             sample_answer_voice_prompt: q.sampleAnswerVoicePrompt || undefined,
+            audio_correct_answer_text: q.audioCorrectAnswerText || undefined,
             short_answers: q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
           })
 
@@ -297,7 +307,7 @@ export function AddNewPracticePage() {
         <>
           {/* Back Link */}
           <Link
-            to={`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`}
+            to={backTo}
             className="group inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-grayScale-600 transition-colors hover:bg-brand-50 hover:text-brand-600"
           >
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
@@ -588,7 +598,7 @@ export function AddNewPracticePage() {
           <div className="rounded-2xl border border-grayScale-200/80 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 shadow-sm sm:px-8 sm:py-6">
             <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 3: Questions</h2>
             <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
-              Add MCQ, True/False, or Short Answer items. Use the full width for stems and options.
+              Add MCQ, True/False, Short Answer, or Audio items. Use the full width for stems and options.
             </p>
           </div>
 
@@ -636,6 +646,7 @@ export function AddNewPracticePage() {
                         <option value="MCQ">Multiple Choice</option>
                         <option value="TRUE_FALSE">True/False</option>
                         <option value="SHORT">Short Answer</option>
+                        <option value="AUDIO">Audio</option>
                       </Select>
                     </div>
 
@@ -800,6 +811,19 @@ export function AddNewPracticePage() {
                       />
                     </div>
                   </div>
+
+                  {question.questionType === "AUDIO" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                        Audio Correct Answer Text
+                      </label>
+                      <Input
+                        value={question.audioCorrectAnswerText}
+                        onChange={(e) => updateQuestion(question.id, { audioCorrectAnswerText: e.target.value })}
+                        placeholder="Expected correct answer text for audio response"
+                      />
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}
@@ -925,7 +949,13 @@ export function AddNewPracticePage() {
                       <p className="text-sm font-medium leading-relaxed text-grayScale-900">{question.questionText}</p>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">
-                          {question.questionType === "MCQ" ? "Multiple Choice" : question.questionType === "TRUE_FALSE" ? "True/False" : "Short Answer"}
+                          {question.questionType === "MCQ"
+                            ? "Multiple Choice"
+                            : question.questionType === "TRUE_FALSE"
+                              ? "True/False"
+                              : question.questionType === "AUDIO"
+                                ? "Audio"
+                                : "Short Answer"}
                         </span>
                         <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-600">
                           {question.difficultyLevel}
@@ -1001,7 +1031,7 @@ export function AddNewPracticePage() {
               <div className="mt-10 flex w-full max-w-sm flex-col gap-3">
                 <Button
                   className="w-full bg-brand-500 hover:bg-brand-600"
-                  onClick={() => navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`)}
+                  onClick={() => navigate(backTo)}
                 >
                   Go back to Course
                 </Button>

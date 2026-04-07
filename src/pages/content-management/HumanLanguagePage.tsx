@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { BookOpen, ChevronDown, ChevronRight, Languages, Loader2, Plus, Search } from "lucide-react"
+import { BookOpen, ChevronDown, ChevronRight, Languages, Loader2, Plus, Search, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
-import { createCourse, createCourseCategory, createHumanLanguageLesson, getHumanLanguageHierarchy } from "../../api/courses.api"
+import { createCourse, createCourseCategory, createHumanLanguageLesson, deleteSubCourse, getHumanLanguageHierarchy } from "../../api/courses.api"
 import type { HumanLanguageCourseTree, HumanLanguageSubCategoryTree } from "../../types/course.types"
 import { toast } from "sonner"
 
@@ -24,6 +24,7 @@ export function HumanLanguagePage() {
   const [quickCourseName, setQuickCourseName] = useState("")
   const [quickSearch, setQuickSearch] = useState("")
   const [quickCreating, setQuickCreating] = useState(false)
+  const [deletingKey, setDeletingKey] = useState<string | null>(null)
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -68,6 +69,13 @@ export function HumanLanguagePage() {
         : availableCourses.filter((c) => c.course_id === selectedCourseId),
     [availableCourses, selectedCourseId],
   )
+
+  const levelsForSelectedCourse = useMemo(() => {
+    if (selectedCourseId === "ALL") return [] as string[]
+    const course = selectedCourses.find((c) => c.course_id === selectedCourseId)
+    if (!course) return []
+    return course.levels.filter((l) => l.modules.length > 0).map((l) => l.level.toUpperCase())
+  }, [selectedCourses, selectedCourseId])
 
   const toggleLevel = (level: CefrLevel) => {
     setCollapsedLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]))
@@ -146,6 +154,55 @@ export function HumanLanguagePage() {
     } catch (error) {
       console.error("Failed to create sub-module:", error)
       toast.error("Failed to create sub-module")
+    } finally {
+      setCreatingKey(null)
+    }
+  }
+
+  const handleDeleteSubModules = async (ids: number[], key: string, successMessage: string) => {
+    if (ids.length === 0) return
+    const proceed = window.confirm("This action will permanently delete selected item(s). Continue?")
+    if (!proceed) return
+    setDeletingKey(key)
+    try {
+      for (const id of ids) {
+        await deleteSubCourse(id)
+      }
+      toast.success(successMessage)
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to delete item(s):", error)
+      toast.error("Failed to delete item(s)")
+    } finally {
+      setDeletingKey(null)
+    }
+  }
+
+  const handleCreateNextLevel = async () => {
+    if (selectedCourseId === "ALL") {
+      toast.error("Select a specific course first")
+      return
+    }
+    const existing = new Set(levelsForSelectedCourse)
+    const next = CEFR_LEVELS.find((level) => !existing.has(level))
+    if (!next) {
+      toast.error("All CEFR levels are already created")
+      return
+    }
+    const key = `next-level-${selectedCourseId}-${next}`
+    setCreatingKey(key)
+    try {
+      await createHumanLanguageLesson({
+        course_id: selectedCourseId,
+        cefr_level: next,
+        title: "Module-1",
+        description: `${next} Module-1`,
+      })
+      toast.success(`${next} created with Module-1`)
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to create next level:", error)
+      toast.error("Failed to create next level")
     } finally {
       setCreatingKey(null)
     }
@@ -256,6 +313,17 @@ export function HumanLanguagePage() {
             </select>
           </div>
         </CardContent>
+        <CardContent className="pt-0">
+          <div className="flex items-center justify-end">
+            <Button
+              size="sm"
+              onClick={handleCreateNextLevel}
+              disabled={selectedCourseId === "ALL" || levelsForSelectedCourse.length >= CEFR_LEVELS.length || creatingKey?.startsWith("next-level-")}
+            >
+              {creatingKey?.startsWith("next-level-") ? "Creating level..." : "Add Next Level"}
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
       {categoryId && selectedCourseId !== "ALL" ? (
@@ -328,7 +396,7 @@ export function HumanLanguagePage() {
                       modules: levelNode?.modules ?? [],
                     }
                   })
-                  .filter((entry) => entry.modules.length > 0 || selectedCourses.length > 0)
+                  .filter((entry) => entry.modules.length > 0 || (selectedCourses.length > 0 && level === "A1"))
                 return (
                   <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
                     <button
@@ -342,6 +410,22 @@ export function HumanLanguagePage() {
                         <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
                           {modulesByCourse.reduce((sum, entry) => sum + entry.modules.length, 0)} module(s)
                         </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="ml-3 border-red-200 text-red-600 hover:bg-red-50"
+                          disabled={selectedCourseId === "ALL" || deletingKey === `level-${selectedCourseId}-${level}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (selectedCourseId === "ALL") return
+                            const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === selectedCourseId)
+                            const ids = (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
+                            handleDeleteSubModules(ids, `level-${selectedCourseId}-${level}`, `Level ${level} removed`)
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove Level
+                        </Button>
                       </div>
                     </button>
                     {!collapsedLevels.includes(level) ? (
@@ -375,21 +459,39 @@ export function HumanLanguagePage() {
                                     <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
                                       <div className="flex items-center justify-between gap-2">
                                         <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() =>
-                                            handleCreateSubModule(entry.course.course_id, level, module.title, module.sub_modules)
-                                          }
-                                          disabled={creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
-                                        >
-                                          {creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
-                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                          ) : (
-                                            <Plus className="h-3.5 w-3.5" />
-                                          )}
-                                          Add Sub-module
-                                        </Button>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                              handleCreateSubModule(entry.course.course_id, level, module.title, module.sub_modules)
+                                            }
+                                            disabled={creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
+                                          >
+                                            {creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
+                                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                              <Plus className="h-3.5 w-3.5" />
+                                            )}
+                                            Add Sub-module
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="border-red-200 text-red-600 hover:bg-red-50"
+                                            disabled={deletingKey === `module-${module.id}`}
+                                            onClick={() =>
+                                              handleDeleteSubModules(
+                                                module.sub_modules.map((s) => s.id),
+                                                `module-${module.id}`,
+                                                `Module ${module.title} removed`,
+                                              )
+                                            }
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            Remove Module
+                                          </Button>
+                                        </div>
                                       </div>
                                       {module.sub_modules.map((subModule) => (
                                         <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
@@ -400,9 +502,25 @@ export function HumanLanguagePage() {
                                                 <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}`}>
                                                   <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
                                                 </Link>
-                                                <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}/add-practice`}>
+                                                <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}/add-practice?source=human-language`}>
                                                   <Button size="sm">Add practice/audio questions</Button>
                                                 </Link>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  className="border-red-200 text-red-600 hover:bg-red-50"
+                                                  disabled={deletingKey === `submodule-${subModule.id}`}
+                                                  onClick={() =>
+                                                    handleDeleteSubModules(
+                                                      [subModule.id],
+                                                      `submodule-${subModule.id}`,
+                                                      `Sub-module ${subModule.title} removed`,
+                                                    )
+                                                  }
+                                                >
+                                                  <Trash2 className="h-3.5 w-3.5" />
+                                                  Remove Sub-module
+                                                </Button>
                                               </div>
                                             ) : null}
                                           </div>

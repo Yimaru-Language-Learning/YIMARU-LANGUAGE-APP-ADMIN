@@ -14,7 +14,7 @@ import {
   getSubCoursesByCourse,
   createQuestion,
   createQuestionSet,
-  getQuestions,
+  // getQuestions,
   getPracticeQuestionsByPractice,
   getQuestionSets,
   updateQuestion,

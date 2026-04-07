@@ -31,6 +31,7 @@ import { PracticeDetailsPage } from "../pages/content-management/PracticeDetails
 import { PracticeMembersPage } from "../pages/content-management/PracticeMembersPage"
 import { QuestionsPage } from "../pages/content-management/QuestionsPage"
 import { AddQuestionPage } from "../pages/content-management/AddQuestionPage"
+import { HumanLanguagePage } from "../pages/content-management/HumanLanguagePage"
 import { UserLogPage } from "../pages/user-log/UserLogPage"
 import { IssuesPage } from "../pages/issues/IssuesPage"
 import { ProfilePage } from "../pages/ProfilePage"
@@ -76,6 +77,7 @@ export function AppRoutes() {
           <Route index element={<CourseCategoryPage />} />
           <Route path="courses" element={<AllCoursesPage />} />
           <Route path="flows" element={<CourseFlowBuilderPage />} />
+          <Route path="human-language" element={<HumanLanguagePage />} />
           <Route path="category/:categoryId" element={<ContentOverviewPage />} />
           <Route path="category/:categoryId/courses" element={<CoursesPage />} />
           {/* Course → Sub-course → Video/Practice */}

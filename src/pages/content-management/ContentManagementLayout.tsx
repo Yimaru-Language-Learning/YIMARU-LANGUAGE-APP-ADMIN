@@ -4,6 +4,7 @@ import { cn } from "../../lib/utils"
 const tabs = [
   { label: "Overview", to: "/content" },
   { label: "Courses", to: "/content/courses" },
+  { label: "Human Language", to: "/content/human-language" },
   { label: "Flows", to: "/content/flows" },
   { label: "Speaking", to: "/content/speaking" },
   { label: "Practice", to: "/content/practices" },

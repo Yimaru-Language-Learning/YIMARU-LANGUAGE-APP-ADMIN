@@ -4,8 +4,13 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  HelpCircle,
+  Image as ImageIcon,
   Languages,
+  Lightbulb,
+  Link2,
   Loader2,
+  Mic,
   Plus,
   Search,
   Trash2,
@@ -66,6 +71,31 @@ function practiceStatusStyle(status: string): string {
   if (u === "DRAFT") return "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200"
   if (u === "ARCHIVED") return "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200"
   return "bg-grayScale-50 text-grayScale-600 ring-1 ring-inset ring-grayScale-200"
+}
+
+function questionTypeBadgeClass(questionType: string): string {
+  const t = questionType.toUpperCase().replace(/\s+/g, "_")
+  if (t === "MCQ" || t.includes("MULTIPLE")) {
+    return "border-transparent bg-violet-50 text-violet-800 ring-1 ring-inset ring-violet-200"
+  }
+  if (t === "TRUE_FALSE" || t.includes("TRUE")) {
+    return "border-transparent bg-sky-50 text-sky-800 ring-1 ring-inset ring-sky-200"
+  }
+  if (t === "SHORT" || t === "SHORT_ANSWER") {
+    return "border-transparent bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200"
+  }
+  if (t === "AUDIO") {
+    return "border-transparent bg-orange-50 text-orange-800 ring-1 ring-inset ring-orange-200"
+  }
+  return "border-transparent bg-grayScale-100 text-grayScale-700 ring-1 ring-inset ring-grayScale-200"
+}
+
+function formatQuestionTypeLabel(raw: string): string {
+  return String(raw ?? "—")
+    .replace(/_/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 const URL_REGEX = /(https?:\/\/[^\s<>"')\]]+)/gi
@@ -146,32 +176,71 @@ export function HumanLanguagePage() {
     urlRaw: string,
     hint?: "audio" | "video" | "image",
     className = "mt-2",
+    label?: string,
   ) => {
     const url = normalizeUrl(urlRaw)
     if (!url) return null
     const mediaType = detectMediaType(url, hint)
     const vimeoEmbed = getVimeoEmbedUrl(url)
+    const showPlayer =
+      mediaType === "image" || mediaType === "video" || mediaType === "audio"
     return (
-      <div className={className}>
+      <div
+        className={cn(
+          "rounded-lg border border-grayScale-100 bg-white p-3 shadow-sm",
+          !showPlayer && "border-dashed bg-grayScale-50/50",
+          className,
+        )}
+      >
+        {label ? (
+          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-grayScale-500">
+            {hint === "image" ? (
+              <ImageIcon className="h-3 w-3" aria-hidden />
+            ) : hint === "audio" ? (
+              <Mic className="h-3 w-3" aria-hidden />
+            ) : hint === "video" ? (
+              <Video className="h-3 w-3" aria-hidden />
+            ) : (
+              <Link2 className="h-3 w-3" aria-hidden />
+            )}
+            {label}
+          </p>
+        ) : null}
         {mediaType === "image" ? (
-          <img src={url} alt="preview" className="max-h-48 rounded-md border border-grayScale-200 object-contain" />
+          <img
+            src={url}
+            alt=""
+            className="max-h-52 w-full rounded-md border border-grayScale-200/90 bg-grayScale-50 object-contain"
+          />
         ) : mediaType === "video" ? (
           vimeoEmbed ? (
             <iframe
               src={vimeoEmbed}
               title="Vimeo preview"
-              className="h-48 w-full rounded-md border border-grayScale-200"
+              className="aspect-video h-auto min-h-[200px] w-full rounded-md border border-grayScale-200/90 bg-black/5"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
             />
           ) : (
-            <video controls className="max-h-56 w-full rounded-md border border-grayScale-200" src={url} />
+            <video
+              controls
+              className="max-h-60 w-full rounded-md border border-grayScale-200/90 bg-black/5"
+              src={url}
+            />
           )
         ) : mediaType === "audio" ? (
-          <audio controls className="w-full" src={url} />
-        ) : null}
-        <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs text-brand-600 hover:underline">
-          Open media URL
+          <audio controls className="h-9 w-full" src={url} />
+        ) : (
+          <p className="text-xs text-grayScale-500">Preview not available for this URL type.</p>
+        )}
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
+        >
+          <Link2 className="h-3 w-3 shrink-0" aria-hidden />
+          Open link
         </a>
       </div>
     )
@@ -951,7 +1020,12 @@ export function HumanLanguagePage() {
                                                                   </span>
                                                                 )}
                                                                 {selectedLesson.video_url
-                                                                  ? renderMediaPreview(selectedLesson.video_url, "video", "mt-2")
+                                                                  ? renderMediaPreview(
+                                                                      selectedLesson.video_url,
+                                                                      "video",
+                                                                      "mt-3",
+                                                                      "Video preview",
+                                                                    )
                                                                   : null}
                                                               </dd>
                                                             </div>
@@ -1015,105 +1089,190 @@ export function HumanLanguagePage() {
                                                       })}
                                                     </div>
                                                     {cardSel.practiceId !== null && selectedPracticeMeta ? (
-                                                      <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/60 p-4">
-                                                        <div className="flex flex-wrap items-start justify-between gap-2">
-                                                          <div>
-                                                            <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">
-                                                              Practice questions
-                                                            </p>
-                                                            <h4 className="mt-1 text-base font-semibold text-grayScale-900">
-                                                              {selectedPracticeMeta.title}
-                                                            </h4>
-
+                                                      <div className="overflow-hidden rounded-xl border border-grayScale-200/90 bg-gradient-to-b from-white to-grayScale-50/80 shadow-sm">
+                                                        <div className="border-b border-grayScale-100 bg-white/90 px-4 py-3.5">
+                                                          <div className="flex flex-wrap items-start justify-between gap-3">
+                                                            <div className="min-w-0 flex-1">
+                                                              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grayScale-400">
+                                                                Question bank
+                                                              </p>
+                                                              <h4 className="mt-0.5 truncate text-base font-semibold text-grayScale-900">
+                                                                {selectedPracticeMeta.title}
+                                                              </h4>
+                                                              {practiceFetch?.status === "ok" ? (
+                                                                <p className="mt-1 text-xs text-grayScale-500">
+                                                                  {practiceFetch.totalCount}{" "}
+                                                                  {practiceFetch.totalCount === 1 ? "question" : "questions"} in this
+                                                                  practice
+                                                                </p>
+                                                              ) : null}
+                                                            </div>
+                                                            <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                                              {practiceFetch?.status === "ok" ? (
+                                                                <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-100">
+                                                                  {practiceFetch.questions.length} loaded
+                                                                </span>
+                                                              ) : null}
+                                                              {categoryId ? (
+                                                                <Button type="button" variant="outline" size="sm" className="h-8 text-xs" asChild>
+                                                                  <Link
+                                                                    to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}/practices/${selectedPracticeMeta.id}/questions`}
+                                                                  >
+                                                                    Edit in full view
+                                                                  </Link>
+                                                                </Button>
+                                                              ) : null}
+                                                            </div>
                                                           </div>
-                                                          {categoryId ? (
-                                                            <Link
-                                                              to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}/practices/${selectedPracticeMeta.id}/questions`}
-                                                              className="shrink-0 text-xs font-semibold text-brand-600 hover:underline"
-                                                            >
-                                                              Edit in full view
-                                                            </Link>
-                                                          ) : null}
                                                         </div>
+                                                        <div className="p-4">
                                                         {!practiceFetch || practiceFetch.status === "loading" ? (
-                                                          <div className="mt-4 flex items-center justify-center gap-2 py-8 text-sm text-grayScale-500">
-                                                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                                          <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-grayScale-500">
+                                                            <Loader2 className="h-5 w-5 animate-spin text-brand-500" aria-hidden />
                                                             Loading questions…
                                                           </div>
                                                         ) : practiceFetch.status === "error" ? (
-                                                          <div className="mt-3 space-y-2">
-                                                            <p className="text-sm text-red-600">{practiceFetch.message}</p>
-                                                            <Button
-                                                              type="button"
-                                                              size="sm"
-                                                              variant="outline"
-                                                              onClick={() => void loadPracticeQuestionsIfNeeded(selectedPracticeMeta.id)}
-                                                            >
-                                                              Retry
-                                                            </Button>
+                                                          <div className="rounded-lg border border-red-100 bg-red-50/50 px-4 py-3">
+                                                            <div className="flex items-start gap-2">
+                                                              <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden />
+                                                              <div className="space-y-2">
+                                                                <p className="text-sm font-medium text-red-800">{practiceFetch.message}</p>
+                                                                <Button
+                                                                  type="button"
+                                                                  size="sm"
+                                                                  variant="outline"
+                                                                  className="border-red-200 text-red-700 hover:bg-red-50"
+                                                                  onClick={() => void loadPracticeQuestionsIfNeeded(selectedPracticeMeta.id)}
+                                                                >
+                                                                  Retry
+                                                                </Button>
+                                                              </div>
+                                                            </div>
                                                           </div>
                                                         ) : practiceFetch.questions.length === 0 ? (
-                                                          <p className="mt-3 text-sm text-grayScale-500">
-                                                            No questions yet. Add them via{" "}
-                                                            <span className="font-medium text-grayScale-700">Open editor</span> or{" "}
-                                                            <span className="font-medium text-grayScale-700">Edit in full view</span>.
-                                                          </p>
+                                                          <div className="rounded-lg border border-dashed border-grayScale-200 bg-white px-4 py-10 text-center">
+                                                            <ClipboardList className="mx-auto mb-2 h-8 w-8 text-grayScale-300" aria-hidden />
+                                                            <p className="text-sm text-grayScale-600">
+                                                              No questions in this practice yet.
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-grayScale-500">
+                                                              Add them via <span className="font-medium text-grayScale-700">Open editor</span>{" "}
+                                                              or <span className="font-medium text-grayScale-700">Edit in full view</span>.
+                                                            </p>
+                                                          </div>
                                                         ) : (
-                                                          <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
-                                                            {practiceFetch.questions.map((q, qIdx) => (
-                                                              <li
-                                                                key={q.question_id ?? q.id}
-                                                                className="rounded-lg border border-grayScale-100 bg-white px-3 py-2.5 shadow-sm"
-                                                              >
-                                                                <div className="flex flex-wrap items-center gap-2">
-                                                                  <span className="text-[11px] font-semibold tabular-nums text-grayScale-400">
-                                                                    #{qIdx + 1}
-                                                                  </span>
-                                                                  <Badge
-                                                                    variant="secondary"
-                                                                    className="h-5 rounded-md px-1.5 text-[10px] font-semibold uppercase"
-                                                                  >
-                                                                    {String(q.question_type ?? "—").replace(/_/g, " ")}
-                                                                  </Badge>
-                                                                  {q.points != null ? (
-                                                                    <span className="text-[11px] text-grayScale-500">
-                                                                      {q.points} pts
-                                                                    </span>
-                                                                  ) : null}
-                                                                  {q.difficulty_level ? (
-                                                                    <span className="text-[11px] text-grayScale-500">
-                                                                      {q.difficulty_level}
-                                                                    </span>
-                                                                  ) : null}
-                                                                </div>
-                                                                <p className="mt-1.5 text-sm text-grayScale-800">
-                                                                  {q.question_text || "—"}
-                                                                </p>
-                                                                {extractUrls(q.question_text || "").map((u) => (
-                                                                  <div key={u}>{renderMediaPreview(u)}</div>
-                                                                ))}
-                                                                {q.tips ? (
-                                                                  <p className="mt-1 text-xs text-grayScale-500">
-                                                                    <span className="font-medium text-grayScale-600">Tip: </span>
-                                                                    {q.tips}
-                                                                  </p>
-                                                                ) : null}
-                                                                {q.image_url ? renderMediaPreview(q.image_url, "image") : null}
-                                                                {q.voice_prompt ? renderMediaPreview(q.voice_prompt, "audio") : null}
-                                                                {q.sample_answer_voice_prompt
-                                                                  ? renderMediaPreview(q.sample_answer_voice_prompt, "audio")
-                                                                  : null}
-                                                              </li>
-                                                            ))}
+                                                          <ul className="max-h-[min(28rem,calc(100vh-16rem))] space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                                                            {practiceFetch.questions.map((q, qIdx) => {
+                                                              const qType = String(q.question_type ?? "—")
+                                                              const embeddedUrls = extractUrls(q.question_text || "")
+                                                              return (
+                                                                <li
+                                                                  key={q.question_id ?? q.id}
+                                                                  className="relative overflow-hidden rounded-xl border border-grayScale-100 bg-white shadow-sm ring-1 ring-black/[0.02] transition-shadow hover:shadow-md"
+                                                                >
+                                                                  <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-brand-400 to-violet-500" />
+                                                                  <div className="flex gap-3 px-4 py-4 pl-5">
+                                                                    <div
+                                                                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/15 to-violet-500/15 text-sm font-bold tabular-nums text-brand-800"
+                                                                      aria-hidden
+                                                                    >
+                                                                      {qIdx + 1}
+                                                                    </div>
+                                                                    <div className="min-w-0 flex-1 space-y-3">
+                                                                      <div className="flex flex-wrap items-center gap-2">
+                                                                        <Badge
+                                                                          className={cn(
+                                                                            "h-6 rounded-md px-2 py-0 text-[11px] font-semibold",
+                                                                            questionTypeBadgeClass(qType),
+                                                                          )}
+                                                                        >
+                                                                          {formatQuestionTypeLabel(qType)}
+                                                                        </Badge>
+                                                                        {q.points != null && q.points > 0 ? (
+                                                                          <span className="rounded-md bg-grayScale-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-grayScale-700">
+                                                                            {q.points} pts
+                                                                          </span>
+                                                                        ) : null}
+                                                                        {q.difficulty_level ? (
+                                                                          <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900 ring-1 ring-inset ring-amber-100">
+                                                                            {q.difficulty_level}
+                                                                          </span>
+                                                                        ) : null}
+                                                                      </div>
+                                                                      <div>
+                                                                        <p className="text-[13px] font-medium uppercase tracking-wide text-grayScale-400">
+                                                                          Prompt
+                                                                        </p>
+                                                                        <p className="mt-1 text-[15px] leading-relaxed text-grayScale-900">
+                                                                          {q.question_text?.trim() || (
+                                                                            <span className="italic text-grayScale-400">No prompt text</span>
+                                                                          )}
+                                                                        </p>
+                                                                      </div>
+                                                                      {embeddedUrls.length > 0 ? (
+                                                                        <div className="space-y-2">
+                                                                          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-500">
+                                                                            <Link2 className="h-3 w-3" aria-hidden />
+                                                                            Media in prompt
+                                                                          </p>
+                                                                          <div className="grid gap-2 sm:grid-cols-2">
+                                                                            {embeddedUrls.map((u) => (
+                                                                              <div key={u}>{renderMediaPreview(u, undefined, "", "Embedded link")}</div>
+                                                                            ))}
+                                                                          </div>
+                                                                        </div>
+                                                                      ) : null}
+                                                                      {q.tips ? (
+                                                                        <div className="rounded-lg border border-amber-100 bg-amber-50/40 px-3 py-2.5">
+                                                                          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-900">
+                                                                            <Lightbulb className="h-3.5 w-3.5" aria-hidden />
+                                                                            Learner tip
+                                                                          </p>
+                                                                          <p className="mt-1 text-sm leading-relaxed text-amber-950/90">{q.tips}</p>
+                                                                        </div>
+                                                                      ) : null}
+                                                                      {q.image_url ||
+                                                                      q.voice_prompt ||
+                                                                      q.sample_answer_voice_prompt ? (
+                                                                        <div className="space-y-2 border-t border-grayScale-100 pt-3">
+                                                                          <p className="text-[11px] font-semibold uppercase tracking-wide text-grayScale-500">
+                                                                            Assets
+                                                                          </p>
+                                                                          <div className="grid gap-2 sm:grid-cols-2">
+                                                                            {q.image_url
+                                                                              ? renderMediaPreview(q.image_url, "image", "", "Image")
+                                                                              : null}
+                                                                            {q.voice_prompt
+                                                                              ? renderMediaPreview(q.voice_prompt, "audio", "", "Voice prompt")
+                                                                              : null}
+                                                                            {q.sample_answer_voice_prompt
+                                                                              ? renderMediaPreview(
+                                                                                  q.sample_answer_voice_prompt,
+                                                                                  "audio",
+                                                                                  "",
+                                                                                  "Sample answer (audio)",
+                                                                                )
+                                                                              : null}
+                                                                          </div>
+                                                                        </div>
+                                                                      ) : null}
+                                                                    </div>
+                                                                  </div>
+                                                                </li>
+                                                              )
+                                                            })}
                                                           </ul>
                                                         )}
                                                         {practiceFetch?.status === "ok" &&
                                                         practiceFetch.totalCount > practiceFetch.questions.length ? (
-                                                          <p className="mt-2 text-xs text-grayScale-500">
-                                                            Showing {practiceFetch.questions.length} of {practiceFetch.totalCount}{" "}
-                                                            questions. Open full editor to see or edit the rest.
-                                                          </p>
+                                                          <div className="mt-4 rounded-lg border border-grayScale-100 bg-white/80 px-3 py-2 text-center text-xs text-grayScale-600">
+                                                            Showing <span className="font-semibold">{practiceFetch.questions.length}</span> of{" "}
+                                                            <span className="font-semibold">{practiceFetch.totalCount}</span> questions. Open{" "}
+                                                            <span className="font-medium text-grayScale-800">Edit in full view</span> for the
+                                                            rest.
+                                                          </div>
                                                         ) : null}
+                                                        </div>
                                                       </div>
                                                     ) : (
                                                       <p className="text-center text-xs text-grayScale-400">

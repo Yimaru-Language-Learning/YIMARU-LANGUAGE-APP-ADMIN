@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { BookOpen, ChevronDown, ChevronRight, Languages, Loader2, Plus } from "lucide-react"
+import { BookOpen, ChevronDown, ChevronRight, Languages, Loader2, Plus, Search } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
-import { createCourse, createHumanLanguageLesson, getHumanLanguageHierarchy } from "../../api/courses.api"
+import { createCourse, createCourseCategory, createHumanLanguageLesson, getHumanLanguageHierarchy } from "../../api/courses.api"
 import type { HumanLanguageCourseTree, HumanLanguageSubCategoryTree } from "../../types/course.types"
 import { toast } from "sonner"
 
@@ -22,6 +22,7 @@ export function HumanLanguagePage() {
   const [creatingKey, setCreatingKey] = useState<string | null>(null)
   const [quickSubCategoryName, setQuickSubCategoryName] = useState("")
   const [quickCourseName, setQuickCourseName] = useState("")
+  const [quickSearch, setQuickSearch] = useState("")
   const [quickCreating, setQuickCreating] = useState(false)
 
   const loadHierarchy = async () => {
@@ -151,19 +152,24 @@ export function HumanLanguagePage() {
   }
 
   const handleQuickCreatePath = async () => {
-    if (!categoryId) {
-      toast.error("Human Language category is not available")
-      return
-    }
     if (!quickSubCategoryName.trim() || !quickCourseName.trim()) {
       toast.error("Subcategory and course names are required")
       return
     }
     setQuickCreating(true)
     try {
+      let effectiveCategoryId = categoryId
+      if (!effectiveCategoryId) {
+        const createdCategory = await createCourseCategory({ name: "Human Language" })
+        effectiveCategoryId = createdCategory.data?.data?.id ?? null
+        setCategoryId(effectiveCategoryId)
+      }
+      if (!effectiveCategoryId) {
+        throw new Error("Missing human language category id")
+      }
       const title = `${quickSubCategoryName.trim()} - ${quickCourseName.trim()}`
       await createCourse({
-        category_id: categoryId,
+        category_id: effectiveCategoryId,
         title,
         description: `${quickSubCategoryName.trim()} / ${quickCourseName.trim()}`,
       })
@@ -268,154 +274,166 @@ export function HumanLanguagePage() {
       ) : (
         <div className="space-y-3">
           {availableCourses.length === 0 ? (
-            <Card className="border-grayScale-200/80">
-              <CardContent className="flex flex-col items-start gap-3 p-4">
-                <p className="text-sm text-grayScale-600">
-                  No Human Language subcategory/course is available yet. Create the language course path first, then you can add incremental modules and sub-modules per level.
-                </p>
-                <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-3">
+            <Card className="overflow-hidden border-grayScale-200/80">
+              <div className="flex items-center justify-between border-b border-grayScale-100 bg-white px-5 py-4">
+                <h3 className="text-lg font-semibold text-grayScale-800">Sub-category Management</h3>
+                <div className="relative w-full max-w-sm">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
                   <input
-                    className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
-                    placeholder="Subcategory (e.g., English)"
-                    value={quickSubCategoryName}
-                    onChange={(e) => setQuickSubCategoryName(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-grayScale-200 bg-white pl-9 pr-3 text-sm"
+                    placeholder="Search sub-categories..."
+                    value={quickSearch}
+                    onChange={(e) => setQuickSearch(e.target.value)}
                   />
-                  <input
-                    className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
-                    placeholder="Course (e.g., Speaking)"
-                    value={quickCourseName}
-                    onChange={(e) => setQuickCourseName(e.target.value)}
-                  />
-                  <Button onClick={handleQuickCreatePath} disabled={quickCreating || !categoryId}>
-                    {quickCreating ? "Creating..." : "Quick Create Path"}
-                  </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link to="/content/courses">
-                    <Button variant="outline">Open Courses</Button>
-                  </Link>
-                  {categoryId ? (
-                    <Link to={`/content/category/${categoryId}/courses`}>
-                      <Button>Open Human Language Courses</Button>
-                    </Link>
-                  ) : null}
+              </div>
+              <CardContent className="p-5">
+                <div className="rounded-2xl border border-dashed border-grayScale-300 bg-grayScale-50/20 px-6 py-10 text-center">
+                  <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-brand-100 text-brand-700">
+                    <Languages className="h-6 w-6" />
+                  </div>
+                  <h4 className="text-xl font-semibold text-grayScale-800">No sub-categories yet</h4>
+                  <p className="mt-2 text-sm text-grayScale-500">
+                    Create your first human-language path. Level listing will appear automatically after creation.
+                  </p>
+                  <div className="mx-auto mt-5 grid max-w-3xl grid-cols-1 gap-2 md:grid-cols-3">
+                    <input
+                      className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+                      placeholder="Subcategory (e.g., English)"
+                      value={quickSubCategoryName}
+                      onChange={(e) => setQuickSubCategoryName(e.target.value)}
+                    />
+                    <input
+                      className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+                      placeholder="Course (e.g., Speaking)"
+                      value={quickCourseName}
+                      onChange={(e) => setQuickCourseName(e.target.value)}
+                    />
+                    <Button onClick={handleQuickCreatePath} disabled={quickCreating}>
+                      {quickCreating ? "Creating..." : "Add your first sub-category"}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ) : null}
-          {CEFR_LEVELS.filter((l) => selectedLevel === "ALL" || l === selectedLevel).map((level) => {
-            const modulesByCourse = selectedCourses
-              .map((course: HumanLanguageCourseTree) => {
-                const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
-                return {
-                  course,
-                  modules: levelNode?.modules ?? [],
-                }
-              })
-            return (
-            <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3 text-left"
-                onClick={() => toggleLevel(level)}
-              >
-                <div className="inline-flex items-center gap-2">
-                  {collapsedLevels.includes(level) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  <span className="text-sm font-semibold text-grayScale-900">{level}</span>
-                  <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
-                    {modulesByCourse.reduce((sum, entry) => sum + entry.modules.length, 0)} module(s)
-                  </span>
-                </div>
-              </button>
-              {!collapsedLevels.includes(level) ? (
-                <CardContent className="space-y-3 p-4">
-                  {modulesByCourse.length === 0 ? (
-                    <p className="text-sm text-grayScale-500">No lessons found for this level.</p>
-                  ) : (
-                    modulesByCourse.map((entry) => (
-                      <div key={entry.course.course_id} className="space-y-2 rounded-xl border border-grayScale-200 bg-white p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold text-brand-700">{entry.course.course_name}</p>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCreateModule(entry.course.course_id, level, entry.modules)}
-                            disabled={creatingKey === `module-${entry.course.course_id}-${level}`}
-                          >
-                            {creatingKey === `module-${entry.course.course_id}-${level}` ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Plus className="h-3.5 w-3.5" />
-                            )}
-                            Add Module
-                          </Button>
-                        </div>
-                        <div className="space-y-2">
-                          {entry.modules.length === 0 ? (
-                            <p className="text-xs text-grayScale-500">No modules yet. Use “Add Module” to start.</p>
-                          ) : (
-                            entry.modules.map((module) => (
-                              <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleCreateSubModule(entry.course.course_id, level, module.title, module.sub_modules)
-                                    }
-                                    disabled={creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
-                                  >
-                                    {creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      <Plus className="h-3.5 w-3.5" />
-                                    )}
-                                    Add Sub-module
-                                  </Button>
-                                </div>
-                                {module.sub_modules.map((subModule) => (
-                                  <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                      <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
-                                      {categoryId ? (
-                                        <div className="flex gap-2">
-                                          <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}`}>
-                                            <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
-                                          </Link>
-                                          <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}/add-practice`}>
-                                            <Button size="sm">Add practice/audio questions</Button>
-                                          </Link>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                      {subModule.videos.map((video) => (
-                                        <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
-                                          <BookOpen className="h-3.5 w-3.5" />
-                                          {video.title}
-                                        </div>
-                                      ))}
-                                      {subModule.practices.map((practice) => (
-                                        <div key={practice.id} className="rounded-md bg-brand-50 px-2 py-1 text-xs text-brand-700">
-                                          Practice: {practice.title} ({practice.question_count} audio question(s))
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ))
-                          )}
-                        </div>
+
+          {availableCourses.length > 0
+            ? CEFR_LEVELS.filter((l) => selectedLevel === "ALL" || l === selectedLevel).map((level) => {
+                const modulesByCourse = selectedCourses
+                  .map((course: HumanLanguageCourseTree) => {
+                    const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
+                    return {
+                      course,
+                      modules: levelNode?.modules ?? [],
+                    }
+                  })
+                  .filter((entry) => entry.modules.length > 0 || selectedCourses.length > 0)
+                return (
+                  <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3 text-left"
+                      onClick={() => toggleLevel(level)}
+                    >
+                      <div className="inline-flex items-center gap-2">
+                        {collapsedLevels.includes(level) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        <span className="text-sm font-semibold text-grayScale-900">{level}</span>
+                        <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                          {modulesByCourse.reduce((sum, entry) => sum + entry.modules.length, 0)} module(s)
+                        </span>
                       </div>
-                    ))
-                  )}
-                </CardContent>
-              ) : null}
-            </Card>
-            )
-          })}
+                    </button>
+                    {!collapsedLevels.includes(level) ? (
+                      <CardContent className="space-y-3 p-4">
+                        {modulesByCourse.length === 0 ? (
+                          <p className="text-sm text-grayScale-500">No lessons found for this level.</p>
+                        ) : (
+                          modulesByCourse.map((entry) => (
+                            <div key={entry.course.course_id} className="space-y-2 rounded-xl border border-grayScale-200 bg-white p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-semibold text-brand-700">{entry.course.course_name}</p>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCreateModule(entry.course.course_id, level, entry.modules)}
+                                  disabled={creatingKey === `module-${entry.course.course_id}-${level}`}
+                                >
+                                  {creatingKey === `module-${entry.course.course_id}-${level}` ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Plus className="h-3.5 w-3.5" />
+                                  )}
+                                  Add Module
+                                </Button>
+                              </div>
+                              <div className="space-y-2">
+                                {entry.modules.length === 0 ? (
+                                  <p className="text-xs text-grayScale-500">No modules yet. Use “Add Module” to start.</p>
+                                ) : (
+                                  entry.modules.map((module) => (
+                                    <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() =>
+                                            handleCreateSubModule(entry.course.course_id, level, module.title, module.sub_modules)
+                                          }
+                                          disabled={creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
+                                        >
+                                          {creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <Plus className="h-3.5 w-3.5" />
+                                          )}
+                                          Add Sub-module
+                                        </Button>
+                                      </div>
+                                      {module.sub_modules.map((subModule) => (
+                                        <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
+                                            {categoryId ? (
+                                              <div className="flex gap-2">
+                                                <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}`}>
+                                                  <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
+                                                </Link>
+                                                <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}/add-practice`}>
+                                                  <Button size="sm">Add practice/audio questions</Button>
+                                                </Link>
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                          <div className="mt-2 flex flex-wrap gap-2">
+                                            {subModule.videos.map((video) => (
+                                              <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
+                                                <BookOpen className="h-3.5 w-3.5" />
+                                                {video.title}
+                                              </div>
+                                            ))}
+                                            {subModule.practices.map((practice) => (
+                                              <div key={practice.id} className="rounded-md bg-brand-50 px-2 py-1 text-xs text-brand-700">
+                                                Practice: {practice.title} ({practice.question_count} audio question(s))
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    ) : null}
+                  </Card>
+                )
+              })
+            : null}
         </div>
       )}
     </div>

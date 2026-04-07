@@ -1522,33 +1522,25 @@ export function SpeakingPage() {
           {currentStep === 2 && (
             <Card className="w-full overflow-hidden border-grayScale-200/80 shadow-sm">
               <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 2: AUDIO questions</h2>
-                    <p className="mt-1 max-w-3xl text-sm text-grayScale-500">
-                      Upload or record prompts, add reference image, and set optional tips.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => setQuestionDrafts((prev) => [...prev, createEmptyDraft()])}
-                    disabled={saving}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add question
-                  </Button>
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 2: AUDIO questions</h2>
+                  <p className="mt-1 max-w-3xl text-sm text-grayScale-500">
+                    Build each question with voice prompts, optional media, and answer guidance.
+                  </p>
                 </div>
               </div>
               <div className="p-5 sm:p-8">
               <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/30 p-4 sm:p-5">
                 <div className="space-y-5">
                   {questionDrafts.map((draft, draftIndex) => (
-                    <div key={draftIndex} className="rounded-xl border border-grayScale-200 border-l-4 border-l-brand-500 bg-white p-4 shadow-sm sm:p-6">
+                    <div key={draftIndex} className="rounded-2xl border border-grayScale-200 border-l-4 border-l-brand-500 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6">
                       <div className="mb-4 flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-grayScale-900">Question {draftIndex + 1}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-md bg-brand-100 px-2 py-1 text-xs font-semibold tracking-wide text-brand-700">
+                            AUDIO
+                          </span>
+                          <p className="text-sm font-semibold text-grayScale-900">Question {draftIndex + 1}</p>
+                        </div>
                         {questionDrafts.length > 1 ? (
                           <Button
                             type="button"
@@ -1789,6 +1781,24 @@ export function SpeakingPage() {
                   ))}
                 </div>
               </div>
+              </div>
+              <div className="border-t border-grayScale-100 bg-white px-5 py-4 sm:px-8">
+                <div className="flex flex-col gap-3 rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/40 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                  <p className="text-xs text-grayScale-500 sm:text-sm">
+                    Need another item? Add a new AUDIO question to the end of the list.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-brand-200 text-brand-700 hover:bg-brand-50 hover:text-brand-800"
+                    onClick={() => setQuestionDrafts((prev) => [...prev, createEmptyDraft()])}
+                    disabled={saving}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add question
+                  </Button>
+                </div>
               </div>
               <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:justify-end sm:px-8 sm:py-5">
                 <Button variant="outline" onClick={() => setCurrentStep(1)} disabled={saving} className="sm:w-auto">

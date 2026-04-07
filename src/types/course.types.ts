@@ -344,7 +344,7 @@ export interface PracticeQuestion {
   sample_answer_voice_prompt: string
   sample_answer: string
   tips: string
-  type: "MCQ" | "TRUE_FALSE" | "SHORT"
+  type: "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
 }
 
 export interface GetPracticeQuestionsResponse {
@@ -455,18 +455,34 @@ export interface QuestionSetQuestion {
   question_id: number
   display_order: number
   question_text: string
-  question_type: "MCQ" | "TRUE_FALSE" | "SHORT" | string
+  question_type: "MCQ" | "TRUE_FALSE" | "SHORT" | "SHORT_ANSWER" | "AUDIO" | string
   difficulty_level?: string | null
   points?: number
   explanation?: string | null
   tips?: string | null
   voice_prompt?: string | null
+  sample_answer_voice_prompt?: string | null
+  image_url?: string | null
+  audio_correct_answer_text?: string | null
   question_status?: string
 }
 
 export interface GetQuestionSetQuestionsResponse {
   message: string
   data: QuestionSetQuestion[]
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetPracticeQuestionsByPracticeResponse {
+  message: string
+  data: {
+    questions: QuestionSetQuestion[]
+    total_count: number
+    limit: number
+    offset: number
+  }
   success: boolean
   status_code: number
   metadata: unknown

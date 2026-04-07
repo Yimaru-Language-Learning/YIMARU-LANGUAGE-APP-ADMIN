@@ -33,6 +33,7 @@ import type {
   GetQuestionSetsParams,
   GetQuestionSetDetailResponse,
   GetQuestionSetQuestionsResponse,
+  GetPracticeQuestionsByPracticeResponse,
   CreateQuestionSetRequest,
   CreateQuestionSetResponse,
   AddQuestionToSetRequest,
@@ -146,6 +147,14 @@ export const deletePractice = (practiceId: number) =>
 // Practice Questions APIs
 export const getPracticeQuestions = (practiceId: number) =>
   http.get<GetQuestionSetQuestionsResponse>(`/question-sets/${practiceId}/questions`)
+
+export const getPracticeQuestionsByPractice = (
+  practiceId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetPracticeQuestionsByPracticeResponse>(`/practices/${practiceId}/questions`, {
+    params,
+  })
 
 export const createPracticeQuestion = (data: CreatePracticeQuestionRequest) =>
   http.post("/course-management/practice-questions", data)

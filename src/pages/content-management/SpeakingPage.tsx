@@ -109,6 +109,9 @@ function introVideoUrlFromUploadResponse(data: { url?: string; embed_url?: strin
 
 export function SpeakingPage() {
   const [audioQuestions, setAudioQuestions] = useState<QuestionDetail[]>([])
+  const [audioTotalCount, setAudioTotalCount] = useState(0)
+  const [audioPage, setAudioPage] = useState(1)
+  const [audioPageSize] = useState(12)
   const [audioPreviewByQuestionId, setAudioPreviewByQuestionId] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -139,7 +142,7 @@ export function SpeakingPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; text: string } | null>(null)
   const [detailForm, setDetailForm] = useState({
     question_text: "",
-    question_type: "AUDIO" as "AUDIO",
+    question_type: "AUDIO" as const,
     difficulty_level: "EASY" as "EASY" | "MEDIUM" | "HARD",
     points: 1,
     explanation: "",
@@ -187,59 +190,49 @@ export function SpeakingPage() {
     return res.data?.data?.url ?? ""
   }, [])
 
-  const fetchAudioQuestions = useCallback(async () => {
+  const fetchAudioQuestions = useCallback(async (page: number = audioPage) => {
     setLoading(true)
     try {
-      const batchSize = 100
-      let nextOffset = 0
-      let expectedTotal = Number.POSITIVE_INFINITY
-      let allRows: QuestionDetail[] = []
+      const safePage = page < 1 ? 1 : page
+      const offset = (safePage - 1) * audioPageSize
+      const res = await getQuestions({
+        question_type: "AUDIO",
+        limit: audioPageSize,
+        offset,
+      })
+      const payload = res.data?.data as unknown
+      const meta = res.data?.metadata as { total_count?: number } | null | undefined
 
-      while (allRows.length < expectedTotal) {
-        const res = await getQuestions({
-          question_type: "AUDIO",
-          limit: batchSize,
-          offset: nextOffset,
-        })
-        const payload = res.data?.data as unknown
-        const meta = res.data?.metadata as { total_count?: number } | null | undefined
-
-        let chunk: QuestionDetail[] = []
-        let chunkTotal: number | undefined
-        if (Array.isArray(payload)) {
-          chunk = payload as QuestionDetail[]
-          chunkTotal = meta?.total_count
-        } else if (
-          payload &&
-          typeof payload === "object" &&
-          Array.isArray((payload as { questions?: unknown[] }).questions)
-        ) {
-          const data = payload as { questions: QuestionDetail[]; total_count?: number }
-          chunk = data.questions
-          chunkTotal = data.total_count ?? meta?.total_count
-        }
-
-        allRows = [...allRows, ...chunk]
-        if (typeof chunkTotal === "number" && Number.isFinite(chunkTotal)) {
-          expectedTotal = chunkTotal
-        }
-
-        if (chunk.length < batchSize) break
-        nextOffset += chunk.length
+      let rows: QuestionDetail[] = []
+      let total = 0
+      if (Array.isArray(payload)) {
+        rows = payload as QuestionDetail[]
+        total = meta?.total_count ?? rows.length
+      } else if (
+        payload &&
+        typeof payload === "object" &&
+        Array.isArray((payload as { questions?: unknown[] }).questions)
+      ) {
+        const data = payload as { questions: QuestionDetail[]; total_count?: number }
+        rows = data.questions
+        total = data.total_count ?? meta?.total_count ?? rows.length
       }
 
-      setAudioQuestions(allRows)
+      setAudioQuestions(rows)
+      setAudioTotalCount(total)
+      setAudioPage(safePage)
     } catch (error) {
       console.error("Failed to fetch audio questions:", error)
       setAudioQuestions([])
+      setAudioTotalCount(0)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [audioPage, audioPageSize])
 
   useEffect(() => {
     fetchAudioQuestions()
-  }, [fetchAudioQuestions])
+  }, [fetchAudioQuestions, audioPageSize])
 
   useEffect(() => {
     let cancelled = false
@@ -988,6 +981,9 @@ export function SpeakingPage() {
             <p className="mt-1 text-xs font-normal text-grayScale-500 sm:text-sm">
               Tap a row to view details. Speaking practices create AUDIO question sets linked to a sub-course.
             </p>
+            <p className="mt-1 text-xs font-normal text-grayScale-400 sm:text-sm">
+              Showing page {audioPage} of {Math.max(1, Math.ceil(audioTotalCount / audioPageSize))} ({audioTotalCount} total)
+            </p>
           </CardHeader>
           <CardContent className="px-4 pb-6 pt-5 sm:px-6">
             {loading ? (
@@ -1060,6 +1056,33 @@ export function SpeakingPage() {
                     ) : null}
                   </div>
                 ))}
+                {audioTotalCount > audioPageSize ? (
+                  <div className="mt-4 flex items-center justify-between rounded-xl border border-grayScale-200 bg-white px-3 py-2">
+                    <p className="text-xs text-grayScale-500 sm:text-sm">
+                      Page {audioPage} of {Math.max(1, Math.ceil(audioTotalCount / audioPageSize))}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={audioPage <= 1 || loading}
+                        onClick={() => fetchAudioQuestions(audioPage - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={audioPage >= Math.ceil(audioTotalCount / audioPageSize) || loading}
+                        onClick={() => fetchAudioQuestions(audioPage + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </CardContent>

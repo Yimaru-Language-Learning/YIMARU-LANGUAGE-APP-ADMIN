@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { ArrowLeft, Plus, Edit, Trash2, X, Check, ChevronDown, ChevronUp, SlidersHorizontal, ArrowUpDown } from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
@@ -9,7 +9,7 @@ import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import {
   getQuestionSetById,
-  getQuestionSetQuestions,
+  getPracticeQuestionsByPractice,
   getQuestionById,
   deleteQuestion,
   updateQuestion,
@@ -21,7 +21,7 @@ import { Select } from "../../components/ui/select"
 import { Textarea } from "../../components/ui/textarea"
 import type { PracticeQuestion, QuestionSetQuestion, QuestionDetail } from "../../types/course.types"
 
-type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT"
+type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD"
 type GroupByOption = "none" | "type" | "difficulty"
 type PointsSortOption = "asc" | "desc"
@@ -47,12 +47,14 @@ const typeLabels: Record<QuestionType, string> = {
   MCQ: "Multiple Choice",
   TRUE_FALSE: "True/False",
   SHORT: "Short Answer",
+  AUDIO: "Audio",
 }
 
 const typeColors: Record<QuestionType, string> = {
   MCQ: "bg-blue-100 text-blue-700",
   TRUE_FALSE: "bg-purple-100 text-purple-700",
   SHORT: "bg-green-100 text-green-700",
+  AUDIO: "bg-brand-100 text-brand-700",
 }
 
 export function PracticeQuestionsPage() {
@@ -75,6 +77,9 @@ export function PracticeQuestionsPage() {
   const [loadingDetailIds, setLoadingDetailIds] = useState<Record<number, boolean>>({})
   const [groupBy, setGroupBy] = useState<GroupByOption>("none")
   const [pointsSort, setPointsSort] = useState<PointsSortOption>("desc")
+  const [pageSize] = useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalQuestions, setTotalQuestions] = useState(0)
 
   const [draft, setDraft] = useState<QuestionDraft>({
     questionText: "",
@@ -194,19 +199,22 @@ export function PracticeQuestionsPage() {
     })
   }
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async (page: number = currentPage) => {
     if (!practiceId) return
 
     try {
+      const safePage = page < 1 ? 1 : page
+      const offset = (safePage - 1) * pageSize
       const [detailRes, questionsRes] = await Promise.all([
         getQuestionSetById(Number(practiceId)),
-        getQuestionSetQuestions(Number(practiceId)),
+        getPracticeQuestionsByPractice(Number(practiceId), { limit: pageSize, offset }),
       ])
       const detail = detailRes.data?.data
       setPracticeTitle(detail?.title || "Practice Questions")
       setPracticeDescription(detail?.description || "")
 
-      const mappedQuestions: PracticeQuestion[] = (questionsRes.data?.data ?? []).map(
+      const payload = questionsRes.data?.data
+      const mappedQuestions: PracticeQuestion[] = (payload?.questions ?? []).map(
         (question: QuestionSetQuestion) => ({
           id: question.question_id || question.id,
           practice_id: question.set_id,
@@ -214,13 +222,14 @@ export function PracticeQuestionsPage() {
           points: question.points ?? 0,
           difficulty_level: question.difficulty_level || "",
           question_voice_prompt: question.voice_prompt || "",
-          sample_answer_voice_prompt: "",
-          sample_answer: question.explanation || "",
+          sample_answer_voice_prompt: question.sample_answer_voice_prompt || "",
+          sample_answer: question.audio_correct_answer_text || question.explanation || "",
           tips: question.tips || "",
           type:
             question.question_type === "MCQ" ||
             question.question_type === "TRUE_FALSE" ||
-            question.question_type === "SHORT"
+            question.question_type === "SHORT" ||
+            question.question_type === "AUDIO"
               ? question.question_type
               : question.question_type === "SHORT_ANSWER"
                 ? "SHORT"
@@ -228,17 +237,19 @@ export function PracticeQuestionsPage() {
         }),
       )
       setQuestions(mappedQuestions)
+      setTotalQuestions(payload?.total_count ?? mappedQuestions.length)
+      setCurrentPage(safePage)
     } catch (err) {
       console.error("Failed to fetch questions:", err)
       setError("Failed to load questions")
     } finally {
       setLoading(false)
     }
-  }
+  }, [practiceId, currentPage, pageSize])
 
   useEffect(() => {
     fetchQuestions()
-  }, [practiceId])
+  }, [fetchQuestions])
 
   const handleAddQuestion = () => {
     resetDraft()
@@ -525,7 +536,10 @@ export function PracticeQuestionsPage() {
             {practiceDescription && (
               <p className="mt-0.5 text-sm text-grayScale-500">{practiceDescription}</p>
             )}
-            <p className="mt-0.5 text-sm text-grayScale-500">{questions.length} questions available</p>
+            <p className="mt-0.5 text-sm text-grayScale-500">{questions.length} questions on this page</p>
+            <p className="mt-0.5 text-xs text-grayScale-400">
+              Total: {totalQuestions} question{totalQuestions === 1 ? "" : "s"}
+            </p>
           </div>
         </div>
         <Button className="bg-brand-500 hover:bg-brand-600" onClick={handleAddQuestion}>
@@ -707,6 +721,31 @@ export function PracticeQuestionsPage() {
               ))}
             </div>
           ))}
+          {totalQuestions > pageSize && (
+            <div className="flex items-center justify-between rounded-xl border border-grayScale-200 bg-white px-4 py-3">
+              <p className="text-sm text-grayScale-500">
+                Page {currentPage} of {Math.max(1, Math.ceil(totalQuestions / pageSize))}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => void fetchQuestions(currentPage - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= Math.ceil(totalQuestions / pageSize)}
+                  onClick={() => void fetchQuestions(currentPage + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

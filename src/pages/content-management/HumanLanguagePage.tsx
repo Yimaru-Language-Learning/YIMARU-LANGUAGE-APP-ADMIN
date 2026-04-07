@@ -480,14 +480,13 @@ export function HumanLanguagePage() {
   }
 
   const togglePracticeCard = (smKey: string, practiceId: number) => {
-    let openedPracticeId: number | null = null
+    const currentPracticeId = subModuleCardSelection[smKey]?.practiceId ?? null
+    const nextPracticeId = currentPracticeId === practiceId ? null : practiceId
     setSubModuleCardSelection((prev) => {
       const cur = prev[smKey] ?? { lessonId: null, practiceId: null }
-      const nextPracticeId = cur.practiceId === practiceId ? null : practiceId
-      if (nextPracticeId !== null) openedPracticeId = nextPracticeId
       return { ...prev, [smKey]: { ...cur, practiceId: nextPracticeId } }
     })
-    if (openedPracticeId !== null) void loadPracticeQuestionsIfNeeded(openedPracticeId)
+    if (nextPracticeId !== null) void loadPracticeQuestionsIfNeeded(nextPracticeId)
   }
 
   return (

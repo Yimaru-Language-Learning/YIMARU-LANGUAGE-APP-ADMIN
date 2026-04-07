@@ -319,8 +319,26 @@ export function SpeakingPage() {
       if (chunk.length < batchSize) break
       offset += chunk.length
     }
+    // Speaking page should only offer practices that already contain AUDIO questions.
+    const checks = await Promise.all(
+      all.map(async (practice) => {
+        try {
+          const res = await getPracticeQuestionsByPractice(practice.id, {
+            limit: 1,
+            offset: 0,
+            question_type: "AUDIO",
+          })
+          const total = res.data?.data?.total_count ?? 0
+          return total > 0 ? practice : null
+        } catch {
+          return null
+        }
+      }),
+    )
+
+    const speakingPractices = checks.filter((p): p is QuestionSet => p !== null)
     setPracticeOptions(
-      all.map((p) => ({
+      speakingPractices.map((p) => ({
         id: p.id,
         title: p.title,
       })),
@@ -332,6 +350,12 @@ export function SpeakingPage() {
       setPracticeOptions([])
     })
   }, [fetchPracticeOptions])
+
+  useEffect(() => {
+    if (!selectedPracticeId) return
+    const exists = practiceOptions.some((option) => option.id === Number(selectedPracticeId))
+    if (!exists) setSelectedPracticeId("")
+  }, [practiceOptions, selectedPracticeId])
 
   useEffect(() => {
     let cancelled = false

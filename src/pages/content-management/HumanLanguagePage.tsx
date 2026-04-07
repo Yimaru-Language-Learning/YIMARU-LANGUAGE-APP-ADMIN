@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ChevronDown, ChevronRight, Languages, Loader2, Plus, Search, Trash2 } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  Languages,
+  Loader2,
+  Plus,
+  Search,
+  Trash2,
+  Video,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import {
@@ -12,32 +22,41 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
-import { createCourse, createCourseCategory, createHumanLanguageLesson, deleteSubCourse, getHumanLanguageHierarchy } from "../../api/courses.api"
+import {
+  createCourse,
+  createCourseCategory,
+  createHumanLanguageLesson,
+  deleteSubCourse,
+  getHumanLanguageHierarchy,
+  getPracticeQuestionsByPractice,
+} from "../../api/courses.api"
 import { Badge } from "../../components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import type {
   HumanLanguageCourseTree,
   HumanLanguageSubCategoryTree,
   LearningPathPractice,
   LearningPathVideo,
+  QuestionSetQuestion,
 } from "../../types/course.types"
+import { cn } from "../../lib/utils"
 import { toast } from "sonner"
 
 const CEFR_LEVELS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"] as const
 type SubModulePanelTab = "lessons" | "practices"
+
+type SubModuleCardSelection = { lessonId: number | null; practiceId: number | null }
+
+type PracticeQuestionsFetchState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ok"; questions: QuestionSetQuestion[]; totalCount: number }
+  | { status: "error"; message: string }
 
 function formatDurationSeconds(total: number): string {
   const s = Math.max(0, Math.floor(total))
   const m = Math.floor(s / 60)
   const r = s % 60
   return `${m}:${r.toString().padStart(2, "0")}`
-}
-
-function truncateMiddle(str: string, max = 42): string {
-  const t = str.trim()
-  if (t.length <= max) return t
-  const half = Math.floor((max - 3) / 2)
-  return `${t.slice(0, half)}…${t.slice(-half)}`
 }
 
 function practiceStatusStyle(status: string): string {
@@ -74,8 +93,11 @@ export function HumanLanguagePage() {
   /** Course IDs whose path body is collapsed (headers stay visible). */
   const [collapsedPathIds, setCollapsedPathIds] = useState<number[]>([])
   const [pendingRemove, setPendingRemove] = useState<PendingRemove | null>(null)
-  /** Per sub-module panel tab (lessons table vs practices table). */
+  /** Per sub-module panel tab (lessons vs practices). */
   const [subModulePanelTab, setSubModulePanelTab] = useState<Record<string, SubModulePanelTab>>({})
+  /** Selected lesson / practice card per sub-module (for inline detail panel). */
+  const [subModuleCardSelection, setSubModuleCardSelection] = useState<Record<string, SubModuleCardSelection>>({})
+  const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -324,6 +346,57 @@ export function HumanLanguagePage() {
     } finally {
       setQuickCreating(false)
     }
+  }
+
+  const loadPracticeQuestionsIfNeeded = async (practiceId: number) => {
+    let skipFetch = false
+    setPracticeQuestionsState((prev) => {
+      const ex = prev[practiceId]
+      if (ex?.status === "ok" || ex?.status === "loading") {
+        skipFetch = true
+        return prev
+      }
+      return { ...prev, [practiceId]: { status: "loading" } }
+    })
+    if (skipFetch) return
+    try {
+      const res = await getPracticeQuestionsByPractice(practiceId, { limit: 200, offset: 0 })
+      const payload = res.data?.data
+      const questions = payload?.questions ?? []
+      const totalCount = payload?.total_count ?? questions.length
+      setPracticeQuestionsState((prev) => ({
+        ...prev,
+        [practiceId]: { status: "ok", questions, totalCount },
+      }))
+    } catch (error) {
+      console.error("Failed to load practice questions:", error)
+      setPracticeQuestionsState((prev) => ({
+        ...prev,
+        [practiceId]: { status: "error", message: "Could not load questions" },
+      }))
+    }
+  }
+
+  const getSubModuleSelection = (smKey: string): SubModuleCardSelection =>
+    subModuleCardSelection[smKey] ?? { lessonId: null, practiceId: null }
+
+  const toggleLessonCard = (smKey: string, lessonId: number) => {
+    setSubModuleCardSelection((prev) => {
+      const cur = prev[smKey] ?? { lessonId: null, practiceId: null }
+      const nextLessonId = cur.lessonId === lessonId ? null : lessonId
+      return { ...prev, [smKey]: { ...cur, lessonId: nextLessonId } }
+    })
+  }
+
+  const togglePracticeCard = (smKey: string, practiceId: number) => {
+    let openedPracticeId: number | null = null
+    setSubModuleCardSelection((prev) => {
+      const cur = prev[smKey] ?? { lessonId: null, practiceId: null }
+      const nextPracticeId = cur.practiceId === practiceId ? null : practiceId
+      if (nextPracticeId !== null) openedPracticeId = nextPracticeId
+      return { ...prev, [smKey]: { ...cur, practiceId: nextPracticeId } }
+    })
+    if (openedPracticeId !== null) void loadPracticeQuestionsIfNeeded(openedPracticeId)
   }
 
   return (
@@ -610,12 +683,23 @@ export function HumanLanguagePage() {
                                         {module.sub_modules.map((subModule) => {
                                           const smKey = `${course.course_id}-${subModule.id}`
                                           const panelTab = subModulePanelTab[smKey] ?? "lessons"
+                                          const cardSel = getSubModuleSelection(smKey)
                                           const lessonRows: LearningPathVideo[] = [...subModule.videos].sort(
                                             (a, b) => a.display_order - b.display_order,
                                           )
                                           const practiceRows: LearningPathPractice[] = [...subModule.practices].sort(
                                             (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
                                           )
+                                          const selectedLesson =
+                                            cardSel.lessonId !== null
+                                              ? lessonRows.find((v) => v.id === cardSel.lessonId) ?? null
+                                              : null
+                                          const selectedPracticeMeta =
+                                            cardSel.practiceId !== null
+                                              ? practiceRows.find((p) => p.id === cardSel.practiceId) ?? null
+                                              : null
+                                          const practiceFetch =
+                                            cardSel.practiceId !== null ? practiceQuestionsState[cardSel.practiceId] : undefined
                                           return (
                                             <div
                                               key={subModule.id}
@@ -704,46 +788,88 @@ export function HumanLanguagePage() {
                                                       videos.
                                                     </div>
                                                   ) : (
-                                                    <Table>
-                                                      <TableHeader>
-                                                        <TableRow className="border-grayScale-100 hover:bg-transparent">
-                                                          <TableHead className="w-10 text-grayScale-500">#</TableHead>
-                                                          <TableHead>Title</TableHead>
-                                                          <TableHead className="whitespace-nowrap">Duration</TableHead>
-                                                          <TableHead className="whitespace-nowrap">Order</TableHead>
-                                                          <TableHead>Video URL</TableHead>
-                                                        </TableRow>
-                                                      </TableHeader>
-                                                      <TableBody>
-                                                        {lessonRows.map((v, idx) => (
-                                                          <TableRow key={v.id} className="border-grayScale-100">
-                                                            <TableCell className="text-xs text-grayScale-500">{idx + 1}</TableCell>
-                                                            <TableCell className="font-medium text-grayScale-900">{v.title}</TableCell>
-                                                            <TableCell className="tabular-nums text-grayScale-600">
-                                                              {formatDurationSeconds(v.duration ?? 0)}
-                                                            </TableCell>
-                                                            <TableCell className="tabular-nums text-grayScale-600">
-                                                              {v.display_order}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                              {v.video_url ? (
-                                                                <a
-                                                                  href={v.video_url}
-                                                                  target="_blank"
-                                                                  rel="noopener noreferrer"
-                                                                  className="font-mono text-xs text-brand-600 hover:underline"
-                                                                  title={v.video_url}
-                                                                >
-                                                                  {truncateMiddle(v.video_url, 48)}
-                                                                </a>
-                                                              ) : (
-                                                                <span className="text-xs text-grayScale-400">—</span>
+                                                    <div className="space-y-3">
+                                                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                                        {lessonRows.map((v, idx) => {
+                                                          const isActive = cardSel.lessonId === v.id
+                                                          return (
+                                                            <button
+                                                              key={v.id}
+                                                              type="button"
+                                                              onClick={() => toggleLessonCard(smKey, v.id)}
+                                                              className={cn(
+                                                                "flex flex-col gap-1.5 rounded-xl border bg-white p-3 text-left shadow-sm transition-all hover:border-brand-200 hover:shadow-md",
+                                                                isActive
+                                                                  ? "border-brand-400 ring-2 ring-brand-400/30"
+                                                                  : "border-grayScale-100",
                                                               )}
-                                                            </TableCell>
-                                                          </TableRow>
-                                                        ))}
-                                                      </TableBody>
-                                                    </Table>
+                                                            >
+                                                              <div className="flex items-start gap-2">
+                                                                <div className="rounded-lg bg-brand-50 p-1.5 text-brand-600">
+                                                                  <Video className="h-3.5 w-3.5" aria-hidden />
+                                                                </div>
+                                                                <div className="min-w-0 flex-1">
+                                                                  <p className="line-clamp-2 text-sm font-semibold text-grayScale-900">
+                                                                    {v.title}
+                                                                  </p>
+                                                                  <p className="mt-0.5 text-[11px] text-grayScale-500">
+                                                                    Lesson {idx + 1} · {formatDurationSeconds(v.duration ?? 0)} · Order{" "}
+                                                                    {v.display_order}
+                                                                  </p>
+                                                                </div>
+                                                              </div>
+                                                            </button>
+                                                          )
+                                                        })}
+                                                      </div>
+                                                      {selectedLesson ? (
+                                                        <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/60 p-4">
+                                                          <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">
+                                                            Lesson content
+                                                          </p>
+                                                          <h4 className="mt-1 text-base font-semibold text-grayScale-900">
+                                                            {selectedLesson.title}
+                                                          </h4>
+                                                          <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                                                            <div>
+                                                              <dt className="text-xs text-grayScale-500">Display order</dt>
+                                                              <dd className="font-medium text-grayScale-800">
+                                                                {selectedLesson.display_order}
+                                                              </dd>
+                                                            </div>
+                                                            <div>
+                                                              <dt className="text-xs text-grayScale-500">Duration</dt>
+                                                              <dd className="tabular-nums font-medium text-grayScale-800">
+                                                                {formatDurationSeconds(selectedLesson.duration ?? 0)}
+                                                              </dd>
+                                                            </div>
+                                                            <div className="sm:col-span-2">
+                                                              <dt className="text-xs text-grayScale-500">Video</dt>
+                                                              <dd className="mt-0.5 break-all">
+                                                                {selectedLesson.video_url ? (
+                                                                  <a
+                                                                    href={selectedLesson.video_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-sm font-medium text-brand-600 hover:underline"
+                                                                  >
+                                                                    {selectedLesson.video_url}
+                                                                  </a>
+                                                                ) : (
+                                                                  <span className="text-sm text-grayScale-400">
+                                                                    No video URL set — use Open editor to add one.
+                                                                  </span>
+                                                                )}
+                                                              </dd>
+                                                            </div>
+                                                          </dl>
+                                                        </div>
+                                                      ) : (
+                                                        <p className="text-center text-xs text-grayScale-400">
+                                                          Select a lesson card to view full content.
+                                                        </p>
+                                                      )}
+                                                    </div>
                                                   )
                                                 ) : practiceRows.length === 0 ? (
                                                   <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/40 px-4 py-8 text-center text-sm text-grayScale-500">
@@ -752,55 +878,138 @@ export function HumanLanguagePage() {
                                                     practice.
                                                   </div>
                                                 ) : (
-                                                  <Table>
-                                                    <TableHeader>
-                                                      <TableRow className="border-grayScale-100 hover:bg-transparent">
-                                                        <TableHead className="w-10 text-grayScale-500">#</TableHead>
-                                                        <TableHead>Title</TableHead>
-                                                        <TableHead className="whitespace-nowrap">Status</TableHead>
-                                                        <TableHead className="whitespace-nowrap text-right">Questions</TableHead>
-                                                        <TableHead className="whitespace-nowrap">Order</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                      </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                      {practiceRows.map((p, idx) => (
-                                                        <TableRow key={p.id} className="border-grayScale-100">
-                                                          <TableCell className="text-xs text-grayScale-500">{idx + 1}</TableCell>
-                                                          <TableCell className="max-w-[220px]">
-                                                            <p className="truncate font-medium text-grayScale-900" title={p.title}>
-                                                              {p.title}
-                                                            </p>
-                                                          </TableCell>
-                                                          <TableCell>
-                                                            <Badge
-                                                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${practiceStatusStyle(p.status)}`}
-                                                            >
-                                                              {(p.status ?? "—").replace(/_/g, " ").toLowerCase()}
-                                                            </Badge>
-                                                          </TableCell>
-                                                          <TableCell className="text-right tabular-nums text-grayScale-700">
-                                                            {p.question_count}
-                                                          </TableCell>
-                                                          <TableCell className="tabular-nums text-grayScale-600">
-                                                            {p.display_order ?? "—"}
-                                                          </TableCell>
-                                                          <TableCell className="text-right">
-                                                            {categoryId ? (
-                                                              <Link
-                                                                to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}/practices/${p.id}/questions`}
-                                                                className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
-                                                              >
-                                                                Questions
-                                                              </Link>
-                                                            ) : (
-                                                              <span className="text-xs text-grayScale-400">—</span>
+                                                  <div className="space-y-3">
+                                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                                      {practiceRows.map((p, pIdx) => {
+                                                        const isActive = cardSel.practiceId === p.id
+                                                        return (
+                                                          <button
+                                                            key={p.id}
+                                                            type="button"
+                                                            onClick={() => togglePracticeCard(smKey, p.id)}
+                                                            className={cn(
+                                                              "flex flex-col gap-1.5 rounded-xl border bg-white p-3 text-left shadow-sm transition-all hover:border-brand-200 hover:shadow-md",
+                                                              isActive
+                                                                ? "border-brand-400 ring-2 ring-brand-400/30"
+                                                                : "border-grayScale-100",
                                                             )}
-                                                          </TableCell>
-                                                        </TableRow>
-                                                      ))}
-                                                    </TableBody>
-                                                  </Table>
+                                                          >
+                                                            <div className="flex items-start gap-2">
+                                                              <div className="rounded-lg bg-violet-50 p-1.5 text-violet-600">
+                                                                <ClipboardList className="h-3.5 w-3.5" aria-hidden />
+                                                              </div>
+                                                              <div className="min-w-0 flex-1">
+                                                                <p className="line-clamp-2 text-sm font-semibold text-grayScale-900">
+                                                                  {p.title}
+                                                                </p>
+                                                                <p className="mt-0.5 text-[11px] text-grayScale-500">
+                                                                  Practice {pIdx + 1}
+                                                                </p>
+                                                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                                  <Badge
+                                                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${practiceStatusStyle(p.status)}`}
+                                                                  >
+                                                                    {(p.status ?? "—").replace(/_/g, " ").toLowerCase()}
+                                                                  </Badge>
+                                                                  <span className="text-[11px] text-grayScale-500">
+                                                                    {p.question_count} Q · order {p.display_order ?? "—"}
+                                                                  </span>
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                                          </button>
+                                                        )
+                                                      })}
+                                                    </div>
+                                                    {cardSel.practiceId !== null && selectedPracticeMeta ? (
+                                                      <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/60 p-4">
+                                                        <div className="flex flex-wrap items-start justify-between gap-2">
+                                                          <div>
+                                                            <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">
+                                                              Practice questions
+                                                            </p>
+                                                            <h4 className="mt-1 text-base font-semibold text-grayScale-900">
+                                                              {selectedPracticeMeta.title}
+                                                            </h4>
+
+                                                          </div>
+                                                          {categoryId ? (
+                                                            <Link
+                                                              to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}/practices/${selectedPracticeMeta.id}/questions`}
+                                                              className="shrink-0 text-xs font-semibold text-brand-600 hover:underline"
+                                                            >
+                                                              Edit in full view
+                                                            </Link>
+                                                          ) : null}
+                                                        </div>
+                                                        {!practiceFetch || practiceFetch.status === "loading" ? (
+                                                          <div className="mt-4 flex items-center justify-center gap-2 py-8 text-sm text-grayScale-500">
+                                                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                                            Loading questions…
+                                                          </div>
+                                                        ) : practiceFetch.status === "error" ? (
+                                                          <p className="mt-3 text-sm text-red-600">{practiceFetch.message}</p>
+                                                        ) : practiceFetch.questions.length === 0 ? (
+                                                          <p className="mt-3 text-sm text-grayScale-500">
+                                                            No questions yet. Add them via{" "}
+                                                            <span className="font-medium text-grayScale-700">Open editor</span> or{" "}
+                                                            <span className="font-medium text-grayScale-700">Edit in full view</span>.
+                                                          </p>
+                                                        ) : (
+                                                          <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+                                                            {practiceFetch.questions.map((q, qIdx) => (
+                                                              <li
+                                                                key={q.question_id ?? q.id}
+                                                                className="rounded-lg border border-grayScale-100 bg-white px-3 py-2.5 shadow-sm"
+                                                              >
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                  <span className="text-[11px] font-semibold tabular-nums text-grayScale-400">
+                                                                    #{qIdx + 1}
+                                                                  </span>
+                                                                  <Badge
+                                                                    variant="secondary"
+                                                                    className="h-5 rounded-md px-1.5 text-[10px] font-semibold uppercase"
+                                                                  >
+                                                                    {String(q.question_type ?? "—").replace(/_/g, " ")}
+                                                                  </Badge>
+                                                                  {q.points != null ? (
+                                                                    <span className="text-[11px] text-grayScale-500">
+                                                                      {q.points} pts
+                                                                    </span>
+                                                                  ) : null}
+                                                                  {q.difficulty_level ? (
+                                                                    <span className="text-[11px] text-grayScale-500">
+                                                                      {q.difficulty_level}
+                                                                    </span>
+                                                                  ) : null}
+                                                                </div>
+                                                                <p className="mt-1.5 text-sm text-grayScale-800">
+                                                                  {q.question_text || "—"}
+                                                                </p>
+                                                                {q.tips ? (
+                                                                  <p className="mt-1 text-xs text-grayScale-500">
+                                                                    <span className="font-medium text-grayScale-600">Tip: </span>
+                                                                    {q.tips}
+                                                                  </p>
+                                                                ) : null}
+                                                              </li>
+                                                            ))}
+                                                          </ul>
+                                                        )}
+                                                        {practiceFetch?.status === "ok" &&
+                                                        practiceFetch.totalCount > practiceFetch.questions.length ? (
+                                                          <p className="mt-2 text-xs text-grayScale-500">
+                                                            Showing {practiceFetch.questions.length} of {practiceFetch.totalCount}{" "}
+                                                            questions. Open full editor to see or edit the rest.
+                                                          </p>
+                                                        ) : null}
+                                                      </div>
+                                                    ) : (
+                                                      <p className="text-center text-xs text-grayScale-400">
+                                                        Select a practice card to view its questions.
+                                                      </p>
+                                                    )}
+                                                  </div>
                                                 )}
                                               </div>
                                             </div>

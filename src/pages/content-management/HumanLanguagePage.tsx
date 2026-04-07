@@ -28,20 +28,30 @@ import {
 } from "../../components/ui/dialog"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
+  addQuestionToSet,
+  createPractice,
+  createQuestion,
   createCourse,
   createCourseCategory,
   createHumanLanguageLesson,
+  deletePractice,
+  deleteQuestion,
   deleteSubCourse,
   getHumanLanguageHierarchy,
+  getQuestionById,
   getPracticeQuestions,
   getPracticeQuestionsByPractice,
+  updatePractice,
+  updateQuestion,
 } from "../../api/courses.api"
 import { Badge } from "../../components/ui/badge"
 import type {
+  CreateQuestionRequest,
   HumanLanguageCourseTree,
   HumanLanguageSubCategoryTree,
   LearningPathPractice,
   LearningPathVideo,
+  QuestionDetail,
   QuestionSetQuestion,
 } from "../../types/course.types"
 import { cn } from "../../lib/utils"
@@ -57,6 +67,24 @@ type PracticeQuestionsFetchState =
   | { status: "loading"; startedAt: number }
   | { status: "ok"; questions: QuestionSetQuestion[]; totalCount: number }
   | { status: "error"; message: string }
+
+type PracticeDialogState =
+  | { open: false }
+  | {
+      open: true
+      mode: "create" | "edit"
+      subModuleId: number
+      practiceId?: number
+    }
+
+type QuestionDialogState =
+  | { open: false }
+  | {
+      open: true
+      mode: "create" | "edit"
+      practiceId: number
+      questionId?: number
+    }
 
 function formatDurationSeconds(total: number): string {
   const s = Math.max(0, Math.floor(total))
@@ -171,6 +199,39 @@ export function HumanLanguagePage() {
   /** Selected lesson / practice card per sub-module (for inline detail panel). */
   const [subModuleCardSelection, setSubModuleCardSelection] = useState<Record<string, SubModuleCardSelection>>({})
   const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
+  const [practiceDialog, setPracticeDialog] = useState<PracticeDialogState>({ open: false })
+  const [questionDialog, setQuestionDialog] = useState<QuestionDialogState>({ open: false })
+  const [practiceForm, setPracticeForm] = useState({ title: "", description: "", persona: "" })
+  const [questionForm, setQuestionForm] = useState({
+    questionText: "",
+    questionType: "MCQ" as "MCQ" | "TRUE_FALSE" | "SHORT",
+    difficulty: "EASY",
+    points: 1,
+    tips: "",
+    explanation: "",
+    imageUrl: "",
+    voicePrompt: "",
+    sampleAnswerVoicePrompt: "",
+    audioCorrectAnswerText: "",
+    optionA: "",
+    optionB: "",
+    optionC: "",
+    optionD: "",
+    correctOption: "A" as "A" | "B" | "C" | "D",
+    shortAnswer: "",
+  })
+  const [questionDetailById, setQuestionDetailById] = useState<Record<number, QuestionDetail>>({})
+  const [practiceTargetDelete, setPracticeTargetDelete] = useState<{ id: number; title: string } | null>(null)
+  const [questionTargetDelete, setQuestionTargetDelete] = useState<{ id: number; practiceId: number; text: string } | null>(null)
+  const [savingPractice, setSavingPractice] = useState(false)
+  const [savingQuestion, setSavingQuestion] = useState(false)
+  const [deletingPractice, setDeletingPractice] = useState(false)
+  const [deletingQuestion, setDeletingQuestion] = useState(false)
+  /** Show inline field errors only after an explicit save attempt (avoids noisy empty-state on open). */
+  const [practiceSubmitAttempted, setPracticeSubmitAttempted] = useState(false)
+  const [questionSubmitAttempted, setQuestionSubmitAttempted] = useState(false)
+  const [practiceFormTouched, setPracticeFormTouched] = useState(false)
+  const [questionFormTouched, setQuestionFormTouched] = useState(false)
 
   const renderMediaPreview = (
     urlRaw: string,
@@ -495,15 +556,15 @@ export function HumanLanguagePage() {
     }
   }
 
-  const loadPracticeQuestionsIfNeeded = async (practiceId: number) => {
+  const loadPracticeQuestionsIfNeeded = async (practiceId: number, forceRefresh = false) => {
     let skipFetch = false
     setPracticeQuestionsState((prev) => {
       const ex = prev[practiceId]
-      if (ex?.status === "ok") {
+      if (!forceRefresh && ex?.status === "ok") {
         skipFetch = true
         return prev
       }
-      if (ex?.status === "loading" && Date.now() - ex.startedAt < 15000) {
+      if (!forceRefresh && ex?.status === "loading" && Date.now() - ex.startedAt < 15000) {
         skipFetch = true
         return prev
       }
@@ -539,6 +600,281 @@ export function HumanLanguagePage() {
 
   const getSubModuleSelection = (smKey: string): SubModuleCardSelection =>
     subModuleCardSelection[smKey] ?? { lessonId: null, practiceId: null }
+
+  const resetPracticeForm = () => setPracticeForm({ title: "", description: "", persona: "" })
+  const resetQuestionForm = () =>
+    setQuestionForm({
+      questionText: "",
+      questionType: "MCQ",
+      difficulty: "EASY",
+      points: 1,
+      tips: "",
+      explanation: "",
+      imageUrl: "",
+      voicePrompt: "",
+      sampleAnswerVoicePrompt: "",
+      audioCorrectAnswerText: "",
+      optionA: "",
+      optionB: "",
+      optionC: "",
+      optionD: "",
+      correctOption: "A",
+      shortAnswer: "",
+    })
+
+  const openCreatePracticeDialog = (subModuleId: number) => {
+    setPracticeSubmitAttempted(false)
+    setPracticeFormTouched(false)
+    resetPracticeForm()
+    setPracticeDialog({ open: true, mode: "create", subModuleId })
+  }
+
+  const openEditPracticeDialog = (subModuleId: number, p: LearningPathPractice) => {
+    setPracticeSubmitAttempted(false)
+    setPracticeFormTouched(false)
+    setPracticeForm({ title: p.title ?? "", description: "", persona: "" })
+    setPracticeDialog({ open: true, mode: "edit", subModuleId, practiceId: p.id })
+  }
+
+  const practiceFieldErrors = useMemo(() => {
+    const title = practiceForm.title.trim()
+    return {
+      title: title ? undefined : "Title is required.",
+    }
+  }, [practiceForm.title])
+
+  const practiceCanSave = !practiceFieldErrors.title
+
+  const handleSavePractice = async () => {
+    if (!practiceDialog.open) return
+    if (!practiceCanSave) {
+      setPracticeSubmitAttempted(true)
+      return
+    }
+    setSavingPractice(true)
+    try {
+      if (practiceDialog.mode === "create") {
+        await createPractice({
+          sub_course_id: practiceDialog.subModuleId,
+          title: practiceForm.title.trim(),
+          description: practiceForm.description.trim(),
+          persona: practiceForm.persona.trim() || undefined,
+        })
+        toast.success("Practice created")
+      } else if (practiceDialog.practiceId) {
+        await updatePractice(practiceDialog.practiceId, {
+          title: practiceForm.title.trim(),
+          description: practiceForm.description.trim(),
+          persona: practiceForm.persona.trim() || undefined,
+        })
+        toast.success("Practice updated")
+      }
+      setPracticeDialog({ open: false })
+      setPracticeSubmitAttempted(false)
+      setPracticeFormTouched(false)
+      resetPracticeForm()
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to save practice:", error)
+      toast.error("Failed to save practice")
+    } finally {
+      setSavingPractice(false)
+    }
+  }
+
+  const openCreateQuestionDialog = (practiceId: number) => {
+    setQuestionSubmitAttempted(false)
+    setQuestionFormTouched(false)
+    resetQuestionForm()
+    setQuestionDialog({ open: true, mode: "create", practiceId })
+  }
+
+  const openEditQuestionDialog = async (practiceId: number, question: QuestionSetQuestion) => {
+    setQuestionSubmitAttempted(false)
+    setQuestionFormTouched(false)
+    const qid = question.question_id ?? question.id
+    resetQuestionForm()
+    setQuestionDialog({ open: true, mode: "edit", practiceId, questionId: qid })
+    try {
+      const detail = questionDetailById[qid] ?? (await getQuestionById(qid)).data?.data
+      if (!detail) return
+      setQuestionDetailById((prev) => ({ ...prev, [qid]: detail }))
+      const options = (detail.options ?? []).slice().sort((a, b) => a.option_order - b.option_order)
+      const correct = options.find((o) => o.is_correct)?.option_order ?? 1
+      const shortAnswer =
+        Array.isArray(detail.short_answers) && detail.short_answers.length > 0
+          ? typeof detail.short_answers[0] === "string"
+            ? detail.short_answers[0]
+            : detail.short_answers[0]?.acceptable_answer ?? ""
+          : ""
+      setQuestionForm({
+        questionText: detail.question_text ?? "",
+        questionType:
+          detail.question_type === "TRUE_FALSE" || detail.question_type === "SHORT" || detail.question_type === "SHORT_ANSWER"
+            ? detail.question_type === "SHORT_ANSWER"
+              ? "SHORT"
+              : detail.question_type
+            : "MCQ",
+        difficulty: detail.difficulty_level ?? "EASY",
+        points: detail.points ?? 1,
+        tips: detail.tips ?? "",
+        explanation: detail.explanation ?? "",
+        imageUrl: detail.image_url ?? "",
+        voicePrompt: detail.voice_prompt ?? "",
+        sampleAnswerVoicePrompt: detail.sample_answer_voice_prompt ?? "",
+        audioCorrectAnswerText: detail.audio_correct_answer_text ?? "",
+        optionA: options[0]?.option_text ?? "",
+        optionB: options[1]?.option_text ?? "",
+        optionC: options[2]?.option_text ?? "",
+        optionD: options[3]?.option_text ?? "",
+        correctOption: (["A", "B", "C", "D"][Math.min(Math.max(correct - 1, 0), 3)] as "A" | "B" | "C" | "D") ?? "A",
+        shortAnswer,
+      })
+    } catch (error) {
+      console.error("Failed to load question detail:", error)
+      toast.error("Could not load question details")
+    }
+  }
+
+  const buildQuestionPayload = (): CreateQuestionRequest => {
+    const payload: CreateQuestionRequest = {
+      question_text: questionForm.questionText.trim(),
+      question_type: questionForm.questionType,
+      difficulty_level: questionForm.difficulty,
+      points: Number(questionForm.points) || 1,
+      tips: questionForm.tips.trim() || undefined,
+      explanation: questionForm.explanation.trim() || undefined,
+      image_url: questionForm.imageUrl.trim() || undefined,
+      voice_prompt: questionForm.voicePrompt.trim() || undefined,
+      sample_answer_voice_prompt: questionForm.sampleAnswerVoicePrompt.trim() || undefined,
+      audio_correct_answer_text: questionForm.audioCorrectAnswerText.trim() || undefined,
+      status: "PUBLISHED",
+    }
+    if (questionForm.questionType === "SHORT") {
+      payload.short_answers = questionForm.shortAnswer.trim()
+        ? [
+            { acceptable_answer: questionForm.shortAnswer.trim(), match_type: "EXACT" },
+            { acceptable_answer: questionForm.shortAnswer.trim(), match_type: "CASE_INSENSITIVE" },
+          ]
+        : undefined
+      return payload
+    }
+    const options =
+      questionForm.questionType === "TRUE_FALSE"
+        ? [
+            { option_order: 1, option_text: "True", is_correct: questionForm.correctOption === "A" },
+            { option_order: 2, option_text: "False", is_correct: questionForm.correctOption === "B" },
+          ]
+        : [
+            { option_order: 1, option_text: questionForm.optionA.trim(), is_correct: questionForm.correctOption === "A" },
+            { option_order: 2, option_text: questionForm.optionB.trim(), is_correct: questionForm.correctOption === "B" },
+            { option_order: 3, option_text: questionForm.optionC.trim(), is_correct: questionForm.correctOption === "C" },
+            { option_order: 4, option_text: questionForm.optionD.trim(), is_correct: questionForm.correctOption === "D" },
+          ].filter((o) => o.option_text)
+    payload.options = options
+    return payload
+  }
+
+  const questionFieldErrors = useMemo(() => {
+    const errors: {
+      questionText?: string
+      points?: string
+      shortAnswer?: string
+      options?: string
+      correctOption?: string
+    } = {}
+    if (!questionForm.questionText.trim()) errors.questionText = "Question text is required."
+    const pts = Number(questionForm.points)
+    if (!Number.isFinite(pts) || pts < 1) errors.points = "Enter a valid number (minimum 1)."
+    if (questionForm.questionType === "SHORT" && !questionForm.shortAnswer.trim()) {
+      errors.shortAnswer = "Expected answer is required for short-answer questions."
+    }
+    if (questionForm.questionType === "MCQ") {
+      const opts = {
+        A: questionForm.optionA.trim(),
+        B: questionForm.optionB.trim(),
+        C: questionForm.optionC.trim(),
+        D: questionForm.optionD.trim(),
+      }
+      const filled = Object.values(opts).filter(Boolean).length
+      if (filled < 2) errors.options = "Enter at least two non-empty options."
+      const correct = questionForm.correctOption
+      if (opts[correct] === "") errors.correctOption = "The marked correct option must include text."
+    }
+    return errors
+  }, [questionForm])
+
+  const questionCanSave = Object.keys(questionFieldErrors).length === 0
+
+  const handleSaveQuestion = async () => {
+    if (!questionDialog.open) return
+    if (!questionCanSave) {
+      setQuestionSubmitAttempted(true)
+      return
+    }
+    setSavingQuestion(true)
+    try {
+      const payload = buildQuestionPayload()
+      if (questionDialog.mode === "create") {
+        const created = await createQuestion(payload)
+        const questionId = created.data?.data?.id
+        if (!questionId) throw new Error("Missing created question id")
+        await addQuestionToSet(questionDialog.practiceId, { question_id: questionId })
+        toast.success("Question created")
+      } else if (questionDialog.questionId) {
+        await updateQuestion(questionDialog.questionId, payload)
+        toast.success("Question updated")
+      }
+      setQuestionDialog({ open: false })
+      setQuestionSubmitAttempted(false)
+      setQuestionFormTouched(false)
+      resetQuestionForm()
+      await Promise.all([
+        loadPracticeQuestionsIfNeeded(questionDialog.practiceId, true),
+        loadHierarchy(),
+      ])
+    } catch (error) {
+      console.error("Failed to save question:", error)
+      toast.error("Failed to save question")
+    } finally {
+      setSavingQuestion(false)
+    }
+  }
+
+  const handleDeletePracticeConfirmed = async () => {
+    if (!practiceTargetDelete) return
+    setDeletingPractice(true)
+    try {
+      await deletePractice(practiceTargetDelete.id)
+      toast.success("Practice deleted")
+      setPracticeTargetDelete(null)
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to delete practice:", error)
+      toast.error("Failed to delete practice")
+    } finally {
+      setDeletingPractice(false)
+    }
+  }
+
+  const handleDeleteQuestionConfirmed = async () => {
+    if (!questionTargetDelete) return
+    setDeletingQuestion(true)
+    try {
+      await deleteQuestion(questionTargetDelete.id)
+      toast.success("Question deleted")
+      await Promise.all([
+        loadPracticeQuestionsIfNeeded(questionTargetDelete.practiceId, true),
+        loadHierarchy(),
+      ])
+      setQuestionTargetDelete(null)
+    } catch (error) {
+      console.error("Failed to delete question:", error)
+      toast.error("Failed to delete question")
+    } finally {
+      setDeletingQuestion(false)
+    }
+  }
 
   const toggleLessonCard = (smKey: string, lessonId: number) => {
     setSubModuleCardSelection((prev) => {
@@ -902,7 +1238,8 @@ export function HumanLanguagePage() {
                                               </div>
 
                                               <div className="border-b border-grayScale-100 bg-white px-3">
-                                                <div className="-mb-px flex gap-6">
+                                                <div className="-mb-px flex items-center justify-between gap-4">
+                                                  <div className="flex gap-6">
                                                   <button
                                                     type="button"
                                                     onClick={() =>
@@ -935,6 +1272,19 @@ export function HumanLanguagePage() {
                                                       <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
                                                     ) : null}
                                                   </button>
+                                                  </div>
+                                                  {panelTab === "practices" ? (
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="outline"
+                                                      className="h-7 px-2 text-[11px]"
+                                                      onClick={() => openCreatePracticeDialog(subModule.id)}
+                                                    >
+                                                      <Plus className="h-3.5 w-3.5" />
+                                                      New practice
+                                                    </Button>
+                                                  ) : null}
                                                 </div>
                                               </div>
 
@@ -1061,7 +1411,7 @@ export function HumanLanguagePage() {
                                                                 : "border-grayScale-100",
                                                             )}
                                                           >
-                                                            <div className="flex items-start gap-2">
+                                                            <div className="flex items-start justify-between gap-2">
                                                               <div className="rounded-lg bg-violet-50 p-1.5 text-violet-600">
                                                                 <ClipboardList className="h-3.5 w-3.5" aria-hidden />
                                                               </div>
@@ -1082,6 +1432,32 @@ export function HumanLanguagePage() {
                                                                     {p.question_count} Q · order {p.display_order ?? "—"}
                                                                   </span>
                                                                 </div>
+                                                              </div>
+                                                              <div className="flex shrink-0 items-center gap-1">
+                                                                <Button
+                                                                  type="button"
+                                                                  size="sm"
+                                                                  variant="ghost"
+                                                                  className="h-7 px-2 text-[10px]"
+                                                                  onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    openEditPracticeDialog(subModule.id, p)
+                                                                  }}
+                                                                >
+                                                                  Edit
+                                                                </Button>
+                                                                <Button
+                                                                  type="button"
+                                                                  size="sm"
+                                                                  variant="ghost"
+                                                                  className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                                  onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setPracticeTargetDelete({ id: p.id, title: p.title })
+                                                                  }}
+                                                                >
+                                                                  Delete
+                                                                </Button>
                                                               </div>
                                                             </div>
                                                           </button>
@@ -1108,6 +1484,16 @@ export function HumanLanguagePage() {
                                                               ) : null}
                                                             </div>
                                                             <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                                              <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-8 text-xs"
+                                                                onClick={() => openCreateQuestionDialog(selectedPracticeMeta.id)}
+                                                              >
+                                                                <Plus className="h-3.5 w-3.5" />
+                                                                Add question
+                                                              </Button>
                                                               {practiceFetch?.status === "ok" ? (
                                                                 <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-100">
                                                                   {practiceFetch.questions.length} loaded
@@ -1179,7 +1565,8 @@ export function HumanLanguagePage() {
                                                                       {qIdx + 1}
                                                                     </div>
                                                                     <div className="min-w-0 flex-1 space-y-3">
-                                                                      <div className="flex flex-wrap items-center gap-2">
+                                                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                        <div className="flex flex-wrap items-center gap-2">
                                                                         <Badge
                                                                           className={cn(
                                                                             "h-6 rounded-md px-2 py-0 text-[11px] font-semibold",
@@ -1198,6 +1585,38 @@ export function HumanLanguagePage() {
                                                                             {q.difficulty_level}
                                                                           </span>
                                                                         ) : null}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1">
+                                                                          <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            className="h-7 px-2 text-[10px]"
+                                                                            onClick={() =>
+                                                                              void openEditQuestionDialog(
+                                                                                selectedPracticeMeta.id,
+                                                                                q,
+                                                                              )
+                                                                            }
+                                                                          >
+                                                                            Edit
+                                                                          </Button>
+                                                                          <Button
+                                                                            type="button"
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                                            onClick={() =>
+                                                                              setQuestionTargetDelete({
+                                                                                id: q.question_id ?? q.id,
+                                                                                practiceId: selectedPracticeMeta.id,
+                                                                                text: q.question_text || "Question",
+                                                                              })
+                                                                            }
+                                                                          >
+                                                                            Delete
+                                                                          </Button>
+                                                                        </div>
                                                                       </div>
                                                                       <div>
                                                                         <p className="text-[13px] font-medium uppercase tracking-wide text-grayScale-400">
@@ -1315,6 +1734,389 @@ export function HumanLanguagePage() {
             </Button>
             <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => void executePendingRemove()}>
               Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={practiceDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPracticeDialog({ open: false })
+            setPracticeSubmitAttempted(false)
+            setPracticeFormTouched(false)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{practiceDialog.open && practiceDialog.mode === "edit" ? "Edit Practice" : "Create Practice"}</DialogTitle>
+            <DialogDescription>
+              Manage practice metadata directly from this page.
+              {!practiceCanSave ? (
+                <span className="mt-1 block text-amber-700/90">Required fields must be completed before you can save.</span>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Title</label>
+              <input
+                value={practiceForm.title}
+                onChange={(e) => {
+                  setPracticeFormTouched(true)
+                  setPracticeForm((p) => ({ ...p, title: e.target.value }))
+                }}
+                className={cn(
+                  "h-10 w-full rounded-md border px-3 text-sm",
+                  (practiceSubmitAttempted || practiceFormTouched) && practiceFieldErrors.title
+                    ? "border-red-300 ring-1 ring-red-200"
+                    : "border-grayScale-200",
+                )}
+                placeholder="Practice title"
+                aria-invalid={Boolean(
+                  (practiceSubmitAttempted || practiceFormTouched) && practiceFieldErrors.title,
+                )}
+              />
+              {(practiceSubmitAttempted || practiceFormTouched) && practiceFieldErrors.title ? (
+                <p className="text-xs text-red-600">{practiceFieldErrors.title}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Description</label>
+              <textarea
+                value={practiceForm.description}
+                onChange={(e) => {
+                  setPracticeFormTouched(true)
+                  setPracticeForm((p) => ({ ...p, description: e.target.value }))
+                }}
+                className="min-h-[88px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Persona</label>
+              <input
+                value={practiceForm.persona}
+                onChange={(e) => {
+                  setPracticeFormTouched(true)
+                  setPracticeForm((p) => ({ ...p, persona: e.target.value }))
+                }}
+                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+                placeholder="Optional persona"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPracticeDialog({ open: false })}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleSavePractice()} disabled={savingPractice || !practiceCanSave}>
+              {savingPractice ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={practiceTargetDelete !== null} onOpenChange={(open) => !open && setPracticeTargetDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete practice?</DialogTitle>
+            <DialogDescription>
+              {practiceTargetDelete ? `This will permanently delete "${practiceTargetDelete.title}".` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPracticeTargetDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void handleDeletePracticeConfirmed()}
+              disabled={deletingPractice}
+            >
+              {deletingPractice ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={questionDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setQuestionDialog({ open: false })
+            setQuestionSubmitAttempted(false)
+            setQuestionFormTouched(false)
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{questionDialog.open && questionDialog.mode === "edit" ? "Edit Question" : "Add Question"}</DialogTitle>
+            <DialogDescription>
+              Create, edit, and attach questions to the selected practice.
+              {!questionCanSave ? (
+                <span className="mt-1 block text-amber-700/90">
+                  Fix the highlighted fields before saving. Save stays disabled until the form is valid.
+                </span>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium text-grayScale-600">Question text</label>
+              <textarea
+                value={questionForm.questionText}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, questionText: e.target.value }))
+                }}
+                className={cn(
+                  "min-h-[96px] w-full rounded-md border px-3 py-2 text-sm",
+                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.questionText
+                    ? "border-red-300 ring-1 ring-red-200"
+                    : "border-grayScale-200",
+                )}
+                placeholder="Type question"
+                aria-invalid={Boolean(
+                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.questionText,
+                )}
+              />
+              {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.questionText ? (
+                <p className="text-xs text-red-600">{questionFieldErrors.questionText}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Type</label>
+              <select
+                value={questionForm.questionType}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, questionType: e.target.value as "MCQ" | "TRUE_FALSE" | "SHORT" }))
+                }}
+                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+              >
+                <option value="MCQ">MCQ</option>
+                <option value="TRUE_FALSE">True/False</option>
+                <option value="SHORT">Short answer</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Difficulty</label>
+              <select
+                value={questionForm.difficulty}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, difficulty: e.target.value }))
+                }}
+                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+              >
+                <option value="EASY">EASY</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HARD">HARD</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Points</label>
+              <input
+                type="number"
+                min={1}
+                value={questionForm.points}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, points: Number(e.target.value) }))
+                }}
+                className={cn(
+                  "h-10 w-full rounded-md border px-3 text-sm",
+                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.points
+                    ? "border-red-300 ring-1 ring-red-200"
+                    : "border-grayScale-200",
+                )}
+                aria-invalid={Boolean(
+                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.points,
+                )}
+              />
+              {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.points ? (
+                <p className="text-xs text-red-600">{questionFieldErrors.points}</p>
+              ) : null}
+            </div>
+            {questionForm.questionType === "SHORT" ? (
+              <div className="space-y-1 sm:col-span-2">
+                <label className="text-xs font-medium text-grayScale-600">Expected short answer</label>
+                <input
+                  value={questionForm.shortAnswer}
+                  onChange={(e) => {
+                    setQuestionFormTouched(true)
+                    setQuestionForm((f) => ({ ...f, shortAnswer: e.target.value }))
+                  }}
+                  className={cn(
+                    "h-10 w-full rounded-md border px-3 text-sm",
+                    (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.shortAnswer
+                      ? "border-red-300 ring-1 ring-red-200"
+                      : "border-grayScale-200",
+                  )}
+                  aria-invalid={Boolean(
+                    (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.shortAnswer,
+                  )}
+                />
+                {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.shortAnswer ? (
+                  <p className="text-xs text-red-600">{questionFieldErrors.shortAnswer}</p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-2 sm:col-span-2">
+                <label className="text-xs font-medium text-grayScale-600">Options</label>
+                {questionForm.questionType === "TRUE_FALSE" ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={questionForm.correctOption === "A" ? "default" : "outline"}
+                      onClick={() => {
+                        setQuestionFormTouched(true)
+                        setQuestionForm((f) => ({ ...f, correctOption: "A" }))
+                      }}
+                    >
+                      True
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={questionForm.correctOption === "B" ? "default" : "outline"}
+                      onClick={() => {
+                        setQuestionFormTouched(true)
+                        setQuestionForm((f) => ({ ...f, correctOption: "B" }))
+                      }}
+                    >
+                      False
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {(["A", "B", "C", "D"] as const).map((opt) => (
+                      <div key={opt} className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={questionForm.correctOption === opt ? "default" : "outline"}
+                          onClick={() => {
+                            setQuestionFormTouched(true)
+                            setQuestionForm((f) => ({ ...f, correctOption: opt }))
+                          }}
+                        >
+                          {opt}
+                        </Button>
+                        <input
+                          value={questionForm[`option${opt}` as "optionA" | "optionB" | "optionC" | "optionD"]}
+                          onChange={(e) => {
+                            setQuestionFormTouched(true)
+                            setQuestionForm((f) => ({
+                              ...f,
+                              [`option${opt}`]: e.target.value,
+                            }))
+                          }}
+                          className="h-9 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+                          placeholder={`Option ${opt}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.options ? (
+                  <p className="text-xs text-red-600">{questionFieldErrors.options}</p>
+                ) : null}
+                {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.correctOption ? (
+                  <p className="text-xs text-red-600">{questionFieldErrors.correctOption}</p>
+                ) : null}
+              </div>
+            )}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium text-grayScale-600">Tips</label>
+              <textarea
+                value={questionForm.tips}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, tips: e.target.value }))
+                }}
+                className="min-h-[74px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium text-grayScale-600">Explanation / sample answer</label>
+              <textarea
+                value={questionForm.explanation}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, explanation: e.target.value }))
+                }}
+                className="min-h-[74px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium text-grayScale-600">Image URL</label>
+              <input
+                value={questionForm.imageUrl}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, imageUrl: e.target.value }))
+                }}
+                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Voice prompt URL</label>
+              <input
+                value={questionForm.voicePrompt}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, voicePrompt: e.target.value }))
+                }}
+                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Sample answer voice URL</label>
+              <input
+                value={questionForm.sampleAnswerVoicePrompt}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, sampleAnswerVoicePrompt: e.target.value }))
+                }}
+                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setQuestionDialog({ open: false })}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleSaveQuestion()} disabled={savingQuestion || !questionCanSave}>
+              {savingQuestion ? "Saving..." : "Save question"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={questionTargetDelete !== null} onOpenChange={(open) => !open && setQuestionTargetDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete question?</DialogTitle>
+            <DialogDescription>
+              {questionTargetDelete ? `This will permanently delete "${questionTargetDelete.text}".` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setQuestionTargetDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void handleDeleteQuestionConfirmed()}
+              disabled={deletingQuestion}
+            >
+              {deletingQuestion ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

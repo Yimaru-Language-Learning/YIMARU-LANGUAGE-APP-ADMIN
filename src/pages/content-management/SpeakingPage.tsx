@@ -1,5 +1,5 @@
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, ChevronDown, ChevronRight, Image as ImageIcon, Loader2, Mic, Pencil, Plus, Trash2, Upload } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronRight, Image as ImageIcon, Loader2, Mic, Plus, Trash2, Upload } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -17,7 +17,6 @@ import {
   getQuestions,
   getPracticeQuestionsByPractice,
   getQuestionSets,
-  updatePractice,
   updateQuestion,
 } from "../../api/courses.api"
 import { resolveFileUrl, uploadAudioFile, uploadImageFile, uploadVideoFile } from "../../api/files.api"
@@ -161,11 +160,6 @@ export function SpeakingPage() {
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [collapsedPracticeIds, setCollapsedPracticeIds] = useState<number[]>([])
-  const [editingPractice, setEditingPractice] = useState<PracticeFilterOption | null>(null)
-  const [practiceEditTitle, setPracticeEditTitle] = useState("")
-  const [practiceEditDescription, setPracticeEditDescription] = useState("")
-  const [practiceEditPersona, setPracticeEditPersona] = useState("")
-  const [practiceEditSaving, setPracticeEditSaving] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [openCreate, setOpenCreate] = useState(false)
@@ -1264,41 +1258,6 @@ export function SpeakingPage() {
     )
   }
 
-  const handleOpenPracticeEdit = (practiceId: number | null) => {
-    if (!practiceId) return
-    const practice = practiceOptions.find((p) => p.id === practiceId)
-    if (!practice) return
-    setEditingPractice(practice)
-    setPracticeEditTitle(practice.title)
-    setPracticeEditDescription(practice.description ?? "")
-    setPracticeEditPersona(practice.persona ?? "")
-  }
-
-  const handleSavePracticeEdit = async () => {
-    if (!editingPractice) return
-    if (!practiceEditTitle.trim()) {
-      toast.error("Practice title is required")
-      return
-    }
-    setPracticeEditSaving(true)
-    try {
-      await updatePractice(editingPractice.id, {
-        title: practiceEditTitle.trim(),
-        description: practiceEditDescription.trim(),
-        ...(practiceEditPersona.trim() ? { persona: practiceEditPersona.trim() } : {}),
-      })
-      toast.success("Practice updated")
-      setEditingPractice(null)
-      await fetchPracticeOptions()
-      await fetchAudioQuestions()
-    } catch (error) {
-      console.error("Failed to update practice:", error)
-      toast.error("Failed to update practice")
-    } finally {
-      setPracticeEditSaving(false)
-    }
-  }
-
   const groupedAudioQuestions = useMemo(() => {
     const groups = new Map<string, { practiceId: number | null; practiceTitle: string; questions: AudioListQuestion[] }>()
     for (const q of audioQuestions) {
@@ -1475,16 +1434,6 @@ export function SpeakingPage() {
                             {group.practiceTitle} {group.practiceId ? `(#${group.practiceId})` : ""}
                           </label>
                         </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 border-grayScale-200 text-grayScale-700 hover:bg-white"
-                          onClick={() => handleOpenPracticeEdit(group.practiceId)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit practice
-                        </Button>
                       </div>
                     </div>
                     {(group.practiceId && collapsedPracticeIds.includes(group.practiceId) ? [] : group.questions).map((question, idx) => (
@@ -1882,44 +1831,6 @@ export function SpeakingPage() {
                 disabled={detailDeleting}
               >
                 {detailDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingPractice && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-grayScale-200/80 bg-white shadow-2xl">
-            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50 to-white px-5 py-4">
-              <h3 className="text-base font-semibold text-grayScale-900">
-                Edit practice metadata ({editingPractice.id})
-              </h3>
-            </div>
-            <div className="space-y-4 px-5 py-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Title</label>
-                <Input value={practiceEditTitle} onChange={(e) => setPracticeEditTitle(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Description</label>
-                <Textarea
-                  rows={3}
-                  value={practiceEditDescription}
-                  onChange={(e) => setPracticeEditDescription(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Persona (optional)</label>
-                <Input value={practiceEditPersona} onChange={(e) => setPracticeEditPersona(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 border-t border-grayScale-100 bg-grayScale-50/40 px-5 py-4">
-              <Button variant="outline" onClick={() => setEditingPractice(null)} disabled={practiceEditSaving}>
-                Cancel
-              </Button>
-              <Button className="bg-brand-500 hover:bg-brand-600" onClick={handleSavePracticeEdit} disabled={practiceEditSaving}>
-                {practiceEditSaving ? "Saving..." : "Save practice"}
               </Button>
             </div>
           </div>

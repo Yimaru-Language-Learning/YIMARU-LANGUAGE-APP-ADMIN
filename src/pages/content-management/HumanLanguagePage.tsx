@@ -244,7 +244,6 @@ export function HumanLanguagePage() {
                   modules: levelNode?.modules ?? [],
                 }
               })
-              .filter((entry) => entry.modules.length > 0)
             return (
             <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
               <button
@@ -284,58 +283,62 @@ export function HumanLanguagePage() {
                           </Button>
                         </div>
                         <div className="space-y-2">
-                          {entry.modules.map((module) => (
-                            <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    handleCreateSubModule(entry.course.course_id, level, module.title, module.sub_modules)
-                                  }
-                                  disabled={creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
-                                >
-                                  {creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : (
-                                    <Plus className="h-3.5 w-3.5" />
-                                  )}
-                                  Add Sub-module
-                                </Button>
-                              </div>
-                              {module.sub_modules.map((subModule) => (
-                                <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
-                                    {categoryId ? (
-                                      <div className="flex gap-2">
-                                        <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}`}>
-                                          <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
-                                        </Link>
-                                        <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}/add-practice`}>
-                                          <Button size="sm">Add practice/audio questions</Button>
-                                        </Link>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {subModule.videos.map((video) => (
-                                      <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
-                                        <BookOpen className="h-3.5 w-3.5" />
-                                        {video.title}
-                                      </div>
-                                    ))}
-                                    {subModule.practices.map((practice) => (
-                                      <div key={practice.id} className="rounded-md bg-brand-50 px-2 py-1 text-xs text-brand-700">
-                                        Practice: {practice.title} ({practice.question_count} audio question(s))
-                                      </div>
-                                    ))}
-                                  </div>
+                          {entry.modules.length === 0 ? (
+                            <p className="text-xs text-grayScale-500">No modules yet. Use “Add Module” to start.</p>
+                          ) : (
+                            entry.modules.map((module) => (
+                              <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleCreateSubModule(entry.course.course_id, level, module.title, module.sub_modules)
+                                    }
+                                    disabled={creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
+                                  >
+                                    {creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Plus className="h-3.5 w-3.5" />
+                                    )}
+                                    Add Sub-module
+                                  </Button>
                                 </div>
-                              ))}
-                            </div>
-                          ))}
+                                {module.sub_modules.map((subModule) => (
+                                  <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
+                                      {categoryId ? (
+                                        <div className="flex gap-2">
+                                          <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}`}>
+                                            <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
+                                          </Link>
+                                          <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}/add-practice`}>
+                                            <Button size="sm">Add practice/audio questions</Button>
+                                          </Link>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      {subModule.videos.map((video) => (
+                                        <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
+                                          <BookOpen className="h-3.5 w-3.5" />
+                                          {video.title}
+                                        </div>
+                                      ))}
+                                      {subModule.practices.map((practice) => (
+                                        <div key={practice.id} className="rounded-md bg-brand-50 px-2 py-1 text-xs text-brand-700">
+                                          Practice: {practice.title} ({practice.question_count} audio question(s))
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
                     ))

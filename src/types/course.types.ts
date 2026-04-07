@@ -742,6 +742,15 @@ export interface GetHumanLanguageHierarchyResponse {
   metadata: unknown
 }
 
+export interface CreateHumanLanguageLessonRequest {
+  course_id: number
+  title: string
+  description?: string
+  thumbnail?: string
+  display_order?: number
+  cefr_level: string
+}
+
 export interface GetSubCourseEntryAssessmentResponse {
   message: string
   data: QuestionSet | null

@@ -49,6 +49,7 @@ import type {
   GetLearningPathResponse,
   GetHumanLanguageLessonsResponse,
   GetHumanLanguageHierarchyResponse,
+  CreateHumanLanguageLessonRequest,
   GetSubCourseEntryAssessmentResponse,
   ReorderItem,
   GetRatingsResponse,
@@ -295,6 +296,9 @@ export const getHumanLanguageLessonsByCourse = (courseId: number, cefr_level: st
 
 export const getHumanLanguageHierarchy = () =>
   http.get<GetHumanLanguageHierarchyResponse>("/course-management/human-language/hierarchy")
+
+export const createHumanLanguageLesson = (data: CreateHumanLanguageLessonRequest) =>
+  http.post("/course-management/human-language/lessons", data)
 
 export const getSubCourseEntryAssessment = (subCourseId: number) =>
   http.get<GetSubCourseEntryAssessmentResponse>(

@@ -32,6 +32,7 @@ import { PracticeMembersPage } from "../pages/content-management/PracticeMembers
 import { QuestionsPage } from "../pages/content-management/QuestionsPage"
 import { AddQuestionPage } from "../pages/content-management/AddQuestionPage"
 import { HumanLanguagePage } from "../pages/content-management/HumanLanguagePage"
+import { HumanLanguageSubModulePage } from "../pages/content-management/HumanLanguageSubModulePage"
 import { UserLogPage } from "../pages/user-log/UserLogPage"
 import { IssuesPage } from "../pages/issues/IssuesPage"
 import { ProfilePage } from "../pages/ProfilePage"
@@ -78,6 +79,18 @@ export function AppRoutes() {
           <Route path="courses" element={<AllCoursesPage />} />
           <Route path="flows" element={<CourseFlowBuilderPage />} />
           <Route path="human-language" element={<HumanLanguagePage />} />
+          <Route
+            path="human-language/:categoryId/:courseId/sub-module/:subCourseId/add-practice"
+            element={<AddNewPracticePage />}
+          />
+          <Route
+            path="human-language/:categoryId/:courseId/sub-module/:subCourseId/practices/:practiceId/questions"
+            element={<PracticeQuestionsPage />}
+          />
+          <Route
+            path="human-language/:categoryId/:courseId/sub-module/:subCourseId"
+            element={<HumanLanguageSubModulePage />}
+          />
           <Route path="category/:categoryId" element={<ContentOverviewPage />} />
           <Route path="category/:categoryId/courses" element={<CoursesPage />} />
           {/* Course → Sub-course → Video/Practice */}

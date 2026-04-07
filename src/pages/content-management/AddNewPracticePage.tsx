@@ -100,9 +100,12 @@ export function AddNewPracticePage() {
   const searchParams = new URLSearchParams(location.search)
   const source = searchParams.get("source")
   const backTo = useMemo(() => {
+    if (location.pathname.includes("/content/human-language/") && location.pathname.includes("/sub-module/")) {
+      return `/content/human-language/${categoryId}/${courseId}/sub-module/${subCourseId}`
+    }
     if (source === "human-language") return "/content/human-language"
     return `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`
-  }, [source, categoryId, courseId, subCourseId])
+  }, [location.pathname, source, categoryId, courseId, subCourseId])
   
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [saving, setSaving] = useState(false)

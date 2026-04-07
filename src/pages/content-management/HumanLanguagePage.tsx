@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { BookOpen, ChevronDown, ChevronRight, Languages, Loader2, Plus, Search, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronRight, Languages, Loader2, Plus, Search, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { createCourse, createCourseCategory, createHumanLanguageLesson, deleteSubCourse, getHumanLanguageHierarchy } from "../../api/courses.api"
 import type { HumanLanguageCourseTree, HumanLanguageSubCategoryTree } from "../../types/course.types"
@@ -10,6 +18,14 @@ import { toast } from "sonner"
 
 const CEFR_LEVELS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"] as const
 type CefrLevel = (typeof CEFR_LEVELS)[number]
+
+type PendingRemove = {
+  ids: number[]
+  key: string
+  successMessage: string
+  title: string
+  description: string
+}
 
 export function HumanLanguagePage() {
   const [loading, setLoading] = useState(false)
@@ -27,6 +43,7 @@ export function HumanLanguagePage() {
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
   /** Course IDs whose path body is collapsed (headers stay visible). */
   const [collapsedPathIds, setCollapsedPathIds] = useState<number[]>([])
+  const [pendingRemove, setPendingRemove] = useState<PendingRemove | null>(null)
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -188,10 +205,15 @@ export function HumanLanguagePage() {
     }
   }
 
-  const handleDeleteSubModules = async (ids: number[], key: string, successMessage: string) => {
-    if (ids.length === 0) return
-    const proceed = window.confirm("This action will permanently delete selected item(s). Continue?")
-    if (!proceed) return
+  const requestRemove = (payload: PendingRemove) => {
+    if (payload.ids.length === 0) return
+    setPendingRemove(payload)
+  }
+
+  const executePendingRemove = async () => {
+    if (!pendingRemove) return
+    const { ids, key, successMessage } = pendingRemove
+    setPendingRemove(null)
     setDeletingKey(key)
     try {
       for (const id of ids) {
@@ -427,13 +449,6 @@ export function HumanLanguagePage() {
                         <span className="text-base font-semibold text-brand-700">{course.course_name}</span>
                       </button>
                       <div className="flex flex-wrap items-center justify-end gap-2">
-                        {categoryId ? (
-                          <Link to={`/content/category/${categoryId}/courses/${course.course_id}/sub-courses`}>
-                            <Button type="button" variant="outline" size="sm" className="shrink-0">
-                              Open detailed management
-                            </Button>
-                          </Link>
-                        ) : null}
                         <Button
                           type="button"
                           size="sm"
@@ -485,7 +500,13 @@ export function HumanLanguagePage() {
                                   className="h-8 shrink-0 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                   disabled={!canRemoveLevel || deletingKey === `level-${course.course_id}-${level}`}
                                   onClick={() =>
-                                    handleDeleteSubModules(levelRemoveIds, `level-${course.course_id}-${level}`, `Level ${level} removed`)
+                                    requestRemove({
+                                      ids: levelRemoveIds,
+                                      key: `level-${course.course_id}-${level}`,
+                                      successMessage: `Level ${level} removed`,
+                                      title: `Remove level ${level}?`,
+                                      description: `This will permanently delete all modules and sub-modules under ${level} for “${course.course_name}”. This action cannot be undone.`,
+                                    })
                                   }
                                 >
                                   <Trash2 className="h-3 w-3.5" aria-hidden />
@@ -539,11 +560,14 @@ export function HumanLanguagePage() {
                                               className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                               disabled={deletingKey === `module-${module.id}`}
                                               onClick={() =>
-                                                handleDeleteSubModules(
-                                                  module.sub_modules.map((s) => s.id),
-                                                  `module-${module.id}`,
-                                                  `Module ${module.title} removed`,
-                                                )
+                                                requestRemove({
+                                                  ids: module.sub_modules.map((s) => s.id),
+                                                  key: `module-${module.id}`,
+                                                  successMessage: `Module ${module.title} removed`,
+                                                  title: `Remove ${module.title}?`,
+                                                  description:
+                                                    "All sub-modules in this module will be permanently deleted. This action cannot be undone.",
+                                                })
                                               }
                                             >
                                               <Trash2 className="h-3 w-3.5" aria-hidden />
@@ -556,12 +580,13 @@ export function HumanLanguagePage() {
                                             <div className="flex flex-wrap items-center justify-between gap-2">
                                               <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
                                               {categoryId ? (
-                                                <div className="flex gap-2">
-                                                  <Link to={`/content/category/${categoryId}/courses/${course.course_id}/sub-courses/${subModule.id}`}>
-                                                    <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
-                                                  </Link>
-                                                  <Link to={`/content/category/${categoryId}/courses/${course.course_id}/sub-courses/${subModule.id}/add-practice?source=human-language`}>
-                                                    <Button size="sm">Add practice/audio questions</Button>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                  <Link
+                                                    to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}`}
+                                                  >
+                                                    <Button size="sm" className="bg-brand-500 hover:bg-brand-600">
+                                                      Manage lesson & practice
+                                                    </Button>
                                                   </Link>
                                                   <Button
                                                     type="button"
@@ -570,11 +595,14 @@ export function HumanLanguagePage() {
                                                     className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                                     disabled={deletingKey === `submodule-${subModule.id}`}
                                                     onClick={() =>
-                                                      handleDeleteSubModules(
-                                                        [subModule.id],
-                                                        `submodule-${subModule.id}`,
-                                                        `Sub-module ${subModule.title} removed`,
-                                                      )
+                                                      requestRemove({
+                                                        ids: [subModule.id],
+                                                        key: `submodule-${subModule.id}`,
+                                                        successMessage: `Sub-module ${subModule.title} removed`,
+                                                        title: `Remove ${subModule.title}?`,
+                                                        description:
+                                                          "This sub-module will be permanently deleted. This action cannot be undone.",
+                                                      })
                                                     }
                                                   >
                                                     <Trash2 className="h-3 w-3.5" aria-hidden />
@@ -583,19 +611,9 @@ export function HumanLanguagePage() {
                                                 </div>
                                               ) : null}
                                             </div>
-                                            <div className="mt-2 flex flex-wrap gap-2">
-                                              {subModule.videos.map((video) => (
-                                                <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
-                                                  <BookOpen className="h-3.5 w-3.5" />
-                                                  {video.title}
-                                                </div>
-                                              ))}
-                                              {subModule.practices.map((practice) => (
-                                                <div key={practice.id} className="rounded-md bg-brand-50 px-2 py-1 text-xs text-brand-700">
-                                                  Practice: {practice.title} ({practice.question_count} audio question(s))
-                                                </div>
-                                              ))}
-                                            </div>
+                                            <p className="mt-2 text-xs text-grayScale-500">
+                                              {subModule.videos.length} lesson video(s) · {subModule.practices.length} practice(s)
+                                            </p>
                                           </div>
                                         ))}
                                       </div>
@@ -615,6 +633,23 @@ export function HumanLanguagePage() {
             : null}
         </div>
       )}
+
+      <Dialog open={pendingRemove !== null} onOpenChange={(open) => !open && setPendingRemove(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{pendingRemove?.title ?? "Confirm removal"}</DialogTitle>
+            <DialogDescription>{pendingRemove?.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setPendingRemove(null)}>
+              Cancel
+            </Button>
+            <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => void executePendingRemove()}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

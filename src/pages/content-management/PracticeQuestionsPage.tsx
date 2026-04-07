@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useLocation, useParams } from "react-router-dom"
 import { ArrowLeft, Plus, Edit, Trash2, X, Check, ChevronDown, ChevronUp, SlidersHorizontal, ArrowUpDown } from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
@@ -59,6 +59,7 @@ const typeColors: Record<QuestionType, string> = {
 
 export function PracticeQuestionsPage() {
   const { categoryId, courseId, subCourseId, practiceId } = useParams()
+  const location = useLocation()
   
   const [questions, setQuestions] = useState<PracticeQuestion[]>([])
   const [practiceTitle, setPracticeTitle] = useState("Practice Questions")
@@ -100,7 +101,12 @@ export function PracticeQuestionsPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const backLink = `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`
+  const backLink = useMemo(() => {
+    if (location.pathname.includes("/content/human-language/") && location.pathname.includes("/sub-module/")) {
+      return `/content/human-language/${categoryId}/${courseId}/sub-module/${subCourseId}`
+    }
+    return `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`
+  }, [location.pathname, categoryId, courseId, subCourseId])
 
   const buildDefaultOptions = (type: QuestionType, sampleAnswerText?: string): DraftOption[] => {
     if (type === "TRUE_FALSE") {

@@ -227,6 +227,8 @@ export function HumanLanguagePage() {
   const [savingQuestion, setSavingQuestion] = useState(false)
   const [deletingPractice, setDeletingPractice] = useState(false)
   const [deletingQuestion, setDeletingQuestion] = useState(false)
+  /** While fetching full question detail before opening the edit dialog (avoids empty form flash). */
+  const [loadingQuestionEditId, setLoadingQuestionEditId] = useState<number | null>(null)
   /** Show inline field errors only after an explicit save attempt (avoids noisy empty-state on open). */
   const [practiceSubmitAttempted, setPracticeSubmitAttempted] = useState(false)
   const [questionSubmitAttempted, setQuestionSubmitAttempted] = useState(false)
@@ -694,29 +696,44 @@ export function HumanLanguagePage() {
     setQuestionFormTouched(false)
     const qid = question.question_id ?? question.id
     resetQuestionForm()
-    setQuestionDialog({ open: true, mode: "edit", practiceId, questionId: qid })
+    setLoadingQuestionEditId(qid)
     try {
       const detail = questionDetailById[qid] ?? (await getQuestionById(qid)).data?.data
-      if (!detail) return
+      if (!detail) {
+        toast.error("Could not load question details")
+        return
+      }
       setQuestionDetailById((prev) => ({ ...prev, [qid]: detail }))
       const options = (detail.options ?? []).slice().sort((a, b) => a.option_order - b.option_order)
-      const correct = options.find((o) => o.is_correct)?.option_order ?? 1
+      const correctOpt = options.find((o) => o.is_correct)
+      const correctOrder = correctOpt?.option_order ?? 1
+      let correctOption: "A" | "B" | "C" | "D" = "A"
+      if (detail.question_type === "TRUE_FALSE") {
+        const t = (correctOpt?.option_text ?? "").trim().toLowerCase()
+        if (t === "false" || correctOrder === 2) correctOption = "B"
+        else correctOption = "A"
+      } else {
+        correctOption =
+          (["A", "B", "C", "D"][Math.min(Math.max(correctOrder - 1, 0), 3)] as "A" | "B" | "C" | "D") ?? "A"
+      }
       const shortAnswer =
         Array.isArray(detail.short_answers) && detail.short_answers.length > 0
           ? typeof detail.short_answers[0] === "string"
             ? detail.short_answers[0]
             : detail.short_answers[0]?.acceptable_answer ?? ""
           : ""
+      const qt = detail.question_type
+      let questionType: "MCQ" | "TRUE_FALSE" | "SHORT" = "MCQ"
+      if (qt === "TRUE_FALSE") questionType = "TRUE_FALSE"
+      else if (qt === "SHORT" || qt === "SHORT_ANSWER" || qt === "AUDIO") questionType = "SHORT"
+      const difficultyRaw = detail.difficulty_level
+      const difficulty =
+        difficultyRaw === "EASY" || difficultyRaw === "MEDIUM" || difficultyRaw === "HARD" ? difficultyRaw : "EASY"
       setQuestionForm({
         questionText: detail.question_text ?? "",
-        questionType:
-          detail.question_type === "TRUE_FALSE" || detail.question_type === "SHORT" || detail.question_type === "SHORT_ANSWER"
-            ? detail.question_type === "SHORT_ANSWER"
-              ? "SHORT"
-              : detail.question_type
-            : "MCQ",
-        difficulty: detail.difficulty_level ?? "EASY",
-        points: detail.points ?? 1,
+        questionType,
+        difficulty,
+        points: detail.points && detail.points > 0 ? detail.points : 1,
         tips: detail.tips ?? "",
         explanation: detail.explanation ?? "",
         imageUrl: detail.image_url ?? "",
@@ -727,12 +744,16 @@ export function HumanLanguagePage() {
         optionB: options[1]?.option_text ?? "",
         optionC: options[2]?.option_text ?? "",
         optionD: options[3]?.option_text ?? "",
-        correctOption: (["A", "B", "C", "D"][Math.min(Math.max(correct - 1, 0), 3)] as "A" | "B" | "C" | "D") ?? "A",
+        correctOption,
         shortAnswer,
       })
+      // Open only after the same form shape as create is fully populated (no empty-state flash).
+      setQuestionDialog({ open: true, mode: "edit", practiceId, questionId: qid })
     } catch (error) {
       console.error("Failed to load question detail:", error)
       toast.error("Could not load question details")
+    } finally {
+      setLoadingQuestionEditId(null)
     }
   }
 
@@ -1591,7 +1612,11 @@ export function HumanLanguagePage() {
                                                                             type="button"
                                                                             size="sm"
                                                                             variant="ghost"
-                                                                            className="h-7 px-2 text-[10px]"
+                                                                            className="h-7 gap-1 px-2 text-[10px]"
+                                                                            disabled={
+                                                                              loadingQuestionEditId ===
+                                                                              (q.question_id ?? q.id)
+                                                                            }
                                                                             onClick={() =>
                                                                               void openEditQuestionDialog(
                                                                                 selectedPracticeMeta.id,
@@ -1599,6 +1624,10 @@ export function HumanLanguagePage() {
                                                                               )
                                                                             }
                                                                           >
+                                                                            {loadingQuestionEditId ===
+                                                                            (q.question_id ?? q.id) ? (
+                                                                              <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                                                                            ) : null}
                                                                             Edit
                                                                           </Button>
                                                                           <Button
@@ -1855,9 +1884,10 @@ export function HumanLanguagePage() {
       >
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{questionDialog.open && questionDialog.mode === "edit" ? "Edit Question" : "Add Question"}</DialogTitle>
+            <DialogTitle>{questionDialog.open && questionDialog.mode === "edit" ? "Edit question" : "Add question"}</DialogTitle>
             <DialogDescription>
-              Create, edit, and attach questions to the selected practice.
+              Use the same fields as when creating: type, scoring, prompts, media URLs, and answer options. Changes apply to this
+              practice only.
               {!questionCanSave ? (
                 <span className="mt-1 block text-amber-700/90">
                   Fix the highlighted fields before saving. Save stays disabled until the form is valid.
@@ -2084,6 +2114,18 @@ export function HumanLanguagePage() {
                   setQuestionForm((f) => ({ ...f, sampleAnswerVoicePrompt: e.target.value }))
                 }}
                 className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium text-grayScale-600">Audio / spoken correct answer text</label>
+              <textarea
+                value={questionForm.audioCorrectAnswerText}
+                onChange={(e) => {
+                  setQuestionFormTouched(true)
+                  setQuestionForm((f) => ({ ...f, audioCorrectAnswerText: e.target.value }))
+                }}
+                className="min-h-[64px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
+                placeholder="Optional; used for audio-style grading when applicable"
               />
             </div>
           </div>

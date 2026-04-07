@@ -700,6 +700,48 @@ export interface GetHumanLanguageLessonsResponse {
   metadata: unknown
 }
 
+export interface HumanLanguageSubModule {
+  id: number
+  title: string
+  videos: LearningPathVideo[]
+  practices: LearningPathPractice[]
+}
+
+export interface HumanLanguageModule {
+  id: number
+  title: string
+  sub_modules: HumanLanguageSubModule[]
+}
+
+export interface HumanLanguageLevelTree {
+  level: string
+  modules: HumanLanguageModule[]
+}
+
+export interface HumanLanguageCourseTree {
+  course_id: number
+  course_name: string
+  levels: HumanLanguageLevelTree[]
+}
+
+export interface HumanLanguageSubCategoryTree {
+  sub_category_id: number
+  sub_category_name: string
+  courses: HumanLanguageCourseTree[]
+}
+
+export interface GetHumanLanguageHierarchyResponse {
+  message: string
+  data: {
+    category_id: number
+    category_name: string
+    sub_categories: HumanLanguageSubCategoryTree[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
 export interface GetSubCourseEntryAssessmentResponse {
   message: string
   data: QuestionSet | null

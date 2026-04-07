@@ -4,7 +4,7 @@ import { BookOpen, ChevronDown, ChevronRight, Languages, Loader2, Plus } from "l
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
-import { createHumanLanguageLesson, getHumanLanguageHierarchy } from "../../api/courses.api"
+import { createCourse, createHumanLanguageLesson, getHumanLanguageHierarchy } from "../../api/courses.api"
 import type { HumanLanguageCourseTree, HumanLanguageSubCategoryTree } from "../../types/course.types"
 import { toast } from "sonner"
 
@@ -20,6 +20,9 @@ export function HumanLanguagePage() {
   const [selectedLevel, setSelectedLevel] = useState<CefrLevel | "ALL">("ALL")
   const [collapsedLevels, setCollapsedLevels] = useState<CefrLevel[]>([])
   const [creatingKey, setCreatingKey] = useState<string | null>(null)
+  const [quickSubCategoryName, setQuickSubCategoryName] = useState("")
+  const [quickCourseName, setQuickCourseName] = useState("")
+  const [quickCreating, setQuickCreating] = useState(false)
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -147,6 +150,35 @@ export function HumanLanguagePage() {
     }
   }
 
+  const handleQuickCreatePath = async () => {
+    if (!categoryId) {
+      toast.error("Human Language category is not available")
+      return
+    }
+    if (!quickSubCategoryName.trim() || !quickCourseName.trim()) {
+      toast.error("Subcategory and course names are required")
+      return
+    }
+    setQuickCreating(true)
+    try {
+      const title = `${quickSubCategoryName.trim()} - ${quickCourseName.trim()}`
+      await createCourse({
+        category_id: categoryId,
+        title,
+        description: `${quickSubCategoryName.trim()} / ${quickCourseName.trim()}`,
+      })
+      toast.success("Subcategory/course path created")
+      setQuickSubCategoryName("")
+      setQuickCourseName("")
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to quick-create language path:", error)
+      toast.error("Failed to create subcategory/course path")
+    } finally {
+      setQuickCreating(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-grayScale-200 bg-gradient-to-r from-white to-brand-50/30 p-5 shadow-sm">
@@ -235,6 +267,42 @@ export function HumanLanguagePage() {
         </div>
       ) : (
         <div className="space-y-3">
+          {availableCourses.length === 0 ? (
+            <Card className="border-grayScale-200/80">
+              <CardContent className="flex flex-col items-start gap-3 p-4">
+                <p className="text-sm text-grayScale-600">
+                  No Human Language subcategory/course is available yet. Create the language course path first, then you can add incremental modules and sub-modules per level.
+                </p>
+                <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-3">
+                  <input
+                    className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+                    placeholder="Subcategory (e.g., English)"
+                    value={quickSubCategoryName}
+                    onChange={(e) => setQuickSubCategoryName(e.target.value)}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+                    placeholder="Course (e.g., Speaking)"
+                    value={quickCourseName}
+                    onChange={(e) => setQuickCourseName(e.target.value)}
+                  />
+                  <Button onClick={handleQuickCreatePath} disabled={quickCreating || !categoryId}>
+                    {quickCreating ? "Creating..." : "Quick Create Path"}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link to="/content/courses">
+                    <Button variant="outline">Open Courses</Button>
+                  </Link>
+                  {categoryId ? (
+                    <Link to={`/content/category/${categoryId}/courses`}>
+                      <Button>Open Human Language Courses</Button>
+                    </Link>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
           {CEFR_LEVELS.filter((l) => selectedLevel === "ALL" || l === selectedLevel).map((level) => {
             const modulesByCourse = selectedCourses
               .map((course: HumanLanguageCourseTree) => {

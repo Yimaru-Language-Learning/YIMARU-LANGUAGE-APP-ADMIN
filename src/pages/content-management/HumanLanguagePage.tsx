@@ -313,14 +313,22 @@ export function HumanLanguagePage() {
             </select>
           </div>
         </CardContent>
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-end">
+        <CardContent className="border-t border-grayScale-100 pt-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-grayScale-500">
+              {selectedCourseId === "ALL"
+                ? "Select a specific course above to enable adding the next CEFR level (starts at A1) and to use remove actions."
+                : levelsForSelectedCourse.length >= CEFR_LEVELS.length
+                  ? "All CEFR levels (A1–C3) already have content for this course."
+                  : `Next level to add: ${CEFR_LEVELS.find((l) => !levelsForSelectedCourse.includes(l)) ?? "—"}`}
+            </p>
             <Button
               size="sm"
+              className="shrink-0"
               onClick={handleCreateNextLevel}
               disabled={selectedCourseId === "ALL" || levelsForSelectedCourse.length >= CEFR_LEVELS.length || creatingKey?.startsWith("next-level-")}
             >
-              {creatingKey?.startsWith("next-level-") ? "Creating level..." : "Add Next Level"}
+              {creatingKey?.startsWith("next-level-") ? "Creating level..." : "Add next CEFR level"}
             </Button>
           </div>
         </CardContent>
@@ -388,46 +396,43 @@ export function HumanLanguagePage() {
 
           {availableCourses.length > 0
             ? CEFR_LEVELS.filter((l) => selectedLevel === "ALL" || l === selectedLevel).map((level) => {
-                const modulesByCourse = selectedCourses
-                  .map((course: HumanLanguageCourseTree) => {
-                    const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
-                    return {
-                      course,
-                      modules: levelNode?.modules ?? [],
-                    }
-                  })
-                  .filter((entry) => entry.modules.length > 0 || (selectedCourses.length > 0 && level === "A1"))
+                const modulesByCourse = selectedCourses.map((course: HumanLanguageCourseTree) => {
+                  const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
+                  return {
+                    course,
+                    modules: levelNode?.modules ?? [],
+                  }
+                })
                 return (
                   <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3 text-left"
-                      onClick={() => toggleLevel(level)}
-                    >
-                      <div className="inline-flex items-center gap-2">
-                        {collapsedLevels.includes(level) ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3">
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        onClick={() => toggleLevel(level)}
+                      >
+                        {collapsedLevels.includes(level) ? <ChevronRight className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
                         <span className="text-sm font-semibold text-grayScale-900">{level}</span>
                         <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
                           {modulesByCourse.reduce((sum, entry) => sum + entry.modules.length, 0)} module(s)
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="ml-3 border-red-200 text-red-600 hover:bg-red-50"
-                          disabled={selectedCourseId === "ALL" || deletingKey === `level-${selectedCourseId}-${level}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (selectedCourseId === "ALL") return
-                            const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === selectedCourseId)
-                            const ids = (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
-                            handleDeleteSubModules(ids, `level-${selectedCourseId}-${level}`, `Level ${level} removed`)
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Remove Level
-                        </Button>
-                      </div>
-                    </button>
+                      </button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-200 text-red-600 hover:bg-red-50"
+                        disabled={selectedCourseId === "ALL" || deletingKey === `level-${selectedCourseId}-${level}`}
+                        onClick={() => {
+                          if (selectedCourseId === "ALL") return
+                          const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === selectedCourseId)
+                          const ids = (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
+                          handleDeleteSubModules(ids, `level-${selectedCourseId}-${level}`, `Level ${level} removed`)
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Remove level
+                      </Button>
+                    </div>
                     {!collapsedLevels.includes(level) ? (
                       <CardContent className="space-y-3 p-4">
                         {modulesByCourse.length === 0 ? (

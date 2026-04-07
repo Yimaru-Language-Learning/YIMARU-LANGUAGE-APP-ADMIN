@@ -40,6 +40,7 @@ interface Question {
   sampleAnswerVoicePrompt: string
   audioCorrectAnswerText: string
   shortAnswers: string[]
+  imageUrl: string
 }
 
 const PERSONAS: Persona[] = [
@@ -91,6 +92,7 @@ function createEmptyQuestion(id: string): Question {
     sampleAnswerVoicePrompt: "",
     audioCorrectAnswerText: "",
     shortAnswers: [],
+    imageUrl: "",
   }
 }
 
@@ -232,6 +234,7 @@ export function AddNewPracticePage() {
             voice_prompt: q.voicePrompt || undefined,
             sample_answer_voice_prompt: q.sampleAnswerVoicePrompt || undefined,
             audio_correct_answer_text: q.audioCorrectAnswerText || undefined,
+            image_url: q.imageUrl.trim() || undefined,
             short_answers: q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
           })
 
@@ -606,6 +609,7 @@ export function AddNewPracticePage() {
                     sampleAnswerVoicePrompt: question.sampleAnswerVoicePrompt,
                     audioCorrectAnswerText: question.audioCorrectAnswerText,
                     shortAnswer: question.shortAnswers[0] ?? "",
+                    imageUrl: question.imageUrl,
                   }}
                   onChange={(next) => {
                     updateQuestion(question.id, {
@@ -620,8 +624,10 @@ export function AddNewPracticePage() {
                       sampleAnswerVoicePrompt: next.sampleAnswerVoicePrompt,
                       audioCorrectAnswerText: next.audioCorrectAnswerText,
                       shortAnswers: next.shortAnswer.trim() ? [next.shortAnswer.trim()] : [],
+                      imageUrl: next.imageUrl,
                     })
                   }}
+                  mediaBusy={saving}
                 />
               </Card>
             ))}

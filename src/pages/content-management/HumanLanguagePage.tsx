@@ -210,7 +210,6 @@ export function HumanLanguagePage() {
   const [questionDialog, setQuestionDialog] = useState<QuestionDialogState>({ open: false })
   const [practiceForm, setPracticeForm] = useState({ title: "", description: "", persona: "" })
   const [questionDraft, setQuestionDraft] = useState<PracticeQuestionEditorValue>(() => createEmptyPracticeQuestionDraft())
-  const [questionImageUrl, setQuestionImageUrl] = useState("")
   const [questionDetailById, setQuestionDetailById] = useState<Record<number, QuestionDetail>>({})
   const [practiceTargetDelete, setPracticeTargetDelete] = useState<{ id: number; title: string } | null>(null)
   const [questionTargetDelete, setQuestionTargetDelete] = useState<{ id: number; practiceId: number; text: string } | null>(null)
@@ -597,7 +596,6 @@ export function HumanLanguagePage() {
   const resetPracticeForm = () => setPracticeForm({ title: "", description: "", persona: "" })
   const resetQuestionForm = () => {
     setQuestionDraft(createEmptyPracticeQuestionDraft())
-    setQuestionImageUrl("")
   }
 
   const openCreatePracticeDialog = (subModuleId: number) => {
@@ -680,7 +678,6 @@ export function HumanLanguagePage() {
         return
       }
       setQuestionDetailById((prev) => ({ ...prev, [qid]: detail }))
-      setQuestionImageUrl(detail.image_url ?? "")
       const sortedOpts = (detail.options ?? []).slice().sort((a, b) => a.option_order - b.option_order)
       const shortAnswer =
         Array.isArray(detail.short_answers) && detail.short_answers.length > 0
@@ -738,6 +735,7 @@ export function HumanLanguagePage() {
         sampleAnswerVoicePrompt: detail.sample_answer_voice_prompt ?? "",
         audioCorrectAnswerText: detail.audio_correct_answer_text ?? "",
         shortAnswer,
+        imageUrl: detail.image_url ?? "",
       })
       // Open only after the same form shape as create is fully populated (no empty-state flash).
       setQuestionDialog({ open: true, mode: "edit", practiceId, questionId: qid })
@@ -758,7 +756,7 @@ export function HumanLanguagePage() {
       points: Number(d.points) || 1,
       tips: d.tips.trim() || undefined,
       explanation: d.explanation.trim() || undefined,
-      image_url: questionImageUrl.trim() || undefined,
+      image_url: d.imageUrl.trim() || undefined,
       voice_prompt: d.voicePrompt.trim() || undefined,
       sample_answer_voice_prompt: d.sampleAnswerVoicePrompt.trim() || undefined,
       audio_correct_answer_text: d.audioCorrectAnswerText.trim() || undefined,
@@ -1917,21 +1915,8 @@ export function HumanLanguagePage() {
                 }}
                 fieldErrors={questionFieldErrors}
                 showFieldErrors={questionSubmitAttempted || questionFormTouched}
+                mediaBusy={savingQuestion}
               />
-
-              <div className="mt-5 space-y-2 border-t border-grayScale-100 pt-5">
-                <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Image URL (Optional)</label>
-                <Input
-                  value={questionImageUrl}
-                  onChange={(e) => {
-                    setQuestionFormTouched(true)
-                    setQuestionImageUrl(e.target.value)
-                  }}
-                  placeholder="https://…"
-                  type="url"
-                  className="h-11 font-mono text-[13px]"
-                />
-              </div>
             </Card>
           </div>
 

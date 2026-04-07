@@ -150,7 +150,7 @@ export const getPracticeQuestions = (practiceId: number) =>
 
 export const getPracticeQuestionsByPractice = (
   practiceId: number,
-  params?: { limit?: number; offset?: number },
+  params?: { limit?: number; offset?: number; question_type?: string },
 ) =>
   http.get<GetPracticeQuestionsByPracticeResponse>(`/practices/${practiceId}/questions`, {
     params,

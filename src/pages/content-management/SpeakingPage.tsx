@@ -15,6 +15,8 @@ import {
   createQuestion,
   createQuestionSet,
   getQuestions,
+  getPracticeQuestionsByPractice,
+  getQuestionSets,
   updateQuestion,
 } from "../../api/courses.api"
 import { resolveFileUrl, uploadAudioFile, uploadImageFile, uploadVideoFile } from "../../api/files.api"
@@ -26,7 +28,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu"
-import type { Course, CourseCategory, QuestionDetail, SubCourse } from "../../types/course.types"
+import type { Course, CourseCategory, QuestionDetail, QuestionSet, SubCourse } from "../../types/course.types"
 import { toast } from "sonner"
 
 const MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024
@@ -62,6 +64,11 @@ type AudioQuestionDraft = {
   uploadingImage: boolean
   recordingVoicePrompt: boolean
   recordingSamplePrompt: boolean
+}
+
+type PracticeFilterOption = {
+  id: number
+  title: string
 }
 
 const createEmptyDraft = (): AudioQuestionDraft => ({
@@ -112,6 +119,8 @@ export function SpeakingPage() {
   const [audioTotalCount, setAudioTotalCount] = useState(0)
   const [audioPage, setAudioPage] = useState(1)
   const [audioPageSize] = useState(12)
+  const [practiceOptions, setPracticeOptions] = useState<PracticeFilterOption[]>([])
+  const [selectedPracticeId, setSelectedPracticeId] = useState<string>("")
   const [audioPreviewByQuestionId, setAudioPreviewByQuestionId] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -195,27 +204,52 @@ export function SpeakingPage() {
     try {
       const safePage = page < 1 ? 1 : page
       const offset = (safePage - 1) * audioPageSize
-      const res = await getQuestions({
-        question_type: "AUDIO",
-        limit: audioPageSize,
-        offset,
-      })
-      const payload = res.data?.data as unknown
-      const meta = res.data?.metadata as { total_count?: number } | null | undefined
-
       let rows: QuestionDetail[] = []
       let total = 0
-      if (Array.isArray(payload)) {
-        rows = payload as QuestionDetail[]
-        total = meta?.total_count ?? rows.length
-      } else if (
-        payload &&
-        typeof payload === "object" &&
-        Array.isArray((payload as { questions?: unknown[] }).questions)
-      ) {
-        const data = payload as { questions: QuestionDetail[]; total_count?: number }
-        rows = data.questions
-        total = data.total_count ?? meta?.total_count ?? rows.length
+
+      if (selectedPracticeId) {
+        const practiceRes = await getPracticeQuestionsByPractice(Number(selectedPracticeId), {
+          limit: audioPageSize,
+          offset,
+          question_type: "AUDIO",
+        })
+        const practiceData = practiceRes.data?.data
+        rows = (practiceData?.questions ?? []).map((q) => ({
+          id: q.question_id || q.id,
+          question_text: q.question_text,
+          question_type: q.question_type,
+          difficulty_level: q.difficulty_level ?? undefined,
+          points: q.points ?? 0,
+          explanation: q.explanation ?? undefined,
+          tips: q.tips ?? undefined,
+          voice_prompt: q.voice_prompt ?? undefined,
+          sample_answer_voice_prompt: q.sample_answer_voice_prompt ?? undefined,
+          image_url: q.image_url ?? undefined,
+          status: q.question_status ?? "DRAFT",
+          created_at: "",
+          audio_correct_answer_text: q.audio_correct_answer_text ?? undefined,
+        }))
+        total = practiceData?.total_count ?? rows.length
+      } else {
+        const res = await getQuestions({
+          question_type: "AUDIO",
+          limit: audioPageSize,
+          offset,
+        })
+        const payload = res.data?.data as unknown
+        const meta = res.data?.metadata as { total_count?: number } | null | undefined
+        if (Array.isArray(payload)) {
+          rows = payload as QuestionDetail[]
+          total = meta?.total_count ?? rows.length
+        } else if (
+          payload &&
+          typeof payload === "object" &&
+          Array.isArray((payload as { questions?: unknown[] }).questions)
+        ) {
+          const data = payload as { questions: QuestionDetail[]; total_count?: number }
+          rows = data.questions
+          total = data.total_count ?? meta?.total_count ?? rows.length
+        }
       }
 
       setAudioQuestions(rows)
@@ -228,11 +262,58 @@ export function SpeakingPage() {
     } finally {
       setLoading(false)
     }
-  }, [audioPage, audioPageSize])
+  }, [audioPage, audioPageSize, selectedPracticeId])
 
   useEffect(() => {
     fetchAudioQuestions()
-  }, [fetchAudioQuestions, audioPageSize])
+  }, [fetchAudioQuestions, audioPageSize, selectedPracticeId])
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchPractices = async () => {
+      try {
+        const batchSize = 100
+        let offset = 0
+        let total = Number.POSITIVE_INFINITY
+        const all: QuestionSet[] = []
+        while (all.length < total) {
+          const res = await getQuestionSets({
+            set_type: "PRACTICE",
+            limit: batchSize,
+            offset,
+          })
+          const payload = res.data?.data
+          let chunk: QuestionSet[] = []
+          let chunkTotal = 0
+          if (Array.isArray(payload)) {
+            chunk = payload
+            chunkTotal = payload.length
+          } else if (payload && typeof payload === "object") {
+            chunk = payload.question_sets ?? []
+            chunkTotal = payload.total_count ?? chunk.length
+          }
+          all.push(...chunk)
+          total = chunkTotal
+          if (chunk.length < batchSize) break
+          offset += chunk.length
+        }
+        if (!cancelled) {
+          setPracticeOptions(
+            all.map((p) => ({
+              id: p.id,
+              title: p.title,
+            })),
+          )
+        }
+      } catch {
+        if (!cancelled) setPracticeOptions([])
+      }
+    }
+    fetchPractices()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -981,6 +1062,26 @@ export function SpeakingPage() {
             <p className="mt-1 text-xs font-normal text-grayScale-500 sm:text-sm">
               Tap a row to view details. Speaking practices create AUDIO question sets linked to a sub-course.
             </p>
+            <div className="mt-3 max-w-md space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">
+                Filter by practice
+              </label>
+              <select
+                value={selectedPracticeId}
+                onChange={(e) => {
+                  setSelectedPracticeId(e.target.value)
+                  setAudioPage(1)
+                }}
+                className="h-10 w-full rounded-md border border-grayScale-200 bg-white px-3 text-sm text-grayScale-700"
+              >
+                <option value="">All practices</option>
+                {practiceOptions.map((practice) => (
+                  <option key={practice.id} value={String(practice.id)}>
+                    {practice.title} (#{practice.id})
+                  </option>
+                ))}
+              </select>
+            </div>
             <p className="mt-1 text-xs font-normal text-grayScale-400 sm:text-sm">
               Showing page {audioPage} of {Math.max(1, Math.ceil(audioTotalCount / audioPageSize))} ({audioTotalCount} total)
             </p>

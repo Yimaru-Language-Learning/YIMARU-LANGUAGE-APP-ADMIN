@@ -513,6 +513,46 @@ export function SpeakingPage() {
       return
     }
     try {
+      const trimmedValue = rawValue.trim()
+      const isURL = /^https?:\/\//i.test(trimmedValue)
+
+      if (isURL) {
+        updateDraft(draftIndex, (draft) =>
+          field === "voice_prompt"
+            ? { ...draft, uploadingVoicePrompt: true }
+            : { ...draft, uploadingSamplePrompt: true },
+        )
+
+        const res = await uploadAudioFile(trimmedValue)
+        const objectKey = res.data?.data?.object_key?.trim()
+        const immediateUrl = res.data?.data?.url?.trim() ?? ""
+        if (!objectKey) throw new Error("Missing uploaded audio object key")
+
+        if (field === "voice_prompt") {
+          updateDraft(draftIndex, (draft) => ({
+            ...draft,
+            voicePrompt: objectKey,
+            voicePromptPreviewUrl: immediateUrl || draft.voicePromptPreviewUrl,
+          }))
+          if (!immediateUrl) {
+            const resolvedUrl = await resolvePreviewUrl(objectKey)
+            updateDraft(draftIndex, (draft) => ({ ...draft, voicePromptPreviewUrl: resolvedUrl }))
+          }
+        } else {
+          updateDraft(draftIndex, (draft) => ({
+            ...draft,
+            sampleAnswerVoicePrompt: objectKey,
+            samplePromptPreviewUrl: immediateUrl || draft.samplePromptPreviewUrl,
+          }))
+          if (!immediateUrl) {
+            const resolvedUrl = await resolvePreviewUrl(objectKey)
+            updateDraft(draftIndex, (draft) => ({ ...draft, samplePromptPreviewUrl: resolvedUrl }))
+          }
+        }
+        toast.success("Audio URL imported successfully")
+        return
+      }
+
       const url = await resolvePreviewUrl(rawValue)
       updateDraft(draftIndex, (draft) =>
         field === "voice_prompt"
@@ -521,7 +561,13 @@ export function SpeakingPage() {
       )
     } catch (error) {
       console.error("Failed to resolve audio preview URL:", error)
-      toast.error("Could not resolve audio preview URL")
+      toast.error("Could not import/resolve audio URL")
+    } finally {
+      updateDraft(draftIndex, (draft) =>
+        field === "voice_prompt"
+          ? { ...draft, uploadingVoicePrompt: false }
+          : { ...draft, uploadingSamplePrompt: false },
+      )
     }
   }
 

@@ -18,7 +18,7 @@ export function HumanLanguagePage() {
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | "ALL">("ALL")
   const [selectedCourseId, setSelectedCourseId] = useState<number | "ALL">("ALL")
   const [selectedLevel, setSelectedLevel] = useState<CefrLevel | "ALL">("ALL")
-  const [collapsedLevels, setCollapsedLevels] = useState<CefrLevel[]>([])
+  const [collapsedLevels, setCollapsedLevels] = useState<string[]>([])
   const [creatingKey, setCreatingKey] = useState<string | null>(null)
   const [quickSubCategoryName, setQuickSubCategoryName] = useState("")
   const [quickCourseName, setQuickCourseName] = useState("")
@@ -111,8 +111,8 @@ export function HumanLanguagePage() {
     }
   }, [selectedLevel, visibleCefrLevels])
 
-  const toggleLevel = (level: CefrLevel) => {
-    setCollapsedLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]))
+  const toggleLevel = (levelKey: string) => {
+    setCollapsedLevels((prev) => (prev.includes(levelKey) ? prev.filter((l) => l !== levelKey) : [...prev, levelKey]))
   }
 
   const parseModuleNumber = (title: string): number | null => {
@@ -429,184 +429,173 @@ export function HumanLanguagePage() {
           ) : null}
 
           {availableCourses.length > 0
-            ? visibleCefrLevels
-                .filter((l) => selectedLevel === "ALL" || l === selectedLevel)
-                .map((level) => {
-                const modulesByCourse = selectedCourses.map((course: HumanLanguageCourseTree) => {
-                  const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
-                  return {
-                    course,
-                    modules: levelNode?.modules ?? [],
-                  }
-                })
-                const levelRemoveIds =
-                  resolvedCourseId == null
-                    ? []
-                    : (() => {
-                        const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === resolvedCourseId)
-                        return (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
-                      })()
-                const canRemoveLevel = resolvedCourseId != null && levelRemoveIds.length > 0
+            ? selectedCourses.map((course: HumanLanguageCourseTree) => {
+                const courseLevels = CEFR_LEVELS.filter((level) => {
+                  if (level === "A1") return true
+                  const node = course.levels.find((item) => item.level.toUpperCase() === level)
+                  return (node?.modules?.length ?? 0) > 0
+                }).filter((level) => selectedLevel === "ALL" || selectedLevel === level)
+
                 return (
-                  <Card key={level} className="overflow-hidden border-grayScale-200/80 shadow-sm">
-                    <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3">
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                        onClick={() => toggleLevel(level)}
-                      >
-                        {collapsedLevels.includes(level) ? <ChevronRight className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
-                        <span className="text-sm font-semibold text-grayScale-900">{level}</span>
-                        <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
-                          {modulesByCourse.reduce((sum, entry) => sum + entry.modules.length, 0)} module(s)
-                        </span>
-                      </button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        title={
-                          resolvedCourseId == null
-                            ? "Select a course (or narrow to one course) to remove this level"
-                            : !canRemoveLevel
-                              ? "Nothing to remove at this level"
-                              : `Remove all content at ${level} for the selected course`
-                        }
-                        className="h-8 shrink-0 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                        disabled={!canRemoveLevel || (resolvedCourseId != null && deletingKey === `level-${resolvedCourseId}-${level}`)}
-                        onClick={() => {
-                          if (!canRemoveLevel || resolvedCourseId == null) return
-                          const courseEntry = modulesByCourse.find((entry) => entry.course.course_id === resolvedCourseId)
-                          const ids = (courseEntry?.modules ?? []).flatMap((m) => m.sub_modules.map((s) => s.id))
-                          handleDeleteSubModules(ids, `level-${resolvedCourseId}-${level}`, `Level ${level} removed`)
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3.5" aria-hidden />
-                        Remove
-                      </Button>
+                  <Card key={course.course_id} className="overflow-hidden border-grayScale-200/80 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-grayScale-100 bg-white px-4 py-3">
+                      <p className="text-base font-semibold text-brand-700">{course.course_name}</p>
                     </div>
-                    {!collapsedLevels.includes(level) ? (
-                      <CardContent className="space-y-3 p-4">
-                        {modulesByCourse.length === 0 ? (
-                          <p className="text-sm text-grayScale-500">No lessons found for this level.</p>
-                        ) : (
-                          modulesByCourse.map((entry) => (
-                            <div key={entry.course.course_id} className="space-y-2 rounded-xl border border-grayScale-200 bg-white p-3">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-brand-700">{entry.course.course_name}</p>
+                    <CardContent className="space-y-3 p-4">
+                      {courseLevels.length === 0 ? (
+                        <p className="text-sm text-grayScale-500">No levels match the current level filter.</p>
+                      ) : (
+                        courseLevels.map((level) => {
+                          const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
+                          const modules = levelNode?.modules ?? []
+                          const levelKey = `${course.course_id}-${level}`
+                          const levelRemoveIds = modules.flatMap((m) => m.sub_modules.map((s) => s.id))
+                          const canRemoveLevel = levelRemoveIds.length > 0
+                          return (
+                            <div key={levelKey} className="overflow-hidden rounded-lg border border-grayScale-200/90">
+                              <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3">
+                                <button
+                                  type="button"
+                                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                  onClick={() => toggleLevel(levelKey)}
+                                >
+                                  {collapsedLevels.includes(levelKey) ? <ChevronRight className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
+                                  <span className="text-sm font-semibold text-grayScale-900">{level}</span>
+                                  <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                                    {modules.length} module(s)
+                                  </span>
+                                </button>
                                 <Button
+                                  type="button"
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleCreateModule(entry.course.course_id, level, entry.modules)}
-                                  disabled={creatingKey === `module-${entry.course.course_id}-${level}`}
+                                  title={!canRemoveLevel ? "Nothing to remove at this level" : `Remove all content at ${level} for ${course.course_name}`}
+                                  className="h-8 shrink-0 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                                  disabled={!canRemoveLevel || deletingKey === `level-${course.course_id}-${level}`}
+                                  onClick={() =>
+                                    handleDeleteSubModules(levelRemoveIds, `level-${course.course_id}-${level}`, `Level ${level} removed`)
+                                  }
                                 >
-                                  {creatingKey === `module-${entry.course.course_id}-${level}` ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : (
-                                    <Plus className="h-3.5 w-3.5" />
-                                  )}
-                                  Add Module
+                                  <Trash2 className="h-3 w-3.5" aria-hidden />
+                                  Remove
                                 </Button>
                               </div>
-                              <div className="space-y-2">
-                                {entry.modules.length === 0 ? (
-                                  <p className="text-xs text-grayScale-500">No modules yet. Use “Add Module” to start.</p>
-                                ) : (
-                                  entry.modules.map((module) => (
-                                    <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
-                                        <div className="flex gap-2">
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                              handleCreateSubModule(entry.course.course_id, level, module.title, module.sub_modules)
-                                            }
-                                            disabled={creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
-                                          >
-                                            {creatingKey === `submodule-${entry.course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
-                                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                            ) : (
-                                              <Plus className="h-3.5 w-3.5" />
-                                            )}
-                                            Add Sub-module
-                                          </Button>
-                                          <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                                            disabled={deletingKey === `module-${module.id}`}
-                                            onClick={() =>
-                                              handleDeleteSubModules(
-                                                module.sub_modules.map((s) => s.id),
-                                                `module-${module.id}`,
-                                                `Module ${module.title} removed`,
-                                              )
-                                            }
-                                          >
-                                            <Trash2 className="h-3 w-3.5" aria-hidden />
-                                            Remove
-                                          </Button>
+                              {!collapsedLevels.includes(levelKey) ? (
+                                <div className="space-y-2 p-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleCreateModule(course.course_id, level, modules)}
+                                      disabled={creatingKey === `module-${course.course_id}-${level}`}
+                                    >
+                                      {creatingKey === `module-${course.course_id}-${level}` ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Plus className="h-3.5 w-3.5" />
+                                      )}
+                                      Add Module
+                                    </Button>
+                                  </div>
+                                  {modules.length === 0 ? (
+                                    <p className="text-xs text-grayScale-500">No modules yet. Use “Add Module” to start.</p>
+                                  ) : (
+                                    modules.map((module) => (
+                                      <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
+                                          <div className="flex gap-2">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() =>
+                                                handleCreateSubModule(course.course_id, level, module.title, module.sub_modules)
+                                              }
+                                              disabled={creatingKey === `submodule-${course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
+                                            >
+                                              {creatingKey === `submodule-${course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                              ) : (
+                                                <Plus className="h-3.5 w-3.5" />
+                                              )}
+                                              Add Sub-module
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                                              disabled={deletingKey === `module-${module.id}`}
+                                              onClick={() =>
+                                                handleDeleteSubModules(
+                                                  module.sub_modules.map((s) => s.id),
+                                                  `module-${module.id}`,
+                                                  `Module ${module.title} removed`,
+                                                )
+                                              }
+                                            >
+                                              <Trash2 className="h-3 w-3.5" aria-hidden />
+                                              Remove
+                                            </Button>
+                                          </div>
                                         </div>
+                                        {module.sub_modules.map((subModule) => (
+                                          <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                              <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
+                                              {categoryId ? (
+                                                <div className="flex gap-2">
+                                                  <Link to={`/content/category/${categoryId}/courses/${course.course_id}/sub-courses/${subModule.id}`}>
+                                                    <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
+                                                  </Link>
+                                                  <Link to={`/content/category/${categoryId}/courses/${course.course_id}/sub-courses/${subModule.id}/add-practice?source=human-language`}>
+                                                    <Button size="sm">Add practice/audio questions</Button>
+                                                  </Link>
+                                                  <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                    disabled={deletingKey === `submodule-${subModule.id}`}
+                                                    onClick={() =>
+                                                      handleDeleteSubModules(
+                                                        [subModule.id],
+                                                        `submodule-${subModule.id}`,
+                                                        `Sub-module ${subModule.title} removed`,
+                                                      )
+                                                    }
+                                                  >
+                                                    <Trash2 className="h-3 w-3.5" aria-hidden />
+                                                    Remove
+                                                  </Button>
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                              {subModule.videos.map((video) => (
+                                                <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
+                                                  <BookOpen className="h-3.5 w-3.5" />
+                                                  {video.title}
+                                                </div>
+                                              ))}
+                                              {subModule.practices.map((practice) => (
+                                                <div key={practice.id} className="rounded-md bg-brand-50 px-2 py-1 text-xs text-brand-700">
+                                                  Practice: {practice.title} ({practice.question_count} audio question(s))
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))}
                                       </div>
-                                      {module.sub_modules.map((subModule) => (
-                                        <div key={subModule.id} className="mt-2 rounded-md border border-grayScale-100 bg-white p-2">
-                                          <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <p className="text-xs font-semibold text-grayScale-700">Sub-module: {subModule.title}</p>
-                                            {categoryId ? (
-                                              <div className="flex gap-2">
-                                                <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}`}>
-                                                  <Button size="sm" variant="outline">Manage lesson videos/audio</Button>
-                                                </Link>
-                                                <Link to={`/content/category/${categoryId}/courses/${entry.course.course_id}/sub-courses/${subModule.id}/add-practice?source=human-language`}>
-                                                  <Button size="sm">Add practice/audio questions</Button>
-                                                </Link>
-                                                <Button
-                                                  type="button"
-                                                  size="sm"
-                                                  variant="outline"
-                                                  className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                                                  disabled={deletingKey === `submodule-${subModule.id}`}
-                                                  onClick={() =>
-                                                    handleDeleteSubModules(
-                                                      [subModule.id],
-                                                      `submodule-${subModule.id}`,
-                                                      `Sub-module ${subModule.title} removed`,
-                                                    )
-                                                  }
-                                                >
-                                                  <Trash2 className="h-3 w-3.5" aria-hidden />
-                                                  Remove
-                                                </Button>
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                          <div className="mt-2 flex flex-wrap gap-2">
-                                            {subModule.videos.map((video) => (
-                                              <div key={video.id} className="inline-flex items-center gap-2 rounded-md bg-grayScale-50 px-2 py-1 text-xs text-grayScale-700">
-                                                <BookOpen className="h-3.5 w-3.5" />
-                                                {video.title}
-                                              </div>
-                                            ))}
-                                            {subModule.practices.map((practice) => (
-                                              <div key={practice.id} className="rounded-md bg-brand-50 px-2 py-1 text-xs text-brand-700">
-                                                Practice: {practice.title} ({practice.question_count} audio question(s))
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ))
-                                )}
-                              </div>
+                                    ))
+                                  )}
+                                </div>
+                              ) : null}
                             </div>
-                          ))
-                        )}
-                      </CardContent>
-                    ) : null}
+                          )
+                        })
+                      )}
+                    </CardContent>
                   </Card>
                 )
               })

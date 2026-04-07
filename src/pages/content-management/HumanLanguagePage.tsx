@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  GripVertical,
   HelpCircle,
   Image as ImageIcon,
   Languages,
@@ -56,6 +57,12 @@ import type {
 } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
+import { Input } from "../../components/ui/input"
+import {
+  createEmptyPracticeQuestionDraft,
+  PracticeQuestionEditorFields,
+  type PracticeQuestionEditorValue,
+} from "../../components/content-management/PracticeQuestionEditorFields"
 
 const CEFR_LEVELS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"] as const
 type SubModulePanelTab = "lessons" | "practices"
@@ -202,24 +209,8 @@ export function HumanLanguagePage() {
   const [practiceDialog, setPracticeDialog] = useState<PracticeDialogState>({ open: false })
   const [questionDialog, setQuestionDialog] = useState<QuestionDialogState>({ open: false })
   const [practiceForm, setPracticeForm] = useState({ title: "", description: "", persona: "" })
-  const [questionForm, setQuestionForm] = useState({
-    questionText: "",
-    questionType: "MCQ" as "MCQ" | "TRUE_FALSE" | "SHORT",
-    difficulty: "EASY",
-    points: 1,
-    tips: "",
-    explanation: "",
-    imageUrl: "",
-    voicePrompt: "",
-    sampleAnswerVoicePrompt: "",
-    audioCorrectAnswerText: "",
-    optionA: "",
-    optionB: "",
-    optionC: "",
-    optionD: "",
-    correctOption: "A" as "A" | "B" | "C" | "D",
-    shortAnswer: "",
-  })
+  const [questionDraft, setQuestionDraft] = useState<PracticeQuestionEditorValue>(() => createEmptyPracticeQuestionDraft())
+  const [questionImageUrl, setQuestionImageUrl] = useState("")
   const [questionDetailById, setQuestionDetailById] = useState<Record<number, QuestionDetail>>({})
   const [practiceTargetDelete, setPracticeTargetDelete] = useState<{ id: number; title: string } | null>(null)
   const [questionTargetDelete, setQuestionTargetDelete] = useState<{ id: number; practiceId: number; text: string } | null>(null)
@@ -604,25 +595,10 @@ export function HumanLanguagePage() {
     subModuleCardSelection[smKey] ?? { lessonId: null, practiceId: null }
 
   const resetPracticeForm = () => setPracticeForm({ title: "", description: "", persona: "" })
-  const resetQuestionForm = () =>
-    setQuestionForm({
-      questionText: "",
-      questionType: "MCQ",
-      difficulty: "EASY",
-      points: 1,
-      tips: "",
-      explanation: "",
-      imageUrl: "",
-      voicePrompt: "",
-      sampleAnswerVoicePrompt: "",
-      audioCorrectAnswerText: "",
-      optionA: "",
-      optionB: "",
-      optionC: "",
-      optionD: "",
-      correctOption: "A",
-      shortAnswer: "",
-    })
+  const resetQuestionForm = () => {
+    setQuestionDraft(createEmptyPracticeQuestionDraft())
+    setQuestionImageUrl("")
+  }
 
   const openCreatePracticeDialog = (subModuleId: number) => {
     setPracticeSubmitAttempted(false)
@@ -704,18 +680,8 @@ export function HumanLanguagePage() {
         return
       }
       setQuestionDetailById((prev) => ({ ...prev, [qid]: detail }))
-      const options = (detail.options ?? []).slice().sort((a, b) => a.option_order - b.option_order)
-      const correctOpt = options.find((o) => o.is_correct)
-      const correctOrder = correctOpt?.option_order ?? 1
-      let correctOption: "A" | "B" | "C" | "D" = "A"
-      if (detail.question_type === "TRUE_FALSE") {
-        const t = (correctOpt?.option_text ?? "").trim().toLowerCase()
-        if (t === "false" || correctOrder === 2) correctOption = "B"
-        else correctOption = "A"
-      } else {
-        correctOption =
-          (["A", "B", "C", "D"][Math.min(Math.max(correctOrder - 1, 0), 3)] as "A" | "B" | "C" | "D") ?? "A"
-      }
+      setQuestionImageUrl(detail.image_url ?? "")
+      const sortedOpts = (detail.options ?? []).slice().sort((a, b) => a.option_order - b.option_order)
       const shortAnswer =
         Array.isArray(detail.short_answers) && detail.short_answers.length > 0
           ? typeof detail.short_answers[0] === "string"
@@ -723,28 +689,54 @@ export function HumanLanguagePage() {
             : detail.short_answers[0]?.acceptable_answer ?? ""
           : ""
       const qt = detail.question_type
-      let questionType: "MCQ" | "TRUE_FALSE" | "SHORT" = "MCQ"
+      let questionType: PracticeQuestionEditorValue["questionType"] = "MCQ"
       if (qt === "TRUE_FALSE") questionType = "TRUE_FALSE"
-      else if (qt === "SHORT" || qt === "SHORT_ANSWER" || qt === "AUDIO") questionType = "SHORT"
+      else if (qt === "SHORT" || qt === "SHORT_ANSWER") questionType = "SHORT"
+      else if (qt === "AUDIO") questionType = "AUDIO"
       const difficultyRaw = detail.difficulty_level
-      const difficulty =
+      const difficultyLevel =
         difficultyRaw === "EASY" || difficultyRaw === "MEDIUM" || difficultyRaw === "HARD" ? difficultyRaw : "EASY"
-      setQuestionForm({
+
+      let options: PracticeQuestionEditorValue["options"]
+      if (questionType === "TRUE_FALSE") {
+        const trueRow =
+          sortedOpts.find((o) => /\btrue\b/i.test((o.option_text ?? "").trim())) ?? sortedOpts[0]
+        const falseRow =
+          sortedOpts.find((o) => /\bfalse\b/i.test((o.option_text ?? "").trim())) ?? sortedOpts[1]
+        const correctIsTrue =
+          trueRow?.is_correct === true
+            ? true
+            : falseRow?.is_correct === true
+              ? false
+              : true
+        options = [
+          { text: "True", isCorrect: correctIsTrue },
+          { text: "False", isCorrect: !correctIsTrue },
+        ]
+      } else {
+        options =
+          sortedOpts.length > 0
+            ? sortedOpts.map((o) => ({
+                text: o.option_text ?? "",
+                isCorrect: !!o.is_correct,
+              }))
+            : createEmptyPracticeQuestionDraft().options
+        if (!options.some((o) => o.isCorrect) && options.length > 0) {
+          options = options.map((o, i) => ({ ...o, isCorrect: i === 0 }))
+        }
+      }
+
+      setQuestionDraft({
         questionText: detail.question_text ?? "",
         questionType,
-        difficulty,
+        difficultyLevel,
         points: detail.points && detail.points > 0 ? detail.points : 1,
         tips: detail.tips ?? "",
         explanation: detail.explanation ?? "",
-        imageUrl: detail.image_url ?? "",
+        options,
         voicePrompt: detail.voice_prompt ?? "",
         sampleAnswerVoicePrompt: detail.sample_answer_voice_prompt ?? "",
         audioCorrectAnswerText: detail.audio_correct_answer_text ?? "",
-        optionA: options[0]?.option_text ?? "",
-        optionB: options[1]?.option_text ?? "",
-        optionC: options[2]?.option_text ?? "",
-        optionD: options[3]?.option_text ?? "",
-        correctOption,
         shortAnswer,
       })
       // Open only after the same form shape as create is fully populated (no empty-state flash).
@@ -758,41 +750,45 @@ export function HumanLanguagePage() {
   }
 
   const buildQuestionPayload = (): CreateQuestionRequest => {
+    const d = questionDraft
     const payload: CreateQuestionRequest = {
-      question_text: questionForm.questionText.trim(),
-      question_type: questionForm.questionType,
-      difficulty_level: questionForm.difficulty,
-      points: Number(questionForm.points) || 1,
-      tips: questionForm.tips.trim() || undefined,
-      explanation: questionForm.explanation.trim() || undefined,
-      image_url: questionForm.imageUrl.trim() || undefined,
-      voice_prompt: questionForm.voicePrompt.trim() || undefined,
-      sample_answer_voice_prompt: questionForm.sampleAnswerVoicePrompt.trim() || undefined,
-      audio_correct_answer_text: questionForm.audioCorrectAnswerText.trim() || undefined,
+      question_text: d.questionText.trim(),
+      question_type: d.questionType,
+      difficulty_level: d.difficultyLevel,
+      points: Number(d.points) || 1,
+      tips: d.tips.trim() || undefined,
+      explanation: d.explanation.trim() || undefined,
+      image_url: questionImageUrl.trim() || undefined,
+      voice_prompt: d.voicePrompt.trim() || undefined,
+      sample_answer_voice_prompt: d.sampleAnswerVoicePrompt.trim() || undefined,
+      audio_correct_answer_text: d.audioCorrectAnswerText.trim() || undefined,
       status: "PUBLISHED",
     }
-    if (questionForm.questionType === "SHORT") {
-      payload.short_answers = questionForm.shortAnswer.trim()
+    if (d.questionType === "SHORT") {
+      payload.short_answers = d.shortAnswer.trim()
         ? [
-            { acceptable_answer: questionForm.shortAnswer.trim(), match_type: "EXACT" },
-            { acceptable_answer: questionForm.shortAnswer.trim(), match_type: "CASE_INSENSITIVE" },
+            { acceptable_answer: d.shortAnswer.trim(), match_type: "EXACT" },
+            { acceptable_answer: d.shortAnswer.trim(), match_type: "CASE_INSENSITIVE" },
           ]
         : undefined
       return payload
     }
-    const options =
-      questionForm.questionType === "TRUE_FALSE"
-        ? [
-            { option_order: 1, option_text: "True", is_correct: questionForm.correctOption === "A" },
-            { option_order: 2, option_text: "False", is_correct: questionForm.correctOption === "B" },
-          ]
-        : [
-            { option_order: 1, option_text: questionForm.optionA.trim(), is_correct: questionForm.correctOption === "A" },
-            { option_order: 2, option_text: questionForm.optionB.trim(), is_correct: questionForm.correctOption === "B" },
-            { option_order: 3, option_text: questionForm.optionC.trim(), is_correct: questionForm.correctOption === "C" },
-            { option_order: 4, option_text: questionForm.optionD.trim(), is_correct: questionForm.correctOption === "D" },
-          ].filter((o) => o.option_text)
-    payload.options = options
+    if (d.questionType === "TRUE_FALSE") {
+      const trueCorrect = d.options[0]?.isCorrect === true && d.options[1]?.isCorrect !== true
+      payload.options = [
+        { option_order: 1, option_text: "True", is_correct: trueCorrect },
+        { option_order: 2, option_text: "False", is_correct: !trueCorrect },
+      ]
+      return payload
+    }
+    if (d.questionType === "MCQ") {
+      const filtered = d.options.filter((o) => o.text.trim())
+      payload.options = filtered.map((o, idx) => ({
+        option_order: idx + 1,
+        option_text: o.text.trim(),
+        is_correct: o.isCorrect,
+      }))
+    }
     return payload
   }
 
@@ -804,26 +800,23 @@ export function HumanLanguagePage() {
       options?: string
       correctOption?: string
     } = {}
-    if (!questionForm.questionText.trim()) errors.questionText = "Question text is required."
-    const pts = Number(questionForm.points)
+    const d = questionDraft
+    if (!d.questionText.trim()) errors.questionText = "Question text is required."
+    const pts = Number(d.points)
     if (!Number.isFinite(pts) || pts < 1) errors.points = "Enter a valid number (minimum 1)."
-    if (questionForm.questionType === "SHORT" && !questionForm.shortAnswer.trim()) {
+    if (d.questionType === "SHORT" && !d.shortAnswer.trim()) {
       errors.shortAnswer = "Expected answer is required for short-answer questions."
     }
-    if (questionForm.questionType === "MCQ") {
-      const opts = {
-        A: questionForm.optionA.trim(),
-        B: questionForm.optionB.trim(),
-        C: questionForm.optionC.trim(),
-        D: questionForm.optionD.trim(),
-      }
-      const filled = Object.values(opts).filter(Boolean).length
+    if (d.questionType === "MCQ") {
+      const filled = d.options.filter((o) => o.text.trim()).length
       if (filled < 2) errors.options = "Enter at least two non-empty options."
-      const correct = questionForm.correctOption
-      if (opts[correct] === "") errors.correctOption = "The marked correct option must include text."
+      const correctIdx = d.options.findIndex((o) => o.isCorrect)
+      if (correctIdx >= 0 && !d.options[correctIdx]?.text?.trim()) {
+        errors.correctOption = "The marked correct option must include text."
+      }
     }
     return errors
-  }, [questionForm])
+  }, [questionDraft])
 
   const questionCanSave = Object.keys(questionFieldErrors).length === 0
 
@@ -1882,261 +1875,79 @@ export function HumanLanguagePage() {
           }
         }}
       >
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{questionDialog.open && questionDialog.mode === "edit" ? "Edit question" : "Add question"}</DialogTitle>
-            <DialogDescription>
-              Use the same fields as when creating: type, scoring, prompts, media URLs, and answer options. Changes apply to this
-              practice only.
-              {!questionCanSave ? (
-                <span className="mt-1 block text-amber-700/90">
-                  Fix the highlighted fields before saving. Save stays disabled until the form is valid.
-                </span>
-              ) : null}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium text-grayScale-600">Question text</label>
-              <textarea
-                value={questionForm.questionText}
-                onChange={(e) => {
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto gap-0 p-0 sm:max-w-4xl">
+          <div className="border-b border-grayScale-100 px-5 py-5 sm:px-8">
+            <DialogHeader className="space-y-1.5 text-left">
+              <DialogTitle className="text-xl">
+                {questionDialog.open && questionDialog.mode === "edit" ? "Edit question" : "Add question"}
+              </DialogTitle>
+              <DialogDescription className="text-sm leading-relaxed">
+                Same layout as <span className="font-medium text-grayScale-700">Add New Practice → Step 3: Questions</span>. Add MCQ,
+                True/False, Short Answer, or Audio; optional tips and voice prompts below.
+                {!questionCanSave ? (
+                  <span className="mt-2 block text-amber-800/90">
+                    Fix the highlighted fields before saving. Save stays disabled until the form is valid.
+                  </span>
+                ) : null}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
+            <div className="rounded-2xl border border-grayScale-200/80 bg-gradient-to-r from-grayScale-50/80 to-white px-4 py-4 shadow-sm sm:px-6 sm:py-5">
+              <h2 className="text-base font-semibold tracking-tight text-grayScale-900 sm:text-lg">Step 3: Questions</h2>
+              <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
+                Add MCQ, True/False, Short Answer, or Audio items. Use the full width for stems and options.
+              </p>
+            </div>
+
+            <Card className="border border-grayScale-200/90 border-l-4 border-l-brand-500 p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6 lg:p-8">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <GripVertical className="h-5 w-5 shrink-0 cursor-grab text-grayScale-300" aria-hidden />
+                  <span className="text-base font-semibold text-grayScale-900">Question 1</span>
+                </div>
+              </div>
+
+              <PracticeQuestionEditorFields
+                value={questionDraft}
+                onChange={(next) => {
                   setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, questionText: e.target.value }))
+                  setQuestionDraft(next)
                 }}
-                className={cn(
-                  "min-h-[96px] w-full rounded-md border px-3 py-2 text-sm",
-                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.questionText
-                    ? "border-red-300 ring-1 ring-red-200"
-                    : "border-grayScale-200",
-                )}
-                placeholder="Type question"
-                aria-invalid={Boolean(
-                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.questionText,
-                )}
+                fieldErrors={questionFieldErrors}
+                showFieldErrors={questionSubmitAttempted || questionFormTouched}
               />
-              {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.questionText ? (
-                <p className="text-xs text-red-600">{questionFieldErrors.questionText}</p>
-              ) : null}
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-grayScale-600">Type</label>
-              <select
-                value={questionForm.questionType}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, questionType: e.target.value as "MCQ" | "TRUE_FALSE" | "SHORT" }))
-                }}
-                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
-              >
-                <option value="MCQ">MCQ</option>
-                <option value="TRUE_FALSE">True/False</option>
-                <option value="SHORT">Short answer</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-grayScale-600">Difficulty</label>
-              <select
-                value={questionForm.difficulty}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, difficulty: e.target.value }))
-                }}
-                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
-              >
-                <option value="EASY">EASY</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="HARD">HARD</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-grayScale-600">Points</label>
-              <input
-                type="number"
-                min={1}
-                value={questionForm.points}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, points: Number(e.target.value) }))
-                }}
-                className={cn(
-                  "h-10 w-full rounded-md border px-3 text-sm",
-                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.points
-                    ? "border-red-300 ring-1 ring-red-200"
-                    : "border-grayScale-200",
-                )}
-                aria-invalid={Boolean(
-                  (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.points,
-                )}
-              />
-              {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.points ? (
-                <p className="text-xs text-red-600">{questionFieldErrors.points}</p>
-              ) : null}
-            </div>
-            {questionForm.questionType === "SHORT" ? (
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-xs font-medium text-grayScale-600">Expected short answer</label>
-                <input
-                  value={questionForm.shortAnswer}
+
+              <div className="mt-5 space-y-2 border-t border-grayScale-100 pt-5">
+                <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Image URL (Optional)</label>
+                <Input
+                  value={questionImageUrl}
                   onChange={(e) => {
                     setQuestionFormTouched(true)
-                    setQuestionForm((f) => ({ ...f, shortAnswer: e.target.value }))
+                    setQuestionImageUrl(e.target.value)
                   }}
-                  className={cn(
-                    "h-10 w-full rounded-md border px-3 text-sm",
-                    (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.shortAnswer
-                      ? "border-red-300 ring-1 ring-red-200"
-                      : "border-grayScale-200",
-                  )}
-                  aria-invalid={Boolean(
-                    (questionSubmitAttempted || questionFormTouched) && questionFieldErrors.shortAnswer,
-                  )}
+                  placeholder="https://…"
+                  type="url"
+                  className="h-11 font-mono text-[13px]"
                 />
-                {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.shortAnswer ? (
-                  <p className="text-xs text-red-600">{questionFieldErrors.shortAnswer}</p>
-                ) : null}
               </div>
-            ) : (
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-xs font-medium text-grayScale-600">Options</label>
-                {questionForm.questionType === "TRUE_FALSE" ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant={questionForm.correctOption === "A" ? "default" : "outline"}
-                      onClick={() => {
-                        setQuestionFormTouched(true)
-                        setQuestionForm((f) => ({ ...f, correctOption: "A" }))
-                      }}
-                    >
-                      True
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={questionForm.correctOption === "B" ? "default" : "outline"}
-                      onClick={() => {
-                        setQuestionFormTouched(true)
-                        setQuestionForm((f) => ({ ...f, correctOption: "B" }))
-                      }}
-                    >
-                      False
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {(["A", "B", "C", "D"] as const).map((opt) => (
-                      <div key={opt} className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={questionForm.correctOption === opt ? "default" : "outline"}
-                          onClick={() => {
-                            setQuestionFormTouched(true)
-                            setQuestionForm((f) => ({ ...f, correctOption: opt }))
-                          }}
-                        >
-                          {opt}
-                        </Button>
-                        <input
-                          value={questionForm[`option${opt}` as "optionA" | "optionB" | "optionC" | "optionD"]}
-                          onChange={(e) => {
-                            setQuestionFormTouched(true)
-                            setQuestionForm((f) => ({
-                              ...f,
-                              [`option${opt}`]: e.target.value,
-                            }))
-                          }}
-                          className="h-9 w-full rounded-md border border-grayScale-200 px-3 text-sm"
-                          placeholder={`Option ${opt}`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.options ? (
-                  <p className="text-xs text-red-600">{questionFieldErrors.options}</p>
-                ) : null}
-                {(questionSubmitAttempted || questionFormTouched) && questionFieldErrors.correctOption ? (
-                  <p className="text-xs text-red-600">{questionFieldErrors.correctOption}</p>
-                ) : null}
-              </div>
-            )}
-            <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium text-grayScale-600">Tips</label>
-              <textarea
-                value={questionForm.tips}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, tips: e.target.value }))
-                }}
-                className="min-h-[74px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium text-grayScale-600">Explanation / sample answer</label>
-              <textarea
-                value={questionForm.explanation}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, explanation: e.target.value }))
-                }}
-                className="min-h-[74px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium text-grayScale-600">Image URL</label>
-              <input
-                value={questionForm.imageUrl}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, imageUrl: e.target.value }))
-                }}
-                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-grayScale-600">Voice prompt URL</label>
-              <input
-                value={questionForm.voicePrompt}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, voicePrompt: e.target.value }))
-                }}
-                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-grayScale-600">Sample answer voice URL</label>
-              <input
-                value={questionForm.sampleAnswerVoicePrompt}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, sampleAnswerVoicePrompt: e.target.value }))
-                }}
-                className="h-10 w-full rounded-md border border-grayScale-200 px-3 text-sm"
-              />
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium text-grayScale-600">Audio / spoken correct answer text</label>
-              <textarea
-                value={questionForm.audioCorrectAnswerText}
-                onChange={(e) => {
-                  setQuestionFormTouched(true)
-                  setQuestionForm((f) => ({ ...f, audioCorrectAnswerText: e.target.value }))
-                }}
-                className="min-h-[64px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
-                placeholder="Optional; used for audio-style grading when applicable"
-              />
-            </div>
+            </Card>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setQuestionDialog({ open: false })}>
+
+          <div className="flex flex-col-reverse items-stretch justify-end gap-2 border-t border-grayScale-100 bg-grayScale-50/30 px-4 py-4 sm:flex-row sm:items-center sm:px-6">
+            <Button type="button" variant="outline" onClick={() => setQuestionDialog({ open: false })} className="sm:mr-auto">
               Cancel
             </Button>
-            <Button type="button" onClick={() => void handleSaveQuestion()} disabled={savingQuestion || !questionCanSave}>
+            <Button
+              type="button"
+              className="bg-brand-500 hover:bg-brand-600"
+              onClick={() => void handleSaveQuestion()}
+              disabled={savingQuestion || !questionCanSave}
+            >
               {savingQuestion ? "Saving..." : "Save question"}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

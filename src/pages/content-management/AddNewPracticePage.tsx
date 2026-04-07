@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState, type ChangeEvent } from "react"
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, ArrowRight, ChevronDown, Grid3X3, Check, Plus, Trash2, GripVertical, X, Edit, Rocket, Loader2, Upload } from "lucide-react"
+import { ArrowLeft, ArrowRight, ChevronDown, Grid3X3, Check, Plus, Trash2, GripVertical, Edit, Rocket, Loader2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Card } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
+import { PracticeQuestionEditorFields } from "../../components/content-management/PracticeQuestionEditorFields"
 import { createQuestionSet, createQuestion, addQuestionToSet } from "../../api/courses.api"
 import { uploadVideoFile } from "../../api/files.api"
 import { Select } from "../../components/ui/select"
@@ -184,35 +185,6 @@ export function AddNewPracticePage() {
 
   const updateQuestion = (id: string, updates: Partial<Question>) => {
     setQuestions(questions.map(q => q.id === id ? { ...q, ...updates } : q))
-  }
-
-  const updateOption = (questionId: string, optionIndex: number, updates: Partial<MCQOption>) => {
-    setQuestions(questions.map(q => {
-      if (q.id !== questionId) return q
-      const newOptions = q.options.map((opt, i) => i === optionIndex ? { ...opt, ...updates } : opt)
-      return { ...q, options: newOptions }
-    }))
-  }
-
-  const addOption = (questionId: string) => {
-    setQuestions(questions.map(q => {
-      if (q.id !== questionId) return q
-      return { ...q, options: [...q.options, { text: "", isCorrect: false }] }
-    }))
-  }
-
-  const removeOption = (questionId: string, optionIndex: number) => {
-    setQuestions(questions.map(q => {
-      if (q.id !== questionId) return q
-      return { ...q, options: q.options.filter((_, i) => i !== optionIndex) }
-    }))
-  }
-
-  const setCorrectOption = (questionId: string, optionIndex: number) => {
-    setQuestions(questions.map(q => {
-      if (q.id !== questionId) return q
-      return { ...q, options: q.options.map((opt, i) => ({ ...opt, isCorrect: i === optionIndex })) }
-    }))
   }
 
   const saveQuestionSet = async (status: "DRAFT" | "PUBLISHED") => {
@@ -621,213 +593,36 @@ export function AddNewPracticePage() {
                   </button>
                 </div>
 
-                <div className="mt-5 space-y-5">
-                  {/* Question Text */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                      Question Text
-                    </label>
-                    <textarea
-                      value={question.questionText}
-                      onChange={(e) => updateQuestion(question.id, { questionText: e.target.value })}
-                      placeholder="Enter your question..."
-                      className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-                    {/* Question Type */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Type
-                      </label>
-                      <Select
-                        value={question.questionType}
-                        onChange={(e) => updateQuestion(question.id, { questionType: e.target.value as QuestionType })}
-                      >
-                        <option value="MCQ">Multiple Choice</option>
-                        <option value="TRUE_FALSE">True/False</option>
-                        <option value="SHORT">Short Answer</option>
-                        <option value="AUDIO">Audio</option>
-                      </Select>
-                    </div>
-
-                    {/* Difficulty */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Difficulty
-                      </label>
-                      <Select
-                        value={question.difficultyLevel}
-                        onChange={(e) => updateQuestion(question.id, { difficultyLevel: e.target.value as DifficultyLevel })}
-                      >
-                        <option value="EASY">Easy</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HARD">Hard</option>
-                      </Select>
-                    </div>
-
-                    {/* Points */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Points
-                      </label>
-                      <Input
-                        type="number"
-                        value={question.points}
-                        onChange={(e) => updateQuestion(question.id, { points: Number(e.target.value) || 1 })}
-                        min={1}
-                      />
-                    </div>
-                  </div>
-
-                  {/* MCQ Options */}
-                  {question.questionType === "MCQ" && (
-                    <div className="space-y-3 rounded-lg bg-grayScale-50/50 p-4">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Options
-                      </label>
-                      <div className="space-y-2.5">
-                        {question.options.map((option, optIdx) => (
-                          <div key={optIdx} className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors ${
-                            option.isCorrect ? "border-green-200 bg-green-50/50" : "border-grayScale-200 bg-white"
-                          }`}>
-                            <button
-                              type="button"
-                              onClick={() => setCorrectOption(question.id, optIdx)}
-                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 ${
-                                option.isCorrect
-                                  ? "border-green-500 bg-green-500 text-white shadow-sm"
-                                  : "border-grayScale-300 hover:border-brand-400 hover:shadow-sm"
-                              }`}
-                            >
-                              {option.isCorrect && <Check className="h-3 w-3" />}
-                            </button>
-                            <Input
-                              value={option.text}
-                              onChange={(e) => updateOption(question.id, optIdx, { text: e.target.value })}
-                              placeholder={`Option ${optIdx + 1}`}
-                              className="flex-1 border-0 bg-transparent shadow-none focus:ring-0"
-                            />
-                            {question.options.length > 2 && (
-                              <button
-                                onClick={() => removeOption(question.id, optIdx)}
-                                className="rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addOption(question.id)}
-                          className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add Option
-                        </button>
-                      </div>
-                      <p className="text-xs text-grayScale-400">Click the circle to mark the correct answer.</p>
-                    </div>
-                  )}
-
-                  {/* TRUE_FALSE Options */}
-                  {question.questionType === "TRUE_FALSE" && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Correct Answer
-                      </label>
-                      <div className="flex gap-3">
-                        {["True", "False"].map((val, i) => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => updateQuestion(question.id, {
-                              options: [
-                                { text: "True", isCorrect: i === 0 },
-                                { text: "False", isCorrect: i === 1 },
-                              ],
-                            })}
-                            className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                              question.options[i]?.isCorrect
-                                ? "border-green-500 bg-green-50 text-green-700"
-                                : "border-grayScale-200 text-grayScale-600 hover:border-grayScale-300"
-                            }`}
-                          >
-                            {val}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-                    {/* Tips */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Tips (Optional)
-                      </label>
-                      <Input
-                        value={question.tips}
-                        onChange={(e) => updateQuestion(question.id, { tips: e.target.value })}
-                        placeholder="Helpful tip for the student"
-                      />
-                    </div>
-
-                    {/* Explanation */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Explanation (Optional)
-                      </label>
-                      <Input
-                        value={question.explanation}
-                        onChange={(e) => updateQuestion(question.id, { explanation: e.target.value })}
-                        placeholder="Why this is the correct answer"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-                    {/* Voice Prompt */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Voice Prompt (Optional)
-                      </label>
-                      <Input
-                        value={question.voicePrompt}
-                        onChange={(e) => updateQuestion(question.id, { voicePrompt: e.target.value })}
-                        placeholder="Voice prompt text"
-                      />
-                    </div>
-
-                    {/* Sample Answer Voice Prompt */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Sample Answer Voice Prompt (Optional)
-                      </label>
-                      <Input
-                        value={question.sampleAnswerVoicePrompt}
-                        onChange={(e) => updateQuestion(question.id, { sampleAnswerVoicePrompt: e.target.value })}
-                        placeholder="Sample answer voice prompt"
-                      />
-                    </div>
-                  </div>
-
-                  {question.questionType === "AUDIO" && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
-                        Audio Correct Answer Text
-                      </label>
-                      <Input
-                        value={question.audioCorrectAnswerText}
-                        onChange={(e) => updateQuestion(question.id, { audioCorrectAnswerText: e.target.value })}
-                        placeholder="Expected correct answer text for audio response"
-                      />
-                    </div>
-                  )}
-                </div>
+                <PracticeQuestionEditorFields
+                  value={{
+                    questionText: question.questionText,
+                    questionType: question.questionType,
+                    difficultyLevel: question.difficultyLevel,
+                    points: question.points,
+                    tips: question.tips,
+                    explanation: question.explanation,
+                    options: question.options,
+                    voicePrompt: question.voicePrompt,
+                    sampleAnswerVoicePrompt: question.sampleAnswerVoicePrompt,
+                    audioCorrectAnswerText: question.audioCorrectAnswerText,
+                    shortAnswer: question.shortAnswers[0] ?? "",
+                  }}
+                  onChange={(next) => {
+                    updateQuestion(question.id, {
+                      questionText: next.questionText,
+                      questionType: next.questionType as QuestionType,
+                      difficultyLevel: next.difficultyLevel as DifficultyLevel,
+                      points: next.points,
+                      tips: next.tips,
+                      explanation: next.explanation,
+                      options: next.options,
+                      voicePrompt: next.voicePrompt,
+                      sampleAnswerVoicePrompt: next.sampleAnswerVoicePrompt,
+                      audioCorrectAnswerText: next.audioCorrectAnswerText,
+                      shortAnswers: next.shortAnswer.trim() ? [next.shortAnswer.trim()] : [],
+                    })
+                  }}
+                />
               </Card>
             ))}
           </div>

@@ -324,12 +324,15 @@ export function SpeakingPage() {
       all.map(async (practice) => {
         try {
           const res = await getPracticeQuestionsByPractice(practice.id, {
-            limit: 1,
+            limit: 20,
             offset: 0,
             question_type: "AUDIO",
           })
-          const total = res.data?.data?.total_count ?? 0
-          return total > 0 ? practice : null
+          const questions = res.data?.data?.questions ?? []
+          const hasAudioQuestion = questions.some(
+            (question) => (question.question_type ?? "").toUpperCase() === "AUDIO",
+          )
+          return hasAudioQuestion ? practice : null
         } catch {
           return null
         }

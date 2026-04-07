@@ -30,6 +30,10 @@ export interface UploadMediaOptions {
   description?: string
 }
 
+export interface UploadMediaFromUrlPayload extends UploadMediaOptions {
+  sourceUrl: string
+}
+
 export const uploadMediaFile = (
   mediaType: UploadMediaType,
   file: File,
@@ -47,12 +51,35 @@ export const uploadMediaFile = (
   return http.post<UploadMediaResponse>("/files/upload", formData)
 }
 
-export const uploadAudioFile = (file: File) => uploadMediaFile("audio", file)
+export const uploadMediaFromUrl = (
+  mediaType: UploadMediaType,
+  payload: UploadMediaFromUrlPayload,
+) =>
+  http.post<UploadMediaResponse>("/files/upload", {
+    media_type: mediaType,
+    source_url: payload.sourceUrl,
+    ...(mediaType === "video" && payload.title ? { title: payload.title } : {}),
+    ...(mediaType === "video" && payload.description ? { description: payload.description } : {}),
+  })
 
-export const uploadImageFile = (file: File) => uploadMediaFile("image", file)
+export const uploadAudioFile = (fileOrUrl: File | string) =>
+  typeof fileOrUrl === "string"
+    ? uploadMediaFromUrl("audio", { sourceUrl: fileOrUrl })
+    : uploadMediaFile("audio", fileOrUrl)
 
-export const uploadVideoFile = (file: File, options?: UploadMediaOptions) =>
-  uploadMediaFile("video", file, options)
+export const uploadImageFile = (fileOrUrl: File | string) =>
+  typeof fileOrUrl === "string"
+    ? uploadMediaFromUrl("image", { sourceUrl: fileOrUrl })
+    : uploadMediaFile("image", fileOrUrl)
+
+export const uploadVideoFile = (fileOrUrl: File | string, options?: UploadMediaOptions) =>
+  typeof fileOrUrl === "string"
+    ? uploadMediaFromUrl("video", {
+        sourceUrl: fileOrUrl,
+        title: options?.title,
+        description: options?.description,
+      })
+    : uploadMediaFile("video", fileOrUrl, options)
 
 export const resolveFileUrl = (key: string) =>
   http.get<ResolveFileUrlResponse>("/files/url", {

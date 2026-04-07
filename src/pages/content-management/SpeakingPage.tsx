@@ -1,5 +1,5 @@
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, ChevronDown, Image as ImageIcon, Loader2, Mic, Plus, Trash2, Upload } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronRight, Image as ImageIcon, Loader2, Mic, Pencil, Plus, Trash2, Upload } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -17,6 +17,7 @@ import {
   getQuestions,
   getPracticeQuestionsByPractice,
   getQuestionSets,
+  updatePractice,
   updateQuestion,
 } from "../../api/courses.api"
 import { resolveFileUrl, uploadAudioFile, uploadImageFile, uploadVideoFile } from "../../api/files.api"
@@ -69,6 +70,9 @@ type AudioQuestionDraft = {
 type PracticeFilterOption = {
   id: number
   title: string
+  description?: string
+  persona?: string
+  status?: string
 }
 
 type AudioListQuestion = QuestionDetail & {
@@ -149,11 +153,19 @@ export function SpeakingPage() {
   const [audioPageSize] = useState(12)
   const [practiceOptions, setPracticeOptions] = useState<PracticeFilterOption[]>([])
   const [selectedPracticeId, setSelectedPracticeId] = useState<string>("")
+  const [practiceFilterOpen, setPracticeFilterOpen] = useState(false)
+  const [practiceFilterSearch, setPracticeFilterSearch] = useState("")
   const [audioPreviewByQuestionId, setAudioPreviewByQuestionId] = useState<Record<number, string>>({})
   const [imagePreviewByQuestionId, setImagePreviewByQuestionId] = useState<Record<number, string>>({})
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [collapsedPracticeIds, setCollapsedPracticeIds] = useState<number[]>([])
+  const [editingPractice, setEditingPractice] = useState<PracticeFilterOption | null>(null)
+  const [practiceEditTitle, setPracticeEditTitle] = useState("")
+  const [practiceEditDescription, setPracticeEditDescription] = useState("")
+  const [practiceEditPersona, setPracticeEditPersona] = useState("")
+  const [practiceEditSaving, setPracticeEditSaving] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [openCreate, setOpenCreate] = useState(false)
@@ -388,6 +400,9 @@ export function SpeakingPage() {
       speakingPractices.map((p) => ({
         id: p.id,
         title: p.title,
+        description: p.description ?? "",
+        persona: p.persona ?? "",
+        status: p.status ?? "",
       })),
     )
   }, [])
@@ -626,6 +641,14 @@ export function SpeakingPage() {
     if (vimeoEmbedUrl) return { kind: "iframe" as const, src: vimeoEmbedUrl }
     return { kind: "video" as const, src: value }
   }, [introVideoUrl])
+  const filteredPracticeOptions = useMemo(() => {
+    const query = practiceFilterSearch.trim().toLowerCase()
+    if (!query) return practiceOptions
+    return practiceOptions.filter((practice) => {
+      const haystack = `${practice.title} ${practice.id}`.toLowerCase()
+      return haystack.includes(query)
+    })
+  }, [practiceOptions, practiceFilterSearch])
 
   const updateDraft = (index: number, updater: (draft: AudioQuestionDraft) => AudioQuestionDraft) => {
     setQuestionDrafts((prev) => prev.map((draft, idx) => (idx === index ? updater(draft) : draft)))
@@ -1224,6 +1247,58 @@ export function SpeakingPage() {
     }
   }
 
+  const togglePracticeCollapsed = (practiceId: number | null) => {
+    if (!practiceId) return
+    setCollapsedPracticeIds((prev) =>
+      prev.includes(practiceId) ? prev.filter((id) => id !== practiceId) : [...prev, practiceId],
+    )
+  }
+
+  const togglePracticeSelection = (practiceId: number | null) => {
+    if (!practiceId) return
+    const questionIds = audioQuestions.filter((q) => q.practice_id === practiceId).map((q) => q.id)
+    if (questionIds.length === 0) return
+    const allSelected = questionIds.every((id) => selectedQuestionIds.includes(id))
+    setSelectedQuestionIds((prev) =>
+      allSelected ? prev.filter((id) => !questionIds.includes(id)) : Array.from(new Set([...prev, ...questionIds])),
+    )
+  }
+
+  const handleOpenPracticeEdit = (practiceId: number | null) => {
+    if (!practiceId) return
+    const practice = practiceOptions.find((p) => p.id === practiceId)
+    if (!practice) return
+    setEditingPractice(practice)
+    setPracticeEditTitle(practice.title)
+    setPracticeEditDescription(practice.description ?? "")
+    setPracticeEditPersona(practice.persona ?? "")
+  }
+
+  const handleSavePracticeEdit = async () => {
+    if (!editingPractice) return
+    if (!practiceEditTitle.trim()) {
+      toast.error("Practice title is required")
+      return
+    }
+    setPracticeEditSaving(true)
+    try {
+      await updatePractice(editingPractice.id, {
+        title: practiceEditTitle.trim(),
+        description: practiceEditDescription.trim(),
+        ...(practiceEditPersona.trim() ? { persona: practiceEditPersona.trim() } : {}),
+      })
+      toast.success("Practice updated")
+      setEditingPractice(null)
+      await fetchPracticeOptions()
+      await fetchAudioQuestions()
+    } catch (error) {
+      console.error("Failed to update practice:", error)
+      toast.error("Failed to update practice")
+    } finally {
+      setPracticeEditSaving(false)
+    }
+  }
+
   const groupedAudioQuestions = useMemo(() => {
     const groups = new Map<string, { practiceId: number | null; practiceTitle: string; questions: AudioListQuestion[] }>()
     for (const q of audioQuestions) {
@@ -1274,21 +1349,47 @@ export function SpeakingPage() {
               <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">
                 Filter by practice
               </label>
-              <select
-                value={selectedPracticeId}
-                onChange={(e) => {
-                  setSelectedPracticeId(e.target.value)
-                  setAudioPage(1)
-                }}
-                className="h-10 w-full rounded-md border border-grayScale-200 bg-white px-3 text-sm text-grayScale-700"
-              >
-                <option value="">All practices</option>
-                {practiceOptions.map((practice) => (
-                  <option key={practice.id} value={String(practice.id)}>
-                    {practice.title} (#{practice.id})
-                  </option>
-                ))}
-              </select>
+              <DropdownMenu open={practiceFilterOpen} onOpenChange={setPracticeFilterOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 w-full justify-between rounded-md border border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-700 hover:bg-grayScale-50"
+                  >
+                    <span className="truncate">
+                      {selectedPracticeId
+                        ? `${practiceOptions.find((p) => p.id === Number(selectedPracticeId))?.title ?? "Practice"} (#${selectedPracticeId})`
+                        : "All practices"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-grayScale-400" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[420px] max-w-[92vw] p-2">
+                  <Input
+                    value={practiceFilterSearch}
+                    onChange={(e) => setPracticeFilterSearch(e.target.value)}
+                    placeholder="Search practices..."
+                    className="mb-2 h-9"
+                  />
+                  <div className="max-h-64 overflow-auto">
+                    <DropdownMenuRadioGroup
+                      value={selectedPracticeId}
+                      onValueChange={(value) => {
+                        setSelectedPracticeId(value)
+                        setAudioPage(1)
+                        setPracticeFilterOpen(false)
+                      }}
+                    >
+                      <DropdownMenuRadioItem value="">All practices</DropdownMenuRadioItem>
+                      {filteredPracticeOptions.map((practice) => (
+                        <DropdownMenuRadioItem key={practice.id} value={String(practice.id)}>
+                          {practice.title} (#{practice.id})
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="mt-3 max-w-md space-y-1.5">
               <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Search</label>
@@ -1348,10 +1449,45 @@ export function SpeakingPage() {
                 </div>
                 {groupedAudioQuestions.map((group) => (
                   <div key={group.practiceId ?? "unknown"} className="space-y-2">
-                    <div className="rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-2 text-sm font-semibold text-grayScale-700">
-                      {group.practiceTitle} {group.practiceId ? `(#${group.practiceId})` : ""}
+                    <div className="rounded-lg border border-grayScale-200 bg-gradient-to-r from-grayScale-50 to-white px-3 py-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="rounded-md border border-grayScale-200 bg-white p-1 text-grayScale-600 hover:bg-grayScale-50"
+                            onClick={() => togglePracticeCollapsed(group.practiceId)}
+                          >
+                            {group.practiceId && collapsedPracticeIds.includes(group.practiceId) ? (
+                              <ChevronRight className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </button>
+                          <label className="inline-flex items-center gap-2 text-sm font-semibold text-grayScale-700">
+                            <input
+                              type="checkbox"
+                              checked={
+                                group.questions.length > 0 &&
+                                group.questions.every((question) => selectedQuestionIds.includes(question.id))
+                              }
+                              onChange={() => togglePracticeSelection(group.practiceId)}
+                            />
+                            {group.practiceTitle} {group.practiceId ? `(#${group.practiceId})` : ""}
+                          </label>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-grayScale-200 text-grayScale-700 hover:bg-white"
+                          onClick={() => handleOpenPracticeEdit(group.practiceId)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit practice
+                        </Button>
+                      </div>
                     </div>
-                    {group.questions.map((question, idx) => (
+                    {(group.practiceId && collapsedPracticeIds.includes(group.practiceId) ? [] : group.questions).map((question, idx) => (
                       <div
                         key={question.id}
                         className={`cursor-pointer rounded-xl border px-4 py-3.5 transition-all sm:px-5 ${
@@ -1746,6 +1882,44 @@ export function SpeakingPage() {
                 disabled={detailDeleting}
               >
                 {detailDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingPractice && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-grayScale-200/80 bg-white shadow-2xl">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50 to-white px-5 py-4">
+              <h3 className="text-base font-semibold text-grayScale-900">
+                Edit practice metadata ({editingPractice.id})
+              </h3>
+            </div>
+            <div className="space-y-4 px-5 py-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Title</label>
+                <Input value={practiceEditTitle} onChange={(e) => setPracticeEditTitle(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Description</label>
+                <Textarea
+                  rows={3}
+                  value={practiceEditDescription}
+                  onChange={(e) => setPracticeEditDescription(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Persona (optional)</label>
+                <Input value={practiceEditPersona} onChange={(e) => setPracticeEditPersona(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-grayScale-100 bg-grayScale-50/40 px-5 py-4">
+              <Button variant="outline" onClick={() => setEditingPractice(null)} disabled={practiceEditSaving}>
+                Cancel
+              </Button>
+              <Button className="bg-brand-500 hover:bg-brand-600" onClick={handleSavePracticeEdit} disabled={practiceEditSaving}>
+                {practiceEditSaving ? "Saving..." : "Save practice"}
               </Button>
             </div>
           </div>

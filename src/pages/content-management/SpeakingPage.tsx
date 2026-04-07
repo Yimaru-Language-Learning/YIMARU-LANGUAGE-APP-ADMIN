@@ -71,6 +71,11 @@ type PracticeFilterOption = {
   title: string
 }
 
+type AudioListQuestion = QuestionDetail & {
+  practice_id: number | null
+  practice_title: string | null
+}
+
 const createEmptyDraft = (): AudioQuestionDraft => ({
   questionText: "",
   difficulty: "EASY",
@@ -138,13 +143,17 @@ function toVimeoEmbedUrl(rawUrl: string): string | null {
 }
 
 export function SpeakingPage() {
-  const [audioQuestions, setAudioQuestions] = useState<QuestionDetail[]>([])
+  const [audioQuestions, setAudioQuestions] = useState<AudioListQuestion[]>([])
   const [audioTotalCount, setAudioTotalCount] = useState(0)
   const [audioPage, setAudioPage] = useState(1)
   const [audioPageSize] = useState(12)
   const [practiceOptions, setPracticeOptions] = useState<PracticeFilterOption[]>([])
   const [selectedPracticeId, setSelectedPracticeId] = useState<string>("")
   const [audioPreviewByQuestionId, setAudioPreviewByQuestionId] = useState<Record<number, string>>({})
+  const [imagePreviewByQuestionId, setImagePreviewByQuestionId] = useState<Record<number, string>>({})
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([])
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [openCreate, setOpenCreate] = useState(false)
@@ -228,17 +237,18 @@ export function SpeakingPage() {
     setLoading(true)
     try {
       const safePage = page < 1 ? 1 : page
-      const offset = (safePage - 1) * audioPageSize
-      let rows: QuestionDetail[] = []
+      let rows: AudioListQuestion[] = []
       let total = 0
 
       if (selectedPracticeId) {
+        const offset = (safePage - 1) * audioPageSize
         const practiceRes = await getPracticeQuestionsByPractice(Number(selectedPracticeId), {
           limit: audioPageSize,
           offset,
           question_type: "AUDIO",
         })
         const practiceData = practiceRes.data?.data
+        const selectedPractice = practiceOptions.find((p) => p.id === Number(selectedPracticeId))
         rows = (practiceData?.questions ?? []).map((q) => ({
           id: q.question_id || q.id,
           question_text: q.question_text,
@@ -253,28 +263,62 @@ export function SpeakingPage() {
           status: q.question_status ?? "DRAFT",
           created_at: "",
           audio_correct_answer_text: q.audio_correct_answer_text ?? undefined,
+          practice_id: Number(selectedPracticeId),
+          practice_title: selectedPractice?.title ?? `Practice #${selectedPracticeId}`,
         }))
-        total = practiceData?.total_count ?? rows.length
-      } else {
-        const res = await getQuestions({
-          question_type: "AUDIO",
-          limit: audioPageSize,
-          offset,
-        })
-        const payload = res.data?.data as unknown
-        const meta = res.data?.metadata as { total_count?: number } | null | undefined
-        if (Array.isArray(payload)) {
-          rows = payload as QuestionDetail[]
-          total = meta?.total_count ?? rows.length
-        } else if (
-          payload &&
-          typeof payload === "object" &&
-          Array.isArray((payload as { questions?: unknown[] }).questions)
-        ) {
-          const data = payload as { questions: QuestionDetail[]; total_count?: number }
-          rows = data.questions
-          total = data.total_count ?? meta?.total_count ?? rows.length
+        const q = searchQuery.trim().toLowerCase()
+        if (q) {
+          rows = rows.filter((question) => {
+            const haystack =
+              `${question.question_text} ${question.audio_correct_answer_text ?? ""} ${question.practice_title ?? ""}`.toLowerCase()
+            return haystack.includes(q)
+          })
         }
+        total = searchQuery.trim() ? rows.length : (practiceData?.total_count ?? rows.length)
+      } else {
+        const groupedRows = await Promise.all(
+          practiceOptions.map(async (practice) => {
+            try {
+              const res = await getPracticeQuestionsByPractice(practice.id, {
+                limit: 100,
+                offset: 0,
+                question_type: "AUDIO",
+              })
+              const questions = res.data?.data?.questions ?? []
+              return questions.map((q) => ({
+                id: q.question_id || q.id,
+                question_text: q.question_text,
+                question_type: q.question_type,
+                difficulty_level: q.difficulty_level ?? undefined,
+                points: q.points ?? 0,
+                explanation: q.explanation ?? undefined,
+                tips: q.tips ?? undefined,
+                voice_prompt: q.voice_prompt ?? undefined,
+                sample_answer_voice_prompt: q.sample_answer_voice_prompt ?? undefined,
+                image_url: q.image_url ?? undefined,
+                status: q.question_status ?? "DRAFT",
+                created_at: "",
+                audio_correct_answer_text: q.audio_correct_answer_text ?? undefined,
+                practice_id: practice.id,
+                practice_title: practice.title,
+              }))
+            } catch {
+              return []
+            }
+          }),
+        )
+        rows = groupedRows.flat()
+        const q = searchQuery.trim().toLowerCase()
+        if (q) {
+          rows = rows.filter((question) => {
+            const haystack =
+              `${question.question_text} ${question.audio_correct_answer_text ?? ""} ${question.practice_title ?? ""}`.toLowerCase()
+            return haystack.includes(q)
+          })
+        }
+        total = rows.length
+        const offset = (safePage - 1) * audioPageSize
+        rows = rows.slice(offset, offset + audioPageSize)
       }
 
       setAudioQuestions(rows)
@@ -287,7 +331,7 @@ export function SpeakingPage() {
     } finally {
       setLoading(false)
     }
-  }, [audioPage, audioPageSize, selectedPracticeId])
+  }, [audioPage, audioPageSize, selectedPracticeId, practiceOptions, searchQuery])
 
   useEffect(() => {
     fetchAudioQuestions()
@@ -445,6 +489,40 @@ export function SpeakingPage() {
       cancelled = true
     }
   }, [audioQuestions, resolvePreviewUrl])
+
+  useEffect(() => {
+    let cancelled = false
+    const withImages = audioQuestions.filter((q) => Boolean(q.image_url))
+    if (withImages.length === 0) {
+      setImagePreviewByQuestionId({})
+      return
+    }
+
+    const resolveAll = async () => {
+      const entries = await Promise.all(
+        withImages.map(async (question) => {
+          try {
+            const url = await resolvePreviewUrl(question.image_url ?? "")
+            return [question.id, url] as const
+          } catch {
+            return [question.id, ""] as const
+          }
+        }),
+      )
+      if (!cancelled) {
+        setImagePreviewByQuestionId(Object.fromEntries(entries))
+      }
+    }
+
+    resolveAll()
+    return () => {
+      cancelled = true
+    }
+  }, [audioQuestions, resolvePreviewUrl])
+
+  useEffect(() => {
+    setSelectedQuestionIds([])
+  }, [selectedPracticeId, audioPage, searchQuery])
 
   const resetCreateForm = () => {
     setSetTitle("")
@@ -1111,6 +1189,54 @@ export function SpeakingPage() {
     }
   }
 
+  const toggleQuestionSelection = (questionId: number) => {
+    setSelectedQuestionIds((prev) =>
+      prev.includes(questionId) ? prev.filter((id) => id !== questionId) : [...prev, questionId],
+    )
+  }
+
+  const toggleSelectAllCurrent = () => {
+    const currentIds = audioQuestions.map((q) => q.id)
+    if (currentIds.length === 0) return
+    const allSelected = currentIds.every((id) => selectedQuestionIds.includes(id))
+    if (allSelected) {
+      setSelectedQuestionIds((prev) => prev.filter((id) => !currentIds.includes(id)))
+    } else {
+      setSelectedQuestionIds((prev) => Array.from(new Set([...prev, ...currentIds])))
+    }
+  }
+
+  const handleBulkDeleteSelected = async () => {
+    if (selectedQuestionIds.length === 0) return
+    setBulkDeleting(true)
+    try {
+      for (const id of selectedQuestionIds) {
+        await deleteQuestion(id)
+      }
+      setSelectedQuestionIds([])
+      await fetchAudioQuestions()
+      toast.success(`Deleted ${selectedQuestionIds.length} AUDIO question(s)`)
+    } catch (error) {
+      console.error("Failed to delete selected AUDIO questions:", error)
+      toast.error("Failed to delete selected AUDIO questions")
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const groupedAudioQuestions = useMemo(() => {
+    const groups = new Map<string, { practiceId: number | null; practiceTitle: string; questions: AudioListQuestion[] }>()
+    for (const q of audioQuestions) {
+      const key = q.practice_id ? String(q.practice_id) : "unassigned"
+      const title = q.practice_title || "Unknown practice"
+      if (!groups.has(key)) {
+        groups.set(key, { practiceId: q.practice_id, practiceTitle: title, questions: [] })
+      }
+      groups.get(key)?.questions.push(q)
+    }
+    return Array.from(groups.values())
+  }, [audioQuestions])
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 pb-10 sm:space-y-8 sm:pb-12">
       <div className="flex flex-col gap-4 border-b border-grayScale-100 pb-6 sm:flex-row sm:items-end sm:justify-between sm:pb-8">
@@ -1164,6 +1290,18 @@ export function SpeakingPage() {
                 ))}
               </select>
             </div>
+            <div className="mt-3 max-w-md space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Search</label>
+              <Input
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setAudioPage(1)
+                }}
+                placeholder="Search question text, answer text, or practice..."
+                className="h-10"
+              />
+            </div>
             <p className="mt-1 text-xs font-normal text-grayScale-400 sm:text-sm">
               Showing page {audioPage} of {Math.max(1, Math.ceil(audioTotalCount / audioPageSize))} ({audioTotalCount} total)
             </p>
@@ -1186,57 +1324,105 @@ export function SpeakingPage() {
               </div>
             ) : (
               <div className="space-y-2.5">
-                {audioQuestions.map((question, idx) => (
-                  <div
-                    key={question.id}
-                    className={`cursor-pointer rounded-xl border px-4 py-3.5 transition-all sm:px-5 ${
-                      idx % 2 === 0 ? "border-grayScale-200 bg-white" : "border-grayScale-100 bg-grayScale-50/80"
-                    } hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-sm`}
-                    onClick={() => handleOpenQuestionDetail(question.id)}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-grayScale-200 bg-grayScale-50/40 px-3 py-2">
+                  <label className="inline-flex items-center gap-2 text-sm text-grayScale-700">
+                    <input
+                      type="checkbox"
+                      checked={
+                        audioQuestions.length > 0 && audioQuestions.every((question) => selectedQuestionIds.includes(question.id))
+                      }
+                      onChange={toggleSelectAllCurrent}
+                    />
+                    Select all on this page
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    disabled={selectedQuestionIds.length === 0 || bulkDeleting}
+                    onClick={handleBulkDeleteSelected}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium leading-snug text-grayScale-800">{question.question_text}</p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-red-500 hover:bg-red-50 hover:text-red-600"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setDeleteTarget({ id: question.id, text: question.question_text })
-                          setConfirmDeleteOpen(true)
-                        }}
+                    {bulkDeleting ? "Deleting..." : `Delete selected (${selectedQuestionIds.length})`}
+                  </Button>
+                </div>
+                {groupedAudioQuestions.map((group) => (
+                  <div key={group.practiceId ?? "unknown"} className="space-y-2">
+                    <div className="rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-2 text-sm font-semibold text-grayScale-700">
+                      {group.practiceTitle} {group.practiceId ? `(#${group.practiceId})` : ""}
+                    </div>
+                    {group.questions.map((question, idx) => (
+                      <div
+                        key={question.id}
+                        className={`cursor-pointer rounded-xl border px-4 py-3.5 transition-all sm:px-5 ${
+                          idx % 2 === 0 ? "border-grayScale-200 bg-white" : "border-grayScale-100 bg-grayScale-50/80"
+                        } hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-sm`}
+                        onClick={() => handleOpenQuestionDetail(question.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-md bg-brand-100 px-2 py-0.5 font-medium text-brand-800">AUDIO</span>
-                      <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
-                        Difficulty: {question.difficulty_level || "—"}
-                      </span>
-                      <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
-                        Points: {question.points ?? 0}
-                      </span>
-                      <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
-                        Status: {question.status || "—"}
-                      </span>
-                    </div>
-                    {question.voice_prompt ? (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-medium text-grayScale-500">Voice prompt preview</p>
-                        {audioPreviewByQuestionId[question.id] ? (
-                          <audio controls src={audioPreviewByQuestionId[question.id]} className="h-10 w-full max-w-sm" />
-                        ) : (
-                          <p className="text-xs text-grayScale-400">Unable to resolve audio URL.</p>
-                        )}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedQuestionIds.includes(question.id)}
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={() => toggleQuestionSelection(question.id)}
+                              className="mt-1"
+                            />
+                            <p className="text-sm font-medium leading-snug text-grayScale-800">{question.question_text}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setDeleteTarget({ id: question.id, text: question.question_text })
+                              setConfirmDeleteOpen(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                          <span className="rounded-md bg-brand-100 px-2 py-0.5 font-medium text-brand-800">AUDIO</span>
+                          <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
+                            Difficulty: {question.difficulty_level || "—"}
+                          </span>
+                          <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
+                            Points: {question.points ?? 0}
+                          </span>
+                          <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
+                            Status: {question.status || "—"}
+                          </span>
+                        </div>
+                        {question.image_url && imagePreviewByQuestionId[question.id] ? (
+                          <div className="mt-3">
+                            <p className="mb-2 text-xs font-medium text-grayScale-500">Image preview</p>
+                            <img
+                              src={imagePreviewByQuestionId[question.id]}
+                              alt="Question visual"
+                              className="h-20 w-32 rounded-md border border-grayScale-200 object-cover"
+                            />
+                          </div>
+                        ) : null}
+                        {question.voice_prompt ? (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs font-medium text-grayScale-500">Voice prompt preview</p>
+                            {audioPreviewByQuestionId[question.id] ? (
+                              <audio controls src={audioPreviewByQuestionId[question.id]} className="h-10 w-full max-w-sm" />
+                            ) : (
+                              <p className="text-xs text-grayScale-400">Unable to resolve audio URL.</p>
+                            )}
+                          </div>
+                        ) : null}
+                        {question.audio_correct_answer_text ? (
+                          <p className="mt-2 text-xs text-grayScale-500">
+                            <span className="font-medium text-grayScale-600">Correct answer text:</span>{" "}
+                            {question.audio_correct_answer_text}
+                          </p>
+                        ) : null}
                       </div>
-                    ) : null}
-                    {question.audio_correct_answer_text ? (
-                      <p className="mt-2 text-xs text-grayScale-500">
-                        <span className="font-medium text-grayScale-600">Correct answer text:</span>{" "}
-                        {question.audio_correct_answer_text}
-                      </p>
-                    ) : null}
+                    ))}
                   </div>
                 ))}
                 {audioTotalCount > audioPageSize ? (

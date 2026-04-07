@@ -42,18 +42,34 @@ export function PracticeDetailsPage() {
   const fetchPractices = useCallback(async () => {
     setLoadingList(true)
     try {
-      const res = await getQuestionSets({ set_type: "PRACTICE" })
-      const payload = res.data?.data as unknown
-      let sets: QuestionSet[] = []
-      if (Array.isArray(payload)) {
-        sets = payload as QuestionSet[]
-      } else if (
-        payload &&
-        typeof payload === "object" &&
-        Array.isArray((payload as { question_sets?: unknown[] }).question_sets)
-      ) {
-        sets = (payload as { question_sets: QuestionSet[] }).question_sets
+      const batchSize = 100
+      let offset = 0
+      let total = Number.POSITIVE_INFINITY
+      const sets: QuestionSet[] = []
+
+      while (sets.length < total) {
+        const res = await getQuestionSets({ set_type: "PRACTICE", limit: batchSize, offset })
+        const payload = res.data?.data as unknown
+        let chunk: QuestionSet[] = []
+        let chunkTotal = 0
+        if (Array.isArray(payload)) {
+          chunk = payload as QuestionSet[]
+          chunkTotal = chunk.length
+        } else if (
+          payload &&
+          typeof payload === "object" &&
+          Array.isArray((payload as { question_sets?: unknown[] }).question_sets)
+        ) {
+          const mapped = payload as { question_sets: QuestionSet[]; total_count?: number }
+          chunk = mapped.question_sets
+          chunkTotal = mapped.total_count ?? chunk.length
+        }
+        sets.push(...chunk)
+        total = chunkTotal
+        if (chunk.length < batchSize) break
+        offset += chunk.length
       }
+
       setPractices(sets)
       if (sets.length > 0) {
         setSelectedPracticeId((prev) => prev ?? sets[0].id)

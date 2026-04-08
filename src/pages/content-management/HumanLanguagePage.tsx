@@ -907,30 +907,43 @@ export function HumanLanguagePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-grayScale-200 bg-gradient-to-r from-white to-brand-50/30 p-5 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-brand-100 p-2 text-brand-700">
-            <Languages className="h-5 w-5" />
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 pb-10">
+      <div className="overflow-hidden rounded-3xl border border-brand-100/70 bg-gradient-to-r from-white via-brand-50/20 to-violet-50/40 p-6 shadow-sm sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl bg-brand-100 p-2.5 text-brand-700 shadow-sm ring-1 ring-brand-200/70">
+              <Languages className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-grayScale-900">Human Language Content</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-grayScale-600">
+                Manage CEFR learning paths from A1 to C3 with quick lesson and practice oversight.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold text-grayScale-900">Human Language Content</h2>
-            <p className="mt-1 text-sm text-grayScale-500">
-              Dedicated management view for CEFR levels A1 to C3 with no sub-levels.
-            </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-grayScale-700 ring-1 ring-grayScale-200">
+              {selectedCourses.length} path{selectedCourses.length === 1 ? "" : "s"}
+            </span>
+            <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-grayScale-700 ring-1 ring-grayScale-200">
+              {subCategories.length} sub-categor{subCategories.length === 1 ? "y" : "ies"}
+            </span>
+            <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-grayScale-700 ring-1 ring-grayScale-200">
+              {visibleCefrLevels.length} level{visibleCefrLevels.length === 1 ? "" : "s"}
+            </span>
           </div>
         </div>
       </div>
 
-      <Card className="border-grayScale-200/80 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">Filters</CardTitle>
+      <Card className="sticky top-3 z-20 border-grayScale-200/80 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-grayScale-900">Filters</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-1.5">
             <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Subcategory</label>
             <select
-              className="h-10 w-full rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+              className="h-11 w-full rounded-xl border border-grayScale-200 bg-white px-3 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
               value={selectedSubCategoryId}
               onChange={(e) =>
                 setSelectedSubCategoryId(e.target.value === "ALL" ? "ALL" : Number(e.target.value))
@@ -947,7 +960,7 @@ export function HumanLanguagePage() {
           <div className="space-y-1.5">
             <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Course</label>
             <select
-              className="h-10 w-full rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+              className="h-11 w-full rounded-xl border border-grayScale-200 bg-white px-3 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
               value={selectedCourseId}
               onChange={(e) =>
                 setSelectedCourseId(e.target.value === "ALL" ? "ALL" : Number(e.target.value))
@@ -964,7 +977,7 @@ export function HumanLanguagePage() {
           <div className="space-y-1.5">
             <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Fetch lessons by level</label>
             <select
-              className="h-10 w-full rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+              className="h-11 w-full rounded-xl border border-grayScale-200 bg-white px-3 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value as CefrLevel | "ALL")}
             >
@@ -985,7 +998,7 @@ export function HumanLanguagePage() {
           Loading human language lessons...
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {availableCourses.length === 0 ? (
             <Card className="overflow-hidden border-grayScale-200/80">
               <div className="flex items-center justify-between border-b border-grayScale-100 bg-white px-5 py-4">
@@ -993,7 +1006,7 @@ export function HumanLanguagePage() {
                 <div className="relative w-full max-w-sm">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
                   <input
-                    className="h-11 w-full rounded-xl border border-grayScale-200 bg-white pl-9 pr-3 text-sm"
+                    className="h-11 w-full rounded-xl border border-grayScale-200 bg-white pl-9 pr-3 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
                     placeholder="Search sub-categories..."
                     value={quickSearch}
                     onChange={(e) => setQuickSearch(e.target.value)}
@@ -1011,13 +1024,13 @@ export function HumanLanguagePage() {
                   </p>
                   <div className="mx-auto mt-5 grid max-w-3xl grid-cols-1 gap-2 md:grid-cols-3">
                     <input
-                      className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+                      className="h-11 rounded-xl border border-grayScale-200 bg-white px-3 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
                       placeholder="Subcategory (e.g., English)"
                       value={quickSubCategoryName}
                       onChange={(e) => setQuickSubCategoryName(e.target.value)}
                     />
                     <input
-                      className="h-10 rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+                      className="h-11 rounded-xl border border-grayScale-200 bg-white px-3 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
                       placeholder="Course (e.g., Speaking)"
                       value={quickCourseName}
                       onChange={(e) => setQuickCourseName(e.target.value)}
@@ -1046,8 +1059,8 @@ export function HumanLanguagePage() {
                 const pathLevelsFull = levelsDone.length >= CEFR_LEVELS.length
 
                 return (
-                  <Card key={course.course_id} className="overflow-hidden border-grayScale-200/80 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-grayScale-100 bg-white px-4 py-3">
+                  <Card key={course.course_id} className="overflow-hidden border-grayScale-200/80 shadow-sm transition-shadow hover:shadow-md">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-grayScale-100 bg-gradient-to-r from-white to-grayScale-50/40 px-4 py-3.5">
                       <button
                         type="button"
                         className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -1059,6 +1072,9 @@ export function HumanLanguagePage() {
                           <ChevronDown className="h-5 w-5 shrink-0 text-grayScale-500" aria-hidden />
                         )}
                         <span className="text-base font-semibold text-brand-700">{course.course_name}</span>
+                        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-100">
+                          {levelsDone.length}/{CEFR_LEVELS.length} levels
+                        </span>
                       </button>
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button
@@ -1080,7 +1096,7 @@ export function HumanLanguagePage() {
                       </div>
                     </div>
                     {!pathCollapsed ? (
-                    <CardContent className="space-y-3 p-4">
+                    <CardContent className="space-y-3 p-4 sm:p-5">
                       {courseLevels.length === 0 ? (
                         <p className="text-sm text-grayScale-500">No levels match the current level filter.</p>
                       ) : (
@@ -1091,8 +1107,8 @@ export function HumanLanguagePage() {
                           const levelRemoveIds = modules.flatMap((m) => m.sub_modules.map((s) => s.id))
                           const canRemoveLevel = levelRemoveIds.length > 0
                           return (
-                            <div key={levelKey} className="overflow-hidden rounded-lg border border-grayScale-200/90">
-                              <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/60 px-4 py-3">
+                            <div key={levelKey} className="overflow-hidden rounded-xl border border-grayScale-200/90 bg-white shadow-sm">
+                              <div className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-4 py-3">
                                 <button
                                   type="button"
                                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -1126,11 +1142,12 @@ export function HumanLanguagePage() {
                                 </Button>
                               </div>
                               {!collapsedLevels.includes(levelKey) ? (
-                                <div className="space-y-2 p-3">
+                                <div className="space-y-2.5 p-3.5">
                                   <div className="flex items-center justify-between gap-2">
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      className="h-8 border-grayScale-200 bg-white text-xs hover:border-brand-200 hover:bg-brand-50/40"
                                       onClick={() => handleCreateModule(course.course_id, level, modules)}
                                       disabled={creatingKey === `module-${course.course_id}-${level}`}
                                     >
@@ -1146,13 +1163,14 @@ export function HumanLanguagePage() {
                                     <p className="text-xs text-grayScale-500">No modules yet. Use “Add Module” to start.</p>
                                   ) : (
                                     modules.map((module) => (
-                                      <div key={module.id} className="rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-3">
+                                      <div key={module.id} className="rounded-xl border border-grayScale-100 bg-gradient-to-b from-grayScale-50/70 to-white p-3.5">
                                         <div className="flex items-center justify-between gap-2">
                                           <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
                                           <div className="flex gap-2">
                                             <Button
                                               size="sm"
                                               variant="outline"
+                                              className="h-8 border-grayScale-200 bg-white text-xs hover:border-brand-200 hover:bg-brand-50/40"
                                               onClick={() =>
                                                 handleCreateSubModule(course.course_id, level, module.title, module.sub_modules)
                                               }
@@ -1169,7 +1187,7 @@ export function HumanLanguagePage() {
                                               type="button"
                                               size="sm"
                                               variant="outline"
-                                              className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                                              className="h-8 gap-1 border-red-200/90 bg-white px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                               disabled={deletingKey === `module-${module.id}`}
                                               onClick={() =>
                                                 requestRemove({
@@ -1210,9 +1228,9 @@ export function HumanLanguagePage() {
                                           return (
                                             <div
                                               key={subModule.id}
-                                              className="mt-2 overflow-hidden rounded-lg border border-grayScale-200/90 bg-white shadow-sm"
+                                              className="mt-2 overflow-hidden rounded-xl border border-grayScale-200/90 bg-white shadow-sm"
                                             >
-                                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-grayScale-50/90 px-3 py-2.5">
+                                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/90 to-white px-3 py-2.5">
                                                 <p className="text-sm font-semibold text-grayScale-800">
                                                   Sub-module: {subModule.title}
                                                 </p>
@@ -1221,7 +1239,7 @@ export function HumanLanguagePage() {
                                                     <Link
                                                       to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}`}
                                                     >
-                                                      <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
+                                                      <Button type="button" variant="outline" size="sm" className="h-8 border-grayScale-200 bg-white text-xs hover:border-brand-200 hover:bg-brand-50/40">
                                                         Open editor
                                                       </Button>
                                                     </Link>
@@ -1229,7 +1247,7 @@ export function HumanLanguagePage() {
                                                       type="button"
                                                       size="sm"
                                                       variant="outline"
-                                                      className="h-8 gap-1 border-red-200/90 px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                                                      className="h-8 gap-1 border-red-200/90 bg-white px-2.5 text-xs font-medium text-red-600 hover:bg-red-50"
                                                       disabled={deletingKey === `submodule-${subModule.id}`}
                                                       onClick={() =>
                                                         requestRemove({
@@ -1290,7 +1308,7 @@ export function HumanLanguagePage() {
                                                       type="button"
                                                       size="sm"
                                                       variant="outline"
-                                                      className="h-7 px-2 text-[11px]"
+                                                      className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
                                                       onClick={() => openCreatePracticeDialog(subModule.id)}
                                                     >
                                                       <Plus className="h-3.5 w-3.5" />
@@ -1300,7 +1318,7 @@ export function HumanLanguagePage() {
                                                 </div>
                                               </div>
 
-                                              <div className="p-3">
+                                              <div className="p-3.5">
                                                 {panelTab === "lessons" ? (
                                                   lessonRows.length === 0 ? (
                                                     <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/40 px-4 py-8 text-center text-sm text-grayScale-500">

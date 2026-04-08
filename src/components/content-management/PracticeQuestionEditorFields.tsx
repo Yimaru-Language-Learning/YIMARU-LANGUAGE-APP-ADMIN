@@ -909,7 +909,7 @@ export function PracticeQuestionEditorFields({
       </div>
 
       {recordingModal ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-grayScale-200/80 bg-white p-6 shadow-2xl">
             <p className="text-center text-base font-semibold text-grayScale-900">Recording {recordingModal.label}</p>
             <p className="mt-1 text-center text-xs text-grayScale-500">

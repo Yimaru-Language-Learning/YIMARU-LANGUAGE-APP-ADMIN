@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ChangeEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
   ChevronDown,
@@ -42,7 +42,8 @@ import {
   getQuestionById,
   getPracticeQuestions,
   getPracticeQuestionsByPractice,
-  updatePractice,
+  getQuestionSetById,
+  updateQuestionSet,
   updateQuestion,
 } from "../../api/courses.api"
 import { Badge } from "../../components/ui/badge"
@@ -58,6 +59,7 @@ import type {
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
 import { Input } from "../../components/ui/input"
+import { uploadVideoFile } from "../../api/files.api"
 import { resolveMediaPreviewUrl } from "../../lib/practiceMedia"
 import {
   createEmptyPracticeQuestionDraft,
@@ -309,6 +311,8 @@ export function HumanLanguagePage() {
   const [selectedCourseId, setSelectedCourseId] = useState<number | "ALL">("ALL")
   const [selectedLevel, setSelectedLevel] = useState<CefrLevel | "ALL">("ALL")
   const [collapsedLevels, setCollapsedLevels] = useState<string[]>([])
+  const [collapsedModuleIds, setCollapsedModuleIds] = useState<number[]>([])
+  const [collapsedSubModuleIds, setCollapsedSubModuleIds] = useState<number[]>([])
   const [creatingKey, setCreatingKey] = useState<string | null>(null)
   const [quickSubCategoryName, setQuickSubCategoryName] = useState("")
   const [quickCourseName, setQuickCourseName] = useState("")
@@ -325,7 +329,15 @@ export function HumanLanguagePage() {
   const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
   const [practiceDialog, setPracticeDialog] = useState<PracticeDialogState>({ open: false })
   const [questionDialog, setQuestionDialog] = useState<QuestionDialogState>({ open: false })
-  const [practiceForm, setPracticeForm] = useState({ title: "", description: "", persona: "" })
+  const [practiceForm, setPracticeForm] = useState({
+    title: "",
+    description: "",
+    persona: "",
+    introVideoUrl: "",
+    passingScore: 50,
+    timeLimitMinutes: 60,
+    shuffleQuestions: false,
+  })
   const [questionDraft, setQuestionDraft] = useState<PracticeQuestionEditorValue>(() => createEmptyPracticeQuestionDraft())
   const [questionDetailById, setQuestionDetailById] = useState<Record<number, QuestionDetail>>({})
   const [practiceTargetDelete, setPracticeTargetDelete] = useState<{ id: number; title: string } | null>(null)
@@ -341,6 +353,8 @@ export function HumanLanguagePage() {
   const [questionSubmitAttempted, setQuestionSubmitAttempted] = useState(false)
   const [practiceFormTouched, setPracticeFormTouched] = useState(false)
   const [questionFormTouched, setQuestionFormTouched] = useState(false)
+  const [loadingPracticeForm, setLoadingPracticeForm] = useState(false)
+  const [uploadingPracticeIntroVideo, setUploadingPracticeIntroVideo] = useState(false)
 
   const renderMediaPreview = (
     urlRaw: string,
@@ -425,6 +439,18 @@ export function HumanLanguagePage() {
   const togglePathCollapsed = (courseId: number) => {
     setCollapsedPathIds((prev) =>
       prev.includes(courseId) ? prev.filter((id) => id !== courseId) : [...prev, courseId],
+    )
+  }
+
+  const toggleModuleCollapsed = (moduleId: number) => {
+    setCollapsedModuleIds((prev) =>
+      prev.includes(moduleId) ? prev.filter((id) => id !== moduleId) : [...prev, moduleId],
+    )
+  }
+
+  const toggleSubModuleCollapsed = (subModuleId: number) => {
+    setCollapsedSubModuleIds((prev) =>
+      prev.includes(subModuleId) ? prev.filter((id) => id !== subModuleId) : [...prev, subModuleId],
     )
   }
 
@@ -643,7 +669,16 @@ export function HumanLanguagePage() {
   const getSubModuleSelection = (smKey: string): SubModuleCardSelection =>
     subModuleCardSelection[smKey] ?? { lessonId: null, practiceId: null }
 
-  const resetPracticeForm = () => setPracticeForm({ title: "", description: "", persona: "" })
+  const resetPracticeForm = () =>
+    setPracticeForm({
+      title: "",
+      description: "",
+      persona: "",
+      introVideoUrl: "",
+      passingScore: 50,
+      timeLimitMinutes: 60,
+      shuffleQuestions: false,
+    })
   const resetQuestionForm = () => {
     setQuestionDraft(createEmptyPracticeQuestionDraft())
   }
@@ -656,11 +691,37 @@ export function HumanLanguagePage() {
     navigate(`/content/human-language/${categoryId}/${courseId}/sub-module/${subModuleId}/add-practice`)
   }
 
-  const openEditPracticeDialog = (subModuleId: number, p: LearningPathPractice) => {
+  const openEditPracticeDialog = async (subModuleId: number, p: LearningPathPractice) => {
     setPracticeSubmitAttempted(false)
     setPracticeFormTouched(false)
-    setPracticeForm({ title: p.title ?? "", description: "", persona: "" })
     setPracticeDialog({ open: true, mode: "edit", subModuleId, practiceId: p.id })
+    setLoadingPracticeForm(true)
+    try {
+      const detail = (await getQuestionSetById(p.id)).data?.data
+      setPracticeForm({
+        title: detail?.title ?? p.title ?? "",
+        description: detail?.description ?? "",
+        persona: detail?.persona ?? "",
+        introVideoUrl: detail?.intro_video_url ?? "",
+        passingScore: detail?.passing_score ?? 50,
+        timeLimitMinutes: detail?.time_limit_minutes ?? 60,
+        shuffleQuestions: detail?.shuffle_questions ?? false,
+      })
+    } catch (error) {
+      console.error("Failed to load practice detail:", error)
+      setPracticeForm({
+        title: p.title ?? "",
+        description: "",
+        persona: "",
+        introVideoUrl: "",
+        passingScore: 50,
+        timeLimitMinutes: 60,
+        shuffleQuestions: false,
+      })
+      toast.error("Could not load full practice details")
+    } finally {
+      setLoadingPracticeForm(false)
+    }
   }
 
   const practiceFieldErrors = useMemo(() => {
@@ -689,10 +750,14 @@ export function HumanLanguagePage() {
         })
         toast.success("Practice created")
       } else if (practiceDialog.practiceId) {
-        await updatePractice(practiceDialog.practiceId, {
+        await updateQuestionSet(practiceDialog.practiceId, {
           title: practiceForm.title.trim(),
-          description: practiceForm.description.trim(),
+          description: practiceForm.description.trim() || undefined,
           persona: practiceForm.persona.trim() || undefined,
+          intro_video_url: practiceForm.introVideoUrl.trim() || undefined,
+          passing_score: Number.isFinite(practiceForm.passingScore) ? practiceForm.passingScore : undefined,
+          time_limit_minutes: Number.isFinite(practiceForm.timeLimitMinutes) ? practiceForm.timeLimitMinutes : undefined,
+          shuffle_questions: practiceForm.shuffleQuestions,
         })
         toast.success("Practice updated")
       }
@@ -706,6 +771,30 @@ export function HumanLanguagePage() {
       toast.error("Failed to save practice")
     } finally {
       setSavingPractice(false)
+    }
+  }
+
+  const handlePracticeIntroVideoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+    setUploadingPracticeIntroVideo(true)
+    try {
+      const uploadRes = await uploadVideoFile(file, {
+        title: practiceForm.title.trim() || file.name.replace(/\.[^.]+$/, "") || "Practice intro",
+        description: practiceForm.description.trim() || undefined,
+      })
+      const finalUrl = uploadRes.data?.data?.embed_url?.trim()
+        ? `${uploadRes.data.data.embed_url}?h=${uploadRes.data.data.url?.split("/").filter(Boolean).at(-1) ?? ""}`
+        : uploadRes.data?.data?.url?.trim()
+      if (!finalUrl) throw new Error("Missing uploaded video url")
+      setPracticeForm((prev) => ({ ...prev, introVideoUrl: finalUrl }))
+      toast.success("Intro video uploaded")
+    } catch (error) {
+      console.error("Failed to upload intro video:", error)
+      toast.error("Failed to upload intro video")
+    } finally {
+      setUploadingPracticeIntroVideo(false)
     }
   }
 
@@ -1215,8 +1304,26 @@ export function HumanLanguagePage() {
                                   ) : (
                                     modules.map((module) => (
                                       <div key={module.id} className="rounded-xl border border-grayScale-100 bg-gradient-to-b from-grayScale-50/70 to-white p-3.5">
+                                        {(() => {
+                                          const moduleCollapsed = collapsedModuleIds.includes(module.id)
+                                          return (
+                                            <>
                                         <div className="flex items-center justify-between gap-2">
-                                          <p className="text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleModuleCollapsed(module.id)}
+                                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                          >
+                                            {moduleCollapsed ? (
+                                              <ChevronRight className="h-4 w-4 shrink-0 text-grayScale-500" />
+                                            ) : (
+                                              <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-500" />
+                                            )}
+                                            <p className="truncate text-sm font-semibold text-grayScale-900">Module: {module.title}</p>
+                                            <span className="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                                              {module.sub_modules.length} sub-module(s)
+                                            </span>
+                                          </button>
                                           <div className="flex gap-2">
                                             <Button
                                               size="sm"
@@ -1256,7 +1363,8 @@ export function HumanLanguagePage() {
                                             </Button>
                                           </div>
                                         </div>
-                                        {module.sub_modules.map((subModule) => {
+                                        {!moduleCollapsed ? module.sub_modules.map((subModule) => {
+                                          const subModuleCollapsed = collapsedSubModuleIds.includes(subModule.id)
                                           const smKey = `${course.course_id}-${subModule.id}`
                                           const panelTab = subModulePanelTab[smKey] ?? "lessons"
                                           const cardSel = getSubModuleSelection(smKey)
@@ -1282,9 +1390,20 @@ export function HumanLanguagePage() {
                                               className="mt-2 overflow-hidden rounded-xl border border-grayScale-200/90 bg-white shadow-sm"
                                             >
                                               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/90 to-white px-3 py-2.5">
-                                                <p className="text-sm font-semibold text-grayScale-800">
-                                                  Sub-module: {subModule.title}
-                                                </p>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => toggleSubModuleCollapsed(subModule.id)}
+                                                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                                >
+                                                  {subModuleCollapsed ? (
+                                                    <ChevronRight className="h-4 w-4 shrink-0 text-grayScale-500" />
+                                                  ) : (
+                                                    <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-500" />
+                                                  )}
+                                                  <p className="truncate text-sm font-semibold text-grayScale-800">
+                                                    Sub-module: {subModule.title}
+                                                  </p>
+                                                </button>
                                                 {categoryId ? (
                                                   <div className="flex flex-wrap items-center gap-2">
                                                     <Link
@@ -1317,7 +1436,8 @@ export function HumanLanguagePage() {
                                                   </div>
                                                 ) : null}
                                               </div>
-
+                                              {!subModuleCollapsed ? (
+                                              <>
                                               <div className="border-b border-grayScale-100 bg-white px-3">
                                                 <div className="-mb-px flex items-center justify-between gap-4">
                                                   <div className="flex gap-6">
@@ -1580,15 +1700,6 @@ export function HumanLanguagePage() {
                                                                   {practiceFetch.questions.length} loaded
                                                                 </span>
                                                               ) : null}
-                                                              {categoryId ? (
-                                                                <Button type="button" variant="outline" size="sm" className="h-8 text-xs" asChild>
-                                                                  <Link
-                                                                    to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}/practices/${selectedPracticeMeta.id}/questions`}
-                                                                  >
-                                                                    Edit in full view
-                                                                  </Link>
-                                                                </Button>
-                                                              ) : null}
                                                             </div>
                                                           </div>
                                                         </div>
@@ -1623,8 +1734,7 @@ export function HumanLanguagePage() {
                                                               No questions in this practice yet.
                                                             </p>
                                                             <p className="mt-1 text-xs text-grayScale-500">
-                                                              Add them via <span className="font-medium text-grayScale-700">Open editor</span>{" "}
-                                                              or <span className="font-medium text-grayScale-700">Edit in full view</span>.
+                                                              Add them via <span className="font-medium text-grayScale-700">Open editor</span>.
                                                             </p>
                                                           </div>
                                                         ) : (
@@ -1785,9 +1895,7 @@ export function HumanLanguagePage() {
                                                         practiceFetch.totalCount > practiceFetch.questions.length ? (
                                                           <div className="mt-4 rounded-lg border border-grayScale-100 bg-white/80 px-3 py-2 text-center text-xs text-grayScale-600">
                                                             Showing <span className="font-semibold">{practiceFetch.questions.length}</span> of{" "}
-                                                            <span className="font-semibold">{practiceFetch.totalCount}</span> questions. Open{" "}
-                                                            <span className="font-medium text-grayScale-800">Edit in full view</span> for the
-                                                            rest.
+                                                            <span className="font-semibold">{practiceFetch.totalCount}</span> questions.
                                                           </div>
                                                         ) : null}
                                                         </div>
@@ -1800,9 +1908,14 @@ export function HumanLanguagePage() {
                                                   </div>
                                                 )}
                                               </div>
+                                              </>
+                                              ) : null}
                                             </div>
                                           )
-                                        })}
+                                        }) : null}
+                                            </>
+                                          )
+                                        })()}
                                       </div>
                                     ))
                                   )}
@@ -1848,17 +1961,23 @@ export function HumanLanguagePage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{practiceDialog.open && practiceDialog.mode === "edit" ? "Edit Practice" : "Create Practice"}</DialogTitle>
             <DialogDescription>
-              Manage practice metadata directly from this page.
+              Manage full practice (question set) metadata directly from this page.
               {!practiceCanSave ? (
                 <span className="mt-1 block text-amber-700/90">Required fields must be completed before you can save.</span>
               ) : null}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          {loadingPracticeForm ? (
+            <div className="flex items-center gap-2 rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-3 text-sm text-grayScale-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading practice details...
+            </div>
+          ) : (
+          <div className="space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-medium text-grayScale-600">Title</label>
               <input
@@ -1906,12 +2025,89 @@ export function HumanLanguagePage() {
                 placeholder="Optional persona"
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-grayScale-600">Intro video URL</label>
+              <Input
+                value={practiceForm.introVideoUrl}
+                onChange={(e) => {
+                  setPracticeFormTouched(true)
+                  setPracticeForm((p) => ({ ...p, introVideoUrl: e.target.value }))
+                }}
+                placeholder="https://..."
+                className="h-10 font-mono text-[13px]"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-grayScale-200 px-3 py-2 text-xs text-grayScale-700 hover:bg-grayScale-50">
+                  {uploadingPracticeIntroVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+                  {uploadingPracticeIntroVideo ? "Uploading..." : "Upload intro video"}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) => void handlePracticeIntroVideoFileChange(e)}
+                    disabled={uploadingPracticeIntroVideo || savingPractice}
+                  />
+                </label>
+              </div>
+              {practiceForm.introVideoUrl.trim()
+                ? renderMediaPreview(practiceForm.introVideoUrl, "video", "", "Intro video")
+                : null}
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-grayScale-600">Passing score</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={practiceForm.passingScore}
+                  onChange={(e) => {
+                    setPracticeFormTouched(true)
+                    setPracticeForm((p) => ({ ...p, passingScore: Number(e.target.value) || 0 }))
+                  }}
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-grayScale-600">Time limit (minutes)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={practiceForm.timeLimitMinutes}
+                  onChange={(e) => {
+                    setPracticeFormTouched(true)
+                    setPracticeForm((p) => ({ ...p, timeLimitMinutes: Number(e.target.value) || 0 }))
+                  }}
+                  className="h-10"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-grayScale-200 px-3 py-2.5">
+              <label className="text-sm font-medium text-grayScale-700">Shuffle questions</label>
+              <button
+                type="button"
+                onClick={() => {
+                  setPracticeFormTouched(true)
+                  setPracticeForm((p) => ({ ...p, shuffleQuestions: !p.shuffleQuestions }))
+                }}
+                className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${
+                  practiceForm.shuffleQuestions ? "bg-brand-500" : "bg-grayScale-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                    practiceForm.shuffleQuestions ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setPracticeDialog({ open: false })}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => void handleSavePractice()} disabled={savingPractice || !practiceCanSave}>
+            <Button type="button" onClick={() => void handleSavePractice()} disabled={savingPractice || !practiceCanSave || loadingPracticeForm}>
               {savingPractice ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>

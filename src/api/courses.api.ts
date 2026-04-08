@@ -242,6 +242,9 @@ export const getQuestionSetQuestions = (questionSetId: number) =>
 export const createQuestionSet = (data: CreateQuestionSetRequest) =>
   http.post<CreateQuestionSetResponse>("/question-sets", data)
 
+export const updateQuestionSet = (questionSetId: number, data: Partial<CreateQuestionSetRequest>) =>
+  http.put(`/question-sets/${questionSetId}`, data)
+
 export const addQuestionToSet = (questionSetId: number, data: AddQuestionToSetRequest) =>
   http.post(`/question-sets/${questionSetId}/questions`, data)
 

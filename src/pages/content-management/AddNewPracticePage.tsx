@@ -856,6 +856,30 @@ export function AddNewPracticePage() {
                   {introVideoUrl.trim() || "—"}
                 </span>
               </div>
+              {introVideoPreview ? (
+                <div className="bg-grayScale-50/50 px-6 py-4">
+                  <span className="text-sm text-grayScale-500">Intro video preview</span>
+                  <div className="mt-2 rounded-lg border border-grayScale-200 bg-white p-3">
+                    {introVideoPreview.kind === "vimeo" ? (
+                      <div className="overflow-hidden rounded-lg border border-grayScale-200 bg-black">
+                        <iframe
+                          src={introVideoPreview.url}
+                          title="Intro video preview"
+                          className="aspect-video w-full"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <video
+                        controls
+                        src={introVideoPreview.url}
+                        className="aspect-video w-full rounded-lg border border-grayScale-200 bg-black"
+                      />
+                    )}
+                  </div>
+                </div>
+              ) : null}
               <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
                 <span className="text-sm text-grayScale-500">Passing Score</span>
                 <span className="text-sm font-medium text-grayScale-900">{passingScore}%</span>

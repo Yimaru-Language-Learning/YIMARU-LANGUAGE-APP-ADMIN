@@ -96,6 +96,53 @@ function isDirectVideoFile(url: string): boolean {
   return /\.(mp4|webm|ogg|mov|m4v)$/.test(clean)
 }
 
+function escapeHtml(raw: string): string {
+  return raw
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function sanitizeAdminRichTextHtml(input: string): string {
+  if (!input.trim()) return ""
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(input, "text/html")
+    const blockedTags = new Set(["script", "style", "iframe", "object", "embed", "link", "meta"])
+    doc.body.querySelectorAll("*").forEach((el) => {
+      const tagName = el.tagName.toLowerCase()
+      if (blockedTags.has(tagName)) {
+        el.remove()
+        return
+      }
+      const attrs = [...el.attributes]
+      attrs.forEach((attr) => {
+        const name = attr.name.toLowerCase()
+        const value = attr.value.trim().toLowerCase()
+        if (name.startsWith("on")) {
+          el.removeAttribute(attr.name)
+          return
+        }
+        if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
+          el.removeAttribute(attr.name)
+        }
+      })
+    })
+    return doc.body.innerHTML
+  } catch {
+    return escapeHtml(input).replace(/\r?\n/g, "<br />")
+  }
+}
+
+function formatDescriptionForPreview(raw: string): string {
+  if (!raw.trim()) return ""
+  const hasHtml = /<\/?[a-z][\s\S]*>/i.test(raw)
+  if (hasHtml) return sanitizeAdminRichTextHtml(raw)
+  return escapeHtml(raw).replace(/\r?\n/g, "<br />")
+}
+
 function createEmptyQuestion(id: string): Question {
   return {
     id,
@@ -229,6 +276,11 @@ export function AddNewPracticePage() {
     if (isDirectVideoFile(raw)) return { kind: "video" as const, url: raw }
     return null
   }, [introVideoUrl])
+
+  const descriptionPreviewHtml = useMemo(
+    () => formatDescriptionForPreview(practiceDescription),
+    [practiceDescription],
+  )
 
   const addQuestion = () => {
     setQuestions([...questions, createEmptyQuestion(String(Date.now()))])
@@ -430,6 +482,9 @@ export function AddNewPracticePage() {
                     className="min-h-[88px] w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
                     rows={3}
                   />
+                  <p className="text-xs text-grayScale-500">
+                    Supports plain text and formatted HTML (for headings, lists, italics, and emphasis).
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -777,9 +832,16 @@ export function AddNewPracticePage() {
                 <span className="text-sm text-grayScale-500">Title</span>
                 <span className="text-sm font-medium text-grayScale-900">{practiceTitle || "Untitled Practice"}</span>
               </div>
-              <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
+              <div className="bg-grayScale-50/50 px-6 py-4">
                 <span className="text-sm text-grayScale-500">Description</span>
-                <span className="max-w-[min(28rem,55%)] text-right text-sm leading-relaxed text-grayScale-700">{practiceDescription || "—"}</span>
+                {descriptionPreviewHtml ? (
+                  <div
+                    className="mt-2 rounded-lg border border-grayScale-200 bg-white px-4 py-3 text-sm leading-relaxed text-grayScale-800 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:text-lg [&_h2]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-2 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
+                    dangerouslySetInnerHTML={{ __html: descriptionPreviewHtml }}
+                  />
+                ) : (
+                  <p className="mt-2 text-sm text-grayScale-400">—</p>
+                )}
               </div>
               <div className="flex justify-between px-6 py-3.5">
                 <span className="text-sm text-grayScale-500">Intro video URL</span>

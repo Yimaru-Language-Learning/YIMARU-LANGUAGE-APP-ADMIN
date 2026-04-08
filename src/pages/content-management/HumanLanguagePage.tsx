@@ -58,6 +58,7 @@ import type {
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
 import { Input } from "../../components/ui/input"
+import { resolveMediaPreviewUrl } from "../../lib/practiceMedia"
 import {
   createEmptyPracticeQuestionDraft,
   PracticeQuestionEditorFields,
@@ -184,6 +185,121 @@ type PendingRemove = {
   description: string
 }
 
+function MediaPreviewCard({
+  urlRaw,
+  hint,
+  className = "mt-2",
+  label,
+}: {
+  urlRaw: string
+  hint?: "audio" | "video" | "image"
+  className?: string
+  label?: string
+}) {
+  const normalized = normalizeUrl(urlRaw)
+  const [resolvedUrl, setResolvedUrl] = useState(normalized)
+  const [resolving, setResolving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!normalized) {
+        setResolvedUrl("")
+        return
+      }
+      if (/^https?:\/\//i.test(normalized)) {
+        setResolvedUrl(normalized)
+        return
+      }
+      setResolving(true)
+      try {
+        const url = await resolveMediaPreviewUrl(normalized)
+        if (!cancelled) setResolvedUrl(url || normalized)
+      } catch {
+        if (!cancelled) setResolvedUrl(normalized)
+      } finally {
+        if (!cancelled) setResolving(false)
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [normalized])
+
+  if (!normalized) return null
+  const previewUrl = resolvedUrl || normalized
+  const mediaType = detectMediaType(previewUrl, hint)
+  const vimeoEmbed = getVimeoEmbedUrl(previewUrl)
+  const showPlayer = mediaType === "image" || mediaType === "video" || mediaType === "audio"
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-grayScale-100 bg-white p-3 shadow-sm",
+        !showPlayer && "border-dashed bg-grayScale-50/50",
+        className,
+      )}
+    >
+      {label ? (
+        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-grayScale-500">
+          {hint === "image" ? (
+            <ImageIcon className="h-3 w-3" aria-hidden />
+          ) : hint === "audio" ? (
+            <Mic className="h-3 w-3" aria-hidden />
+          ) : hint === "video" ? (
+            <Video className="h-3 w-3" aria-hidden />
+          ) : (
+            <Link2 className="h-3 w-3" aria-hidden />
+          )}
+          {label}
+        </p>
+      ) : null}
+      {resolving ? (
+        <div className="flex items-center gap-2 rounded-md border border-grayScale-100 bg-grayScale-50 px-3 py-2 text-xs text-grayScale-500">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Resolving media URL...
+        </div>
+      ) : mediaType === "image" ? (
+        <img
+          src={previewUrl}
+          alt=""
+          className="max-h-52 w-full rounded-md border border-grayScale-200/90 bg-grayScale-50 object-contain"
+        />
+      ) : mediaType === "video" ? (
+        vimeoEmbed ? (
+          <iframe
+            src={vimeoEmbed}
+            title="Vimeo preview"
+            className="aspect-video h-auto min-h-[200px] w-full rounded-md border border-grayScale-200/90 bg-black/5"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <video
+            controls
+            className="max-h-60 w-full rounded-md border border-grayScale-200/90 bg-black/5"
+            src={previewUrl}
+          />
+        )
+      ) : mediaType === "audio" ? (
+        <audio controls className="h-9 w-full" src={previewUrl} />
+      ) : (
+        <p className="text-xs text-grayScale-500">Preview not available for this URL type.</p>
+      )}
+      <a
+        href={previewUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
+      >
+        <Link2 className="h-3 w-3 shrink-0" aria-hidden />
+        Open link
+      </a>
+    </div>
+  )
+}
+
 export function HumanLanguagePage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -231,74 +347,7 @@ export function HumanLanguagePage() {
     hint?: "audio" | "video" | "image",
     className = "mt-2",
     label?: string,
-  ) => {
-    const url = normalizeUrl(urlRaw)
-    if (!url) return null
-    const mediaType = detectMediaType(url, hint)
-    const vimeoEmbed = getVimeoEmbedUrl(url)
-    const showPlayer =
-      mediaType === "image" || mediaType === "video" || mediaType === "audio"
-    return (
-      <div
-        className={cn(
-          "rounded-lg border border-grayScale-100 bg-white p-3 shadow-sm",
-          !showPlayer && "border-dashed bg-grayScale-50/50",
-          className,
-        )}
-      >
-        {label ? (
-          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-grayScale-500">
-            {hint === "image" ? (
-              <ImageIcon className="h-3 w-3" aria-hidden />
-            ) : hint === "audio" ? (
-              <Mic className="h-3 w-3" aria-hidden />
-            ) : hint === "video" ? (
-              <Video className="h-3 w-3" aria-hidden />
-            ) : (
-              <Link2 className="h-3 w-3" aria-hidden />
-            )}
-            {label}
-          </p>
-        ) : null}
-        {mediaType === "image" ? (
-          <img
-            src={url}
-            alt=""
-            className="max-h-52 w-full rounded-md border border-grayScale-200/90 bg-grayScale-50 object-contain"
-          />
-        ) : mediaType === "video" ? (
-          vimeoEmbed ? (
-            <iframe
-              src={vimeoEmbed}
-              title="Vimeo preview"
-              className="aspect-video h-auto min-h-[200px] w-full rounded-md border border-grayScale-200/90 bg-black/5"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <video
-              controls
-              className="max-h-60 w-full rounded-md border border-grayScale-200/90 bg-black/5"
-              src={url}
-            />
-          )
-        ) : mediaType === "audio" ? (
-          <audio controls className="h-9 w-full" src={url} />
-        ) : (
-          <p className="text-xs text-grayScale-500">Preview not available for this URL type.</p>
-        )}
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
-        >
-          <Link2 className="h-3 w-3 shrink-0" aria-hidden />
-          Open link
-        </a>
-      </div>
-    )
-  }
+  ) => <MediaPreviewCard urlRaw={urlRaw} hint={hint} className={className} label={label} />
 
   const loadHierarchy = async () => {
     setLoading(true)
@@ -1713,6 +1762,16 @@ export function HumanLanguagePage() {
                                                                                 )
                                                                               : null}
                                                                           </div>
+                                                                        </div>
+                                                                      ) : null}
+                                                                      {q.audio_correct_answer_text ? (
+                                                                        <div className="rounded-lg border border-blue-100 bg-blue-50/40 px-3 py-2.5">
+                                                                          <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                                                                            Sample answer text
+                                                                          </p>
+                                                                          <p className="mt-1 text-sm leading-relaxed text-blue-900/90">
+                                                                            {q.audio_correct_answer_text}
+                                                                          </p>
                                                                         </div>
                                                                       ) : null}
                                                                     </div>

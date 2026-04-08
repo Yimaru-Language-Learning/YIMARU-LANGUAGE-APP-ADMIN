@@ -73,6 +73,29 @@ function introVideoUrlFromUploadResponse(data: { url?: string; embed_url?: strin
   return pageUrl || null
 }
 
+function toVimeoEmbedUrl(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl.trim())
+    const host = parsed.hostname.toLowerCase()
+    if (!host.includes("vimeo.com")) return null
+    if (host.includes("player.vimeo.com") && parsed.pathname.includes("/video/")) return parsed.toString()
+    const segments = parsed.pathname.split("/").filter(Boolean)
+    const videoId = segments.find((segment) => /^\d+$/.test(segment))
+    if (!videoId) return null
+    const hash = parsed.searchParams.get("h")
+    return hash
+      ? `https://player.vimeo.com/video/${videoId}?h=${encodeURIComponent(hash)}`
+      : `https://player.vimeo.com/video/${videoId}`
+  } catch {
+    return null
+  }
+}
+
+function isDirectVideoFile(url: string): boolean {
+  const clean = url.split("?")[0].toLowerCase()
+  return /\.(mp4|webm|ogg|mov|m4v)$/.test(clean)
+}
+
 function createEmptyQuestion(id: string): Question {
   return {
     id,
@@ -120,6 +143,7 @@ export function AddNewPracticePage() {
   const [practiceDescription, setPracticeDescription] = useState("")
   const [introVideoUrl, setIntroVideoUrl] = useState("")
   const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false)
+  const [importingIntroVideoUrl, setImportingIntroVideoUrl] = useState(false)
   const introVideoFileInputRef = useRef<HTMLInputElement>(null)
   const [shuffleQuestions, setShuffleQuestions] = useState(false)
   const [passingScore, setPassingScore] = useState(50)
@@ -174,6 +198,37 @@ export function AddNewPracticePage() {
       setUploadingIntroVideo(false)
     }
   }
+
+  const handleImportIntroVideoFromUrl = async () => {
+    const source = introVideoUrl.trim()
+    if (!source || !/^https?:\/\//i.test(source)) return
+
+    setImportingIntroVideoUrl(true)
+    try {
+      const uploadRes = await uploadVideoFile(source, {
+        title: practiceTitle.trim() || "Practice intro",
+        description: practiceDescription.trim() || undefined,
+      })
+      const finalUrl = introVideoUrlFromUploadResponse(uploadRes.data?.data)
+      if (!finalUrl) throw new Error("Missing uploaded video url")
+      setIntroVideoUrl(finalUrl)
+      toast.success("Intro video URL imported", { description: "Processed via /files/upload." })
+    } catch (error) {
+      console.error("Failed to import intro video URL:", error)
+      toast.error("Failed to import intro video URL")
+    } finally {
+      setImportingIntroVideoUrl(false)
+    }
+  }
+
+  const introVideoPreview = useMemo(() => {
+    const raw = introVideoUrl.trim()
+    if (!raw) return null
+    const vimeoEmbedUrl = toVimeoEmbedUrl(raw)
+    if (vimeoEmbedUrl) return { kind: "vimeo" as const, url: vimeoEmbedUrl }
+    if (isDirectVideoFile(raw)) return { kind: "video" as const, url: raw }
+    return null
+  }, [introVideoUrl])
 
   const addQuestion = () => {
     setQuestions([...questions, createEmptyQuestion(String(Date.now()))])
@@ -384,6 +439,7 @@ export function AddNewPracticePage() {
                   <Input
                     value={introVideoUrl}
                     onChange={(e) => setIntroVideoUrl(e.target.value)}
+                    onBlur={() => void handleImportIntroVideoFromUrl()}
                     placeholder="https://…"
                     type="url"
                     inputMode="url"
@@ -396,14 +452,14 @@ export function AddNewPracticePage() {
                     accept="video/*"
                     className="hidden"
                     onChange={handleIntroVideoFileChange}
-                    disabled={uploadingIntroVideo}
+                    disabled={uploadingIntroVideo || importingIntroVideoUrl}
                   />
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={uploadingIntroVideo}
+                      disabled={uploadingIntroVideo || importingIntroVideoUrl}
                       onClick={() => introVideoFileInputRef.current?.click()}
                       className="gap-1.5"
                     >
@@ -414,12 +470,50 @@ export function AddNewPracticePage() {
                       )}
                       {uploadingIntroVideo ? "Uploading…" : "Upload video from computer"}
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploadingIntroVideo || importingIntroVideoUrl || !introVideoUrl.trim()}
+                      onClick={() => void handleImportIntroVideoFromUrl()}
+                    >
+                      {importingIntroVideoUrl ? (
+                        <>
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                          Importing URL…
+                        </>
+                      ) : (
+                        "Import URL via /files/upload"
+                      )}
+                    </Button>
                     {introVideoUrl.trim() ? (
                       <Button type="button" variant="ghost" size="sm" onClick={() => setIntroVideoUrl("")}>
                         Clear URL
                       </Button>
                     ) : null}
                   </div>
+                  {introVideoPreview ? (
+                    <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-3">
+                      <p className="mb-2 text-xs font-medium text-grayScale-500">Preview</p>
+                      {introVideoPreview.kind === "vimeo" ? (
+                        <div className="overflow-hidden rounded-lg border border-grayScale-200 bg-black">
+                          <iframe
+                            src={introVideoPreview.url}
+                            title="Intro video preview"
+                            className="aspect-video w-full"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : (
+                        <video
+                          controls
+                          src={introVideoPreview.url}
+                          className="aspect-video w-full rounded-lg border border-grayScale-200 bg-black"
+                        />
+                      )}
+                    </div>
+                  ) : null}
                   <p className="text-xs leading-relaxed text-grayScale-500">
                     Paste a link or upload from your computer; uploads go through the file service (optional, not tied to sub-course video rows).
                   </p>

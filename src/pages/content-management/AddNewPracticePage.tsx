@@ -249,6 +249,13 @@ export function AddNewPracticePage() {
   const handleImportIntroVideoFromUrl = async () => {
     const source = introVideoUrl.trim()
     if (!source || !/^https?:\/\//i.test(source)) return
+    const vimeoEmbed = toVimeoEmbedUrl(source)
+    // Vimeo page URLs can be protected by anti-bot checks when server-side fetched.
+    // For those links, prefer local normalization to player URL instead of failing import.
+    if (vimeoEmbed) {
+      setIntroVideoUrl(vimeoEmbed)
+      return
+    }
 
     setImportingIntroVideoUrl(true)
     try {

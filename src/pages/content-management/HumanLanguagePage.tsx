@@ -35,7 +35,7 @@ import {
   createCourse,
   createCourseCategory,
   createHumanLanguageLesson,
-  deletePractice,
+  deleteQuestionSet,
   deleteQuestion,
   deleteSubCourse,
   getHumanLanguageHierarchy,
@@ -997,7 +997,7 @@ export function HumanLanguagePage() {
     if (!practiceTargetDelete) return
     setDeletingPractice(true)
     try {
-      await deletePractice(practiceTargetDelete.id)
+      await deleteQuestionSet(practiceTargetDelete.id)
       toast.success("Practice deleted")
       setPracticeTargetDelete(null)
       await loadHierarchy()

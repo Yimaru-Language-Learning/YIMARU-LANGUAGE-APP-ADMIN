@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   ChevronDown,
   ChevronRight,
@@ -185,6 +185,7 @@ type PendingRemove = {
 }
 
 export function HumanLanguagePage() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [subCategories, setSubCategories] = useState<HumanLanguageSubCategoryTree[]>([])
@@ -598,11 +599,12 @@ export function HumanLanguagePage() {
     setQuestionDraft(createEmptyPracticeQuestionDraft())
   }
 
-  const openCreatePracticeDialog = (subModuleId: number) => {
-    setPracticeSubmitAttempted(false)
-    setPracticeFormTouched(false)
-    resetPracticeForm()
-    setPracticeDialog({ open: true, mode: "create", subModuleId })
+  const openCreatePracticeDialog = (courseId: number, subModuleId: number) => {
+    if (!categoryId) {
+      toast.error("Category is not ready yet. Please try again.")
+      return
+    }
+    navigate(`/content/human-language/${categoryId}/${courseId}/sub-module/${subModuleId}/add-practice`)
   }
 
   const openEditPracticeDialog = (subModuleId: number, p: LearningPathPractice) => {
@@ -1309,7 +1311,7 @@ export function HumanLanguagePage() {
                                                       size="sm"
                                                       variant="outline"
                                                       className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
-                                                      onClick={() => openCreatePracticeDialog(subModule.id)}
+                                                      onClick={() => openCreatePracticeDialog(course.course_id, subModule.id)}
                                                     >
                                                       <Plus className="h-3.5 w-3.5" />
                                                       New practice

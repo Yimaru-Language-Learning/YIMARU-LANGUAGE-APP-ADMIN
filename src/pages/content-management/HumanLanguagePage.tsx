@@ -302,6 +302,13 @@ function MediaPreviewCard({
   )
 }
 
+function nextMissingPositive(values: number[]): number {
+  const existing = new Set(values.filter((n) => Number.isFinite(n) && n > 0))
+  let candidate = 1
+  while (existing.has(candidate)) candidate += 1
+  return candidate
+}
+
 export function HumanLanguagePage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
@@ -477,11 +484,10 @@ export function HumanLanguagePage() {
     const key = `module-${courseId}-${level}`
     setCreatingKey(key)
     try {
-      const maxExisting = modules
+      const usedNumbers = modules
         .map((m) => parseModuleNumber(m.title))
-        .filter((v): v is number => v !== null)
-        .reduce((acc, n) => Math.max(acc, n), 0)
-      const next = maxExisting + 1
+        .filter((v): v is number => v !== null && v > 0)
+      const next = nextMissingPositive(usedNumbers)
       const title = `Module-${next}`
       await createHumanLanguageLesson({
         course_id: courseId,
@@ -513,11 +519,11 @@ export function HumanLanguagePage() {
     const key = `submodule-${courseId}-${level}-${moduleNo}`
     setCreatingKey(key)
     try {
-      const maxExisting = existingSubModules
+      const usedNumbers = existingSubModules
         .map((s) => parseSubModuleNumber(s.title))
         .filter((v): v is { module: number; sub: number } => v !== null && v.module === moduleNo)
-        .reduce((acc, item) => Math.max(acc, item.sub), 0)
-      const next = maxExisting + 1
+        .map((item) => item.sub)
+      const next = nextMissingPositive(usedNumbers)
       const title = `Module-${moduleNo}.${next}`
       await createHumanLanguageLesson({
         course_id: courseId,

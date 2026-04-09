@@ -376,7 +376,23 @@ export function HumanLanguagePage() {
       const res = await getHumanLanguageHierarchy()
       const data = res.data?.data
       setCategoryId(data?.category_id ?? null)
-      setSubCategories(data?.sub_categories ?? [])
+      const nextSubCategories = data?.sub_categories ?? []
+      setSubCategories(nextSubCategories)
+      // Default UI behavior: modules and sub-modules start collapsed.
+      const moduleIds = nextSubCategories.flatMap((subCategory) =>
+        subCategory.courses.flatMap((course) =>
+          course.levels.flatMap((levelNode) => levelNode.modules.map((module) => module.id)),
+        ),
+      )
+      const subModuleIds = nextSubCategories.flatMap((subCategory) =>
+        subCategory.courses.flatMap((course) =>
+          course.levels.flatMap((levelNode) =>
+            levelNode.modules.flatMap((module) => module.sub_modules.map((subModule) => subModule.id)),
+          ),
+        ),
+      )
+      setCollapsedModuleIds(moduleIds)
+      setCollapsedSubModuleIds(subModuleIds)
     } finally {
       setLoading(false)
     }

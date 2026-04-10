@@ -311,7 +311,7 @@ export function AddNewPracticePage() {
       const setRes = await createQuestionSet({
         title: practiceTitle || "Untitled Practice",
         set_type: "PRACTICE",
-        owner_type: "SUB_COURSE",
+        owner_type: "SUB_MODULE",
         owner_id: Number(subCourseId),
         ...(practiceDescription.trim() ? { description: practiceDescription.trim() } : {}),
         ...(persona?.name ? { persona: persona.name } : {}),

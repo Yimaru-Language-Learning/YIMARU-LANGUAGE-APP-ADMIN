@@ -122,7 +122,7 @@ export function SubCourseContentPage() {
     if (!subCourseId) return
     setPracticesLoading(true)
     try {
-      const res = await getQuestionSetsByOwner("SUB_COURSE", Number(subCourseId))
+      const res = await getQuestionSetsByOwner("SUB_MODULE", Number(subCourseId))
       setPractices(res.data.data ?? [])
     } catch (err) {
       console.error("Failed to fetch practices:", err)

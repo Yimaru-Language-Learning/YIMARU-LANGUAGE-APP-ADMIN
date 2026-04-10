@@ -115,7 +115,7 @@ export function HumanLanguageSubModulePage() {
     if (!subCourseId) return
     setPracticesLoading(true)
     try {
-      const res = await getQuestionSetsByOwner("SUB_COURSE", Number(subCourseId))
+      const res = await getQuestionSetsByOwner("SUB_MODULE", Number(subCourseId))
       const raw = res.data.data
       const list = Array.isArray(raw) ? raw : raw?.question_sets ?? []
       setPractices(list)

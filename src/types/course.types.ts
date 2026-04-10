@@ -25,6 +25,7 @@ export interface GetCourseCategoriesResponse {
 export interface Course {
   id: number
   category_id: number
+  sub_category_id?: number | null
   title: string
   description: string
   thumbnail: string
@@ -191,9 +192,11 @@ export interface UpdateModuleStatusRequest {
 export interface SubCourse {
   id: number
   course_id: number
+  module_id?: number
   title: string
   description: string
   level: string
+  cefr_level?: string
   thumbnail: string
   display_order: number
   sub_level?: string
@@ -237,7 +240,8 @@ export interface UpdateSubCourseStatusRequest {
 // SubCourse Video
 export interface SubCourseVideo {
   id: number
-  sub_course_id: number
+  sub_course_id?: number
+  sub_module_id?: number
   title: string
   description: string
   video_url: string
@@ -259,7 +263,8 @@ export interface GetSubCourseVideosResponse {
 }
 
 export interface CreateSubCourseVideoRequest {
-  sub_course_id: number
+  sub_course_id?: number
+  sub_module_id?: number
   title: string
   description: string
   video_url: string
@@ -269,7 +274,8 @@ export type VideoVisibility = "PUBLISHED" | "DRAFT" | "PRIVATE" | "UNLISTED" | s
 export type VideoStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED" | string
 
 export interface CreateCourseVideoRequest {
-  sub_course_id: number
+  sub_course_id?: number
+  sub_module_id?: number
   title: string
   description: string
   video_url: string
@@ -281,7 +287,8 @@ export interface CreateCourseVideoRequest {
 }
 
 export interface CreateVimeoVideoRequest {
-  sub_course_id: number
+  sub_course_id?: number
+  sub_module_id?: number
   title: string
   description: string
   source_url: string
@@ -298,9 +305,13 @@ export interface UpdateSubCourseVideoRequest {
 // Practice now belongs to SubCourse
 export interface Practice {
   id: number
-  sub_course_id: number
+  sub_course_id?: number
+  sub_module_id?: number
   title: string
   description: string
+  thumbnail?: string
+  intro_video_url?: string
+  question_set_id?: number
   banner_image: string
   persona: string
   is_active: boolean
@@ -318,9 +329,12 @@ export interface GetPracticesResponse {
 }
 
 export interface CreatePracticeRequest {
-  sub_course_id: number
+  sub_course_id?: number
+  sub_module_id?: number
   title: string
   description: string
+  thumbnail?: string
+  intro_video_url?: string
   persona?: string
 }
 
@@ -390,7 +404,7 @@ export interface UpdatePracticeQuestionRequest {
 // Question Sets (Practice sets fetched via /question-sets)
 export type QuestionSetType = "PRACTICE" | "EXAM"
 export type QuestionSetStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED"
-export type QuestionSetOwnerType = "SUB_COURSE" | "COURSE"
+export type QuestionSetOwnerType = "SUB_COURSE" | "SUB_MODULE" | "COURSE"
 
 export interface QuestionSet {
   id: number
@@ -415,7 +429,7 @@ export interface GetQuestionSetsResponse {
 
 export interface GetQuestionSetsParams {
   set_type?: "PRACTICE" | "INITIAL_ASSESSMENT" | "EXAM" | string
-  owner_type?: "SUB_COURSE" | "COURSE" | string
+  owner_type?: "SUB_COURSE" | "SUB_MODULE" | "COURSE" | string
   owner_id?: number
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED" | string
   limit?: number

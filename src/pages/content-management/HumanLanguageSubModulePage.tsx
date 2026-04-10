@@ -8,9 +8,9 @@ import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { 
-  getSubCoursesByCourse,
+  getSubModulesByCourse,
   getQuestionSetsByOwner,
-  getVideosBySubCourse,
+  getVideosBySubModule,
   updatePractice,
   deleteQuestionSet,
   createCourseVideo,
@@ -34,10 +34,10 @@ type StatusFilter = "all" | "published" | "draft" | "archived"
 
 /** Human Language–only sub-module editor: lesson (videos) + practice tabs; not used by general course flows. */
 export function HumanLanguageSubModulePage() {
-  const { categoryId, courseId, subCourseId } = useParams<{ 
+  const { categoryId, courseId, subModuleId } = useParams<{ 
     categoryId: string
     courseId: string
-    subCourseId: string
+    subModuleId: string
   }>()
   const navigate = useNavigate()
   
@@ -92,12 +92,12 @@ export function HumanLanguageSubModulePage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!subCourseId || !courseId) return
+      if (!subModuleId || !courseId) return
 
       try {
-        const subCoursesRes = await getSubCoursesByCourse(Number(courseId))
+        const subCoursesRes = await getSubModulesByCourse(Number(courseId))
         const foundSubCourse = subCoursesRes.data.data.sub_courses?.find(
-          (sc) => sc.id === Number(subCourseId)
+          (sc) => sc.id === Number(subModuleId)
         )
         setSubCourse(foundSubCourse ?? null)
       } catch (err) {
@@ -109,13 +109,13 @@ export function HumanLanguageSubModulePage() {
     }
 
     fetchData()
-  }, [subCourseId, courseId])
+  }, [subModuleId, courseId])
 
   const fetchPractices = async () => {
-    if (!subCourseId) return
+    if (!subModuleId) return
     setPracticesLoading(true)
     try {
-      const res = await getQuestionSetsByOwner("SUB_MODULE", Number(subCourseId))
+      const res = await getQuestionSetsByOwner("SUB_MODULE", Number(subModuleId))
       const raw = res.data.data
       const list = Array.isArray(raw) ? raw : raw?.question_sets ?? []
       setPractices(list)
@@ -127,10 +127,10 @@ export function HumanLanguageSubModulePage() {
   }
 
   const fetchVideos = async () => {
-    if (!subCourseId) return
+    if (!subModuleId) return
     setVideosLoading(true)
     try {
-      const res = await getVideosBySubCourse(Number(subCourseId))
+      const res = await getVideosBySubModule(Number(subModuleId))
       setVideos(res.data.data.videos ?? [])
     } catch (err) {
       console.error("Failed to fetch videos:", err)
@@ -145,10 +145,10 @@ export function HumanLanguageSubModulePage() {
     } else if (activeTab === "lesson") {
       fetchVideos()
     }
-  }, [activeTab, subCourseId])
+  }, [activeTab, subModuleId])
 
   const handleAddPractice = () => {
-    navigate(`/content/human-language/${categoryId}/${courseId}/sub-module/${subCourseId}/add-practice`)
+    navigate(`/content/human-language/${categoryId}/${courseId}/sub-module/${subModuleId}/add-practice`)
   }
 
 
@@ -207,7 +207,7 @@ export function HumanLanguageSubModulePage() {
   }
 
   const handlePracticeClick = (practiceId: number) => {
-    navigate(`/content/human-language/${categoryId}/${courseId}/sub-module/${subCourseId}/practices/${practiceId}/questions`)
+    navigate(`/content/human-language/${categoryId}/${courseId}/sub-module/${subModuleId}/practices/${practiceId}/questions`)
   }
 
   const handleAddVideo = () => {
@@ -248,7 +248,7 @@ export function HumanLanguageSubModulePage() {
   }
 
   const handleSaveNewVideo = async () => {
-    if (!subCourseId || !videoFile) return
+    if (!subModuleId || !videoFile) return
     setSaving(true)
     setSaveError(null)
     try {
@@ -270,7 +270,7 @@ export function HumanLanguageSubModulePage() {
       const finalTitle = videoTitle.trim() || videoFile.name
 
       await createCourseVideo({
-        sub_course_id: Number(subCourseId),
+        sub_module_id: Number(subModuleId),
         title: finalTitle,
         description: videoDescription.trim(),
         video_url: finalVideoUrl,

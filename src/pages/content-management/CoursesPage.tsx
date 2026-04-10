@@ -245,7 +245,7 @@ export function CoursesPage() {
   }
 
   const handleCourseClick = (courseId: number) => {
-    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses`)
+    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-modules`)
   }
 
   const handleViewRatings = async (courseId: number) => {

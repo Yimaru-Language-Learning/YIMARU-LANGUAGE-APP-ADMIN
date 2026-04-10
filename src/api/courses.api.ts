@@ -145,8 +145,8 @@ export const updateCourseStatus = (courseId: number, isActive: boolean) =>
 export const updateCourse = (courseId: number, data: UpdateCourseRequest) =>
   http.put(`/course-management/courses/${courseId}`, data)
 
-// SubCourse APIs (New Hierarchy)
-export const getSubCoursesByCourse = (courseId: number) =>
+// Sub-Module APIs (Unified Hierarchy)
+export const getSubModulesByCourse = (courseId: number) =>
   http.get(`/course-management/courses/${courseId}/hierarchy`).then((res) => {
     const rows: CourseHierarchyRow[] = res.data?.data ?? []
     const subModuleMap = new Map<number, { id: number; course_id: number; module_id?: number; title: string; description: string; level: string; cefr_level?: string; thumbnail: string; display_order: number; sub_level?: string; is_active: boolean }>()
@@ -178,7 +178,7 @@ export const getSubCoursesByCourse = (courseId: number) =>
     } as unknown as { data: GetSubCoursesResponse }
   })
 
-export const createSubCourse = (data: CreateSubCourseRequest) =>
+export const createSubModule = (data: CreateSubCourseRequest) =>
   http
     .post("/course-management/levels", {
       course_id: data.course_id,
@@ -205,23 +205,23 @@ export const createSubCourse = (data: CreateSubCourseRequest) =>
       }),
     )
 
-export const updateSubCourseThumbnail = (subCourseId: number, thumbnailUrl: string) =>
-  http.post(`/course-management/sub-courses/${subCourseId}/thumbnail`, {
+export const updateSubModuleThumbnail = (subModuleId: number, thumbnailUrl: string) =>
+  http.post(`/course-management/sub-courses/${subModuleId}/thumbnail`, {
     thumbnail_url: thumbnailUrl,
   })
 
-export const updateSubCourse = (subCourseId: number, data: UpdateSubCourseRequest) =>
-  http.put(`/course-management/sub-modules/${subCourseId}`, data)
+export const updateSubModule = (subModuleId: number, data: UpdateSubCourseRequest) =>
+  http.put(`/course-management/sub-modules/${subModuleId}`, data)
 
-export const updateSubCourseStatus = (subCourseId: number, data: UpdateSubCourseStatusRequest) =>
-  http.put(`/course-management/sub-modules/${subCourseId}`, data)
+export const updateSubModuleStatus = (subModuleId: number, data: UpdateSubCourseStatusRequest) =>
+  http.put(`/course-management/sub-modules/${subModuleId}`, data)
 
-export const deleteSubCourse = (subCourseId: number) =>
-  http.delete(`/course-management/sub-modules/${subCourseId}`)
+export const deleteSubModule = (subModuleId: number) =>
+  http.delete(`/course-management/sub-modules/${subModuleId}`)
 
-// SubCourse Video APIs
-export const getVideosBySubCourse = (subCourseId: number) =>
-  http.get<GetSubCourseVideosResponse>(`/course-management/sub-modules/${subCourseId}/videos`)
+// Sub-Module Video APIs
+export const getVideosBySubModule = (subModuleId: number) =>
+  http.get<GetSubCourseVideosResponse>(`/course-management/sub-modules/${subModuleId}/videos`)
 
 export const createSubCourseVideo = (data: CreateSubCourseVideoRequest) =>
   http.post("/course-management/sub-module-videos", {
@@ -250,11 +250,10 @@ export const updateSubCourseVideo = (videoId: number, data: UpdateSubCourseVideo
 export const deleteSubCourseVideo = (videoId: number) =>
   http.delete(`/course-management/sub-module-videos/${videoId}`)
 
-// Practice APIs - for SubCourse practices (New Hierarchy)
-// Practices are question sets: POST /question-sets with set_type: "PRACTICE", owner_type: "SUB_COURSE".
-export const getPracticesBySubCourse = (subCourseId: number) =>
+// Practice APIs - for Sub-Module practices (Unified Hierarchy)
+export const getPracticesBySubModule = (subModuleId: number) =>
   http.get<GetQuestionSetsResponse>("/question-sets/by-owner", {
-    params: { owner_type: "SUB_MODULE", owner_id: subCourseId },
+    params: { owner_type: "SUB_MODULE", owner_id: subModuleId },
   })
 
 export const createPractice = (data: CreatePracticeRequest) =>
@@ -427,15 +426,15 @@ export const deleteQuestionSet = (questionSetId: number) =>
 export const createVimeoVideo = (data: CreateVimeoVideoRequest) =>
   http.post("/course-management/videos/vimeo", data)
 
-// Sub-course Prerequisite APIs
-export const getSubCoursePrerequisites = (subCourseId: number) =>
-  http.get<GetSubCoursePrerequisitesResponse>(`/course-management/sub-courses/${subCourseId}/prerequisites`)
+// Sub-module Prerequisite APIs
+export const getSubModulePrerequisites = (subModuleId: number) =>
+  http.get<GetSubCoursePrerequisitesResponse>(`/course-management/sub-courses/${subModuleId}/prerequisites`)
 
-export const addSubCoursePrerequisite = (subCourseId: number, data: AddSubCoursePrerequisiteRequest) =>
-  http.post(`/course-management/sub-courses/${subCourseId}/prerequisites`, data)
+export const addSubModulePrerequisite = (subModuleId: number, data: AddSubCoursePrerequisiteRequest) =>
+  http.post(`/course-management/sub-courses/${subModuleId}/prerequisites`, data)
 
-export const removeSubCoursePrerequisite = (subCourseId: number, prerequisiteId: number) =>
-  http.delete(`/course-management/sub-courses/${subCourseId}/prerequisites/${prerequisiteId}`)
+export const removeSubModulePrerequisite = (subModuleId: number, prerequisiteId: number) =>
+  http.delete(`/course-management/sub-courses/${subModuleId}/prerequisites/${prerequisiteId}`)
 
 // Learning Path APIs
 export const getLearningPath = (courseId: number) =>
@@ -476,9 +475,9 @@ export const createHumanLanguageLesson = (data: CreateHumanLanguageLessonRequest
       }),
     )
 
-export const getSubCourseEntryAssessment = (subCourseId: number) =>
+export const getSubModuleEntryAssessment = (subModuleId: number) =>
   http.get<GetSubCourseEntryAssessmentResponse>(
-    `/question-sets/sub-courses/${subCourseId}/entry-assessment`,
+    `/question-sets/sub-courses/${subModuleId}/entry-assessment`,
   )
 
 const buildReorderPayload = (items: ReorderItem[]) => {
@@ -508,8 +507,23 @@ export const reorderCategories = (items: ReorderItem[]) =>
 export const reorderCourses = (items: ReorderItem[]) =>
   http.put("/course-management/courses/reorder", buildReorderPayload(items))
 
-export const reorderSubCourses = (items: ReorderItem[]) =>
+export const reorderSubModules = (items: ReorderItem[]) =>
   http.put("/course-management/sub-courses/reorder", buildReorderPayload(items))
+
+// Backward-compatible aliases
+export const getSubCoursesByCourse = getSubModulesByCourse
+export const createSubCourse = createSubModule
+export const updateSubCourseThumbnail = updateSubModuleThumbnail
+export const updateSubCourse = updateSubModule
+export const updateSubCourseStatus = updateSubModuleStatus
+export const deleteSubCourse = deleteSubModule
+export const getVideosBySubCourse = getVideosBySubModule
+export const getPracticesBySubCourse = getPracticesBySubModule
+export const getSubCoursePrerequisites = getSubModulePrerequisites
+export const addSubCoursePrerequisite = addSubModulePrerequisite
+export const removeSubCoursePrerequisite = removeSubModulePrerequisite
+export const getSubCourseEntryAssessment = getSubModuleEntryAssessment
+export const reorderSubCourses = reorderSubModules
 
 export const reorderVideos = (items: ReorderItem[]) =>
   http.put("/course-management/videos/reorder", buildReorderPayload(items))

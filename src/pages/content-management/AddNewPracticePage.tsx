@@ -167,18 +167,18 @@ function createEmptyQuestion(id: string): Question {
 }
 
 export function AddNewPracticePage() {
-  const { categoryId, courseId, subCourseId } = useParams()
+  const { categoryId, courseId, subModuleId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
   const searchParams = new URLSearchParams(location.search)
   const source = searchParams.get("source")
   const backTo = useMemo(() => {
     if (location.pathname.includes("/content/human-language/") && location.pathname.includes("/sub-module/")) {
-      return `/content/human-language/${categoryId}/${courseId}/sub-module/${subCourseId}`
+      return `/content/human-language/${categoryId}/${courseId}/sub-module/${subModuleId}`
     }
     if (source === "human-language") return "/content/human-language"
-    return `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`
-  }, [location.pathname, source, categoryId, courseId, subCourseId])
+    return `/content/category/${categoryId}/courses/${courseId}/sub-modules/${subModuleId}`
+  }, [location.pathname, source, categoryId, courseId, subModuleId])
   
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [saving, setSaving] = useState(false)
@@ -312,7 +312,7 @@ export function AddNewPracticePage() {
         title: practiceTitle || "Untitled Practice",
         set_type: "PRACTICE",
         owner_type: "SUB_MODULE",
-        owner_id: Number(subCourseId),
+        owner_id: Number(subModuleId),
         ...(practiceDescription.trim() ? { description: practiceDescription.trim() } : {}),
         ...(persona?.name ? { persona: persona.name } : {}),
         shuffle_questions: shuffleQuestions,

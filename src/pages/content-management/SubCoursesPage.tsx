@@ -24,16 +24,16 @@ import alertSrc from "../../assets/Alert.svg";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
-  getSubCoursesByCourse,
+  getSubModulesByCourse,
   getCoursesByCategory,
   getCourseCategories,
-  createSubCourse,
-  updateSubCourse,
-  updateSubCourseStatus,
-  deleteSubCourse,
-  getSubCoursePrerequisites,
-  addSubCoursePrerequisite,
-  removeSubCoursePrerequisite,
+  createSubModule,
+  updateSubModule,
+  updateSubModuleStatus,
+  deleteSubModule,
+  getSubModulePrerequisites,
+  addSubModulePrerequisite,
+  removeSubModulePrerequisite,
 } from "../../api/courses.api";
 import { uploadImageFile } from "../../api/files.api";
 import { Input } from "../../components/ui/input";
@@ -47,7 +47,7 @@ import type {
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import { toast } from "sonner";
 
-export function SubCoursesPage() {
+export function SubModulesPage() {
   const { categoryId, courseId } = useParams<{
     categoryId: string;
     courseId: string;
@@ -122,10 +122,10 @@ export function SubCoursesPage() {
     if (!courseId) return;
 
     try {
-      const subCoursesRes = await getSubCoursesByCourse(Number(courseId));
+      const subCoursesRes = await getSubModulesByCourse(Number(courseId));
       setSubCourses(subCoursesRes.data.data.sub_courses ?? []);
     } catch (err) {
-      console.error("Failed to fetch sub-courses:", err);
+      console.error("Failed to fetch sub-modules:", err);
     }
   };
 
@@ -135,7 +135,7 @@ export function SubCoursesPage() {
     try {
       const results = await Promise.all(
         scs.map((sc) =>
-          getSubCoursePrerequisites(sc.id).then((res) => ({
+          getSubModulePrerequisites(sc.id).then((res) => ({
             id: sc.id,
             data: res.data.data ?? [],
           })),
@@ -159,7 +159,7 @@ export function SubCoursesPage() {
 
       try {
         const [subCoursesRes, coursesRes, categoriesRes] = await Promise.all([
-          getSubCoursesByCourse(Number(courseId)),
+          getSubModulesByCourse(Number(courseId)),
           getCoursesByCategory(Number(categoryId)),
           getCourseCategories(),
         ]);
@@ -176,7 +176,7 @@ export function SubCoursesPage() {
         );
         setCategory(foundCategory ?? null);
       } catch (err) {
-        console.error("Failed to fetch sub-courses:", err);
+        console.error("Failed to fetch sub-modules:", err);
         setError("Failed to load courses");
       } finally {
         setLoading(false);
@@ -195,7 +195,7 @@ export function SubCoursesPage() {
   const handleToggleStatus = async (subCourse: SubCourse) => {
     setTogglingId(subCourse.id);
     try {
-      await updateSubCourseStatus(subCourse.id, {
+      await updateSubModuleStatus(subCourse.id, {
         is_active: !subCourse.is_active,
         level: subCourse.level,
         title: subCourse.title,
@@ -218,7 +218,7 @@ export function SubCoursesPage() {
 
     setDeleting(true);
     try {
-      await deleteSubCourse(subCourseToDelete.id);
+      await deleteSubModule(subCourseToDelete.id);
       setShowDeleteModal(false);
       setSubCourseToDelete(null);
       await fetchSubCourses();
@@ -264,7 +264,7 @@ export function SubCoursesPage() {
         ? parsedOrder
         : nextSubCourseDisplayOrder();
 
-      await createSubCourse({
+      await createSubModule({
         course_id: Number(courseId),
         title: title.trim(),
         description: description.trim(),
@@ -309,7 +309,7 @@ export function SubCoursesPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      await updateSubCourse(subCourseToEdit.id, {
+      await updateSubModule(subCourseToEdit.id, {
         title,
         description,
         level,
@@ -328,9 +328,9 @@ export function SubCoursesPage() {
     }
   };
 
-  const handleSubCourseClick = (subCourseId: number) => {
+  const handleSubModuleClick = (subModuleId: number) => {
     navigate(
-      `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`,
+      `/content/category/${categoryId}/courses/${courseId}/sub-modules/${subModuleId}`,
     );
   };
 
@@ -340,7 +340,7 @@ export function SubCoursesPage() {
     setPrereqLoading(true);
     setSelectedPrereqId(0);
     try {
-      const res = await getSubCoursePrerequisites(subCourse.id);
+      const res = await getSubModulePrerequisites(subCourse.id);
       setPrerequisites(res.data.data ?? []);
     } catch (err) {
       console.error("Failed to fetch prerequisites:", err);
@@ -354,10 +354,10 @@ export function SubCoursesPage() {
     if (!prereqSubCourse || !selectedPrereqId) return;
     setPrereqAdding(true);
     try {
-      await addSubCoursePrerequisite(prereqSubCourse.id, {
+      await addSubModulePrerequisite(prereqSubCourse.id, {
         prerequisite_sub_course_id: selectedPrereqId,
       });
-      const res = await getSubCoursePrerequisites(prereqSubCourse.id);
+      const res = await getSubModulePrerequisites(prereqSubCourse.id);
       setPrerequisites(res.data.data ?? []);
       setSelectedPrereqId(0);
     } catch (err) {
@@ -371,8 +371,8 @@ export function SubCoursesPage() {
     if (!prereqSubCourse) return;
     setPrereqRemoving(prereqId);
     try {
-      await removeSubCoursePrerequisite(prereqSubCourse.id, prereqId);
-      const res = await getSubCoursePrerequisites(prereqSubCourse.id);
+      await removeSubModulePrerequisite(prereqSubCourse.id, prereqId);
+      const res = await getSubModulePrerequisites(prereqSubCourse.id);
       setPrerequisites(res.data.data ?? []);
     } catch (err) {
       console.error("Failed to remove prerequisite:", err);
@@ -385,7 +385,7 @@ export function SubCoursesPage() {
   const flowLayers = (() => {
     if (subCourses.length === 0) return [];
 
-    // Find sub-courses with no prerequisites (roots)
+    // Find sub-modules with no prerequisites (roots)
     const hasPrereqs = new Set<number>();
     const isPrereqOf = new Map<number, number[]>(); // prereqId -> [subCourseIds that depend on it]
 
@@ -557,7 +557,7 @@ export function SubCoursesPage() {
               <Card
                 key={subCourse.id}
                 className="group cursor-pointer overflow-hidden border border-grayScale-100 bg-white shadow-sm transition-all duration-200 hover:shadow-soft hover:-translate-y-1 hover:border-brand-100"
-                onClick={() => handleSubCourseClick(subCourse.id)}
+                onClick={() => handleSubModuleClick(subCourse.id)}
               >
                 {/* Thumbnail with level badge */}
                 <div className="relative aspect-video w-full overflow-hidden">
@@ -738,7 +738,7 @@ export function SubCoursesPage() {
         </div>
       )}
 
-      {/* Add Sub-course Modal — POST /course-management/sub-courses */}
+      {/* Add Sub-module Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
           <div

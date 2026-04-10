@@ -219,7 +219,7 @@ export function DashboardPage() {
                 icon={BookOpen}
                 label="Courses"
                 value={dashboard.courses.total_courses.toLocaleString()}
-                deltaLabel={`${dashboard.courses.total_sub_courses} sub-courses, ${dashboard.courses.total_videos} videos`}
+                deltaLabel={`${dashboard.courses.total_sub_courses} sub-modules, ${dashboard.courses.total_videos} videos`}
                 deltaPositive
               />
               <StatCard

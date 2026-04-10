@@ -8,9 +8,9 @@ import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { 
-  getSubCoursesByCourse,
+  getSubModulesByCourse,
   getQuestionSetsByOwner,
-  getVideosBySubCourse,
+  getVideosBySubModule,
   updatePractice,
   deleteQuestionSet,
   createCourseVideo,
@@ -34,11 +34,11 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 type TabType = "video" | "practice" | "ratings"
 type StatusFilter = "all" | "published" | "draft" | "archived"
 
-export function SubCourseContentPage() {
-  const { categoryId, courseId, subCourseId } = useParams<{ 
+export function SubModuleContentPage() {
+  const { categoryId, courseId, subModuleId } = useParams<{ 
     categoryId: string
     courseId: string
-    subCourseId: string
+    subModuleId: string
   }>()
   const navigate = useNavigate()
   
@@ -99,12 +99,12 @@ export function SubCourseContentPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!subCourseId || !courseId) return
+      if (!subModuleId || !courseId) return
 
       try {
-        const subCoursesRes = await getSubCoursesByCourse(Number(courseId))
+        const subCoursesRes = await getSubModulesByCourse(Number(courseId))
         const foundSubCourse = subCoursesRes.data.data.sub_courses?.find(
-          (sc) => sc.id === Number(subCourseId)
+          (sc) => sc.id === Number(subModuleId)
         )
         setSubCourse(foundSubCourse ?? null)
       } catch (err) {
@@ -116,13 +116,13 @@ export function SubCourseContentPage() {
     }
 
     fetchData()
-  }, [subCourseId, courseId])
+  }, [subModuleId, courseId])
 
   const fetchPractices = async () => {
-    if (!subCourseId) return
+    if (!subModuleId) return
     setPracticesLoading(true)
     try {
-      const res = await getQuestionSetsByOwner("SUB_MODULE", Number(subCourseId))
+      const res = await getQuestionSetsByOwner("SUB_MODULE", Number(subModuleId))
       setPractices(res.data.data ?? [])
     } catch (err) {
       console.error("Failed to fetch practices:", err)
@@ -132,10 +132,10 @@ export function SubCourseContentPage() {
   }
 
   const fetchVideos = async () => {
-    if (!subCourseId) return
+    if (!subModuleId) return
     setVideosLoading(true)
     try {
-      const res = await getVideosBySubCourse(Number(subCourseId))
+      const res = await getVideosBySubModule(Number(subModuleId))
       setVideos(res.data.data.videos ?? [])
     } catch (err) {
       console.error("Failed to fetch videos:", err)
@@ -145,12 +145,12 @@ export function SubCourseContentPage() {
   }
 
   const fetchRatings = async (offset = 0) => {
-    if (!subCourseId) return
+    if (!subModuleId) return
     setRatingsLoading(true)
     try {
       const res = await getRatings({
         target_type: "sub_course",
-        target_id: Number(subCourseId),
+        target_id: Number(subModuleId),
         limit: ratingsPageSize,
         offset,
       })
@@ -170,7 +170,7 @@ export function SubCourseContentPage() {
     } else if (activeTab === "ratings") {
       fetchRatings(ratingsPage * ratingsPageSize)
     }
-  }, [activeTab, subCourseId])
+  }, [activeTab, subModuleId])
 
   useEffect(() => {
     if (activeTab === "ratings") {
@@ -179,7 +179,7 @@ export function SubCourseContentPage() {
   }, [ratingsPage])
 
   const handleAddPractice = () => {
-    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}/add-practice`)
+    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-modules/${subModuleId}/add-practice`)
   }
 
 
@@ -238,7 +238,7 @@ export function SubCourseContentPage() {
   }
 
   const handlePracticeClick = (practiceId: number) => {
-    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}/practices/${practiceId}/questions`)
+    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-modules/${subModuleId}/practices/${practiceId}/questions`)
   }
 
   const handleAddVideo = () => {
@@ -279,7 +279,7 @@ export function SubCourseContentPage() {
   }
 
   const handleSaveNewVideo = async () => {
-    if (!subCourseId || !videoFile) return
+    if (!subModuleId || !videoFile) return
     setSaving(true)
     setSaveError(null)
     try {
@@ -301,7 +301,7 @@ export function SubCourseContentPage() {
       const finalTitle = videoTitle.trim() || videoFile.name
 
       await createCourseVideo({
-        sub_course_id: Number(subCourseId),
+        sub_module_id: Number(subModuleId),
         title: finalTitle,
         description: videoDescription.trim(),
         video_url: finalVideoUrl,
@@ -444,7 +444,7 @@ export function SubCourseContentPage() {
     <div className="space-y-6">
       {/* Back Button */}
       <Link
-        to={`/content/category/${categoryId}/courses/${courseId}/sub-courses`}
+        to={`/content/category/${categoryId}/courses/${courseId}/sub-modules`}
         className="group inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-grayScale-500 transition-all hover:bg-grayScale-50 hover:text-grayScale-900"
       >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />

@@ -37,7 +37,7 @@ import {
   createHumanLanguageLesson,
   deleteQuestionSet,
   deleteQuestion,
-  deleteSubCourse,
+  deleteSubModule,
   getHumanLanguageHierarchy,
   getQuestionById,
   getPracticeQuestions,
@@ -569,7 +569,7 @@ export function HumanLanguagePage() {
     setDeletingKey(key)
     try {
       for (const id of ids) {
-        await deleteSubCourse(id)
+        await deleteSubModule(id)
       }
       toast.success(successMessage)
       await loadHierarchy()

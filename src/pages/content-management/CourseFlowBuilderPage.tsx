@@ -34,10 +34,10 @@ import {
   getCoursesByCategory,
   getLearningPath,
   getQuestionSetsByOwner,
-  getSubCourseEntryAssessment,
+  getSubModuleEntryAssessment,
   reorderCategories,
   reorderCourses,
-  reorderSubCourses,
+  reorderSubModules,
   reorderVideos,
   reorderPractices,
 } from "../../api/courses.api"
@@ -320,7 +320,7 @@ export function CourseFlowBuilderPage() {
     try {
       const [setsRes, entryRes] = await Promise.allSettled([
         getQuestionSetsByOwner("SUB_COURSE", subCourseId),
-        getSubCourseEntryAssessment(subCourseId),
+        getSubModuleEntryAssessment(subCourseId),
       ])
 
       // No practice sets is a valid empty-state scenario; do not toast for 404/empty.
@@ -429,12 +429,12 @@ export function CourseFlowBuilderPage() {
     }))
     const previous = items
     setLearningPath((prev) => (prev ? { ...prev, sub_courses: reordered } : prev))
-    setSavingKey("sub-courses")
+    setSavingKey("sub-modules")
     try {
-      await reorderSubCourses(toReorderItems(reordered))
+      await reorderSubModules(toReorderItems(reordered))
     } catch (err: any) {
       setLearningPath((prev) => (prev ? { ...prev, sub_courses: previous } : prev))
-      toast.error(err?.response?.data?.message || "Failed to reorder sub-courses.")
+      toast.error(err?.response?.data?.message || "Failed to reorder sub-modules.")
     } finally {
       setSavingKey(null)
     }

@@ -11,7 +11,7 @@ import {
   getCourseCategories,
   getCoursesByCategory,
   getQuestionById,
-  getSubCoursesByCourse,
+  getSubModulesByCourse,
   createQuestion,
   createQuestionSet,
   // getQuestions,
@@ -441,7 +441,7 @@ export function SpeakingPage() {
 
         const subCourseResponses = await Promise.all(
           courseRecords.map(async ({ category, course }) => {
-            const res = await getSubCoursesByCourse(course.id)
+            const res = await getSubModulesByCourse(course.id)
             const subCourses = res.data?.data?.sub_courses ?? []
             return subCourses.map((subCourse: SubCourse) => ({
               id: subCourse.id,

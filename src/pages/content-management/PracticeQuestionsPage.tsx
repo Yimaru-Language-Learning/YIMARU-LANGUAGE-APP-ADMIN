@@ -58,7 +58,7 @@ const typeColors: Record<QuestionType, string> = {
 }
 
 export function PracticeQuestionsPage() {
-  const { categoryId, courseId, subCourseId, practiceId } = useParams()
+  const { categoryId, courseId, subModuleId, practiceId } = useParams()
   const location = useLocation()
   
   const [questions, setQuestions] = useState<PracticeQuestion[]>([])
@@ -103,10 +103,10 @@ export function PracticeQuestionsPage() {
 
   const backLink = useMemo(() => {
     if (location.pathname.includes("/content/human-language/") && location.pathname.includes("/sub-module/")) {
-      return `/content/human-language/${categoryId}/${courseId}/sub-module/${subCourseId}`
+      return `/content/human-language/${categoryId}/${courseId}/sub-module/${subModuleId}`
     }
-    return `/content/category/${categoryId}/courses/${courseId}/sub-courses/${subCourseId}`
-  }, [location.pathname, categoryId, courseId, subCourseId])
+    return `/content/category/${categoryId}/courses/${courseId}/sub-modules/${subModuleId}`
+  }, [location.pathname, categoryId, courseId, subModuleId])
 
   const buildDefaultOptions = (type: QuestionType, sampleAnswerText?: string): DraftOption[] => {
     if (type === "TRUE_FALSE") {

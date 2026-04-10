@@ -332,7 +332,7 @@ export function AllCoursesPage() {
                       className="group cursor-pointer"
                       onClick={() =>
                         navigate(
-                          `/content/category/${course.category_id}/courses/${course.id}/sub-courses`,
+                          `/content/category/${course.category_id}/courses/${course.id}/sub-modules`,
                         )
                       }
                     >
@@ -393,7 +393,7 @@ export function AllCoursesPage() {
                             onClick={(e) => {
                               e.stopPropagation()
                               navigate(
-                                `/content/category/${course.category_id}/courses/${course.id}/sub-courses`,
+                                `/content/category/${course.category_id}/courses/${course.id}/sub-modules`,
                               )
                             }}
                           >

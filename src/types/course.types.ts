@@ -214,7 +214,7 @@ export interface GetSubCoursesResponse {
   metadata: unknown
 }
 
-/** POST /course-management/sub-courses */
+/** Compatibility request used to create sub-modules */
 export interface CreateSubCourseRequest {
   course_id: number
   title: string

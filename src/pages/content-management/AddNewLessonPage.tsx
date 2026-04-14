@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type ChangeEvent } from "react"
 import { ArrowLeft, ArrowRight, Check, GripVertical, Loader2, Plus, Rocket, Trash2, Upload } from "lucide-react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { createLesson, createQuestion, addQuestionToSet } from "../../api/courses.api"
+import { addQuestionToSet, createLesson, createQuestion } from "../../api/courses.api"
 import { uploadVideoFile } from "../../api/files.api"
 import { PracticeQuestionEditorFields } from "../../components/content-management/PracticeQuestionEditorFields"
 import { Button } from "../../components/ui/button"
@@ -10,16 +10,10 @@ import { Card } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import type { QuestionOption } from "../../types/course.types"
 
-type Step = 1 | 2 | 3 | 4 | 5
+type Step = 1 | 2 | 3 | 4
 type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD"
 type ResultStatus = "success" | "error"
-
-interface Persona {
-  id: string
-  name: string
-  avatar: string
-}
 
 interface MCQOption {
   text: string
@@ -42,18 +36,10 @@ interface Question {
   imageUrl: string
 }
 
-const PERSONAS: Persona[] = [
-  { id: "1", name: "Dawit", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dawit" },
-  { id: "2", name: "Mahlet", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mahlet" },
-  { id: "3", name: "Amanuel", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Amanuel" },
-  { id: "4", name: "Bethel", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bethel" },
-]
-
 const STEPS = [
   { number: 1, label: "Context" },
-  { number: 2, label: "Persona" },
-  { number: 3, label: "Questions" },
-  { number: 4, label: "Review" },
+  { number: 2, label: "Questions" },
+  { number: 3, label: "Review" },
 ]
 
 function createEmptyQuestion(id: string): Question {
@@ -136,13 +122,9 @@ export function AddNewLessonPage() {
   const [introVideoUrl, setIntroVideoUrl] = useState("")
   const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false)
   const [importingIntroVideoUrl, setImportingIntroVideoUrl] = useState(false)
-  const [shuffleQuestions, setShuffleQuestions] = useState(false)
-  const [passingScore, setPassingScore] = useState(50)
-  const [timeLimitMinutes, setTimeLimitMinutes] = useState(60)
-  const [selectedPersona, setSelectedPersona] = useState<string | null>(null)
   const [questions, setQuestions] = useState<Question[]>([createEmptyQuestion("1")])
 
-  const handleNext = () => setCurrentStep((s) => (s < 4 ? ((s + 1) as Step) : s))
+  const handleNext = () => setCurrentStep((s) => (s < 3 ? ((s + 1) as Step) : s))
   const handleBack = () => setCurrentStep((s) => (s > 1 ? ((s - 1) as Step) : s))
 
   const handleIntroVideoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -171,8 +153,6 @@ export function AddNewLessonPage() {
     const source = introVideoUrl.trim()
     if (!source || !/^https?:\/\//i.test(source)) return
     const vimeoEmbed = toVimeoEmbedUrl(source)
-    // Vimeo page URLs can be protected by anti-bot checks when server-side fetched.
-    // For those links, prefer local normalization to player URL instead of failing import.
     if (vimeoEmbed) {
       setIntroVideoUrl(vimeoEmbed)
       return
@@ -217,17 +197,12 @@ export function AddNewLessonPage() {
     }
     setSaving(true)
     try {
-      const persona = PERSONAS.find((p) => p.id === selectedPersona)?.name
       const lessonRes = await createLesson({
         sub_module_id: Number(subModuleId),
         title: lessonTitle.trim() || "Untitled Lesson",
         description: lessonDescription.trim() || undefined,
         intro_video_url: introVideoUrl.trim() || undefined,
-        persona,
         status,
-        passing_score: passingScore,
-        time_limit_minutes: timeLimitMinutes,
-        shuffle_questions: shuffleQuestions,
       })
 
       const questionSetId = lessonRes.data?.data?.id
@@ -268,12 +243,12 @@ export function AddNewLessonPage() {
 
       setResultStatus("success")
       setResultMessage(status === "PUBLISHED" ? "Lesson published successfully." : "Lesson saved as draft.")
-      setCurrentStep(5)
+      setCurrentStep(4)
     } catch (error) {
       console.error("Failed to save lesson:", error)
       setResultStatus("error")
       setResultMessage(error instanceof Error ? error.message : "Failed to save lesson")
-      setCurrentStep(5)
+      setCurrentStep(4)
     } finally {
       setSaving(false)
     }
@@ -282,7 +257,7 @@ export function AddNewLessonPage() {
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
       <div className="space-y-5 sm:space-y-6">
-        {currentStep !== 5 ? (
+        {currentStep !== 4 ? (
           <>
             <Link
               to={backTo}
@@ -294,7 +269,7 @@ export function AddNewLessonPage() {
             <div className="border-b border-grayScale-100 pb-6 sm:pb-8">
               <h1 className="text-2xl font-bold tracking-tight text-grayScale-900 sm:text-3xl">Add New Lesson</h1>
               <p className="mt-2 max-w-3xl text-sm leading-relaxed text-grayScale-500 sm:text-[15px]">
-                Create a lesson using the same guided flow and save it under `sub_module_lessons`.
+                Create a lesson backed by `question_sets` and attach it through `sub_module_lessons`.
               </p>
             </div>
             <div className="flex items-center justify-center rounded-2xl border border-grayScale-100 bg-grayScale-50/40 px-3 py-4 sm:px-6 sm:py-5">
@@ -324,160 +299,99 @@ export function AddNewLessonPage() {
         {currentStep === 1 ? (
           <Card className="p-6">
             <h2 className="text-lg font-semibold text-grayScale-900">Step 1: Context</h2>
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-grayScale-700">Lesson title</label>
-                  <Input value={lessonTitle} onChange={(e) => setLessonTitle(e.target.value)} placeholder="Enter lesson title" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-grayScale-700">Description</label>
-                  <textarea
-                    value={lessonDescription}
-                    onChange={(e) => setLessonDescription(e.target.value)}
-                    className="min-h-[88px] w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm"
-                    placeholder="Enter lesson description"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-grayScale-700">Intro video URL (optional)</label>
-                  <Input
-                    value={introVideoUrl}
-                    onChange={(e) => setIntroVideoUrl(e.target.value)}
-                    onBlur={() => void handleImportIntroVideoFromUrl()}
-                    placeholder="https://..."
-                    type="url"
-                    inputMode="url"
-                    autoComplete="off"
-                    className="font-mono text-[13px]"
-                  />
-                  <input
-                    ref={introVideoFileInputRef}
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={handleIntroVideoFileChange}
-                    disabled={uploadingIntroVideo || importingIntroVideoUrl}
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => introVideoFileInputRef.current?.click()}
-                      disabled={uploadingIntroVideo || importingIntroVideoUrl}
-                      className="gap-1.5"
-                    >
-                      {uploadingIntroVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      {uploadingIntroVideo ? "Uploading..." : "Upload video from computer"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleImportIntroVideoFromUrl()}
-                      disabled={uploadingIntroVideo || importingIntroVideoUrl || !introVideoUrl.trim()}
-                    >
-                      {importingIntroVideoUrl ? (
-                        <>
-                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                          Importing URL...
-                        </>
-                      ) : (
-                        "Import URL via /files/upload"
-                      )}
-                    </Button>
-                    {introVideoUrl.trim() ? (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setIntroVideoUrl("")}>
-                        Clear URL
-                      </Button>
-                    ) : null}
-                  </div>
-                  {introVideoPreview ? (
-                    <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-3">
-                      <p className="mb-2 text-xs font-medium text-grayScale-500">Preview</p>
-                      {introVideoPreview.kind === "vimeo" ? (
-                        <div className="overflow-hidden rounded-lg border border-grayScale-200 bg-black">
-                          <iframe
-                            src={introVideoPreview.url}
-                            title="Intro video preview"
-                            className="aspect-video w-full"
-                            allow="autoplay; fullscreen; picture-in-picture"
-                            allowFullScreen
-                          />
-                        </div>
-                      ) : (
-                        <video
-                          controls
-                          src={introVideoPreview.url}
-                          className="aspect-video w-full rounded-lg border border-grayScale-200 bg-black"
-                        />
-                      )}
-                    </div>
-                  ) : null}
-                  <p className="text-xs leading-relaxed text-grayScale-500">
-                    File uploads and URL imports both go through `/files/upload`.
-                  </p>
-                </div>
+            <div className="mt-5 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">Lesson title</label>
+                <Input value={lessonTitle} onChange={(e) => setLessonTitle(e.target.value)} placeholder="Enter lesson title" />
               </div>
-              <div className="space-y-4 rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-4">
-                <h3 className="text-sm font-semibold text-grayScale-700">Scoring & behavior</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-grayScale-500">Passing score</label>
-                    <Input type="number" value={passingScore} onChange={(e) => setPassingScore(Number(e.target.value))} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-grayScale-500">Time (min)</label>
-                    <Input type="number" value={timeLimitMinutes} onChange={(e) => setTimeLimitMinutes(Number(e.target.value))} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-grayScale-200 bg-white px-3 py-2">
-                  <span className="text-sm text-grayScale-700">Shuffle questions</span>
-                  <button
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">Description</label>
+                <textarea
+                  value={lessonDescription}
+                  onChange={(e) => setLessonDescription(e.target.value)}
+                  className="min-h-[88px] w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm"
+                  placeholder="Enter lesson description"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">Intro video URL (optional)</label>
+                <Input
+                  value={introVideoUrl}
+                  onChange={(e) => setIntroVideoUrl(e.target.value)}
+                  onBlur={() => void handleImportIntroVideoFromUrl()}
+                  placeholder="https://..."
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  className="font-mono text-[13px]"
+                />
+                <input
+                  ref={introVideoFileInputRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={handleIntroVideoFileChange}
+                  disabled={uploadingIntroVideo || importingIntroVideoUrl}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
                     type="button"
-                    onClick={() => setShuffleQuestions((p) => !p)}
-                    className={`relative inline-flex h-6 w-11 rounded-full ${shuffleQuestions ? "bg-brand-500" : "bg-grayScale-300"}`}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => introVideoFileInputRef.current?.click()}
+                    disabled={uploadingIntroVideo || importingIntroVideoUrl}
+                    className="gap-1.5"
                   >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-                        shuffleQuestions ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+                    {uploadingIntroVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {uploadingIntroVideo ? "Uploading..." : "Upload video from computer"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleImportIntroVideoFromUrl()}
+                    disabled={uploadingIntroVideo || importingIntroVideoUrl || !introVideoUrl.trim()}
+                  >
+                    {importingIntroVideoUrl ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        Importing URL...
+                      </>
+                    ) : (
+                      "Import URL via /files/upload"
+                    )}
+                  </Button>
+                  {introVideoUrl.trim() ? (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setIntroVideoUrl("")}>
+                      Clear URL
+                    </Button>
+                  ) : null}
                 </div>
+                {introVideoPreview ? (
+                  <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-3">
+                    <p className="mb-2 text-xs font-medium text-grayScale-500">Preview</p>
+                    {introVideoPreview.kind === "vimeo" ? (
+                      <div className="overflow-hidden rounded-lg border border-grayScale-200 bg-black">
+                        <iframe
+                          src={introVideoPreview.url}
+                          title="Intro video preview"
+                          className="aspect-video w-full"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <video
+                        controls
+                        src={introVideoPreview.url}
+                        className="aspect-video w-full rounded-lg border border-grayScale-200 bg-black"
+                      />
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className="mt-6 flex justify-end">
-              <Button onClick={handleNext}>
-                Next: Persona
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </Card>
-        ) : null}
-
-        {currentStep === 2 ? (
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-grayScale-900">Step 2: Persona</h2>
-            <p className="mt-1 text-sm text-grayScale-500">Optional field stored on the lesson question set.</p>
-            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {PERSONAS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`rounded-xl border-2 p-4 text-center ${selectedPersona === p.id ? "border-brand-500 bg-brand-50" : "border-grayScale-200 bg-white"}`}
-                  onClick={() => setSelectedPersona(p.id)}
-                >
-                  <img src={p.avatar} alt={p.name} className="mx-auto mb-2 h-12 w-12 rounded-full" />
-                  <p className="text-sm font-medium">{p.name}</p>
-                </button>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-between">
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
               <Button onClick={handleNext}>
                 Next: Questions
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -486,7 +400,7 @@ export function AddNewLessonPage() {
           </Card>
         ) : null}
 
-        {currentStep === 3 ? (
+        {currentStep === 2 ? (
           <div className="space-y-4">
             {questions.map((question, index) => (
               <Card key={question.id} className="p-5">
@@ -550,14 +464,13 @@ export function AddNewLessonPage() {
           </div>
         ) : null}
 
-        {currentStep === 4 ? (
+        {currentStep === 3 ? (
           <Card className="p-6">
-            <h2 className="text-lg font-semibold text-grayScale-900">Step 4: Review & publish</h2>
+            <h2 className="text-lg font-semibold text-grayScale-900">Step 3: Review & publish</h2>
             <div className="mt-4 space-y-2 text-sm text-grayScale-700">
-              <p><span className="font-medium">Title:</span> {lessonTitle || "Untitled Lesson"}</p>
-              <p><span className="font-medium">Description:</span> {lessonDescription || "—"}</p>
-              <p><span className="font-medium">Intro video:</span> {introVideoUrl || "—"}</p>
-              <p><span className="font-medium">Persona:</span> {PERSONAS.find((p) => p.id === selectedPersona)?.name || "None"}</p>
+              <p><span className="font-medium">Question set title:</span> {lessonTitle || "Untitled Lesson"}</p>
+              <p><span className="font-medium">Question set description:</span> {lessonDescription || "—"}</p>
+              <p><span className="font-medium">Sub-module lesson intro video:</span> {introVideoUrl || "—"}</p>
               <p><span className="font-medium">Questions:</span> {questions.length}</p>
             </div>
             <div className="mt-6 flex justify-between">
@@ -577,7 +490,7 @@ export function AddNewLessonPage() {
           </Card>
         ) : null}
 
-        {currentStep === 5 && resultStatus ? (
+        {currentStep === 4 && resultStatus ? (
           <div className="flex flex-col items-center py-16">
             <h2 className="text-2xl font-bold text-grayScale-900">
               {resultStatus === "success" ? "Lesson saved successfully!" : "Lesson save failed"}

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
 import {
-  BadgeCheck,
   ChevronDown,
   ChevronRight,
   GripVertical,
@@ -32,9 +31,9 @@ import { Badge } from "../../components/ui/badge"
 import {
   getCourseCategories,
   getCoursesByCategory,
-  getLearningPath,
+  getSubModulesByCourse,
+  getVideosBySubModule,
   getQuestionSetsByOwner,
-  getSubModuleEntryAssessment,
   reorderCategories,
   reorderCourses,
   reorderSubModules,
@@ -194,9 +193,7 @@ export function CourseFlowBuilderPage() {
   const [practicesBySubCourse, setPracticesBySubCourse] = useState<Record<number, PracticeListItem[]>>(
     {},
   )
-  const [entryAssessmentBySubCourse, setEntryAssessmentBySubCourse] = useState<Record<number, QuestionSet | null>>(
-    {},
-  )
+  const [videosBySubCourse, setVideosBySubCourse] = useState<Record<number, LearningPathVideo[]>>({})
 
   const [loading, setLoading] = useState(true)
   const [loadingCourses, setLoadingCourses] = useState(false)
@@ -280,47 +277,94 @@ export function CourseFlowBuilderPage() {
     const load = async () => {
       setLoadingPath(true)
       try {
-        const res = await getLearningPath(selectedCourseId)
-        const path = res.data.data
+        const selectedCourse = activeCourses.find((course) => course.id === selectedCourseId)
+        const subRes = await getSubModulesByCourse(selectedCourseId)
+        const subCourses = sortByDisplayOrder((subRes.data.data.sub_courses ?? []) as any[]).map((sc) => ({
+          id: sc.id,
+          title: sc.title,
+          description: sc.description ?? "",
+          thumbnail: sc.thumbnail ?? "",
+          display_order: sc.display_order ?? 0,
+          level: sc.level ?? sc.cefr_level ?? "",
+          sub_level: sc.sub_level ?? "",
+          prerequisite_count: 0,
+          video_count: 0,
+          practice_count: 0,
+          prerequisites: [],
+          videos: [],
+          practices: [],
+        }))
+
         setLearningPath({
-          ...path,
-          sub_courses: sortByDisplayOrder(path.sub_courses ?? []),
+          course_id: selectedCourseId,
+          course_title: selectedCourse?.title ?? "",
+          description: selectedCourse?.description ?? "",
+          thumbnail: selectedCourse?.thumbnail ?? "",
+          intro_video_url: "",
+          category_id: selectedCategoryId ?? 0,
+          category_name: topLevelCategories.find((cat) => cat.id === selectedCategoryId)?.name ?? "",
+          sub_courses: subCourses,
         })
 
-        // Practices source of truth: question sets by SUB_COURSE owner.
-        const subCourses = path.sub_courses ?? []
-        if (subCourses.length > 0) {
-          const ownerResults = await Promise.all(
+        if (subCourses.length === 0) {
+          setPracticesBySubCourse({})
+          setVideosBySubCourse({})
+          return
+        }
+
+        const [ownerResults, videoResults] = await Promise.all([
+          Promise.all(
             subCourses.map(async (sc) => {
-              const setsRes = await getQuestionSetsByOwner("SUB_COURSE", sc.id)
+              const setsRes = await getQuestionSetsByOwner("SUB_MODULE", sc.id)
               return [sc.id, mapPracticeSetsToPracticeItems((setsRes.data.data ?? []) as QuestionSet[])] as const
             }),
-          )
-          const practiceMap: Record<number, PracticeListItem[]> = {}
-          ownerResults.forEach(([subCourseId, practiceItems]) => {
-            practiceMap[subCourseId] = practiceItems
-          })
-          setPracticesBySubCourse(practiceMap)
-        } else {
-          setPracticesBySubCourse({})
-        }
+          ),
+          Promise.all(
+            subCourses.map(async (sc) => {
+              const videosRes = await getVideosBySubModule(sc.id)
+              const rows = videosRes.data?.data?.videos ?? []
+              const mapped = sortByDisplayOrder(
+                rows.map((video: any, idx: number) => ({
+                  id: Number(video.id),
+                  title: String(video.title ?? "Video"),
+                  display_order: Number(video.display_order ?? idx),
+                  duration: Number(video.duration ?? 0),
+                  video_url: String(video.video_url ?? ""),
+                })),
+              )
+              return [sc.id, mapped] as const
+            }),
+          ),
+        ])
+
+        const practiceMap: Record<number, PracticeListItem[]> = {}
+        ownerResults.forEach(([subCourseId, practiceItems]) => {
+          practiceMap[subCourseId] = practiceItems
+        })
+        setPracticesBySubCourse(practiceMap)
+
+        const videoMap: Record<number, LearningPathVideo[]> = {}
+        videoResults.forEach(([subCourseId, videos]) => {
+          videoMap[subCourseId] = videos
+        })
+        setVideosBySubCourse(videoMap)
       } catch {
-        toast.error("Failed to load course sub-category learning path.")
+        toast.error("Failed to load course flow detail.")
         setLearningPath(null)
       } finally {
         setLoadingPath(false)
       }
     }
     load()
-  }, [selectedCourseId])
+  }, [selectedCourseId, activeCourses, selectedCategoryId, topLevelCategories])
 
   const loadSubCoursePracticeAndEntry = async (subCourseId: number) => {
-    if (practicesBySubCourse[subCourseId] && entryAssessmentBySubCourse[subCourseId] !== undefined) return
+    if (practicesBySubCourse[subCourseId] && videosBySubCourse[subCourseId]) return
     setLoadingPracticesBySubCourse((prev) => ({ ...prev, [subCourseId]: true }))
     try {
-      const [setsRes, entryRes] = await Promise.allSettled([
-        getQuestionSetsByOwner("SUB_COURSE", subCourseId),
-        getSubModuleEntryAssessment(subCourseId),
+      const [setsRes, videosRes] = await Promise.allSettled([
+        getQuestionSetsByOwner("SUB_MODULE", subCourseId),
+        getVideosBySubModule(subCourseId),
       ])
 
       // No practice sets is a valid empty-state scenario; do not toast for 404/empty.
@@ -339,20 +383,21 @@ export function CourseFlowBuilderPage() {
         [subCourseId]: mapPracticeSetsToPracticeItems(ownerSets),
       }))
 
-      // Entry assessment may legitimately be absent.
-      let entryAssessment: QuestionSet | null = null
-      if (entryRes.status === "fulfilled") {
-        entryAssessment = (entryRes.value.data.data ?? null) as QuestionSet | null
-      } else {
-        const status = entryRes.reason?.response?.status
-        if (status !== 404) {
-          throw entryRes.reason
-        }
-      }
-
-      setEntryAssessmentBySubCourse((prev) => ({
+      const videos =
+        videosRes.status === "fulfilled"
+          ? sortByDisplayOrder(
+              (videosRes.value.data?.data?.videos ?? []).map((video: any, idx: number) => ({
+                id: Number(video.id),
+                title: String(video.title ?? "Video"),
+                display_order: Number(video.display_order ?? idx),
+                duration: Number(video.duration ?? 0),
+                video_url: String(video.video_url ?? ""),
+              })),
+            )
+          : []
+      setVideosBySubCourse((prev) => ({
         ...prev,
-        [subCourseId]: entryAssessment,
+        [subCourseId]: videos,
       }))
     } catch {
       toast.error("Failed to load practice sets for course.")
@@ -694,6 +739,7 @@ export function CourseFlowBuilderPage() {
                     {learningPath.sub_courses.map((subCourse) => {
                       const expanded = expandedSubCourseIds.has(subCourse.id)
                       const practices = practicesBySubCourse[subCourse.id] ?? []
+                      const videos = videosBySubCourse[subCourse.id] ?? subCourse.videos ?? []
                       return (
                         <SortableRow key={subCourse.id} id={subCourse.id}>
                           <button
@@ -723,17 +769,12 @@ export function CourseFlowBuilderPage() {
                                     {subCourse.sub_level}
                                   </Badge>
                                 )}
-                                {entryAssessmentBySubCourse[subCourse.id] && (
-                                  <span className="inline-flex items-center gap-1 text-emerald-600">
-                                    <BadgeCheck className="h-3.5 w-3.5" />
-                                    Entry assessment
-                                  </span>
-                                )}
+                                {/* entry-assessment route is no longer guaranteed across deployments */}
                               </p>
                             </div>
                             <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
                               <Badge variant="secondary" className="text-[10px]">
-                                {subCourse.videos.length} videos / {practices.length || subCourse.practice_count} practices
+                                {videos.length} videos / {practices.length} practices
                               </Badge>
                               {expanded ? (
                                 <ChevronDown className="h-4 w-4 text-grayScale-400" />
@@ -755,16 +796,16 @@ export function CourseFlowBuilderPage() {
                                   onDragEnd={(event) => onVideosDragEnd(subCourse.id, event)}
                                 >
                                   <SortableContext
-                                    items={subCourse.videos.map((item) => item.id)}
+                                    items={videos.map((item) => item.id)}
                                     strategy={verticalListSortingStrategy}
                                   >
                                     <div className="space-y-1.5">
-                                      {subCourse.videos.length === 0 ? (
+                                      {videos.length === 0 ? (
                                         <p className="rounded-lg border border-dashed border-grayScale-200 px-2 py-2 text-[11px] text-grayScale-400">
                                           No videos
                                         </p>
                                       ) : (
-                                        subCourse.videos.map((video) => (
+                                        videos.map((video) => (
                                           <SortableChip
                                             key={video.id}
                                             id={video.id}
@@ -842,7 +883,7 @@ export function CourseFlowBuilderPage() {
           </p>
           <p>
             Practices load from <code>/question-sets/by-owner</code> filtered by
-            <code> set_type=PRACTICE</code>; entry assessment loads from dedicated course endpoint.
+            <code> set_type=PRACTICE</code> and <code>owner_type=SUB_MODULE</code>.
           </p>
         </CardContent>
       </Card>

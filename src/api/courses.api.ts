@@ -81,7 +81,10 @@ type CourseHierarchyRow = {
 export const getCourseCategories = () =>
   http.get("/course-management/hierarchy").then((res) => {
     const rows: UnifiedHierarchyRow[] = res.data?.data ?? []
-    const categoriesMap = new Map<number, { id: number; name: string; is_active: boolean; created_at: string }>()
+    const categoriesMap = new Map<
+      number,
+      { id: number; name: string; is_active: boolean; created_at: string; subCategoryCount: number; courseCount: number }
+    >()
     rows.forEach((r) => {
       if (!categoriesMap.has(r.category_id)) {
         categoriesMap.set(r.category_id, {
@@ -89,10 +92,50 @@ export const getCourseCategories = () =>
           name: r.category_name,
           is_active: true,
           created_at: new Date().toISOString(),
+          subCategoryCount: 0,
+          courseCount: 0,
         })
       }
+      const category = categoriesMap.get(r.category_id)!
+      if (r.sub_category_id) category.subCategoryCount += 1
+      if (r.course_id) category.courseCount += 1
     })
-    const categories = Array.from(categoriesMap.values())
+
+    // Merge duplicate top-level category names by selecting the richest representative.
+    type CategoryAggregate = {
+      id: number
+      name: string
+      is_active: boolean
+      created_at: string
+      subCategoryCount: number
+      courseCount: number
+    }
+    const categoryByName = new Map<string, CategoryAggregate>()
+    Array.from(categoriesMap.values()).forEach((category) => {
+      const key = category.name.trim().toLowerCase()
+      const existing = categoryByName.get(key)
+      if (!existing) {
+        categoryByName.set(key, category)
+        return
+      }
+      if (category.subCategoryCount > existing.subCategoryCount) {
+        categoryByName.set(key, category)
+        return
+      }
+      if (category.subCategoryCount === existing.subCategoryCount && category.courseCount > existing.courseCount) {
+        categoryByName.set(key, category)
+        return
+      }
+      if (
+        category.subCategoryCount === existing.subCategoryCount &&
+        category.courseCount === existing.courseCount &&
+        category.id > existing.id
+      ) {
+        categoryByName.set(key, category)
+      }
+    })
+
+    const categories = Array.from(categoryByName.values()).map(({ subCategoryCount, courseCount, ...category }) => category)
     return {
       ...res,
       data: {
@@ -113,17 +156,32 @@ export const createCourseCategory = (data: CreateCourseCategoryRequest) =>
 export const getCoursesByCategory = (categoryId: number) =>
   http.get("/course-management/hierarchy").then((res) => {
     const rows: UnifiedHierarchyRow[] = res.data?.data ?? []
-    const courses = rows
-      .filter((r) => r.category_id === categoryId && r.course_id)
-      .map((r) => ({
-        id: Number(r.course_id),
-        category_id: r.category_id,
-        sub_category_id: r.sub_category_id ?? null,
-        title: r.course_title ?? "",
-        description: "",
-        thumbnail: "",
-        is_active: true,
-      }))
+
+    const requestedCategoryRows = rows.filter((r) => r.category_id === categoryId)
+    const requestedCategoryName = requestedCategoryRows.find((r) => !!r.category_name)?.category_name?.trim().toLowerCase()
+    const relevantRows = requestedCategoryName
+      ? rows.filter((r) => r.category_name?.trim().toLowerCase() === requestedCategoryName)
+      : requestedCategoryRows
+
+    const courseMap = new Map<number, { id: number; category_id: number; sub_category_id: number | null; title: string; description: string; thumbnail: string; is_active: boolean }>()
+    relevantRows
+      .filter((r) => r.course_id)
+      .forEach((r) => {
+        const id = Number(r.course_id)
+        if (!Number.isFinite(id)) return
+        if (courseMap.has(id)) return
+        courseMap.set(id, {
+          id,
+          category_id: r.category_id,
+          sub_category_id: r.sub_category_id ?? null,
+          title: r.course_title ?? "",
+          description: "",
+          thumbnail: "",
+          is_active: true,
+        })
+      })
+    const courses = Array.from(courseMap.values())
+
     return {
       ...res,
       data: { ...res.data, data: { courses, total_count: courses.length } },

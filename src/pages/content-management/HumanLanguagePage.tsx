@@ -448,14 +448,18 @@ export function HumanLanguagePage() {
     const run = async () => {
       setLoading(true)
       try {
-        const count = await loadHierarchy(false)
-        // On first navigation after login, the first hierarchy request can race auth refresh.
-        // Retry once if it comes back empty so users don't need a manual browser refresh.
-        if (!cancelled && count === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 650))
-          if (!cancelled) {
-            await loadHierarchy(false)
+        // On first navigation after login, hierarchy can race token refresh and return empty.
+        // Retry a few times before showing empty state so manual browser refresh is not required.
+        let loadedCount = 0
+        const retryDelays = [0, 500, 900, 1400]
+        for (const delay of retryDelays) {
+          if (cancelled) return
+          if (delay > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delay))
+            if (cancelled) return
           }
+          loadedCount = await loadHierarchy(false)
+          if (loadedCount > 0) break
         }
         const saved = sessionStorage.getItem(HUMAN_LANGUAGE_SCROLL_KEY)
         const targetY = saved ? Number(saved) : 0

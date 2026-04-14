@@ -302,7 +302,7 @@ export function RolesListPage() {
               {roles.map((role) => (
                 <Card
                   key={role.id}
-                  className="overflow-hidden shadow-sm transition-shadow hover:shadow-md"
+                  className="overflow-hidden border border-grayScale-100 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div
                     className={cn(
@@ -312,7 +312,7 @@ export function RolesListPage() {
                         : "bg-gradient-to-r from-brand-500 to-brand-600",
                     )}
                   />
-                  <CardContent className="p-5">
+                  <CardContent className="space-y-4 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5">
                         <div
@@ -330,23 +330,37 @@ export function RolesListPage() {
                           )}
                         </div>
                         <div>
-                          <h3 className="text-sm font-semibold text-grayScale-700">{role.name}</h3>
-                          <p className="mt-0.5 text-xs text-grayScale-400 line-clamp-1">
-                            {role.description}
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-grayScale-700">
+                            {role.name}
+                          </h3>
+                          <p className="mt-0.5 text-xs text-grayScale-500 line-clamp-2">
+                            {role.description?.trim() || "No description provided for this role."}
                           </p>
                         </div>
                       </div>
-                      {role.is_system && (
-                        <Badge variant="warning" className="shrink-0 text-[10px]">
-                          System
-                        </Badge>
-                      )}
+                      <Badge
+                        variant={role.is_system ? "warning" : "outline"}
+                        className="shrink-0 text-[10px]"
+                      >
+                        {role.is_system ? "System" : "Custom"}
+                      </Badge>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-[11px] text-grayScale-400">
-                        Created {new Date(role.created_at).toLocaleDateString()}
-                      </span>
+                    <div className="grid grid-cols-2 gap-2 rounded-xl border border-grayScale-100 bg-grayScale-50/70 p-2.5 text-[11px]">
+                      <div>
+                        <p className="text-grayScale-400">Role ID</p>
+                        <p className="font-semibold text-grayScale-700">#{role.id}</p>
+                      </div>
+                      <div>
+                        <p className="text-grayScale-400">Created</p>
+                        <p className="font-semibold text-grayScale-700">
+                          {new Date(role.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-grayScale-400">Open details to view permissions</span>
                       <Button
                         variant="outline"
                         size="sm"

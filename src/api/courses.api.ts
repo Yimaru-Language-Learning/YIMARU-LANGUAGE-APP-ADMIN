@@ -574,9 +574,21 @@ export const getHumanLanguageHierarchy = () =>
       }
     })
 
-    const selectedCategory =
-      Array.from(categoryMap.values()).find((c) => c.category_name.toLowerCase().includes("human")) ??
-      Array.from(categoryMap.values())[0]
+    const categories = Array.from(categoryMap.values())
+    const humanLanguageCandidates = categories.filter((c) => c.category_name.toLowerCase().includes("human"))
+
+    const selectedCategory = (humanLanguageCandidates.length ? humanLanguageCandidates : categories).sort((a, b) => {
+      const aSubCategoryCount = a.sub_categories.size
+      const bSubCategoryCount = b.sub_categories.size
+      if (aSubCategoryCount !== bSubCategoryCount) return bSubCategoryCount - aSubCategoryCount
+
+      const aCourseCount = Array.from(a.sub_categories.values()).reduce((sum, sub) => sum + sub.courses.size, 0)
+      const bCourseCount = Array.from(b.sub_categories.values()).reduce((sum, sub) => sum + sub.courses.size, 0)
+      if (aCourseCount !== bCourseCount) return bCourseCount - aCourseCount
+
+      // If tied on richness, pick the latest category id.
+      return b.category_id - a.category_id
+    })[0]
 
     if (!selectedCategory) {
       return {

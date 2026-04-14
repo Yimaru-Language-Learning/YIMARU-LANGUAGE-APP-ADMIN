@@ -31,6 +31,7 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
   addQuestionToSet,
   createPractice,
+  createLesson,
   createQuestion,
   createCourse,
   createCourseCategory,
@@ -565,6 +566,26 @@ export function HumanLanguagePage() {
     }
   }
 
+  const handleCreateLesson = async (subModuleId: number, currentLessonsCount: number) => {
+    const key = `lesson-${subModuleId}`
+    setCreatingKey(key)
+    try {
+      const next = (currentLessonsCount || 0) + 1
+      await createLesson({
+        sub_module_id: subModuleId,
+        title: `Lesson ${next}`,
+        description: `Auto-created lesson ${next}`,
+      })
+      toast.success("Lesson created")
+      await loadHierarchy(false)
+    } catch (error) {
+      console.error("Failed to create lesson:", error)
+      toast.error("Failed to create lesson")
+    } finally {
+      setCreatingKey(null)
+    }
+  }
+
   const requestRemove = (payload: PendingRemove) => {
     if (payload.ids.length === 0) return
     setPendingRemove(payload)
@@ -608,12 +629,17 @@ export function HumanLanguagePage() {
     const key = `next-level-${courseId}-${next}`
     setCreatingKey(key)
     try {
-      await createHumanLanguageLesson({
-        course_id: courseId,
-        cefr_level: next,
-        title: "Module-1",
-        description: `${next} Module-1`,
-      })
+      const existingLevel = course.levels.find((l) => l.level.toUpperCase() === next)
+      if (existingLevel?.level_id) {
+        await createModuleInLevel(existingLevel.level_id, "Module-1", `${next} Module-1`, 1)
+      } else {
+        await createHumanLanguageLesson({
+          course_id: courseId,
+          cefr_level: next,
+          title: "Module-1",
+          description: `${next} Module-1`,
+        })
+      }
       toast.success(`${next} created with Module-1`)
       await loadHierarchy()
     } catch (error) {
@@ -1611,20 +1637,22 @@ export function HumanLanguagePage() {
                                                       <Plus className="h-3.5 w-3.5" />
                                                       New practice
                                                     </Button>
-                                                  ) : panelTab === "lessons" && categoryId ? (
-                                                    <Link
-                                                      to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}`}
+                                                  ) : panelTab === "lessons" ? (
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="outline"
+                                                      className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
+                                                      onClick={() => handleCreateLesson(subModule.id, lessonRows.length)}
+                                                      disabled={creatingKey === `lesson-${subModule.id}`}
                                                     >
-                                                      <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
-                                                      >
+                                                      {creatingKey === `lesson-${subModule.id}` ? (
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                      ) : (
                                                         <Plus className="h-3.5 w-3.5" />
-                                                        New lesson
-                                                      </Button>
-                                                    </Link>
+                                                      )}
+                                                      New lesson
+                                                    </Button>
                                                   ) : null}
                                                 </div>
                                               </div>

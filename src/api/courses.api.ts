@@ -349,6 +349,33 @@ export const createPractice = (data: CreatePracticeRequest) =>
         .then(() => res)
     })
 
+export const createLesson = (data: {
+  sub_module_id: number
+  title: string
+  description?: string
+  intro_video_url?: string
+}) =>
+  http
+    .post<CreateQuestionSetResponse>("/question-sets", {
+      title: data.title,
+      set_type: "QUIZ",
+      owner_type: "SUB_MODULE",
+      owner_id: data.sub_module_id,
+      ...(data.description?.trim() ? { description: data.description.trim() } : {}),
+      ...(data.intro_video_url?.trim() ? { intro_video_url: data.intro_video_url.trim() } : {}),
+    })
+    .then((res) => {
+      const questionSetID = res.data?.data?.id
+      if (!questionSetID) return res
+      return http
+        .post("/course-management/sub-module-lessons", {
+          sub_module_id: data.sub_module_id,
+          question_set_id: questionSetID,
+          intro_video_url: data.intro_video_url,
+        })
+        .then(() => res)
+    })
+
 export const updatePractice = (practiceId: number, data: UpdatePracticeRequest) =>
   http.put(`/course-management/practices/${practiceId}`, data)
 

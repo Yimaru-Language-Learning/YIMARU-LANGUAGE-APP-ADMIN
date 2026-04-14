@@ -35,6 +35,8 @@ import {
   createCourse,
   createCourseCategory,
   createHumanLanguageLesson,
+  deleteCourse,
+  deleteCourseSubCategory,
   deleteQuestionSet,
   deleteQuestion,
   deleteSubModule,
@@ -325,6 +327,10 @@ export function HumanLanguagePage() {
   const [quickCourseName, setQuickCourseName] = useState("")
   const [quickSearch, setQuickSearch] = useState("")
   const [quickCreating, setQuickCreating] = useState(false)
+  const [subCategoryTargetDelete, setSubCategoryTargetDelete] = useState<{ id: number; name: string } | null>(null)
+  const [courseTargetDelete, setCourseTargetDelete] = useState<{ id: number; name: string } | null>(null)
+  const [deletingSubCategory, setDeletingSubCategory] = useState(false)
+  const [deletingCourse, setDeletingCourse] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
   /** Course IDs whose path body is collapsed (headers stay visible). */
   const [collapsedPathIds, setCollapsedPathIds] = useState<number[]>([])
@@ -653,6 +659,41 @@ export function HumanLanguagePage() {
       toast.error("Failed to create subcategory/course path")
     } finally {
       setQuickCreating(false)
+    }
+  }
+
+  const handleDeleteSelectedSubCategory = async () => {
+    if (!subCategoryTargetDelete) return
+    setDeletingSubCategory(true)
+    try {
+      await deleteCourseSubCategory(subCategoryTargetDelete.id)
+      toast.success("Sub-category deleted")
+      setSubCategoryTargetDelete(null)
+      setSelectedSubCategoryId("ALL")
+      setSelectedCourseId("ALL")
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to delete sub-category:", error)
+      toast.error("Failed to delete sub-category")
+    } finally {
+      setDeletingSubCategory(false)
+    }
+  }
+
+  const handleDeleteSelectedCourse = async () => {
+    if (!courseTargetDelete) return
+    setDeletingCourse(true)
+    try {
+      await deleteCourse(courseTargetDelete.id)
+      toast.success("Course deleted")
+      setCourseTargetDelete(null)
+      setSelectedCourseId("ALL")
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to delete course:", error)
+      toast.error("Failed to delete course")
+    } finally {
+      setDeletingCourse(false)
     }
   }
 
@@ -1163,6 +1204,44 @@ export function HumanLanguagePage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+          disabled={selectedSubCategoryId === "ALL"}
+          onClick={() => {
+            if (selectedSubCategoryId === "ALL") return
+            const selected = subCategories.find((s) => s.sub_category_id === selectedSubCategoryId)
+            setSubCategoryTargetDelete({
+              id: Number(selectedSubCategoryId),
+              name: selected?.sub_category_name ?? `Sub-category ${selectedSubCategoryId}`,
+            })
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete selected sub-category
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+          disabled={selectedCourseId === "ALL"}
+          onClick={() => {
+            if (selectedCourseId === "ALL") return
+            const selected = availableCourses.find((c) => c.course_id === selectedCourseId)
+            setCourseTargetDelete({
+              id: Number(selectedCourseId),
+              name: selected?.course_name ?? `Course ${selectedCourseId}`,
+            })
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete selected course
+        </Button>
+      </div>
 
       {loading ? (
         <div className="flex items-center gap-2 py-8 text-sm text-grayScale-500">
@@ -2165,6 +2244,58 @@ export function HumanLanguagePage() {
               disabled={deletingPractice}
             >
               {deletingPractice ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={subCategoryTargetDelete !== null} onOpenChange={(open) => !open && setSubCategoryTargetDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete sub-category?</DialogTitle>
+            <DialogDescription>
+              {subCategoryTargetDelete
+                ? `This will permanently delete "${subCategoryTargetDelete.name}" and all courses under it.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setSubCategoryTargetDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void handleDeleteSelectedSubCategory()}
+              disabled={deletingSubCategory}
+            >
+              {deletingSubCategory ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={courseTargetDelete !== null} onOpenChange={(open) => !open && setCourseTargetDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete course?</DialogTitle>
+            <DialogDescription>
+              {courseTargetDelete
+                ? `This will permanently delete "${courseTargetDelete.name}" and all nested content under it.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCourseTargetDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void handleDeleteSelectedCourse()}
+              disabled={deletingCourse}
+            >
+              {deletingCourse ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

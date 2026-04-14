@@ -507,7 +507,185 @@ export const getHumanLanguageLessonsByCourse = (courseId: number, cefr_level: st
   })
 
 export const getHumanLanguageHierarchy = () =>
-  http.get<GetHumanLanguageHierarchyResponse>("/course-management/hierarchy")
+  http.get<GetHumanLanguageHierarchyResponse>("/course-management/hierarchy").then(async (res) => {
+    const payload = res.data?.data as unknown
+    if (payload && typeof payload === "object" && !Array.isArray(payload) && "sub_categories" in payload) {
+      return res
+    }
+
+    const rows: UnifiedHierarchyRow[] = Array.isArray(payload) ? payload : []
+    const categoryMap = new Map<
+      number,
+      {
+        category_id: number
+        category_name: string
+        sub_categories: Map<
+          number,
+          {
+            sub_category_id: number
+            sub_category_name: string
+            courses: Map<
+              number,
+              {
+                course_id: number
+                course_name: string
+              }
+            >
+          }
+        >
+      }
+    >()
+
+    rows.forEach((row) => {
+      const categoryId = Number(row.category_id)
+      if (!Number.isFinite(categoryId)) return
+
+      if (!categoryMap.has(categoryId)) {
+        categoryMap.set(categoryId, {
+          category_id: categoryId,
+          category_name: row.category_name ?? "",
+          sub_categories: new Map(),
+        })
+      }
+
+      if (!row.sub_category_id) return
+      const subCategoryId = Number(row.sub_category_id)
+      if (!Number.isFinite(subCategoryId)) return
+
+      const categoryNode = categoryMap.get(categoryId)!
+      if (!categoryNode.sub_categories.has(subCategoryId)) {
+        categoryNode.sub_categories.set(subCategoryId, {
+          sub_category_id: subCategoryId,
+          sub_category_name: row.sub_category_name ?? "",
+          courses: new Map(),
+        })
+      }
+
+      if (!row.course_id) return
+      const courseId = Number(row.course_id)
+      if (!Number.isFinite(courseId)) return
+
+      const subCategoryNode = categoryNode.sub_categories.get(subCategoryId)!
+      if (!subCategoryNode.courses.has(courseId)) {
+        subCategoryNode.courses.set(courseId, {
+          course_id: courseId,
+          course_name: row.course_title ?? "",
+        })
+      }
+    })
+
+    const selectedCategory =
+      Array.from(categoryMap.values()).find((c) => c.category_name.toLowerCase().includes("human")) ??
+      Array.from(categoryMap.values())[0]
+
+    if (!selectedCategory) {
+      return {
+        ...res,
+        data: {
+          ...res.data,
+          data: {
+            category_id: 0,
+            category_name: "",
+            sub_categories: [],
+          },
+        },
+      } as unknown as { data: GetHumanLanguageHierarchyResponse }
+    }
+
+    const courses = Array.from(selectedCategory.sub_categories.values()).flatMap((sub) =>
+      Array.from(sub.courses.values()).map((course) => ({ sub_category_id: sub.sub_category_id, course })),
+    )
+
+    const hierarchyResponses = await Promise.all(
+      courses.map(({ course }) =>
+        http
+          .get(`/course-management/courses/${course.course_id}/hierarchy`)
+          .then((courseRes) => ({ course_id: course.course_id, rows: (courseRes.data?.data ?? []) as CourseHierarchyRow[] }))
+          .catch(() => ({ course_id: course.course_id, rows: [] as CourseHierarchyRow[] })),
+      ),
+    )
+
+    const hierarchyByCourse = new Map<number, CourseHierarchyRow[]>(
+      hierarchyResponses.map((h) => [h.course_id, h.rows]),
+    )
+
+    const subCategories = Array.from(selectedCategory.sub_categories.values()).map((sub) => ({
+      sub_category_id: sub.sub_category_id,
+      sub_category_name: sub.sub_category_name,
+      courses: Array.from(sub.courses.values()).map((course) => {
+        const levelMap = new Map<
+          string,
+          {
+            level: string
+            modules: Map<
+              number,
+              {
+                id: number
+                title: string
+                sub_modules: Map<number, { id: number; title: string; videos: []; practices: [] }>
+              }
+            >
+          }
+        >()
+
+        ;(hierarchyByCourse.get(course.course_id) ?? []).forEach((row) => {
+          if (!row.level_id || !row.cefr_level) return
+          const levelKey = String(row.cefr_level).toUpperCase()
+          if (!levelMap.has(levelKey)) {
+            levelMap.set(levelKey, { level: levelKey, modules: new Map() })
+          }
+
+          if (!row.module_id) return
+          const levelNode = levelMap.get(levelKey)!
+          const moduleId = Number(row.module_id)
+          if (!levelNode.modules.has(moduleId)) {
+            levelNode.modules.set(moduleId, {
+              id: moduleId,
+              title: row.module_title ?? "",
+              sub_modules: new Map(),
+            })
+          }
+
+          if (!row.sub_module_id) return
+          const moduleNode = levelNode.modules.get(moduleId)!
+          const subModuleId = Number(row.sub_module_id)
+          if (!moduleNode.sub_modules.has(subModuleId)) {
+            moduleNode.sub_modules.set(subModuleId, {
+              id: subModuleId,
+              title: row.sub_module_title ?? "",
+              videos: [],
+              practices: [],
+            })
+          }
+        })
+
+        return {
+          course_id: course.course_id,
+          course_name: course.course_name,
+          levels: Array.from(levelMap.values()).map((levelNode) => ({
+            level: levelNode.level,
+            modules: Array.from(levelNode.modules.values()).map((moduleNode) => ({
+              id: moduleNode.id,
+              title: moduleNode.title,
+              sub_modules: Array.from(moduleNode.sub_modules.values()),
+            })),
+          })),
+        }
+      }),
+    }))
+
+    return {
+      ...res,
+      data: {
+        ...res.data,
+        data: {
+          category_id: selectedCategory.category_id,
+          category_name: selectedCategory.category_name,
+          sub_categories: subCategories,
+        },
+      },
+    } as unknown as { data: GetHumanLanguageHierarchyResponse }
+  })
 
 export const createHumanLanguageLesson = (data: CreateHumanLanguageLessonRequest) =>
   http

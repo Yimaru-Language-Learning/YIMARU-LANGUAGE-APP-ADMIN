@@ -358,7 +358,7 @@ export function AddNewLessonPage() {
                         Importing URL...
                       </>
                     ) : (
-                      "Import URL via /files/upload"
+                      "Import video from URL"
                     )}
                   </Button>
                   {introVideoUrl.trim() ? (

@@ -91,6 +91,14 @@ type PracticeDialogState =
       practiceId?: number
     }
 
+type LessonDialogState =
+  | { open: false }
+  | {
+      open: true
+      lessonId: number
+      questionSetId: number
+    }
+
 type QuestionDialogState =
   | { open: false }
   | {
@@ -344,7 +352,14 @@ export function HumanLanguagePage() {
   const [subModuleCardSelection, setSubModuleCardSelection] = useState<Record<string, SubModuleCardSelection>>({})
   const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
   const [practiceDialog, setPracticeDialog] = useState<PracticeDialogState>({ open: false })
+  const [lessonDialog, setLessonDialog] = useState<LessonDialogState>({ open: false })
   const [questionDialog, setQuestionDialog] = useState<QuestionDialogState>({ open: false })
+  const [lessonForm, setLessonForm] = useState({
+    title: "",
+    description: "",
+    introVideoUrl: "",
+    status: "DRAFT" as "DRAFT" | "PUBLISHED" | "ARCHIVED",
+  })
   const [practiceForm, setPracticeForm] = useState({
     title: "",
     description: "",
@@ -357,9 +372,12 @@ export function HumanLanguagePage() {
   const [questionDraft, setQuestionDraft] = useState<PracticeQuestionEditorValue>(() => createEmptyPracticeQuestionDraft())
   const [questionDetailById, setQuestionDetailById] = useState<Record<number, QuestionDetail>>({})
   const [practiceTargetDelete, setPracticeTargetDelete] = useState<{ id: number; title: string } | null>(null)
+  const [lessonTargetDelete, setLessonTargetDelete] = useState<{ id: number; questionSetId: number; title: string } | null>(null)
   const [questionTargetDelete, setQuestionTargetDelete] = useState<{ id: number; practiceId: number; text: string } | null>(null)
   const [savingPractice, setSavingPractice] = useState(false)
+  const [savingLesson, setSavingLesson] = useState(false)
   const [savingQuestion, setSavingQuestion] = useState(false)
+  const [deletingLesson, setDeletingLesson] = useState(false)
   const [deletingPractice, setDeletingPractice] = useState(false)
   const [deletingQuestion, setDeletingQuestion] = useState(false)
   /** While fetching full question detail before opening the edit dialog (avoids empty form flash). */
@@ -815,6 +833,57 @@ export function HumanLanguagePage() {
     }
   }
 
+  const openEditLessonDialog = async (lesson: { id: number; question_set_id: number; title: string }) => {
+    setLessonDialog({ open: true, lessonId: lesson.id, questionSetId: lesson.question_set_id })
+    setSavingLesson(false)
+    try {
+      const detail = (await getQuestionSetById(lesson.question_set_id)).data?.data
+      setLessonForm({
+        title: detail?.title ?? lesson.title ?? "",
+        description: detail?.description ?? "",
+        introVideoUrl: detail?.intro_video_url ?? "",
+        status:
+          (detail?.status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | undefined) && ["DRAFT", "PUBLISHED", "ARCHIVED"].includes(detail.status)
+            ? (detail.status as "DRAFT" | "PUBLISHED" | "ARCHIVED")
+            : "DRAFT",
+      })
+    } catch (error) {
+      console.error("Failed to load lesson detail:", error)
+      setLessonForm({
+        title: lesson.title ?? "",
+        description: "",
+        introVideoUrl: "",
+        status: "DRAFT",
+      })
+      toast.error("Could not load full lesson details")
+    }
+  }
+
+  const handleSaveLesson = async () => {
+    if (!lessonDialog.open) return
+    if (!lessonForm.title.trim()) {
+      toast.error("Lesson title is required")
+      return
+    }
+    setSavingLesson(true)
+    try {
+      await updateQuestionSet(lessonDialog.questionSetId, {
+        title: lessonForm.title.trim(),
+        description: lessonForm.description.trim() || undefined,
+        intro_video_url: lessonForm.introVideoUrl.trim() || undefined,
+        status: lessonForm.status,
+      })
+      toast.success("Lesson updated")
+      setLessonDialog({ open: false })
+      await loadHierarchy(false)
+    } catch (error) {
+      console.error("Failed to update lesson:", error)
+      toast.error("Failed to update lesson")
+    } finally {
+      setSavingLesson(false)
+    }
+  }
+
   const practiceFieldErrors = useMemo(() => {
     const title = practiceForm.title.trim()
     return {
@@ -1097,6 +1166,22 @@ export function HumanLanguagePage() {
       toast.error("Failed to delete practice")
     } finally {
       setDeletingPractice(false)
+    }
+  }
+
+  const handleDeleteLessonConfirmed = async () => {
+    if (!lessonTargetDelete) return
+    setDeletingLesson(true)
+    try {
+      await deleteQuestionSet(lessonTargetDelete.questionSetId)
+      toast.success("Lesson deleted")
+      setLessonTargetDelete(null)
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to delete lesson:", error)
+      toast.error("Failed to delete lesson")
+    } finally {
+      setDeletingLesson(false)
     }
   }
 
@@ -1508,6 +1593,7 @@ export function HumanLanguagePage() {
                                           const lessonRows = [
                                             ...(subModule.lessons ?? []).map((lesson) => ({
                                               id: lesson.id,
+                                              question_set_id: lesson.question_set_id,
                                               title: lesson.title,
                                               display_order: lesson.display_order,
                                               status: lesson.status,
@@ -1517,6 +1603,7 @@ export function HumanLanguagePage() {
                                             ...((subModule.lessons?.length ?? 0) === 0
                                               ? subModule.videos.map((video) => ({
                                                   id: video.id,
+                                                  question_set_id: 0,
                                                   title: video.title,
                                                   display_order: video.display_order,
                                                   status: "PUBLISHED",
@@ -1673,14 +1760,14 @@ export function HumanLanguagePage() {
                                                               type="button"
                                                               onClick={() => toggleLessonCard(smKey, v.id)}
                                                               className={cn(
-                                                                "flex flex-col gap-1.5 rounded-xl border bg-white p-3 text-left shadow-sm transition-all hover:border-brand-200 hover:shadow-md",
+                                                                "flex flex-col gap-1.5 rounded-xl border bg-white p-3 text-left shadow-sm transition-all hover:border-grayScale-300 hover:shadow-md",
                                                                 isActive
-                                                                  ? "border-brand-400 ring-2 ring-brand-400/30"
+                                                                  ? "border-grayScale-300 ring-1 ring-grayScale-200"
                                                                   : "border-grayScale-100",
                                                               )}
                                                             >
-                                                              <div className="flex items-start gap-2">
-                                                                <div className="rounded-lg bg-brand-50 p-1.5 text-brand-600">
+                                                              <div className="flex items-start justify-between gap-2">
+                                                                <div className="rounded-lg bg-grayScale-100 p-1.5 text-grayScale-600">
                                                                   <Video className="h-3.5 w-3.5" aria-hidden />
                                                                 </div>
                                                                 <div className="min-w-0 flex-1">
@@ -1688,7 +1775,9 @@ export function HumanLanguagePage() {
                                                                     {v.title}
                                                                   </p>
                                                                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                                                    <Badge className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-100">
+                                                                    <Badge
+                                                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${practiceStatusStyle(v.status ?? "DRAFT")}`}
+                                                                    >
                                                                       {(v.status ?? "DRAFT").replace(/_/g, " ").toLowerCase()}
                                                                     </Badge>
                                                                     <span className="text-[11px] text-grayScale-500">
@@ -1696,6 +1785,38 @@ export function HumanLanguagePage() {
                                                                     </span>
                                                                   </div>
                                                                 </div>
+                                                                {v.question_set_id > 0 ? (
+                                                                  <div className="flex shrink-0 items-center gap-1">
+                                                                    <Button
+                                                                      type="button"
+                                                                      size="sm"
+                                                                      variant="ghost"
+                                                                      className="h-7 px-2 text-[10px]"
+                                                                      onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        void openEditLessonDialog(v)
+                                                                      }}
+                                                                    >
+                                                                      Edit
+                                                                    </Button>
+                                                                    <Button
+                                                                      type="button"
+                                                                      size="sm"
+                                                                      variant="ghost"
+                                                                      className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                                      onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        setLessonTargetDelete({
+                                                                          id: v.id,
+                                                                          questionSetId: v.question_set_id,
+                                                                          title: v.title,
+                                                                        })
+                                                                      }}
+                                                                    >
+                                                                      Delete
+                                                                    </Button>
+                                                                  </div>
+                                                                ) : null}
                                                               </div>
                                                             </button>
                                                           )
@@ -1710,6 +1831,12 @@ export function HumanLanguagePage() {
                                                             {selectedLesson.title}
                                                           </h4>
                                                           <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                                                            <div>
+                                                              <dt className="text-xs text-grayScale-500">Status</dt>
+                                                              <dd className="font-medium text-grayScale-800 capitalize">
+                                                                {(selectedLesson.status ?? "DRAFT").toLowerCase()}
+                                                              </dd>
+                                                            </div>
                                                             <div>
                                                               <dt className="text-xs text-grayScale-500">Display order</dt>
                                                               <dd className="font-medium text-grayScale-800">
@@ -2278,6 +2405,100 @@ export function HumanLanguagePage() {
             </Button>
             <Button type="button" onClick={() => void handleSavePractice()} disabled={savingPractice || !practiceCanSave || loadingPracticeForm}>
               {savingPractice ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={lessonDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setLessonDialog({ open: false })
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit lesson</DialogTitle>
+            <DialogDescription>Update lesson metadata stored in the linked question set.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Title</label>
+              <Input
+                value={lessonForm.title}
+                onChange={(e) => setLessonForm((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Lesson title"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Description</label>
+              <textarea
+                value={lessonForm.description}
+                onChange={(e) => setLessonForm((prev) => ({ ...prev, description: e.target.value }))}
+                className="min-h-[88px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Status</label>
+              <select
+                value={lessonForm.status}
+                onChange={(e) =>
+                  setLessonForm((prev) => ({
+                    ...prev,
+                    status: (e.target.value as "DRAFT" | "PUBLISHED" | "ARCHIVED") ?? "DRAFT",
+                  }))
+                }
+                className="h-10 w-full rounded-md border border-grayScale-200 bg-white px-3 text-sm"
+              >
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Intro video URL</label>
+              <Input
+                value={lessonForm.introVideoUrl}
+                onChange={(e) => setLessonForm((prev) => ({ ...prev, introVideoUrl: e.target.value }))}
+                placeholder="https://..."
+                className="font-mono text-[13px]"
+              />
+              {lessonForm.introVideoUrl.trim()
+                ? renderMediaPreview(lessonForm.introVideoUrl, "video", "", "Intro video")
+                : null}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setLessonDialog({ open: false })}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleSaveLesson()} disabled={savingLesson}>
+              {savingLesson ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={lessonTargetDelete !== null} onOpenChange={(open) => !open && setLessonTargetDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete lesson?</DialogTitle>
+            <DialogDescription>
+              {lessonTargetDelete ? `This will permanently delete "${lessonTargetDelete.title}".` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setLessonTargetDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void handleDeleteLessonConfirmed()}
+              disabled={deletingLesson}
+            >
+              {deletingLesson ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

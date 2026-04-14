@@ -106,7 +106,9 @@ export const getCourseCategories = () =>
   })
 
 export const createCourseCategory = (data: CreateCourseCategoryRequest) =>
-  http.post("/course-management/sub-categories", { category_id: data.parent_id ?? 1, name: data.name })
+  data.parent_id
+    ? http.post("/course-management/sub-categories", { category_id: data.parent_id, name: data.name })
+    : http.post("/course-management/categories", { name: data.name })
 
 export const getCoursesByCategory = (categoryId: number) =>
   http.get("/course-management/hierarchy").then((res) => {

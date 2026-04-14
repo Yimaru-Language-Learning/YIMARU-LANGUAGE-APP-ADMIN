@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { FolderOpen, RefreshCw, BookOpen, Plus } from "lucide-react"
+import { FolderOpen, RefreshCw, BookOpen, Plus, Trash2 } from "lucide-react"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import alertSrc from "../../assets/Alert.svg"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -11,10 +11,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog"
-import { getCourseCategories, createCourseCategory } from "../../api/courses.api"
+import { getCourseCategories, createCourseCategory, deleteCourseCategory } from "../../api/courses.api"
 import type { CourseCategory } from "../../types/course.types"
 import { toast } from "sonner"
 
@@ -29,6 +30,8 @@ export function CourseCategoryPage() {
   const [newSubCategoryName, setNewSubCategoryName] = useState("")
   const [pendingSubCategories, setPendingSubCategories] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [deleteTarget, setDeleteTarget] = useState<CourseCategory | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchCategories = async () => {
     setLoading(true)
@@ -164,12 +167,26 @@ export function CourseCategoryPage() {
                 </CardHeader>
 
                 <CardContent>
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 transition-colors group-hover:text-brand-600">
-                    View Sub-categories
-                    <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
-                      →
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 transition-colors group-hover:text-brand-600">
+                      View Sub-categories
+                      <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
+                        →
+                      </span>
                     </span>
-                  </span>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 bg-white text-red-500 hover:bg-red-50"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDeleteTarget(category)
+                      }}
+                      aria-label={`Delete category ${category.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
             </Link>
@@ -335,7 +352,7 @@ export function CourseCategoryPage() {
                   if (createdCategoryId && pendingSubCategories.length > 0) {
                     await Promise.all(
                       pendingSubCategories.map((subName) =>
-                        createCourseCategory({ name: subName }),
+                        createCourseCategory({ name: subName, parent_id: createdCategoryId }),
                       ),
                     )
                   }
@@ -369,6 +386,46 @@ export function CourseCategoryPage() {
               {creating ? "Creating..." : "Create"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete category?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? `This will permanently delete "${deleteTarget.name}" and all linked sub-categories/courses.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={deleting}
+              onClick={async () => {
+                if (!deleteTarget) return
+                setDeleting(true)
+                try {
+                  await deleteCourseCategory(deleteTarget.id)
+                  toast.success("Category deleted")
+                  setDeleteTarget(null)
+                  await fetchCategories()
+                } catch (err: any) {
+                  const message = err?.response?.data?.message || "Failed to delete category."
+                  toast.error("Could not delete category", { description: message })
+                } finally {
+                  setDeleting(false)
+                }
+              }}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

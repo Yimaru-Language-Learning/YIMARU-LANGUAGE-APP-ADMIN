@@ -380,8 +380,8 @@ export function HumanLanguagePage() {
     label?: string,
   ) => <MediaPreviewCard urlRaw={urlRaw} hint={hint} className={className} label={label} />
 
-  const loadHierarchy = async () => {
-    setLoading(true)
+  const loadHierarchy = async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await getHumanLanguageHierarchy()
       const data = res.data?.data
@@ -404,7 +404,7 @@ export function HumanLanguagePage() {
       setCollapsedModuleIds(moduleIds)
       setCollapsedSubModuleIds(subModuleIds)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
@@ -525,7 +525,7 @@ export function HumanLanguagePage() {
       const next = nextMissingPositive(usedNumbers)
       const title = `Module-${next}`
       await createModuleInLevel(levelNode.level_id, title, `${level} ${title}`, next)
-      await loadHierarchy()
+      await loadHierarchy(false)
     } catch (error) {
       console.error("Failed to create module:", error)
       toast.error("Failed to create module")
@@ -556,7 +556,7 @@ export function HumanLanguagePage() {
       const next = nextMissingPositive(usedNumbers)
       const title = `Module-${moduleNo}.${next}`
       await createSubModuleInModule(moduleId, title, `${level} ${title}`, next)
-      await loadHierarchy()
+      await loadHierarchy(false)
     } catch (error) {
       console.error("Failed to create sub-module:", error)
       toast.error("Failed to create sub-module")

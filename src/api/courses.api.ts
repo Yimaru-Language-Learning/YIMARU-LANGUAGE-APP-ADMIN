@@ -153,6 +153,9 @@ export const createCourseCategory = (data: CreateCourseCategoryRequest) =>
     ? http.post("/course-management/sub-categories", { category_id: data.parent_id, name: data.name })
     : http.post("/course-management/categories", { name: data.name })
 
+export const deleteCourseCategory = (categoryId: number) =>
+  http.delete(`/course-management/categories/${categoryId}`)
+
 export const deleteCourseSubCategory = (subCategoryId: number) =>
   http.delete(`/course-management/sub-categories/${subCategoryId}`)
 

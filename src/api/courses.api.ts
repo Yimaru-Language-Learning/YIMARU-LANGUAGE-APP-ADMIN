@@ -78,8 +78,17 @@ type CourseHierarchyRow = {
   sub_module_title?: string | null
 }
 
+async function withSingleRetry<T>(request: () => Promise<T>, retryDelayMs = 400): Promise<T> {
+  try {
+    return await request()
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+    return request()
+  }
+}
+
 export const getCourseCategories = () =>
-  http.get("/course-management/hierarchy").then((res) => {
+  withSingleRetry(() => http.get("/course-management/hierarchy")).then((res) => {
     const rows: UnifiedHierarchyRow[] = res.data?.data ?? []
     const categoriesMap = new Map<
       number,
@@ -160,7 +169,7 @@ export const deleteCourseSubCategory = (subCategoryId: number) =>
   http.delete(`/course-management/sub-categories/${subCategoryId}`)
 
 export const getCoursesByCategory = (categoryId: number) =>
-  http.get("/course-management/hierarchy").then((res) => {
+  withSingleRetry(() => http.get("/course-management/hierarchy")).then((res) => {
     const rows: UnifiedHierarchyRow[] = res.data?.data ?? []
 
     const requestedCategoryRows = rows.filter((r) => r.category_id === categoryId)
@@ -608,7 +617,7 @@ export const getHumanLanguageLessonsByCourse = (courseId: number, cefr_level: st
   })
 
 export const getHumanLanguageHierarchy = () =>
-  http.get<GetHumanLanguageHierarchyResponse>("/course-management/hierarchy").then(async (res) => {
+  withSingleRetry(() => http.get<GetHumanLanguageHierarchyResponse>("/course-management/hierarchy")).then(async (res) => {
     const payload = res.data?.data as unknown
     if (payload && typeof payload === "object" && !Array.isArray(payload) && "sub_categories" in payload) {
       return res

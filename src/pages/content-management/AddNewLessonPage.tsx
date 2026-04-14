@@ -99,6 +99,13 @@ function isDirectVideoFile(url: string): boolean {
   return /\.(mp4|webm|ogg|mov|m4v)$/.test(clean)
 }
 
+function questionTypeLabel(type: QuestionType): string {
+  if (type === "TRUE_FALSE") return "True/False"
+  if (type === "SHORT") return "Short Answer"
+  if (type === "AUDIO") return "Audio"
+  return "Multiple Choice"
+}
+
 export function AddNewLessonPage() {
   const { categoryId, courseId, subModuleId } = useParams()
   const navigate = useNavigate()
@@ -187,6 +194,11 @@ export function AddNewLessonPage() {
     if (isDirectVideoFile(raw)) return { kind: "video" as const, url: raw }
     return null
   }, [introVideoUrl])
+
+  const populatedQuestions = useMemo(
+    () => questions.filter((question) => question.questionText.trim().length > 0),
+    [questions],
+  )
 
   const addQuestion = () => setQuestions((prev) => [...prev, createEmptyQuestion(String(Date.now()))])
   const removeQuestion = (id: string) => setQuestions((prev) => (prev.length > 1 ? prev.filter((q) => q.id !== id) : prev))
@@ -485,22 +497,102 @@ export function AddNewLessonPage() {
           <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
             <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
               <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 3: Review & publish</h2>
+              <p className="mt-1.5 text-sm text-grayScale-500">Confirm lesson details and questions before saving or publishing.</p>
             </div>
-            <div className="p-5 sm:p-8">
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-grayScale-200 bg-white p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">Question set</p>
-                <p className="mt-2 text-sm"><span className="font-medium">Title:</span> {lessonTitle || "Untitled Lesson"}</p>
-                <p className="mt-1 text-sm"><span className="font-medium">Description:</span> {lessonDescription || "—"}</p>
-                <p className="mt-1 text-sm"><span className="font-medium">Status:</span> Draft/Published (selected on save)</p>
+            <div className="space-y-4 p-5 sm:p-8">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="overflow-hidden rounded-2xl border border-grayScale-200 bg-white">
+                  <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-3">
+                    <h3 className="text-base font-semibold text-grayScale-900">Basic Information</h3>
+                    <button
+                      type="button"
+                      className="text-sm font-medium text-brand-500 hover:text-brand-600"
+                      onClick={() => setCurrentStep(1)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <div className="divide-y divide-grayScale-100">
+                    <div className="flex items-center justify-between px-4 py-3 text-sm">
+                      <span className="text-grayScale-500">Title</span>
+                      <span className="font-medium text-grayScale-800">{lessonTitle || "Untitled Lesson"}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-3 text-sm">
+                      <span className="text-grayScale-500">Description</span>
+                      <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">
+                        {lessonDescription || "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-3 text-sm">
+                      <span className="text-grayScale-500">Intro video URL</span>
+                      <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">{introVideoUrl || "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-4 py-3 text-sm">
+                      <span className="text-grayScale-500">Sub-module</span>
+                      <span className="font-medium text-grayScale-800">{subModuleId ?? "—"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-grayScale-200 bg-white">
+                  <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-3">
+                    <h3 className="text-base font-semibold text-grayScale-900">
+                      Questions
+                      <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                        {populatedQuestions.length}
+                      </span>
+                    </h3>
+                    <button
+                      type="button"
+                      className="text-sm font-medium text-brand-500 hover:text-brand-600"
+                      onClick={() => setCurrentStep(2)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <div className="space-y-3 p-3">
+                    {populatedQuestions.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 p-4 text-sm text-grayScale-500">
+                        No question content added yet.
+                      </div>
+                    ) : (
+                      populatedQuestions.map((question, idx) => (
+                        <div key={question.id} className="rounded-xl border border-grayScale-200 bg-grayScale-50/35 p-3">
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-100 px-1.5 text-[11px] font-semibold text-brand-700">
+                              {idx + 1}
+                            </span>
+                            <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                              {questionTypeLabel(question.questionType)}
+                            </span>
+                            <span className="rounded-md bg-grayScale-100 px-2 py-0.5 text-[11px] font-semibold text-grayScale-600">
+                              {question.difficultyLevel}
+                            </span>
+                            <span className="text-[11px] font-semibold text-grayScale-500">{question.points} pt</span>
+                          </div>
+                          <p className="mb-2 line-clamp-2 text-sm font-medium text-grayScale-800">{question.questionText}</p>
+                          {question.questionType === "MCQ" ? (
+                            <div className="space-y-1">
+                              {question.options.map((option, optionIdx) => (
+                                <div
+                                  key={`${question.id}-option-${optionIdx}`}
+                                  className={`rounded px-2 py-1 text-xs ${
+                                    option.isCorrect
+                                      ? "bg-green-50 font-medium text-green-700"
+                                      : "text-grayScale-500"
+                                  }`}
+                                >
+                                  {option.text || `Option ${optionIdx + 1}`}
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="rounded-xl border border-grayScale-200 bg-white p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">Lesson link</p>
-                <p className="mt-2 text-sm"><span className="font-medium">Sub-module:</span> {subModuleId ?? "—"}</p>
-                <p className="mt-1 text-sm"><span className="font-medium">Intro video:</span> {introVideoUrl || "—"}</p>
-                <p className="mt-1 text-sm"><span className="font-medium">Questions:</span> {questions.length}</p>
-              </div>
-            </div>
             </div>
             <div className="flex items-center justify-between border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:px-8 sm:py-5">
               <Button variant="outline" onClick={handleBack}>
@@ -520,18 +612,27 @@ export function AddNewLessonPage() {
         ) : null}
 
         {currentStep === 4 && resultStatus ? (
-          <div className="flex flex-col items-center py-16">
-            <h2 className="text-2xl font-bold text-grayScale-900">
-              {resultStatus === "success" ? "Lesson saved successfully!" : "Lesson save failed"}
+          <div className="mx-auto flex max-w-xl flex-col items-center py-16 text-center">
+            <div className={`mb-5 grid h-24 w-24 place-items-center rounded-full ${resultStatus === "success" ? "bg-gradient-to-br from-brand-200 to-brand-400" : "bg-gradient-to-br from-red-200 to-red-400"}`}>
+              <Check className="h-10 w-10 text-white" />
+            </div>
+            <h2 className="text-4xl font-bold tracking-tight text-grayScale-900">
+              {resultStatus === "success" ? "Lesson Published Successfully!" : "Lesson save failed"}
             </h2>
-            <p className="mt-3 text-sm text-grayScale-500">{resultMessage}</p>
-            <div className="mt-6 flex gap-3">
-              <Button onClick={() => navigate(backTo)}>Go back to course</Button>
+            <p className="mt-3 text-sm text-grayScale-500">{resultStatus === "success" ? "Your lesson is now active." : resultMessage}</p>
+            <div className="mt-8 w-full space-y-3">
+              <Button className="h-11 w-full text-base" onClick={() => navigate(backTo)}>
+                Go back to Course
+              </Button>
               {resultStatus === "success" ? (
-                <Button variant="outline" onClick={() => navigate(0)}>
-                  Add another lesson
+                <Button variant="outline" className="h-11 w-full text-base" onClick={() => navigate(0)}>
+                  Add Another Lesson
                 </Button>
-              ) : null}
+              ) : (
+                <Button variant="outline" className="h-11 w-full text-base" onClick={() => setCurrentStep(3)}>
+                  Back to Review
+                </Button>
+              )}
             </div>
           </div>
         ) : null}

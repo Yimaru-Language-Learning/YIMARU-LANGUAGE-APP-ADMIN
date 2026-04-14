@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   ChevronDown,
   ChevronRight,
@@ -335,6 +335,7 @@ function nextMissingPositive(values: number[]): number {
 
 export function HumanLanguagePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [loading, setLoading] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [subCategories, setSubCategories] = useState<HumanLanguageSubCategoryTree[]>([])
@@ -444,6 +445,7 @@ export function HumanLanguagePage() {
   }
 
   useEffect(() => {
+    if (!location.pathname.startsWith("/content/human-language")) return
     let cancelled = false
     const run = async () => {
       setLoading(true)
@@ -478,7 +480,7 @@ export function HumanLanguagePage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [location.pathname, location.key])
 
   useEffect(() => {
     const save = () => sessionStorage.setItem(HUMAN_LANGUAGE_SCROLL_KEY, String(window.scrollY || 0))

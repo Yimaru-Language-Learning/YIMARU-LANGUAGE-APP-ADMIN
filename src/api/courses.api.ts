@@ -354,6 +354,11 @@ export const createLesson = (data: {
   title: string
   description?: string
   intro_video_url?: string
+  persona?: string
+  status?: "DRAFT" | "PUBLISHED"
+  passing_score?: number
+  time_limit_minutes?: number
+  shuffle_questions?: boolean
 }) =>
   http
     .post<CreateQuestionSetResponse>("/question-sets", {
@@ -363,6 +368,11 @@ export const createLesson = (data: {
       owner_id: data.sub_module_id,
       ...(data.description?.trim() ? { description: data.description.trim() } : {}),
       ...(data.intro_video_url?.trim() ? { intro_video_url: data.intro_video_url.trim() } : {}),
+      ...(data.persona?.trim() ? { persona: data.persona.trim() } : {}),
+      ...(data.status ? { status: data.status } : {}),
+      ...(Number.isFinite(data.passing_score) ? { passing_score: data.passing_score } : {}),
+      ...(Number.isFinite(data.time_limit_minutes) ? { time_limit_minutes: data.time_limit_minutes } : {}),
+      ...(typeof data.shuffle_questions === "boolean" ? { shuffle_questions: data.shuffle_questions } : {}),
     })
     .then((res) => {
       const questionSetID = res.data?.data?.id

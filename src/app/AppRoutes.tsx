@@ -10,6 +10,7 @@ import { ContentOverviewPage } from "../pages/content-management/ContentOverview
 import { CoursesPage } from "../pages/content-management/CoursesPage"
 import { PracticeQuestionsPage } from "../pages/content-management/PracticeQuestionsPage"
 import { AddNewPracticePage } from "../pages/content-management/AddNewPracticePage"
+import { AddNewLessonPage } from "../pages/content-management/AddNewLessonPage"
 import { SubModulesPage } from "../pages/content-management/SubCoursesPage"
 import { SubModuleContentPage } from "../pages/content-management/SubCourseContentPage"
 import { SpeakingPage } from "../pages/content-management/SpeakingPage"
@@ -84,6 +85,10 @@ export function AppRoutes() {
             element={<AddNewPracticePage />}
           />
           <Route
+            path="human-language/:categoryId/:courseId/sub-module/:subModuleId/add-lesson"
+            element={<AddNewLessonPage />}
+          />
+          <Route
             path="human-language/:categoryId/:courseId/sub-module/:subModuleId/practices/:practiceId/questions"
             element={<PracticeQuestionsPage />}
           />
@@ -97,11 +102,13 @@ export function AppRoutes() {
           <Route path="category/:categoryId/courses/:courseId/sub-modules" element={<SubModulesPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId" element={<SubModuleContentPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId/add-practice" element={<AddNewPracticePage />} />
+          <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId/add-lesson" element={<AddNewLessonPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId/practices/:practiceId/questions" element={<PracticeQuestionsPage />} />
           {/* Legacy aliases */}
           <Route path="category/:categoryId/courses/:courseId/sub-courses" element={<SubModulesPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId" element={<SubModuleContentPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId/add-practice" element={<AddNewPracticePage />} />
+          <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId/add-lesson" element={<AddNewLessonPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId/practices/:practiceId/questions" element={<PracticeQuestionsPage />} />
           <Route path="category/:categoryId/courses/add-video" element={<AddVideoPage />} />
           <Route path="speaking" element={<SpeakingPage />} />

@@ -1,4 +1,4 @@
-# Yimaru Academy LMS Admin Dashboard
+# Yimaru Academy LMS Admin Panel
 
 A modern, feature-rich admin dashboard for managing Yimaru Academy's educational platform. Built with React, TypeScript, and Tailwind CSS.
 

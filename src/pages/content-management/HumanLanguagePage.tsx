@@ -1611,6 +1611,20 @@ export function HumanLanguagePage() {
                                                       <Plus className="h-3.5 w-3.5" />
                                                       New practice
                                                     </Button>
+                                                  ) : panelTab === "lessons" && categoryId ? (
+                                                    <Link
+                                                      to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}`}
+                                                    >
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
+                                                      >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                        New lesson
+                                                      </Button>
+                                                    </Link>
                                                   ) : null}
                                                 </div>
                                               </div>

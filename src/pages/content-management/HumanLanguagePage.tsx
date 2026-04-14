@@ -37,6 +37,7 @@ import {
   createHumanLanguageLesson,
   createModuleInLevel,
   createSubModuleInModule,
+  deleteModule,
   deleteCourse,
   deleteCourseSubCategory,
   deleteQuestionSet,
@@ -185,6 +186,7 @@ type CefrLevel = (typeof CEFR_LEVELS)[number]
 
 type PendingRemove = {
   ids: number[]
+  target: "sub_module" | "module"
   key: string
   successMessage: string
   title: string
@@ -523,7 +525,6 @@ export function HumanLanguagePage() {
       const next = nextMissingPositive(usedNumbers)
       const title = `Module-${next}`
       await createModuleInLevel(levelNode.level_id, title, `${level} ${title}`, next)
-      toast.success(`${title} created`)
       await loadHierarchy()
     } catch (error) {
       console.error("Failed to create module:", error)
@@ -555,7 +556,6 @@ export function HumanLanguagePage() {
       const next = nextMissingPositive(usedNumbers)
       const title = `Module-${moduleNo}.${next}`
       await createSubModuleInModule(moduleId, title, `${level} ${title}`, next)
-      toast.success(`Sub-module ${moduleNo}.${next} created`)
       await loadHierarchy()
     } catch (error) {
       console.error("Failed to create sub-module:", error)
@@ -572,12 +572,16 @@ export function HumanLanguagePage() {
 
   const executePendingRemove = async () => {
     if (!pendingRemove) return
-    const { ids, key, successMessage } = pendingRemove
+    const { ids, target, key, successMessage } = pendingRemove
     setPendingRemove(null)
     setDeletingKey(key)
     try {
       for (const id of ids) {
-        await deleteSubModule(id)
+        if (target === "module") {
+          await deleteModule(id)
+        } else {
+          await deleteSubModule(id)
+        }
       }
       toast.success(successMessage)
       await loadHierarchy()
@@ -1357,7 +1361,7 @@ export function HumanLanguagePage() {
                           const levelNode = course.levels.find((item) => item.level.toUpperCase() === level)
                           const modules = levelNode?.modules ?? []
                           const levelKey = `${course.course_id}-${level}`
-                          const levelRemoveIds = modules.flatMap((m) => m.sub_modules.map((s) => s.id))
+                          const levelRemoveIds = modules.map((m) => m.id)
                           const canRemoveLevel = levelRemoveIds.length > 0
                           return (
                             <div key={levelKey} className="overflow-hidden rounded-xl border border-grayScale-200/90 bg-white shadow-sm">
@@ -1383,6 +1387,7 @@ export function HumanLanguagePage() {
                                   onClick={() =>
                                     requestRemove({
                                       ids: levelRemoveIds,
+                                      target: "module",
                                       key: `level-${course.course_id}-${level}`,
                                       successMessage: `Level ${level} removed`,
                                       title: `Remove level ${level}?`,
@@ -1468,7 +1473,8 @@ export function HumanLanguagePage() {
                                               disabled={deletingKey === `module-${module.id}`}
                                               onClick={() =>
                                                 requestRemove({
-                                                  ids: module.sub_modules.map((s) => s.id),
+                                                  ids: [module.id],
+                                                  target: "module",
                                                   key: `module-${module.id}`,
                                                   successMessage: `Module ${module.title} removed`,
                                                   title: `Remove ${module.title}?`,
@@ -1541,6 +1547,7 @@ export function HumanLanguagePage() {
                                                       onClick={() =>
                                                         requestRemove({
                                                           ids: [subModule.id],
+                                                          target: "sub_module",
                                                           key: `submodule-${subModule.id}`,
                                                           successMessage: `Sub-module ${subModule.title} removed`,
                                                           title: `Remove ${subModule.title}?`,

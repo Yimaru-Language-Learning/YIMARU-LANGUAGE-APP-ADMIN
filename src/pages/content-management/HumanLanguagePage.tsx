@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   ChevronDown,
@@ -336,6 +336,7 @@ function nextMissingPositive(values: number[]): number {
 export function HumanLanguagePage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const emptyStateRetryCountRef = useRef(0)
   const [loading, setLoading] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [subCategories, setSubCategories] = useState<HumanLanguageSubCategoryTree[]>([])
@@ -481,6 +482,27 @@ export function HumanLanguagePage() {
       cancelled = true
     }
   }, [location.pathname, location.key])
+
+  useEffect(() => {
+    if (!location.pathname.startsWith("/content/human-language")) return
+    if (loading) return
+    if (subCategories.length > 0) {
+      emptyStateRetryCountRef.current = 0
+      return
+    }
+    if (emptyStateRetryCountRef.current >= 6) return
+
+    emptyStateRetryCountRef.current += 1
+    const timer = window.setTimeout(() => {
+      void loadHierarchy(false).catch((error) => {
+        console.error("Background retry failed for human-language hierarchy:", error)
+      })
+    }, 1200)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [location.pathname, loading, subCategories.length])
 
   useEffect(() => {
     const save = () => sessionStorage.setItem(HUMAN_LANGUAGE_SCROLL_KEY, String(window.scrollY || 0))

@@ -257,7 +257,9 @@ export function CourseFlowBuilderPage() {
       setLoadingCourses(true)
       try {
         const res = await getCoursesByCategory(selectedCategoryId)
-        const items = sortByDisplayOrder(res.data.data.courses ?? [])
+        const items = sortByDisplayOrder(
+          (res.data.data.courses ?? []).filter((course) => Number(course.category_id) === Number(selectedCategoryId)),
+        )
         setCoursesByCategory((prev) => ({ ...prev, [selectedCategoryId]: items }))
         setSelectedCourseId(items[0]?.id ?? null)
       } catch {

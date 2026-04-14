@@ -694,6 +694,8 @@ export function HumanLanguagePage() {
       toast.error("Subcategory and course names are required")
       return
     }
+    const normalizedSubCategoryName = quickSubCategoryName.trim().toLowerCase()
+    const normalizedCourseName = quickCourseName.trim().toLowerCase()
     setQuickCreating(true)
     try {
       let effectiveCategoryId = categoryId
@@ -706,13 +708,30 @@ export function HumanLanguagePage() {
         throw new Error("Missing human language category id")
       }
 
-      const createdSubCategory = await createCourseCategory({
-        name: quickSubCategoryName.trim(),
-        parent_id: effectiveCategoryId,
-      })
-      const subCategoryId = createdSubCategory.data?.data?.id
+      const existingSubCategory = subCategories.find(
+        (sub) => sub.sub_category_name.trim().toLowerCase() === normalizedSubCategoryName,
+      )
+      const subCategoryId =
+        existingSubCategory?.sub_category_id ??
+        (
+          await createCourseCategory({
+            name: quickSubCategoryName.trim(),
+            parent_id: effectiveCategoryId,
+          })
+        ).data?.data?.id
       if (!subCategoryId) {
         throw new Error("Failed to create subcategory")
+      }
+
+      const existingCourse = subCategories
+        .find((sub) => sub.sub_category_id === Number(subCategoryId))
+        ?.courses.find((course) => course.course_name.trim().toLowerCase() === normalizedCourseName)
+      if (existingCourse) {
+        toast.success("Path already exists; reused existing subcategory/course")
+        setQuickSubCategoryName("")
+        setQuickCourseName("")
+        await loadHierarchy()
+        return
       }
 
       await createCourse({

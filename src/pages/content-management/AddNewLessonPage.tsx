@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from "react"
+import { useMemo, useState, type ChangeEvent } from "react"
 import { ArrowLeft, ArrowRight, Check, GripVertical, Loader2, Plus, Rocket, Trash2, Upload } from "lucide-react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -103,7 +103,6 @@ export function AddNewLessonPage() {
   const { categoryId, courseId, subModuleId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const introVideoFileInputRef = useRef<HTMLInputElement>(null)
 
   const backTo = useMemo(() => {
     if (location.pathname.includes("/content/human-language/") && location.pathname.includes("/sub-module/")) {
@@ -121,7 +120,6 @@ export function AddNewLessonPage() {
   const [lessonDescription, setLessonDescription] = useState("")
   const [introVideoUrl, setIntroVideoUrl] = useState("")
   const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false)
-  const [importingIntroVideoUrl, setImportingIntroVideoUrl] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([createEmptyQuestion("1")])
 
   const handleNext = () => setCurrentStep((s) => (s < 3 ? ((s + 1) as Step) : s))
@@ -149,7 +147,7 @@ export function AddNewLessonPage() {
     }
   }
 
-  const handleImportIntroVideoFromUrl = async () => {
+  const handleIntroVideoUrlBlur = async () => {
     const source = introVideoUrl.trim()
     if (!source || !/^https?:\/\//i.test(source)) return
     const vimeoEmbed = toVimeoEmbedUrl(source)
@@ -157,8 +155,13 @@ export function AddNewLessonPage() {
       setIntroVideoUrl(vimeoEmbed)
       return
     }
+    if (isDirectVideoFile(source)) {
+      setIntroVideoUrl(source)
+      return
+    }
 
-    setImportingIntroVideoUrl(true)
+    // For non-direct URLs, automatically try server-side import via /files/upload.
+    setUploadingIntroVideo(true)
     try {
       const uploadRes = await uploadVideoFile(source, {
         title: lessonTitle.trim() || "Lesson intro",
@@ -167,12 +170,12 @@ export function AddNewLessonPage() {
       const finalUrl = introVideoUrlFromUploadResponse(uploadRes.data?.data)
       if (!finalUrl) throw new Error("Missing uploaded video url")
       setIntroVideoUrl(finalUrl)
-      toast.success("Intro video URL imported", { description: "Processed via /files/upload." })
+      toast.success("Intro video URL imported")
     } catch (error) {
       console.error("Failed to import intro video URL:", error)
       toast.error("Failed to import intro video URL")
     } finally {
-      setImportingIntroVideoUrl(false)
+      setUploadingIntroVideo(false)
     }
   }
 
@@ -307,7 +310,8 @@ export function AddNewLessonPage() {
               </p>
             </div>
             <div className="p-5 sm:p-8 lg:p-10">
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 grid gap-8 lg:grid-cols-12">
+              <div className="space-y-4 lg:col-span-7">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-grayScale-700">Lesson title</label>
                 <Input
@@ -331,49 +335,25 @@ export function AddNewLessonPage() {
                 <Input
                   value={introVideoUrl}
                   onChange={(e) => setIntroVideoUrl(e.target.value)}
-                  onBlur={() => void handleImportIntroVideoFromUrl()}
+                  onBlur={() => void handleIntroVideoUrlBlur()}
                   placeholder="https://..."
                   type="url"
                   inputMode="url"
                   autoComplete="off"
                   className="font-mono text-[13px]"
                 />
-                <input
-                  ref={introVideoFileInputRef}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={handleIntroVideoFileChange}
-                  disabled={uploadingIntroVideo || importingIntroVideoUrl}
-                />
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => introVideoFileInputRef.current?.click()}
-                    disabled={uploadingIntroVideo || importingIntroVideoUrl}
-                    className="gap-1.5"
-                  >
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-grayScale-200 px-3 py-2 text-xs text-grayScale-700 hover:bg-grayScale-50">
                     {uploadingIntroVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                     {uploadingIntroVideo ? "Uploading..." : "Upload video from computer"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void handleImportIntroVideoFromUrl()}
-                    disabled={uploadingIntroVideo || importingIntroVideoUrl || !introVideoUrl.trim()}
-                  >
-                    {importingIntroVideoUrl ? (
-                      <>
-                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                        Importing URL...
-                      </>
-                    ) : (
-                      "Import video from URL"
-                    )}
-                  </Button>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={handleIntroVideoFileChange}
+                      disabled={uploadingIntroVideo}
+                    />
+                  </label>
                   {introVideoUrl.trim() ? (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setIntroVideoUrl("")}>
                       Clear URL
@@ -403,6 +383,26 @@ export function AddNewLessonPage() {
                   </div>
                 ) : null}
               </div>
+              </div>
+              <aside className="space-y-4 lg:col-span-5">
+                <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-5 shadow-sm">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Lesson schema mapping</h3>
+                  <div className="mt-3 space-y-2 text-sm text-grayScale-700">
+                    <p>
+                      <span className="font-medium">question_sets.title</span> ← Lesson title
+                    </p>
+                    <p>
+                      <span className="font-medium">question_sets.description</span> ← Description
+                    </p>
+                    <p>
+                      <span className="font-medium">question_sets.set_type</span> = QUIZ
+                    </p>
+                    <p>
+                      <span className="font-medium">sub_module_lessons.intro_video_url</span> ← Intro URL
+                    </p>
+                  </div>
+                </div>
+              </aside>
             </div>
             </div>
             <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:items-center sm:px-8 sm:py-5">
@@ -487,11 +487,19 @@ export function AddNewLessonPage() {
               <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 3: Review & publish</h2>
             </div>
             <div className="p-5 sm:p-8">
-            <div className="mt-4 space-y-2 text-sm text-grayScale-700">
-              <p><span className="font-medium">Question set title:</span> {lessonTitle || "Untitled Lesson"}</p>
-              <p><span className="font-medium">Question set description:</span> {lessonDescription || "—"}</p>
-              <p><span className="font-medium">Sub-module lesson intro video:</span> {introVideoUrl || "—"}</p>
-              <p><span className="font-medium">Questions:</span> {questions.length}</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-grayScale-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">Question set</p>
+                <p className="mt-2 text-sm"><span className="font-medium">Title:</span> {lessonTitle || "Untitled Lesson"}</p>
+                <p className="mt-1 text-sm"><span className="font-medium">Description:</span> {lessonDescription || "—"}</p>
+                <p className="mt-1 text-sm"><span className="font-medium">Status:</span> Draft/Published (selected on save)</p>
+              </div>
+              <div className="rounded-xl border border-grayScale-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">Lesson link</p>
+                <p className="mt-2 text-sm"><span className="font-medium">Sub-module:</span> {subModuleId ?? "—"}</p>
+                <p className="mt-1 text-sm"><span className="font-medium">Intro video:</span> {introVideoUrl || "—"}</p>
+                <p className="mt-1 text-sm"><span className="font-medium">Questions:</span> {questions.length}</p>
+              </div>
             </div>
             </div>
             <div className="flex items-center justify-between border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:px-8 sm:py-5">

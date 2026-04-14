@@ -72,6 +72,7 @@ import {
 } from "../../components/content-management/PracticeQuestionEditorFields"
 
 const CEFR_LEVELS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"] as const
+const HUMAN_LANGUAGE_SCROLL_KEY = "human-language-page:scroll-y"
 type SubModulePanelTab = "lessons" | "practices"
 
 type SubModuleCardSelection = { lessonId: number | null; practiceId: number | null }
@@ -98,6 +99,16 @@ type LessonDialogState =
       lessonId: number
       questionSetId: number
     }
+
+type LessonListItem = {
+  id: number
+  question_set_id: number
+  title: string
+  display_order: number
+  status: string
+  question_count: number
+  intro_video_url: string
+}
 
 type QuestionDialogState =
   | { open: false }
@@ -373,6 +384,12 @@ export function HumanLanguagePage() {
   const [questionDetailById, setQuestionDetailById] = useState<Record<number, QuestionDetail>>({})
   const [practiceTargetDelete, setPracticeTargetDelete] = useState<{ id: number; title: string } | null>(null)
   const [lessonTargetDelete, setLessonTargetDelete] = useState<{ id: number; questionSetId: number; title: string } | null>(null)
+  const [lessonBulkTargetDelete, setLessonBulkTargetDelete] = useState<{
+    title: string
+    lessons: { id: number; questionSetId: number; title: string }[]
+    subModuleKey: string
+  } | null>(null)
+  const [selectedLessonIdsBySubModule, setSelectedLessonIdsBySubModule] = useState<Record<string, number[]>>({})
   const [questionTargetDelete, setQuestionTargetDelete] = useState<{ id: number; practiceId: number; text: string } | null>(null)
   const [savingPractice, setSavingPractice] = useState(false)
   const [savingLesson, setSavingLesson] = useState(false)
@@ -430,11 +447,29 @@ export function HumanLanguagePage() {
       setLoading(true)
       try {
         await loadHierarchy()
+        const saved = sessionStorage.getItem(HUMAN_LANGUAGE_SCROLL_KEY)
+        const targetY = saved ? Number(saved) : 0
+        if (Number.isFinite(targetY) && targetY > 0) {
+          window.requestAnimationFrame(() => window.scrollTo({ top: targetY, behavior: "auto" }))
+          setTimeout(() => window.scrollTo({ top: targetY, behavior: "auto" }), 250)
+        }
       } finally {
         setLoading(false)
       }
     }
     run().catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    const save = () => sessionStorage.setItem(HUMAN_LANGUAGE_SCROLL_KEY, String(window.scrollY || 0))
+    const onBeforeUnload = () => save()
+    window.addEventListener("scroll", save, { passive: true })
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => {
+      save()
+      window.removeEventListener("scroll", save)
+      window.removeEventListener("beforeunload", onBeforeUnload)
+    }
   }, [])
 
   const filteredSubCategories = useMemo(
@@ -1185,6 +1220,25 @@ export function HumanLanguagePage() {
     }
   }
 
+  const handleDeleteSelectedLessonsConfirmed = async () => {
+    if (!lessonBulkTargetDelete || lessonBulkTargetDelete.lessons.length === 0) return
+    setDeletingLesson(true)
+    try {
+      for (const lesson of lessonBulkTargetDelete.lessons) {
+        await deleteQuestionSet(lesson.questionSetId)
+      }
+      toast.success(`${lessonBulkTargetDelete.lessons.length} lesson(s) deleted`)
+      setSelectedLessonIdsBySubModule((prev) => ({ ...prev, [lessonBulkTargetDelete.subModuleKey]: [] }))
+      setLessonBulkTargetDelete(null)
+      await loadHierarchy()
+    } catch (error) {
+      console.error("Failed to delete selected lessons:", error)
+      toast.error("Failed to delete selected lessons")
+    } finally {
+      setDeletingLesson(false)
+    }
+  }
+
   const handleDeleteQuestionConfirmed = async () => {
     if (!questionTargetDelete) return
     setDeletingQuestion(true)
@@ -1209,6 +1263,14 @@ export function HumanLanguagePage() {
       const cur = prev[smKey] ?? { lessonId: null, practiceId: null }
       const nextLessonId = cur.lessonId === lessonId ? null : lessonId
       return { ...prev, [smKey]: { ...cur, lessonId: nextLessonId } }
+    })
+  }
+
+  const toggleLessonSelection = (smKey: string, lessonId: number) => {
+    setSelectedLessonIdsBySubModule((prev) => {
+      const current = prev[smKey] ?? []
+      const next = current.includes(lessonId) ? current.filter((id) => id !== lessonId) : [...current, lessonId]
+      return { ...prev, [smKey]: next }
     })
   }
 
@@ -1590,7 +1652,7 @@ export function HumanLanguagePage() {
                                           const smKey = `${course.course_id}-${subModule.id}`
                                           const panelTab = subModulePanelTab[smKey] ?? "lessons"
                                           const cardSel = getSubModuleSelection(smKey)
-                                          const lessonRows = [
+                                          const lessonRows: LessonListItem[] = [
                                             ...(subModule.lessons ?? []).map((lesson) => ({
                                               id: lesson.id,
                                               question_set_id: lesson.question_set_id,
@@ -1619,6 +1681,8 @@ export function HumanLanguagePage() {
                                             cardSel.lessonId !== null
                                               ? lessonRows.find((v) => v.id === cardSel.lessonId) ?? null
                                               : null
+                                          const selectedLessonIds = selectedLessonIdsBySubModule[smKey] ?? []
+                                          const selectedLessonRows = lessonRows.filter((row) => selectedLessonIds.includes(row.id))
                                           const selectedPracticeMeta =
                                             cardSel.practiceId !== null
                                               ? practiceRows.find((p) => p.id === cardSel.practiceId) ?? null
@@ -1728,16 +1792,42 @@ export function HumanLanguagePage() {
                                                       New practice
                                                     </Button>
                                                   ) : panelTab === "lessons" ? (
-                                                    <Button
-                                                      type="button"
-                                                      size="sm"
-                                                      variant="outline"
-                                                      className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
-                                                      onClick={() => openCreateLessonDialog(course.course_id, subModule.id)}
-                                                    >
-                                                      <Plus className="h-3.5 w-3.5" />
-                                                      New lesson
-                                                    </Button>
+                                                    <div className="flex items-center gap-2">
+                                                      {selectedLessonRows.length > 0 ? (
+                                                        <Button
+                                                          type="button"
+                                                          size="sm"
+                                                          variant="outline"
+                                                          className="h-8 border-red-200 bg-white px-2 text-[11px] text-red-600 hover:bg-red-50"
+                                                          onClick={() =>
+                                                            setLessonBulkTargetDelete({
+                                                              title: subModule.title,
+                                                              subModuleKey: smKey,
+                                                              lessons: selectedLessonRows
+                                                                .filter((item) => item.question_set_id > 0)
+                                                                .map((item) => ({
+                                                                  id: item.id,
+                                                                  questionSetId: item.question_set_id,
+                                                                  title: item.title,
+                                                                })),
+                                                            })
+                                                          }
+                                                        >
+                                                          <Trash2 className="h-3.5 w-3.5" />
+                                                          Delete selected ({selectedLessonRows.length})
+                                                        </Button>
+                                                      ) : null}
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
+                                                        onClick={() => openCreateLessonDialog(course.course_id, subModule.id)}
+                                                      >
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                        New lesson
+                                                      </Button>
+                                                    </div>
                                                   ) : null}
                                                 </div>
                                               </div>
@@ -1787,6 +1877,17 @@ export function HumanLanguagePage() {
                                                                 </div>
                                                                 {v.question_set_id > 0 ? (
                                                                   <div className="flex shrink-0 items-center gap-1">
+                                                                    <label
+                                                                      className="inline-flex items-center gap-1 rounded px-1 text-[10px] text-grayScale-600"
+                                                                      onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                      <input
+                                                                        type="checkbox"
+                                                                        checked={selectedLessonIds.includes(v.id)}
+                                                                        onChange={() => toggleLessonSelection(smKey, v.id)}
+                                                                        className="h-3.5 w-3.5 rounded border-grayScale-300"
+                                                                      />
+                                                                    </label>
                                                                     <Button
                                                                       type="button"
                                                                       size="sm"
@@ -2499,6 +2600,32 @@ export function HumanLanguagePage() {
               disabled={deletingLesson}
             >
               {deletingLesson ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={lessonBulkTargetDelete !== null} onOpenChange={(open) => !open && setLessonBulkTargetDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete selected lessons?</DialogTitle>
+            <DialogDescription>
+              {lessonBulkTargetDelete
+                ? `This will permanently delete ${lessonBulkTargetDelete.lessons.length} selected lesson(s) in "${lessonBulkTargetDelete.title}".`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setLessonBulkTargetDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void handleDeleteSelectedLessonsConfirmed()}
+              disabled={deletingLesson}
+            >
+              {deletingLesson ? "Deleting..." : "Delete selected"}
             </Button>
           </DialogFooter>
         </DialogContent>

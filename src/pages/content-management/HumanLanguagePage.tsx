@@ -35,6 +35,8 @@ import {
   createCourse,
   createCourseCategory,
   createHumanLanguageLesson,
+  createModuleInLevel,
+  createSubModuleInModule,
   deleteCourse,
   deleteCourseSubCategory,
   deleteQuestionSet,
@@ -502,7 +504,16 @@ export function HumanLanguagePage() {
     return { module, sub }
   }
 
-  const handleCreateModule = async (courseId: number, level: string, modules: { title: string }[]) => {
+  const handleCreateModule = async (
+    courseId: number,
+    levelNode: HumanLanguageCourseTree["levels"][number] | undefined,
+    modules: { title: string }[],
+  ) => {
+    if (!levelNode?.level_id) {
+      toast.error("Cannot create module: missing level identifier")
+      return
+    }
+    const level = levelNode.level
     const key = `module-${courseId}-${level}`
     setCreatingKey(key)
     try {
@@ -511,12 +522,7 @@ export function HumanLanguagePage() {
         .filter((v): v is number => v !== null && v > 0)
       const next = nextMissingPositive(usedNumbers)
       const title = `Module-${next}`
-      await createHumanLanguageLesson({
-        course_id: courseId,
-        cefr_level: level,
-        title,
-        description: `${level} ${title}`,
-      })
+      await createModuleInLevel(levelNode.level_id, title, `${level} ${title}`, next)
       toast.success(`${title} created`)
       await loadHierarchy()
     } catch (error) {
@@ -530,6 +536,7 @@ export function HumanLanguagePage() {
   const handleCreateSubModule = async (
     courseId: number,
     level: string,
+    moduleId: number,
     moduleTitle: string,
     existingSubModules: { title: string }[],
   ) => {
@@ -547,12 +554,7 @@ export function HumanLanguagePage() {
         .map((item) => item.sub)
       const next = nextMissingPositive(usedNumbers)
       const title = `Module-${moduleNo}.${next}`
-      await createHumanLanguageLesson({
-        course_id: courseId,
-        cefr_level: level,
-        title,
-        description: `${level} ${title}`,
-      })
+      await createSubModuleInModule(moduleId, title, `${level} ${title}`, next)
       toast.success(`Sub-module ${moduleNo}.${next} created`)
       await loadHierarchy()
     } catch (error) {
@@ -1399,7 +1401,7 @@ export function HumanLanguagePage() {
                                       size="sm"
                                       variant="outline"
                                       className="h-8 border-grayScale-200 bg-white text-xs hover:border-brand-200 hover:bg-brand-50/40"
-                                      onClick={() => handleCreateModule(course.course_id, level, modules)}
+                                      onClick={() => handleCreateModule(course.course_id, levelNode, modules)}
                                       disabled={creatingKey === `module-${course.course_id}-${level}`}
                                     >
                                       {creatingKey === `module-${course.course_id}-${level}` ? (
@@ -1441,7 +1443,13 @@ export function HumanLanguagePage() {
                                               variant="outline"
                                               className="h-8 border-grayScale-200 bg-white text-xs hover:border-brand-200 hover:bg-brand-50/40"
                                               onClick={() =>
-                                                handleCreateSubModule(course.course_id, level, module.title, module.sub_modules)
+                                                handleCreateSubModule(
+                                                  course.course_id,
+                                                  level,
+                                                  module.id,
+                                                  module.title,
+                                                  module.sub_modules,
+                                                )
                                               }
                                               disabled={creatingKey === `submodule-${course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
                                             >

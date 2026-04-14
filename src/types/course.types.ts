@@ -729,6 +729,7 @@ export interface HumanLanguageModule {
 }
 
 export interface HumanLanguageLevelTree {
+  level_id?: number
   level: string
   modules: HumanLanguageModule[]
 }

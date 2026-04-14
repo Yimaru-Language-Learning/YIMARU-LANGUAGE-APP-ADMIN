@@ -689,6 +689,7 @@ export const getHumanLanguageHierarchy = () =>
         const levelMap = new Map<
           string,
           {
+            level_id?: number
             level: string
             modules: Map<
               number,
@@ -705,7 +706,7 @@ export const getHumanLanguageHierarchy = () =>
           if (!row.level_id || !row.cefr_level) return
           const levelKey = String(row.cefr_level).toUpperCase()
           if (!levelMap.has(levelKey)) {
-            levelMap.set(levelKey, { level: levelKey, modules: new Map() })
+            levelMap.set(levelKey, { level_id: Number(row.level_id), level: levelKey, modules: new Map() })
           }
 
           if (!row.module_id) return
@@ -736,6 +737,7 @@ export const getHumanLanguageHierarchy = () =>
           course_id: course.course_id,
           course_name: course.course_name,
           levels: Array.from(levelMap.values()).map((levelNode) => ({
+            level_id: levelNode.level_id,
             level: levelNode.level,
             modules: Array.from(levelNode.modules.values()).map((moduleNode) => ({
               id: moduleNode.id,
@@ -786,6 +788,34 @@ export const createHumanLanguageLesson = (data: CreateHumanLanguageLessonRequest
         is_active: true,
       }),
     )
+
+export const createModuleInLevel = (
+  levelId: number,
+  title: string,
+  description: string,
+  displayOrder = 0,
+) =>
+  http.post("/course-management/modules", {
+    level_id: levelId,
+    title,
+    description,
+    display_order: displayOrder,
+    is_active: true,
+  })
+
+export const createSubModuleInModule = (
+  moduleId: number,
+  title: string,
+  description: string,
+  displayOrder = 0,
+) =>
+  http.post("/course-management/sub-modules", {
+    module_id: moduleId,
+    title,
+    description,
+    display_order: displayOrder,
+    is_active: true,
+  })
 
 export const getSubModuleEntryAssessment = (subModuleId: number) =>
   http.get<GetSubCourseEntryAssessmentResponse>(

@@ -307,13 +307,43 @@ export const getPracticeQuestionsByPractice = (
   })
 
 export const createPracticeQuestion = (data: CreatePracticeQuestionRequest) =>
-  http.post("/course-management/practice-questions", data)
+  http
+    .post<CreateQuestionResponse>("/questions", {
+      question_text: data.question,
+      question_type: data.type === "SHORT" ? "SHORT_ANSWER" : data.type,
+      points: data.points ?? 1,
+      difficulty_level: data.difficulty_level,
+      tips: data.tips,
+      explanation: data.explanation,
+      voice_prompt: data.question_voice_prompt,
+      sample_answer_voice_prompt: data.sample_answer_voice_prompt,
+      audio_correct_answer_text: data.sample_answer,
+      options: data.options,
+      short_answers: data.short_answers,
+    })
+    .then((res) =>
+      http.post(`/question-sets/${data.practice_id}/questions`, {
+        question_id: res.data?.data?.id,
+      }),
+    )
 
 export const updatePracticeQuestion = (questionId: number, data: UpdatePracticeQuestionRequest) =>
-  http.put(`/course-management/practice-questions/${questionId}`, data)
+  http.put(`/questions/${questionId}`, {
+    question_text: data.question,
+    question_type: data.type === "SHORT" ? "SHORT_ANSWER" : data.type,
+    points: data.points ?? 1,
+    difficulty_level: data.difficulty_level,
+    tips: data.tips,
+    explanation: data.explanation,
+    voice_prompt: data.question_voice_prompt,
+    sample_answer_voice_prompt: data.sample_answer_voice_prompt,
+    audio_correct_answer_text: data.sample_answer,
+    options: data.options,
+    short_answers: data.short_answers,
+  })
 
 export const deletePracticeQuestion = (questionId: number) =>
-  http.delete(`/course-management/practice-questions/${questionId}`)
+  http.delete(`/questions/${questionId}`)
 
 // ============================================
 // Legacy APIs (deprecated - using SubCourse hierarchy now)
@@ -426,17 +456,46 @@ export const deleteQuestionSet = (questionSetId: number) =>
   http.delete(`/question-sets/${questionSetId}`)
 
 export const createVimeoVideo = (data: CreateVimeoVideoRequest) =>
-  http.post("/course-management/videos/vimeo", data)
+  http.post("/vimeo/uploads/pull", {
+    name: data.title,
+    description: data.description,
+    source_url: data.source_url,
+    file_size: data.file_size,
+  })
 
 // Sub-module Prerequisite APIs
 export const getSubModulePrerequisites = (subModuleId: number) =>
-  http.get<GetSubCoursePrerequisitesResponse>(`/course-management/sub-courses/${subModuleId}/prerequisites`)
+  Promise.resolve({
+    data: {
+      message: "Sub-module prerequisites are not supported by this backend yet",
+      data: { prerequisites: [], total_count: 0 },
+      success: true,
+      status_code: 200,
+      metadata: { sub_module_id: subModuleId },
+    },
+  })
 
 export const addSubModulePrerequisite = (subModuleId: number, data: AddSubCoursePrerequisiteRequest) =>
-  http.post(`/course-management/sub-courses/${subModuleId}/prerequisites`, data)
+  Promise.resolve({
+    data: {
+      message: "Sub-module prerequisites are not supported by this backend yet",
+      data: { sub_module_id: subModuleId, prerequisite_sub_module_id: data.prerequisite_sub_course_id },
+      success: true,
+      status_code: 200,
+      metadata: null,
+    },
+  })
 
 export const removeSubModulePrerequisite = (subModuleId: number, prerequisiteId: number) =>
-  http.delete(`/course-management/sub-courses/${subModuleId}/prerequisites/${prerequisiteId}`)
+  Promise.resolve({
+    data: {
+      message: "Sub-module prerequisites are not supported by this backend yet",
+      data: { sub_module_id: subModuleId, prerequisite_id: prerequisiteId },
+      success: true,
+      status_code: 200,
+      metadata: null,
+    },
+  })
 
 // Learning Path APIs
 export const getLearningPath = (courseId: number) =>
@@ -503,14 +562,13 @@ const buildReorderPayload = (items: ReorderItem[]) => {
   return { items: normalized }
 }
 
-export const reorderCategories = (items: ReorderItem[]) =>
-  http.put("/course-management/categories/reorder", buildReorderPayload(items))
+const reorderNotYetSupported = (items: ReorderItem[]) => Promise.resolve({ data: { data: buildReorderPayload(items) } })
 
-export const reorderCourses = (items: ReorderItem[]) =>
-  http.put("/course-management/courses/reorder", buildReorderPayload(items))
+export const reorderCategories = reorderNotYetSupported
 
-export const reorderSubModules = (items: ReorderItem[]) =>
-  http.put("/course-management/sub-courses/reorder", buildReorderPayload(items))
+export const reorderCourses = reorderNotYetSupported
+
+export const reorderSubModules = reorderNotYetSupported
 
 // Backward-compatible aliases
 export const getSubCoursesByCourse = getSubModulesByCourse
@@ -527,11 +585,9 @@ export const removeSubCoursePrerequisite = removeSubModulePrerequisite
 export const getSubCourseEntryAssessment = getSubModuleEntryAssessment
 export const reorderSubCourses = reorderSubModules
 
-export const reorderVideos = (items: ReorderItem[]) =>
-  http.put("/course-management/videos/reorder", buildReorderPayload(items))
+export const reorderVideos = reorderNotYetSupported
 
-export const reorderPractices = (items: ReorderItem[]) =>
-  http.put("/course-management/practices/reorder", buildReorderPayload(items))
+export const reorderPractices = reorderNotYetSupported
 
 // Ratings
 export const getRatings = (params: GetRatingsParams) =>

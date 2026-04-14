@@ -70,21 +70,26 @@ function KpiCard({
   className?: string
 }) {
   return (
-    <Card className={cn("shadow-none transition-shadow hover:shadow-md", className)}>
-      <CardContent className="p-4">
+    <Card
+      className={cn(
+        "border-grayScale-100/90 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        className,
+      )}
+    >
+      <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-xs font-medium text-grayScale-500">{label}</div>
-            <div className="mt-1 text-2xl font-semibold tracking-tight">{value}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-grayScale-400">{label}</div>
+            <div className="mt-1.5 text-[1.75rem] font-semibold leading-none tracking-tight text-grayScale-800">{value}</div>
           </div>
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-brand-600 ring-1 ring-brand-100">
             <Icon className="h-5 w-5" />
           </div>
         </div>
         {sub && (
           <div
             className={cn(
-              "mt-2 flex items-center gap-1 text-xs font-medium",
+              "mt-3 flex items-center gap-1 text-xs font-medium",
               trend === "up" && "text-mint-500",
               trend === "down" && "text-destructive",
               (!trend || trend === "neutral") && "text-grayScale-400",
@@ -244,16 +249,16 @@ function Section({
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div className="rounded-xl border bg-white">
+    <div className="rounded-2xl border border-grayScale-100 bg-white shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-grayScale-50"
+        className="flex w-full items-center gap-3 px-6 py-4 text-left transition-colors hover:bg-grayScale-50/80"
       >
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-100 text-brand-600">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-brand-50 to-brand-100 text-brand-600 ring-1 ring-brand-100">
           <Icon className="h-4 w-4" />
         </div>
-        <span className="flex-1 text-sm font-semibold text-grayScale-800">{title}</span>
+        <span className="flex-1 text-sm font-semibold tracking-wide text-grayScale-800">{title}</span>
         {count !== undefined && (
           <Badge variant="secondary" className="mr-2 text-[10px]">
             {count}
@@ -273,7 +278,7 @@ function Section({
         )}
       >
         <div className="overflow-hidden">
-          <div className="px-5 pb-5 pt-1">{children}</div>
+          <div className="border-t border-grayScale-100 px-6 pb-6 pt-4">{children}</div>
         </div>
       </div>
     </div>
@@ -305,9 +310,9 @@ export function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-4 text-sm font-semibold text-grayScale-500">Analytics</div>
-        <div className="flex flex-col items-center justify-center gap-3 py-20">
+      <div className="mx-auto w-full max-w-[1280px] px-2 sm:px-4">
+        <div className="mb-6 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Analytics</div>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-grayScale-100 bg-white py-24 shadow-sm">
           <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
           <span className="text-sm font-medium text-grayScale-400">Loading analytics…</span>
         </div>
@@ -317,9 +322,9 @@ export function AnalyticsPage() {
 
   if (error || !dashboard) {
     return (
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-4 text-sm font-semibold text-grayScale-500">Analytics</div>
-        <div className="flex flex-col items-center justify-center gap-3 py-20">
+      <div className="mx-auto w-full max-w-[1280px] px-2 sm:px-4">
+        <div className="mb-6 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Analytics</div>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-red-100 bg-red-50/30 py-24">
           <img src={alertSrc} alt="" className="h-12 w-12" />
           <span className="text-sm text-destructive">Failed to load analytics data.</span>
           <Button variant="outline" size="sm" onClick={fetchData}>
@@ -375,12 +380,12 @@ export function AnalyticsPage() {
   })
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="mx-auto w-full max-w-[1280px] px-2 pb-6 sm:px-4">
       {/* Header */}
-      <div className="mb-5 flex items-end justify-between">
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="mb-1 text-sm font-semibold text-grayScale-500">Analytics</div>
-          <h1 className="text-2xl font-semibold tracking-tight">Platform Overview</h1>
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Analytics</div>
+          <h1 className="text-3xl font-semibold tracking-tight text-grayScale-900">Platform Overview</h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-grayScale-400">Generated {generatedAt}</span>
@@ -392,7 +397,7 @@ export function AnalyticsPage() {
       </div>
 
       {/* Summary Tabs */}
-      <div className="mb-4 border-b border-grayScale-200">
+      <div className="mb-6 rounded-2xl border border-grayScale-100 bg-white px-5 pt-4 shadow-sm">
         <div className="-mb-px flex gap-6">
           <button
             onClick={() => setActiveSummaryTab("key")}
@@ -433,7 +438,7 @@ export function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {activeSummaryTab === "key" && (
           <>
             {/* ─── Key Metrics ─── */}

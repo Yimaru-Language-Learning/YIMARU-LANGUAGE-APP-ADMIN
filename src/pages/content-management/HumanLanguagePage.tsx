@@ -93,6 +93,14 @@ type PracticeDialogState =
       practiceId?: number
     }
 
+type LessonDialogState =
+  | { open: false }
+  | {
+      open: true
+      subModuleId: number
+      defaultIndex: number
+    }
+
 type QuestionDialogState =
   | { open: false }
   | {
@@ -346,7 +354,13 @@ export function HumanLanguagePage() {
   const [subModuleCardSelection, setSubModuleCardSelection] = useState<Record<string, SubModuleCardSelection>>({})
   const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
   const [practiceDialog, setPracticeDialog] = useState<PracticeDialogState>({ open: false })
+  const [lessonDialog, setLessonDialog] = useState<LessonDialogState>({ open: false })
   const [questionDialog, setQuestionDialog] = useState<QuestionDialogState>({ open: false })
+  const [lessonForm, setLessonForm] = useState({
+    title: "",
+    description: "",
+    introVideoUrl: "",
+  })
   const [practiceForm, setPracticeForm] = useState({
     title: "",
     description: "",
@@ -361,6 +375,7 @@ export function HumanLanguagePage() {
   const [practiceTargetDelete, setPracticeTargetDelete] = useState<{ id: number; title: string } | null>(null)
   const [questionTargetDelete, setQuestionTargetDelete] = useState<{ id: number; practiceId: number; text: string } | null>(null)
   const [savingPractice, setSavingPractice] = useState(false)
+  const [savingLesson, setSavingLesson] = useState(false)
   const [savingQuestion, setSavingQuestion] = useState(false)
   const [deletingPractice, setDeletingPractice] = useState(false)
   const [deletingQuestion, setDeletingQuestion] = useState(false)
@@ -368,11 +383,14 @@ export function HumanLanguagePage() {
   const [loadingQuestionEditId, setLoadingQuestionEditId] = useState<number | null>(null)
   /** Show inline field errors only after an explicit save attempt (avoids noisy empty-state on open). */
   const [practiceSubmitAttempted, setPracticeSubmitAttempted] = useState(false)
+  const [lessonSubmitAttempted, setLessonSubmitAttempted] = useState(false)
   const [questionSubmitAttempted, setQuestionSubmitAttempted] = useState(false)
+  const [lessonFormTouched, setLessonFormTouched] = useState(false)
   const [practiceFormTouched, setPracticeFormTouched] = useState(false)
   const [questionFormTouched, setQuestionFormTouched] = useState(false)
   const [loadingPracticeForm, setLoadingPracticeForm] = useState(false)
   const [uploadingPracticeIntroVideo, setUploadingPracticeIntroVideo] = useState(false)
+  const [uploadingLessonIntroVideo, setUploadingLessonIntroVideo] = useState(false)
 
   const renderMediaPreview = (
     urlRaw: string,
@@ -566,23 +584,84 @@ export function HumanLanguagePage() {
     }
   }
 
-  const handleCreateLesson = async (subModuleId: number, currentLessonsCount: number) => {
-    const key = `lesson-${subModuleId}`
-    setCreatingKey(key)
+  const resetLessonForm = () =>
+    setLessonForm({
+      title: "",
+      description: "",
+      introVideoUrl: "",
+    })
+
+  const openCreateLessonDialog = (subModuleId: number, currentLessonsCount: number) => {
+    setLessonSubmitAttempted(false)
+    setLessonFormTouched(false)
+    const next = (currentLessonsCount || 0) + 1
+    setLessonForm({
+      title: `Lesson ${next}`,
+      description: "",
+      introVideoUrl: "",
+    })
+    setLessonDialog({ open: true, subModuleId, defaultIndex: next })
+  }
+
+  const lessonFieldErrors = useMemo(() => {
+    const title = lessonForm.title.trim()
+    return {
+      title: title ? undefined : "Title is required.",
+    }
+  }, [lessonForm.title])
+
+  const lessonCanSave = !lessonFieldErrors.title
+
+  const handleSaveLesson = async () => {
+    if (!lessonDialog.open) return
+    if (!lessonCanSave) {
+      setLessonSubmitAttempted(true)
+      return
+    }
+
     try {
-      const next = (currentLessonsCount || 0) + 1
+      setSavingLesson(true)
       await createLesson({
-        sub_module_id: subModuleId,
-        title: `Lesson ${next}`,
-        description: `Auto-created lesson ${next}`,
+        sub_module_id: lessonDialog.subModuleId,
+        title: lessonForm.title.trim(),
+        description: lessonForm.description.trim() || undefined,
+        intro_video_url: lessonForm.introVideoUrl.trim() || undefined,
       })
       toast.success("Lesson created")
+      setLessonDialog({ open: false })
+      setLessonSubmitAttempted(false)
+      setLessonFormTouched(false)
+      resetLessonForm()
       await loadHierarchy(false)
     } catch (error) {
       console.error("Failed to create lesson:", error)
       toast.error("Failed to create lesson")
     } finally {
-      setCreatingKey(null)
+      setSavingLesson(false)
+    }
+  }
+
+  const handleLessonIntroVideoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+    setUploadingLessonIntroVideo(true)
+    try {
+      const uploadRes = await uploadVideoFile(file, {
+        title: lessonForm.title.trim() || file.name.replace(/\.[^.]+$/, "") || "Lesson intro",
+        description: lessonForm.description.trim() || undefined,
+      })
+      const finalUrl = uploadRes.data?.data?.embed_url?.trim()
+        ? `${uploadRes.data.data.embed_url}?h=${uploadRes.data.data.url?.split("/").filter(Boolean).at(-1) ?? ""}`
+        : uploadRes.data?.data?.url?.trim()
+      if (!finalUrl) throw new Error("Missing uploaded video url")
+      setLessonForm((prev) => ({ ...prev, introVideoUrl: finalUrl }))
+      toast.success("Lesson intro video uploaded")
+    } catch (error) {
+      console.error("Failed to upload lesson intro video:", error)
+      toast.error("Failed to upload lesson intro video")
+    } finally {
+      setUploadingLessonIntroVideo(false)
     }
   }
 
@@ -1643,14 +1722,9 @@ export function HumanLanguagePage() {
                                                       size="sm"
                                                       variant="outline"
                                                       className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
-                                                      onClick={() => handleCreateLesson(subModule.id, lessonRows.length)}
-                                                      disabled={creatingKey === `lesson-${subModule.id}`}
+                                          onClick={() => openCreateLessonDialog(subModule.id, lessonRows.length)}
                                                     >
-                                                      {creatingKey === `lesson-${subModule.id}` ? (
-                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                      ) : (
-                                                        <Plus className="h-3.5 w-3.5" />
-                                                      )}
+                                          <Plus className="h-3.5 w-3.5" />
                                                       New lesson
                                                     </Button>
                                                   ) : null}
@@ -2114,6 +2188,110 @@ export function HumanLanguagePage() {
             </Button>
             <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => void executePendingRemove()}>
               Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={lessonDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLessonDialog({ open: false })
+            setLessonSubmitAttempted(false)
+            setLessonFormTouched(false)
+            resetLessonForm()
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Create Lesson</DialogTitle>
+            <DialogDescription>
+              Create a lesson as a `sub_module_lessons` entry linked to a QUIZ question set.
+              {!lessonCanSave ? (
+                <span className="mt-1 block text-amber-700/90">Required fields must be completed before you can save.</span>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Title</label>
+              <input
+                value={lessonForm.title}
+                onChange={(e) => {
+                  setLessonFormTouched(true)
+                  setLessonForm((p) => ({ ...p, title: e.target.value }))
+                }}
+                className={cn(
+                  "h-10 w-full rounded-md border px-3 text-sm",
+                  (lessonSubmitAttempted || lessonFormTouched) && lessonFieldErrors.title
+                    ? "border-red-300 ring-1 ring-red-200"
+                    : "border-grayScale-200",
+                )}
+                placeholder={lessonDialog.open ? `Lesson ${lessonDialog.defaultIndex}` : "Lesson title"}
+                aria-invalid={Boolean((lessonSubmitAttempted || lessonFormTouched) && lessonFieldErrors.title)}
+              />
+              {(lessonSubmitAttempted || lessonFormTouched) && lessonFieldErrors.title ? (
+                <p className="text-xs text-red-600">{lessonFieldErrors.title}</p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-grayScale-600">Description</label>
+              <textarea
+                value={lessonForm.description}
+                onChange={(e) => {
+                  setLessonFormTouched(true)
+                  setLessonForm((p) => ({ ...p, description: e.target.value }))
+                }}
+                className="min-h-[88px] w-full rounded-md border border-grayScale-200 px-3 py-2 text-sm"
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-grayScale-600">Intro video URL</label>
+              <Input
+                value={lessonForm.introVideoUrl}
+                onChange={(e) => {
+                  setLessonFormTouched(true)
+                  setLessonForm((p) => ({ ...p, introVideoUrl: e.target.value }))
+                }}
+                placeholder="https://..."
+                className="h-10 font-mono text-[13px]"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-grayScale-200 px-3 py-2 text-xs text-grayScale-700 hover:bg-grayScale-50">
+                  {uploadingLessonIntroVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+                  {uploadingLessonIntroVideo ? "Uploading..." : "Upload intro video"}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) => void handleLessonIntroVideoFileChange(e)}
+                    disabled={uploadingLessonIntroVideo || savingLesson}
+                  />
+                </label>
+              </div>
+              {lessonForm.introVideoUrl.trim() ? renderMediaPreview(lessonForm.introVideoUrl, "video", "", "Intro video") : null}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setLessonDialog({ open: false })
+                setLessonSubmitAttempted(false)
+                setLessonFormTouched(false)
+                resetLessonForm()
+              }}
+              disabled={savingLesson}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleSaveLesson()} disabled={savingLesson || !lessonCanSave}>
+              {savingLesson ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {savingLesson ? "Saving..." : "Create lesson"}
             </Button>
           </DialogFooter>
         </DialogContent>

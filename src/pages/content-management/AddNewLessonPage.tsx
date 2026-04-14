@@ -99,6 +99,12 @@ function isDirectVideoFile(url: string): boolean {
   return /\.(mp4|webm|ogg|mov|m4v)$/.test(clean)
 }
 
+function stepNodeClass(active: boolean, completed: boolean): string {
+  if (active) return "bg-grayScale-900 text-white ring-4 ring-grayScale-200"
+  if (completed) return "bg-grayScale-700 text-white"
+  return "border-2 border-grayScale-300 bg-white text-grayScale-400"
+}
+
 export function AddNewLessonPage() {
   const { categoryId, courseId, subModuleId } = useParams()
   const navigate = useNavigate()
@@ -277,19 +283,18 @@ export function AddNewLessonPage() {
                 <div key={step.number} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm sm:h-10 sm:w-10 sm:text-sm ${
-                        currentStep === step.number
-                          ? "bg-brand-500 text-white ring-4 ring-brand-100"
-                          : currentStep > step.number
-                            ? "bg-brand-500 text-white"
-                            : "border-2 border-grayScale-300 bg-white text-grayScale-400"
-                      }`}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm sm:h-10 sm:w-10 sm:text-sm ${stepNodeClass(
+                        currentStep === step.number,
+                        currentStep > step.number,
+                      )}`}
                     >
                       {currentStep > step.number ? <Check className="h-4 w-4" /> : step.number}
                     </div>
                     <span className="mt-2 text-xs font-semibold text-grayScale-500">{step.label}</span>
                   </div>
-                  {index < STEPS.length - 1 ? <div className="mx-4 h-0.5 w-20 bg-grayScale-200" /> : null}
+                  {index < STEPS.length - 1 ? (
+                    <div className={`mx-4 h-0.5 w-20 ${currentStep > step.number ? "bg-grayScale-700" : "bg-grayScale-200"}`} />
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -297,19 +302,30 @@ export function AddNewLessonPage() {
         ) : null}
 
         {currentStep === 1 ? (
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-grayScale-900">Step 1: Context</h2>
+          <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+              <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 1: Context</h2>
+              <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
+                Define lesson metadata that will be stored in the linked question set.
+              </p>
+            </div>
+            <div className="p-5 sm:p-8 lg:p-10">
             <div className="mt-5 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-grayScale-700">Lesson title</label>
-                <Input value={lessonTitle} onChange={(e) => setLessonTitle(e.target.value)} placeholder="Enter lesson title" />
+                <Input
+                  value={lessonTitle}
+                  onChange={(e) => setLessonTitle(e.target.value)}
+                  placeholder="Enter lesson title"
+                  className="h-11"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-grayScale-700">Description</label>
                 <textarea
                   value={lessonDescription}
                   onChange={(e) => setLessonDescription(e.target.value)}
-                  className="min-h-[88px] w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm"
+                  className="min-h-[96px] w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-grayScale-400 focus:outline-none focus:ring-2 focus:ring-grayScale-100"
                   placeholder="Enter lesson description"
                 />
               </div>
@@ -391,7 +407,11 @@ export function AddNewLessonPage() {
                 ) : null}
               </div>
             </div>
-            <div className="mt-6 flex justify-end">
+            </div>
+            <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:items-center sm:px-8 sm:py-5">
+              <Button variant="ghost" onClick={() => navigate(backTo)} className="sm:w-auto">
+                Cancel
+              </Button>
               <Button onClick={handleNext}>
                 Next: Questions
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -401,9 +421,9 @@ export function AddNewLessonPage() {
         ) : null}
 
         {currentStep === 2 ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {questions.map((question, index) => (
-              <Card key={question.id} className="p-5">
+              <Card key={question.id} className="border border-grayScale-200/90 border-l-4 border-l-grayScale-700 p-5 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <GripVertical className="h-4 w-4 text-grayScale-400" />
@@ -452,7 +472,7 @@ export function AddNewLessonPage() {
               <Plus className="mr-2 h-4 w-4" />
               Add another question
             </Button>
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between rounded-2xl border border-grayScale-200/80 bg-grayScale-50/30 px-4 py-4 sm:px-6 sm:py-5">
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
@@ -465,15 +485,19 @@ export function AddNewLessonPage() {
         ) : null}
 
         {currentStep === 3 ? (
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-grayScale-900">Step 3: Review & publish</h2>
+          <Card className="overflow-hidden border-grayScale-200/80 shadow-sm">
+            <div className="border-b border-grayScale-100 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 sm:px-8 sm:py-6">
+              <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">Step 3: Review & publish</h2>
+            </div>
+            <div className="p-5 sm:p-8">
             <div className="mt-4 space-y-2 text-sm text-grayScale-700">
               <p><span className="font-medium">Question set title:</span> {lessonTitle || "Untitled Lesson"}</p>
               <p><span className="font-medium">Question set description:</span> {lessonDescription || "—"}</p>
               <p><span className="font-medium">Sub-module lesson intro video:</span> {introVideoUrl || "—"}</p>
               <p><span className="font-medium">Questions:</span> {questions.length}</p>
             </div>
-            <div className="mt-6 flex justify-between">
+            </div>
+            <div className="flex items-center justify-between border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:px-8 sm:py-5">
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>

@@ -1754,13 +1754,13 @@ export function HumanLanguagePage() {
                                                     }
                                                     className={`relative pb-3 pt-2 text-sm font-semibold transition-colors ${
                                                       panelTab === "lessons"
-                                                        ? "text-brand-600"
+                                                        ? "text-grayScale-800"
                                                         : "text-grayScale-400 hover:text-grayScale-700"
                                                     }`}
                                                   >
                                                     Lessons
                                                     {panelTab === "lessons" ? (
-                                                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+                                                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-grayScale-700" />
                                                     ) : null}
                                                   </button>
                                                   <button
@@ -1770,13 +1770,13 @@ export function HumanLanguagePage() {
                                                     }
                                                     className={`relative pb-3 pt-2 text-sm font-semibold transition-colors ${
                                                       panelTab === "practices"
-                                                        ? "text-brand-600"
+                                                        ? "text-grayScale-800"
                                                         : "text-grayScale-400 hover:text-grayScale-700"
                                                     }`}
                                                   >
                                                     Practices
                                                     {panelTab === "practices" ? (
-                                                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+                                                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-grayScale-700" />
                                                     ) : null}
                                                   </button>
                                                   </div>
@@ -1785,7 +1785,7 @@ export function HumanLanguagePage() {
                                                       type="button"
                                                       size="sm"
                                                       variant="outline"
-                                                      className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
+                                                      className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-grayScale-300 hover:bg-grayScale-50"
                                                       onClick={() => openCreatePracticeDialog(course.course_id, subModule.id)}
                                                     >
                                                       <Plus className="h-3.5 w-3.5" />
@@ -1821,7 +1821,7 @@ export function HumanLanguagePage() {
                                                         type="button"
                                                         size="sm"
                                                         variant="outline"
-                                                        className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-brand-200 hover:bg-brand-50/40"
+                                                        className="h-8 border-grayScale-200 bg-white px-2 text-[11px] hover:border-grayScale-300 hover:bg-grayScale-50"
                                                         onClick={() => openCreateLessonDialog(course.course_id, subModule.id)}
                                                       >
                                                         <Plus className="h-3.5 w-3.5" />
@@ -1958,7 +1958,7 @@ export function HumanLanguagePage() {
                                                                     href={selectedLesson.intro_video_url}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="text-sm font-medium text-brand-600 hover:underline"
+                                                                    className="text-sm font-medium text-grayScale-700 hover:underline"
                                                                   >
                                                                     {selectedLesson.intro_video_url}
                                                                   </a>

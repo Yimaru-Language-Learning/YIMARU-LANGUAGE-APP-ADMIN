@@ -768,6 +768,7 @@ export const getHumanLanguageHierarchy = () =>
               id: subModuleId,
               title: row.sub_module_title ?? "",
               videos: [],
+              lessons: [],
               practices: [],
             })
           }
@@ -788,6 +789,71 @@ export const getHumanLanguageHierarchy = () =>
         }
       }),
     }))
+
+    const subModuleIds = subCategories.flatMap((sub) =>
+      sub.courses.flatMap((course) =>
+        course.levels.flatMap((levelNode) => levelNode.modules.flatMap((moduleNode) => moduleNode.sub_modules.map((sm) => sm.id))),
+      ),
+    )
+
+    type QuestionSetListItem = {
+      id: number
+      title?: string
+      set_type?: string
+      status?: string
+      intro_video_url?: string | null
+      question_count?: number
+      created_at?: string
+    }
+
+    const questionSetsBySubModule = new Map<number, QuestionSetListItem[]>()
+    await Promise.all(
+      subModuleIds.map(async (subModuleID) => {
+        try {
+          const questionSetRes = await http.get<GetQuestionSetsResponse>("/question-sets/by-owner", {
+            params: { owner_type: "SUB_MODULE", owner_id: subModuleID },
+          })
+          const payload = questionSetRes.data?.data
+          const sets = Array.isArray(payload)
+            ? payload
+            : Array.isArray((payload as { question_sets?: QuestionSetListItem[] } | undefined)?.question_sets)
+              ? ((payload as { question_sets: QuestionSetListItem[] }).question_sets ?? [])
+              : []
+          questionSetsBySubModule.set(subModuleID, sets as QuestionSetListItem[])
+        } catch {
+          questionSetsBySubModule.set(subModuleID, [])
+        }
+      }),
+    )
+
+    subCategories.forEach((sub) => {
+      sub.courses.forEach((course) => {
+        course.levels.forEach((levelNode) => {
+          levelNode.modules.forEach((moduleNode) => {
+            moduleNode.sub_modules.forEach((subModuleNode) => {
+              const sets = questionSetsBySubModule.get(subModuleNode.id) ?? []
+              const lessons = sets
+                .filter((set) => String(set.set_type ?? "").toUpperCase() === "QUIZ")
+                .sort((a, b) => {
+                  const ad = Date.parse(String(a.created_at ?? "")) || 0
+                  const bd = Date.parse(String(b.created_at ?? "")) || 0
+                  return ad - bd
+                })
+                .map((set, idx) => ({
+                  id: Number(set.id),
+                  question_set_id: Number(set.id),
+                  title: set.title?.trim() || `Lesson ${idx + 1}`,
+                  status: set.status ?? "DRAFT",
+                  question_count: Number(set.question_count ?? 0),
+                  display_order: idx + 1,
+                  intro_video_url: set.intro_video_url ?? null,
+                }))
+              subModuleNode.lessons = lessons
+            })
+          })
+        })
+      })
+    })
 
     return {
       ...res,

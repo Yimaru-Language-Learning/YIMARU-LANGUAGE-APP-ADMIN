@@ -719,6 +719,15 @@ export interface HumanLanguageSubModule {
   id: number
   title: string
   videos: LearningPathVideo[]
+  lessons?: {
+    id: number
+    question_set_id: number
+    title: string
+    status: string
+    question_count: number
+    display_order: number
+    intro_video_url?: string | null
+  }[]
   practices: LearningPathPractice[]
 }
 

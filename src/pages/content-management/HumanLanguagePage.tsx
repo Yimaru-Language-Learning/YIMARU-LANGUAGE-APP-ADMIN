@@ -57,7 +57,6 @@ import type {
   HumanLanguageCourseTree,
   HumanLanguageSubCategoryTree,
   LearningPathPractice,
-  LearningPathVideo,
   QuestionDetail,
   QuestionSetQuestion,
 } from "../../types/course.types"
@@ -1506,9 +1505,26 @@ export function HumanLanguagePage() {
                                           const smKey = `${course.course_id}-${subModule.id}`
                                           const panelTab = subModulePanelTab[smKey] ?? "lessons"
                                           const cardSel = getSubModuleSelection(smKey)
-                                          const lessonRows: LearningPathVideo[] = [...subModule.videos].sort(
-                                            (a, b) => a.display_order - b.display_order,
-                                          )
+                                          const lessonRows = [
+                                            ...(subModule.lessons ?? []).map((lesson) => ({
+                                              id: lesson.id,
+                                              title: lesson.title,
+                                              display_order: lesson.display_order,
+                                              status: lesson.status,
+                                              question_count: lesson.question_count,
+                                              intro_video_url: lesson.intro_video_url ?? "",
+                                            })),
+                                            ...((subModule.lessons?.length ?? 0) === 0
+                                              ? subModule.videos.map((video) => ({
+                                                  id: video.id,
+                                                  title: video.title,
+                                                  display_order: video.display_order,
+                                                  status: "PUBLISHED",
+                                                  question_count: 0,
+                                                  intro_video_url: video.video_url ?? "",
+                                                }))
+                                              : []),
+                                          ].sort((a, b) => a.display_order - b.display_order)
                                           const practiceRows: LearningPathPractice[] = [...subModule.practices].sort(
                                             (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
                                           )
@@ -1643,9 +1659,8 @@ export function HumanLanguagePage() {
                                                 {panelTab === "lessons" ? (
                                                   lessonRows.length === 0 ? (
                                                     <div className="rounded-lg border border-dashed border-grayScale-200 bg-grayScale-50/40 px-4 py-8 text-center text-sm text-grayScale-500">
-                                                      No lesson videos yet. Use{" "}
-                                                      <span className="font-medium text-grayScale-700">Open editor</span> to add
-                                                      videos.
+                                                      No lessons yet. Use{" "}
+                                                      <span className="font-medium text-grayScale-700">New lesson</span> to create one.
                                                     </div>
                                                   ) : (
                                                     <div className="space-y-3">
@@ -1672,10 +1687,14 @@ export function HumanLanguagePage() {
                                                                   <p className="line-clamp-2 text-sm font-semibold text-grayScale-900">
                                                                     {v.title}
                                                                   </p>
-                                                                  <p className="mt-0.5 text-[11px] text-grayScale-500">
-                                                                    Lesson {idx + 1} · {formatDurationSeconds(v.duration ?? 0)} · Order{" "}
-                                                                    {v.display_order}
-                                                                  </p>
+                                                                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                                    <Badge className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-100">
+                                                                      {(v.status ?? "DRAFT").replace(/_/g, " ").toLowerCase()}
+                                                                    </Badge>
+                                                                    <span className="text-[11px] text-grayScale-500">
+                                                                      Lesson {idx + 1} · {v.question_count} Q · Order {v.display_order}
+                                                                    </span>
+                                                                  </div>
                                                                 </div>
                                                               </div>
                                                             </button>
@@ -1685,7 +1704,7 @@ export function HumanLanguagePage() {
                                                       {selectedLesson ? (
                                                         <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/60 p-4">
                                                           <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">
-                                                            Lesson content
+                                                            Lesson detail
                                                           </p>
                                                           <h4 className="mt-1 text-base font-semibold text-grayScale-900">
                                                             {selectedLesson.title}
@@ -1698,34 +1717,34 @@ export function HumanLanguagePage() {
                                                               </dd>
                                                             </div>
                                                             <div>
-                                                              <dt className="text-xs text-grayScale-500">Duration</dt>
+                                                              <dt className="text-xs text-grayScale-500">Questions</dt>
                                                               <dd className="tabular-nums font-medium text-grayScale-800">
-                                                                {formatDurationSeconds(selectedLesson.duration ?? 0)}
+                                                                {selectedLesson.question_count}
                                                               </dd>
                                                             </div>
                                                             <div className="sm:col-span-2">
-                                                              <dt className="text-xs text-grayScale-500">Video</dt>
+                                                              <dt className="text-xs text-grayScale-500">Intro video</dt>
                                                               <dd className="mt-0.5 break-all">
-                                                                {selectedLesson.video_url ? (
+                                                                {selectedLesson.intro_video_url ? (
                                                                   <a
-                                                                    href={selectedLesson.video_url}
+                                                                    href={selectedLesson.intro_video_url}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="text-sm font-medium text-brand-600 hover:underline"
                                                                   >
-                                                                    {selectedLesson.video_url}
+                                                                    {selectedLesson.intro_video_url}
                                                                   </a>
                                                                 ) : (
                                                                   <span className="text-sm text-grayScale-400">
-                                                                    No video URL set — use Open editor to add one.
+                                                                    No intro video URL set for this lesson.
                                                                   </span>
                                                                 )}
-                                                                {selectedLesson.video_url
+                                                                {selectedLesson.intro_video_url
                                                                   ? renderMediaPreview(
-                                                                      selectedLesson.video_url,
+                                                                      selectedLesson.intro_video_url,
                                                                       "video",
                                                                       "mt-3",
-                                                                      "Video preview",
+                                                                      "Intro video preview",
                                                                     )
                                                                   : null}
                                                               </dd>

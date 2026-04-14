@@ -437,27 +437,43 @@ export function HumanLanguagePage() {
       )
       setCollapsedModuleIds(moduleIds)
       setCollapsedSubModuleIds(subModuleIds)
+      return nextSubCategories.length
     } finally {
       if (showLoading) setLoading(false)
     }
   }
 
   useEffect(() => {
+    let cancelled = false
     const run = async () => {
       setLoading(true)
       try {
-        await loadHierarchy()
+        const count = await loadHierarchy(false)
+        // On first navigation after login, the first hierarchy request can race auth refresh.
+        // Retry once if it comes back empty so users don't need a manual browser refresh.
+        if (!cancelled && count === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 650))
+          if (!cancelled) {
+            await loadHierarchy(false)
+          }
+        }
         const saved = sessionStorage.getItem(HUMAN_LANGUAGE_SCROLL_KEY)
         const targetY = saved ? Number(saved) : 0
         if (Number.isFinite(targetY) && targetY > 0) {
           window.requestAnimationFrame(() => window.scrollTo({ top: targetY, behavior: "auto" }))
           setTimeout(() => window.scrollTo({ top: targetY, behavior: "auto" }), 250)
         }
+      } catch (error) {
+        console.error("Failed to load human-language hierarchy:", error)
+        toast.error("Failed to load Human Language data")
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     run().catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {

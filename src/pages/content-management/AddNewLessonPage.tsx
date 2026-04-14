@@ -195,10 +195,7 @@ export function AddNewLessonPage() {
     return null
   }, [introVideoUrl])
 
-  const populatedQuestions = useMemo(
-    () => questions.filter((question) => question.questionText.trim().length > 0),
-    [questions],
-  )
+  const reviewQuestions = useMemo(() => questions, [questions])
 
   const addQuestion = () => setQuestions((prev) => [...prev, createEmptyQuestion(String(Date.now()))])
   const removeQuestion = (id: string) => setQuestions((prev) => (prev.length > 1 ? prev.filter((q) => q.id !== id) : prev))
@@ -539,7 +536,7 @@ export function AddNewLessonPage() {
                     <h3 className="text-base font-semibold text-grayScale-900">
                       Questions
                       <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
-                        {populatedQuestions.length}
+                        {reviewQuestions.length}
                       </span>
                     </h3>
                     <button
@@ -551,12 +548,12 @@ export function AddNewLessonPage() {
                     </button>
                   </div>
                   <div className="space-y-3 p-3">
-                    {populatedQuestions.length === 0 ? (
+                    {reviewQuestions.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 p-4 text-sm text-grayScale-500">
                         No question content added yet.
                       </div>
                     ) : (
-                      populatedQuestions.map((question, idx) => (
+                      reviewQuestions.map((question, idx) => (
                         <div key={question.id} className="rounded-xl border border-grayScale-200 bg-grayScale-50/35 p-3">
                           <div className="mb-2 flex items-center gap-2">
                             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-100 px-1.5 text-[11px] font-semibold text-brand-700">
@@ -570,7 +567,9 @@ export function AddNewLessonPage() {
                             </span>
                             <span className="text-[11px] font-semibold text-grayScale-500">{question.points} pt</span>
                           </div>
-                          <p className="mb-2 line-clamp-2 text-sm font-medium text-grayScale-800">{question.questionText}</p>
+                          <p className="mb-2 line-clamp-2 text-sm font-medium text-grayScale-800">
+                            {question.questionText.trim() || `Question ${idx + 1}`}
+                          </p>
                           {question.questionType === "MCQ" ? (
                             <div className="space-y-1">
                               {question.options.map((option, optionIdx) => (

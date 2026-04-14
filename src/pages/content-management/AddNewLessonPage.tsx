@@ -99,12 +99,6 @@ function isDirectVideoFile(url: string): boolean {
   return /\.(mp4|webm|ogg|mov|m4v)$/.test(clean)
 }
 
-function stepNodeClass(active: boolean, completed: boolean): string {
-  if (active) return "bg-grayScale-900 text-white ring-4 ring-grayScale-200"
-  if (completed) return "bg-grayScale-700 text-white"
-  return "border-2 border-grayScale-300 bg-white text-grayScale-400"
-}
-
 export function AddNewLessonPage() {
   const { categoryId, courseId, subModuleId } = useParams()
   const navigate = useNavigate()
@@ -283,17 +277,20 @@ export function AddNewLessonPage() {
                 <div key={step.number} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm sm:h-10 sm:w-10 sm:text-sm ${stepNodeClass(
-                        currentStep === step.number,
-                        currentStep > step.number,
-                      )}`}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold shadow-sm transition-all duration-300 sm:h-10 sm:w-10 sm:text-sm ${
+                        currentStep === step.number
+                          ? "bg-brand-500 text-white ring-4 ring-brand-100"
+                          : currentStep > step.number
+                            ? "bg-brand-500 text-white"
+                            : "border-2 border-grayScale-300 bg-white text-grayScale-400"
+                      }`}
                     >
                       {currentStep > step.number ? <Check className="h-4 w-4" /> : step.number}
                     </div>
                     <span className="mt-2 text-xs font-semibold text-grayScale-500">{step.label}</span>
                   </div>
                   {index < STEPS.length - 1 ? (
-                    <div className={`mx-4 h-0.5 w-20 ${currentStep > step.number ? "bg-grayScale-700" : "bg-grayScale-200"}`} />
+                    <div className={`mx-4 h-0.5 w-20 ${currentStep > step.number ? "bg-brand-500" : "bg-grayScale-200"}`} />
                   ) : null}
                 </div>
               ))}

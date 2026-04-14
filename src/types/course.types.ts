@@ -45,6 +45,7 @@ export interface GetCoursesResponse {
 
 export interface CreateCourseRequest {
   category_id: number
+  sub_category_id?: number | null
   title: string
   description: string
 }

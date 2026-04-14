@@ -628,10 +628,20 @@ export function HumanLanguagePage() {
       if (!effectiveCategoryId) {
         throw new Error("Missing human language category id")
       }
-      const title = `${quickSubCategoryName.trim()} - ${quickCourseName.trim()}`
+
+      const createdSubCategory = await createCourseCategory({
+        name: quickSubCategoryName.trim(),
+        parent_id: effectiveCategoryId,
+      })
+      const subCategoryId = createdSubCategory.data?.data?.id
+      if (!subCategoryId) {
+        throw new Error("Failed to create subcategory")
+      }
+
       await createCourse({
         category_id: effectiveCategoryId,
-        title,
+        sub_category_id: Number(subCategoryId),
+        title: quickCourseName.trim(),
         description: `${quickSubCategoryName.trim()} / ${quickCourseName.trim()}`,
       })
       toast.success("Subcategory/course path created")

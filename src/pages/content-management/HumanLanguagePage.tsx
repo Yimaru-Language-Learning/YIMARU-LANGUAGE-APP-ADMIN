@@ -462,8 +462,19 @@ export function HumanLanguagePage() {
           const restoreBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
             ? "auto"
             : "smooth"
-          window.requestAnimationFrame(() => window.scrollTo({ top: targetY, behavior: restoreBehavior }))
-          setTimeout(() => window.scrollTo({ top: targetY, behavior: restoreBehavior }), 250)
+          let attempts = 0
+          const maxAttempts = 14
+          const tryRestore = () => {
+            if (cancelled) return
+            const maxScrollableY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+            if (maxScrollableY >= targetY || attempts >= maxAttempts) {
+              window.scrollTo({ top: targetY, behavior: restoreBehavior })
+              return
+            }
+            attempts += 1
+            window.setTimeout(tryRestore, 180)
+          }
+          window.requestAnimationFrame(tryRestore)
         }
       } catch (error) {
         console.error("Failed to load human-language hierarchy:", error)

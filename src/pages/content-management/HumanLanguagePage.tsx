@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import {
   ChevronDown,
   ChevronRight,
@@ -118,13 +118,6 @@ type QuestionDialogState =
       practiceId: number
       questionId?: number
     }
-
-function formatDurationSeconds(total: number): string {
-  const s = Math.max(0, Math.floor(total))
-  const m = Math.floor(s / 60)
-  const r = s % 60
-  return `${m}:${r.toString().padStart(2, "0")}`
-}
 
 function practiceStatusStyle(status: string): string {
   const u = status.toUpperCase()
@@ -1774,13 +1767,6 @@ export function HumanLanguagePage() {
                                                 </button>
                                                 {categoryId ? (
                                                   <div className="flex flex-wrap items-center gap-2">
-                                                    <Link
-                                                      to={`/content/human-language/${categoryId}/${course.course_id}/sub-module/${subModule.id}`}
-                                                    >
-                                                      <Button type="button" variant="outline" size="sm" className="h-8 border-grayScale-200 bg-white text-xs hover:border-brand-200 hover:bg-brand-50/40">
-                                                        Open editor
-                                                      </Button>
-                                                    </Link>
                                                     <Button
                                                       type="button"
                                                       size="sm"
@@ -2169,7 +2155,8 @@ export function HumanLanguagePage() {
                                                             <Loader2 className="h-5 w-5 animate-spin text-brand-500" aria-hidden />
                                                             Loading questions…
                                                           </div>
-                                                        ) : practiceFetch.status === "error" ? (
+                                                        ) : null}
+                                                        {practiceFetch?.status === "error" ? (
                                                           <div className="rounded-lg border border-red-100 bg-red-50/50 px-4 py-3">
                                                             <div className="flex items-start gap-2">
                                                               <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden />
@@ -2187,7 +2174,8 @@ export function HumanLanguagePage() {
                                                               </div>
                                                             </div>
                                                           </div>
-                                                        ) : practiceFetch.questions.length === 0 ? (
+                                                        ) : null}
+                                                        {practiceFetch?.status === "ok" && practiceFetch.questions.length === 0 ? (
                                                           <div className="rounded-lg border border-dashed border-grayScale-200 bg-white px-4 py-10 text-center">
                                                             <ClipboardList className="mx-auto mb-2 h-8 w-8 text-grayScale-300" aria-hidden />
                                                             <p className="text-sm text-grayScale-600">
@@ -2197,7 +2185,8 @@ export function HumanLanguagePage() {
                                                               Add them via <span className="font-medium text-grayScale-700">Open editor</span>.
                                                             </p>
                                                           </div>
-                                                        ) : (
+                                                        ) : null}
+                                                        {practiceFetch?.status === "ok" && practiceFetch.questions.length > 0 ? (
                                                           <ul className="max-h-[min(28rem,calc(100vh-16rem))] space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
                                                             {practiceFetch.questions.map((q, qIdx) => {
                                                               const qType = String(q.question_type ?? "—")
@@ -2350,7 +2339,7 @@ export function HumanLanguagePage() {
                                                               )
                                                             })}
                                                           </ul>
-                                                        )}
+                                                        ) : null}
                                                         {practiceFetch?.status === "ok" &&
                                                         practiceFetch.totalCount > practiceFetch.questions.length ? (
                                                           <div className="mt-4 rounded-lg border border-grayScale-100 bg-white/80 px-3 py-2 text-center text-xs text-grayScale-600">

@@ -122,6 +122,7 @@ export function AddNewLessonPage() {
   const [saving, setSaving] = useState(false)
   const [resultStatus, setResultStatus] = useState<ResultStatus | null>(null)
   const [resultMessage, setResultMessage] = useState("")
+  const [lastSavedStatus, setLastSavedStatus] = useState<"DRAFT" | "PUBLISHED" | null>(null)
 
   const [lessonTitle, setLessonTitle] = useState("")
   const [lessonDescription, setLessonDescription] = useState("")
@@ -255,11 +256,13 @@ export function AddNewLessonPage() {
 
       setResultStatus("success")
       setResultMessage(status === "PUBLISHED" ? "Lesson published successfully." : "Lesson saved as draft.")
+      setLastSavedStatus(status)
       setCurrentStep(4)
     } catch (error) {
       console.error("Failed to save lesson:", error)
       setResultStatus("error")
       setResultMessage(error instanceof Error ? error.message : "Failed to save lesson")
+      setLastSavedStatus(null)
       setCurrentStep(4)
     } finally {
       setSaving(false)
@@ -620,7 +623,12 @@ export function AddNewLessonPage() {
             </h2>
             <p className="mt-3 text-sm text-grayScale-500">{resultStatus === "success" ? "Your lesson is now active." : resultMessage}</p>
             <div className="mt-8 w-full space-y-3">
-              <Button className="h-11 w-full text-base" onClick={() => navigate(backTo)}>
+              <Button
+                className="h-11 w-full text-base"
+                onClick={() =>
+                  navigate(lastSavedStatus === "PUBLISHED" ? "/content/human-language" : backTo)
+                }
+              >
                 Go back to Course
               </Button>
               {resultStatus === "success" ? (

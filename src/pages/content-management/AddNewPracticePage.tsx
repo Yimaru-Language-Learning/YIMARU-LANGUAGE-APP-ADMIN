@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ChangeEvent } from "react"
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom"
-import { ArrowLeft, ArrowRight, ChevronDown, Grid3X3, Check, Plus, Trash2, GripVertical, Edit, Rocket, Loader2, Upload } from "lucide-react"
+import { ArrowLeft, ArrowRight, ChevronDown, Grid3X3, Check, Plus, Trash2, GripVertical, Edit, Rocket, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Card } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
@@ -9,6 +9,7 @@ import { PracticeQuestionEditorFields } from "../../components/content-managemen
 import { createQuestionSet, createQuestion, addQuestionToSet } from "../../api/courses.api"
 import { uploadVideoFile } from "../../api/files.api"
 import { Select } from "../../components/ui/select"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import type { QuestionOption } from "../../types/course.types"
 
 type Step = 1 | 2 | 3 | 4 | 5
@@ -526,7 +527,7 @@ export function AddNewPracticePage() {
                       className="gap-1.5"
                     >
                       {uploadingIntroVideo ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <SpinnerIcon className="h-4 w-4" alt="" />
                       ) : (
                         <Upload className="h-4 w-4" />
                       )}
@@ -541,7 +542,7 @@ export function AddNewPracticePage() {
                     >
                       {importingIntroVideoUrl ? (
                         <>
-                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                          <SpinnerIcon className="mr-1.5 h-4 w-4" alt="" />
                           Importing URL…
                         </>
                       ) : (

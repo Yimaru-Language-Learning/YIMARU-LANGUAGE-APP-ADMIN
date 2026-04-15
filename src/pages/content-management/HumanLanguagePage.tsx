@@ -10,7 +10,6 @@ import {
   Languages,
   Lightbulb,
   Link2,
-  Loader2,
   Mic,
   Plus,
   Search,
@@ -276,7 +275,7 @@ function MediaPreviewCard({
       ) : null}
       {resolving ? (
         <div className="flex items-center gap-2 rounded-md border border-grayScale-100 bg-grayScale-50 px-3 py-2 text-xs text-grayScale-500">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <SpinnerIcon className="h-3.5 w-3.5" alt="" />
           Resolving media URL...
         </div>
       ) : mediaType === "image" ? (
@@ -460,8 +459,11 @@ export function HumanLanguagePage() {
         const saved = sessionStorage.getItem(HUMAN_LANGUAGE_SCROLL_KEY)
         const targetY = saved ? Number(saved) : 0
         if (Number.isFinite(targetY) && targetY > 0) {
-          window.requestAnimationFrame(() => window.scrollTo({ top: targetY, behavior: "auto" }))
-          setTimeout(() => window.scrollTo({ top: targetY, behavior: "auto" }), 250)
+          const restoreBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth"
+          window.requestAnimationFrame(() => window.scrollTo({ top: targetY, behavior: restoreBehavior }))
+          setTimeout(() => window.scrollTo({ top: targetY, behavior: restoreBehavior }), 250)
         }
       } catch (error) {
         console.error("Failed to load human-language hierarchy:", error)
@@ -1625,7 +1627,7 @@ export function HumanLanguagePage() {
                                       disabled={creatingKey === `module-${course.course_id}-${level}`}
                                     >
                                       {creatingKey === `module-${course.course_id}-${level}` ? (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        <SpinnerIcon className="h-3.5 w-3.5" alt="" />
                                       ) : (
                                         <Plus className="h-3.5 w-3.5" />
                                       )}
@@ -1674,7 +1676,7 @@ export function HumanLanguagePage() {
                                               disabled={creatingKey === `submodule-${course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}`}
                                             >
                                               {creatingKey === `submodule-${course.course_id}-${level}-${parseModuleNumber(module.title) ?? 0}` ? (
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                <SpinnerIcon className="h-3.5 w-3.5" alt="" />
                                               ) : (
                                                 <Plus className="h-3.5 w-3.5" />
                                               )}
@@ -2152,7 +2154,7 @@ export function HumanLanguagePage() {
                                                         <div className="p-4">
                                                         {!practiceFetch || practiceFetch.status === "loading" ? (
                                                           <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-grayScale-500">
-                                                            <Loader2 className="h-5 w-5 animate-spin text-brand-500" aria-hidden />
+                                                            <SpinnerIcon className="h-5 w-5 text-brand-500" alt="" />
                                                             Loading questions…
                                                           </div>
                                                         ) : null}
@@ -2245,7 +2247,7 @@ export function HumanLanguagePage() {
                                                                           >
                                                                             {loadingQuestionEditId ===
                                                                             (q.question_id ?? q.id) ? (
-                                                                              <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                                                                              <SpinnerIcon className="h-3 w-3" alt="" />
                                                                             ) : null}
                                                                             Edit
                                                                           </Button>
@@ -2422,7 +2424,7 @@ export function HumanLanguagePage() {
           </DialogHeader>
           {loadingPracticeForm ? (
             <div className="flex items-center gap-2 rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-3 text-sm text-grayScale-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <SpinnerIcon className="h-4 w-4" alt="" />
               Loading practice details...
             </div>
           ) : (
@@ -2487,7 +2489,7 @@ export function HumanLanguagePage() {
               />
               <div className="flex flex-wrap items-center gap-2">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-grayScale-200 px-3 py-2 text-xs text-grayScale-700 hover:bg-grayScale-50">
-                  {uploadingPracticeIntroVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+                  {uploadingPracticeIntroVideo ? <SpinnerIcon className="h-4 w-4" alt="" /> : <Video className="h-4 w-4" />}
                   {uploadingPracticeIntroVideo ? "Uploading..." : "Upload intro video"}
                   <input
                     type="file"

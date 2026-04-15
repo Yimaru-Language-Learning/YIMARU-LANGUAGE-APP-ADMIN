@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from "react"
-import { ArrowLeft, ArrowRight, Check, GripVertical, Loader2, Plus, Rocket, Trash2, Upload } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, GripVertical, Plus, Rocket, Trash2, Upload } from "lucide-react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { addQuestionToSet, createLesson, createQuestion } from "../../api/courses.api"
@@ -8,6 +8,7 @@ import { PracticeQuestionEditorFields } from "../../components/content-managemen
 import { Button } from "../../components/ui/button"
 import { Card } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import type { QuestionOption } from "../../types/course.types"
 
 type Step = 1 | 2 | 3 | 4
@@ -356,7 +357,7 @@ export function AddNewLessonPage() {
                 />
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-grayScale-200 px-3 py-2 text-xs text-grayScale-700 hover:bg-grayScale-50">
-                    {uploadingIntroVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {uploadingIntroVideo ? <SpinnerIcon className="h-4 w-4" alt="" /> : <Upload className="h-4 w-4" />}
                     {uploadingIntroVideo ? "Uploading..." : "Upload video from computer"}
                     <input
                       type="file"

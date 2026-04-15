@@ -1,5 +1,5 @@
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, ChevronDown, ChevronRight, Image as ImageIcon, Loader2, Mic, Plus, Trash2, Upload } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronRight, Image as ImageIcon, Mic, Plus, Trash2, Upload } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
@@ -1926,7 +1926,7 @@ export function SpeakingPage() {
                           className="gap-1.5"
                         >
                           {uploadingIntroVideo ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <SpinnerIcon className="h-4 w-4" alt="" />
                           ) : (
                             <Upload className="h-4 w-4" />
                           )}

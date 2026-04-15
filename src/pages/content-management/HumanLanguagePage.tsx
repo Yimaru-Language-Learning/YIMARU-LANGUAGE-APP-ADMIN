@@ -1382,7 +1382,7 @@ export function HumanLanguagePage() {
         </div>
       </div>
 
-      <Card className="sticky top-20 z-10 border-grayScale-200/80 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <Card className="sticky top-3 z-0 border-grayScale-200/80 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold text-grayScale-900">Filters</CardTitle>
         </CardHeader>

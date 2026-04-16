@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Plus,
@@ -81,27 +81,28 @@ export function RolesListPage() {
     return () => clearTimeout(timer)
   }, [query])
 
+  const fetchRoles = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getRoles({
+        query: debouncedQuery || undefined,
+        page,
+        page_size: pageSize,
+      })
+      setRoles(res.data.data.roles ?? [])
+      setTotal(res.data.data.total ?? 0)
+    } catch {
+      setError("Failed to load roles.")
+    } finally {
+      setLoading(false)
+    }
+  }, [debouncedQuery, page, pageSize])
+
   // Fetch roles
   useEffect(() => {
-    const fetchRoles = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await getRoles({
-          query: debouncedQuery || undefined,
-          page,
-          page_size: pageSize,
-        })
-        setRoles(res.data.data.roles ?? [])
-        setTotal(res.data.data.total ?? 0)
-      } catch {
-        setError("Failed to load roles.")
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchRoles()
-  }, [debouncedQuery, page, pageSize])
+  }, [fetchRoles])
 
   // Open role detail
   const handleViewRole = async (roleId: number) => {
@@ -147,7 +148,7 @@ export function RolesListPage() {
 
       setRoleToDelete(null)
       setDeleteDialogOpen(false)
-      setPage(1) // trigger list refresh via the existing effect
+      await fetchRoles()
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??

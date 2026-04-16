@@ -1042,6 +1042,9 @@ export function HumanLanguagePage() {
       })
       toast.error("Could not load full lesson details")
     }
+
+    // Preload questions so the lesson edit dialog can show the question bank immediately.
+    if (lesson.question_set_id > 0) void loadLessonQuestionsIfNeeded(lesson.question_set_id)
   }
 
   const handleSaveLesson = async () => {
@@ -1845,11 +1848,9 @@ export function HumanLanguagePage() {
                                           const selectedLessonFetch =
                                             cardSel.lessonId !== null ? lessonDetailState[cardSel.lessonId] : undefined
                                           const selectedLessonDetail =
-                                            selectedLessonFetch?.status === "ok" ? selectedLessonFetch.data : null
-                                          const selectedLessonQuestionSetId =
-                                            selectedLessonDetail?.question_set_id ?? selectedLesson?.question_set_id ?? 0
-                                          const lessonFetch =
-                                            selectedLessonQuestionSetId > 0 ? lessonQuestionsState[selectedLessonQuestionSetId] : undefined
+                                            selectedLessonFetch && selectedLessonFetch.status === "ok"
+                                              ? selectedLessonFetch.data
+                                              : null
                                           const selectedLessonIds = selectedLessonIdsBySubModule[smKey] ?? []
                                           const selectedLessonRows = lessonRows.filter((row) => selectedLessonIds.includes(row.id))
                                           const selectedPracticeMeta =
@@ -2006,6 +2007,16 @@ export function HumanLanguagePage() {
                                                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                                         {lessonRows.map((v, idx) => {
                                                           const isActive = cardSel.lessonId === v.id
+                                                          const fetchedLessonCount = (() => {
+                                                            const detailFetch = lessonDetailState[v.id]
+                                                            if (detailFetch?.status === "ok") return detailFetch.data.question_count
+
+                                                            const questionFetch = lessonQuestionsState[v.question_set_id]
+                                                            if (questionFetch?.status === "ok") return questionFetch.questions.length
+
+                                                            return undefined
+                                                          })()
+                                                          const questionCountToShow = fetchedLessonCount ?? v.question_count
                                                           return (
                                                             <button
                                                               key={v.id}
@@ -2033,7 +2044,7 @@ export function HumanLanguagePage() {
                                                                       {(v.status ?? "DRAFT").replace(/_/g, " ").toLowerCase()}
                                                                     </Badge>
                                                                     <span className="text-[11px] text-grayScale-500">
-                                                                      Lesson {idx + 1} · {v.question_count} Q · Order {v.display_order}
+                                                                      Lesson {idx + 1} · {questionCountToShow} Q · Order {v.display_order}
                                                                     </span>
                                                                   </div>
                                                                 </div>
@@ -2148,242 +2159,7 @@ export function HumanLanguagePage() {
                                                             </div>
                                                           </dl>
                                                         </div>
-                                                        {selectedLessonQuestionSetId > 0 && (
-                                                          <div className="overflow-hidden rounded-xl border border-grayScale-200/90 bg-gradient-to-b from-white to-grayScale-50/80 shadow-sm">
-                                                            <div className="border-b border-grayScale-100 bg-white/90 px-4 py-3.5">
-                                                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                                                <div className="min-w-0 flex-1">
-                                                                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grayScale-400">
-                                                                    Question bank
-                                                                  </p>
-                                                                  <h4 className="mt-0.5 truncate text-base font-semibold text-grayScale-900">
-                                                                    {selectedLessonDetail?.title ?? selectedLesson?.title}
-                                                                  </h4>
-                                                                  <p className="mt-1 text-xs text-grayScale-500">
-                                                                    {selectedLessonDetail?.question_count ?? selectedLesson?.question_count ?? 0}{" "}
-                                                                    {Number(
-                                                                      selectedLessonDetail?.question_count ?? selectedLesson?.question_count ?? 0,
-                                                                    ) === 1
-                                                                      ? "question"
-                                                                      : "questions"}{" "}
-                                                                    in this lesson
-                                                                  </p>
-                                                                </div>
-                                                                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                                                                  <Button
-                                                                    type="button"
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="h-8 text-xs"
-                                                                    onClick={() =>
-                                                                      openCreateQuestionDialog(selectedLessonQuestionSetId, "lesson")
-                                                                    }
-                                                                  >
-                                                                    <Plus className="h-3.5 w-3.5" />
-                                                                    Add question
-                                                                  </Button>
-                                                                  {lessonFetch?.status === "ok" ? (
-                                                                    <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-100">
-                                                                      {lessonFetch.questions.length} loaded
-                                                                    </span>
-                                                                  ) : null}
-                                                                </div>
-                                                              </div>
-                                                            </div>
-                                                            <div className="p-4">
-                                                              {!lessonFetch || lessonFetch.status === "loading" ? (
-                                                                <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-grayScale-500">
-                                                                  <SpinnerIcon className="h-5 w-5 text-brand-500" alt="" />
-                                                                  Loading questions…
-                                                                </div>
-                                                              ) : null}
-                                                              {lessonFetch?.status === "error" ? (
-                                                                <div className="rounded-lg border border-red-100 bg-red-50/50 px-4 py-3">
-                                                                  <div className="flex items-start gap-2">
-                                                                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden />
-                                                                    <div className="space-y-2">
-                                                                      <p className="text-sm font-medium text-red-800">{lessonFetch.message}</p>
-                                                                      <Button
-                                                                        type="button"
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        className="border-red-200 text-red-700 hover:bg-red-50"
-                                                                        onClick={() =>
-                                                                          void loadLessonQuestionsIfNeeded(selectedLessonQuestionSetId)
-                                                                        }
-                                                                      >
-                                                                        Retry
-                                                                      </Button>
-                                                                    </div>
-                                                                  </div>
-                                                                </div>
-                                                              ) : null}
-                                                              {lessonFetch?.status === "ok" && lessonFetch.questions.length === 0 ? (
-                                                                <div className="rounded-lg border border-dashed border-grayScale-200 bg-white px-4 py-10 text-center">
-                                                                  <ClipboardList className="mx-auto mb-2 h-8 w-8 text-grayScale-300" aria-hidden />
-                                                                  <p className="text-sm text-grayScale-600">No questions in this lesson yet.</p>
-                                                                  <p className="mt-1 text-xs text-grayScale-500">
-                                                                    Add them via <span className="font-medium text-grayScale-700">Open editor</span>.
-                                                                  </p>
-                                                                </div>
-                                                              ) : null}
-                                                              {lessonFetch?.status === "ok" && lessonFetch.questions.length > 0 ? (
-                                                                <ul className="max-h-[min(28rem,calc(100vh-16rem))] space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-                                                                  {lessonFetch.questions.map((q, qIdx) => {
-                                                                    const qType = String(q.question_type ?? "—")
-                                                                    const embeddedUrls = extractUrls(q.question_text || "")
-                                                                    return (
-                                                                      <li
-                                                                        key={q.question_id ?? q.id}
-                                                                        className="relative overflow-hidden rounded-xl border border-grayScale-100 bg-white shadow-sm ring-1 ring-black/[0.02] transition-shadow hover:shadow-md"
-                                                                      >
-                                                                        <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-brand-400 to-violet-500" />
-                                                                        <div className="flex gap-3 px-4 py-4 pl-5">
-                                                                          <div
-                                                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/15 to-violet-500/15 text-sm font-bold tabular-nums text-brand-800"
-                                                                            aria-hidden
-                                                                          >
-                                                                            {qIdx + 1}
-                                                                          </div>
-                                                                          <div className="min-w-0 flex-1 space-y-3">
-                                                                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                                                              <div className="flex flex-wrap items-center gap-2">
-                                                                                <Badge
-                                                                                  className={cn(
-                                                                                    "h-6 rounded-md px-2 py-0 text-[11px] font-semibold",
-                                                                                    questionTypeBadgeClass(qType),
-                                                                                  )}
-                                                                                >
-                                                                                  {formatQuestionTypeLabel(qType)}
-                                                                                </Badge>
-                                                                                {q.points != null && q.points > 0 ? (
-                                                                                  <span className="rounded-md bg-grayScale-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-grayScale-700">
-                                                                                    {q.points} pts
-                                                                                  </span>
-                                                                                ) : null}
-                                                                                {q.difficulty_level ? (
-                                                                                  <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900 ring-1 ring-inset ring-amber-100">
-                                                                                    {q.difficulty_level}
-                                                                                  </span>
-                                                                                ) : null}
-                                                                              </div>
-                                                                              <div className="flex items-center gap-1">
-                                                                                <Button
-                                                                                  type="button"
-                                                                                  size="sm"
-                                                                                  variant="ghost"
-                                                                                  className="h-7 gap-1 px-2 text-[10px]"
-                                                                                  disabled={loadingQuestionEditId === (q.question_id ?? q.id)}
-                                                                                  onClick={() =>
-                                                                                    void openEditQuestionDialog(
-                                                                                      selectedLessonQuestionSetId,
-                                                                                      q,
-                                                                                      "lesson",
-                                                                                    )
-                                                                                  }
-                                                                                >
-                                                                                  {loadingQuestionEditId === (q.question_id ?? q.id) ? (
-                                                                                    <SpinnerIcon className="h-3 w-3" alt="" />
-                                                                                  ) : null}
-                                                                                  Edit
-                                                                                </Button>
-                                                                                <Button
-                                                                                  type="button"
-                                                                                  size="sm"
-                                                                                  variant="ghost"
-                                                                                  className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700"
-                                                                                  onClick={() =>
-                                                                                    setQuestionTargetDelete({
-                                                                                      id: q.question_id ?? q.id,
-                                                                                      practiceId: selectedLessonQuestionSetId,
-                                                                                      text: q.question_text || "Question",
-                                                                                      target: "lesson",
-                                                                                    })
-                                                                                  }
-                                                                                >
-                                                                                  Delete
-                                                                                </Button>
-                                                                              </div>
-                                                                            </div>
-                                                                            <div>
-                                                                              <p className="text-[13px] font-medium uppercase tracking-wide text-grayScale-400">
-                                                                                Prompt
-                                                                              </p>
-                                                                              <p className="mt-1 text-[15px] leading-relaxed text-grayScale-900">
-                                                                                {q.question_text?.trim() || (
-                                                                                  <span className="italic text-grayScale-400">No prompt text</span>
-                                                                                )}
-                                                                              </p>
-                                                                            </div>
-                                                                            {embeddedUrls.length > 0 ? (
-                                                                              <div className="space-y-2">
-                                                                                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-500">
-                                                                                  <Link2 className="h-3 w-3" aria-hidden />
-                                                                                  Media in prompt
-                                                                                </p>
-                                                                                <div className="grid gap-2 sm:grid-cols-2">
-                                                                                  {embeddedUrls.map((u) => (
-                                                                                    <div key={u}>
-                                                                                      {renderMediaPreview(u, undefined, "", "Embedded link")}
-                                                                                    </div>
-                                                                                  ))}
-                                                                                </div>
-                                                                              </div>
-                                                                            ) : null}
-                                                                            {q.tips ? (
-                                                                              <div className="rounded-lg border border-amber-100 bg-amber-50/40 px-3 py-2.5">
-                                                                                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-900">
-                                                                                  <Lightbulb className="h-3.5 w-3.5" aria-hidden />
-                                                                                  Learner tip
-                                                                                </p>
-                                                                                <p className="mt-1 text-sm leading-relaxed text-amber-950/90">{q.tips}</p>
-                                                                              </div>
-                                                                            ) : null}
-                                                                            {q.image_url ||
-                                                                            q.voice_prompt ||
-                                                                            q.sample_answer_voice_prompt ? (
-                                                                              <div className="space-y-2 border-t border-grayScale-100 pt-3">
-                                                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-grayScale-500">
-                                                                                  Assets
-                                                                                </p>
-                                                                                <div className="grid gap-2 sm:grid-cols-2">
-                                                                                  {q.image_url
-                                                                                    ? renderMediaPreview(q.image_url, "image", "", "Image")
-                                                                                    : null}
-                                                                                  {q.voice_prompt
-                                                                                    ? renderMediaPreview(q.voice_prompt, "audio", "", "Voice prompt")
-                                                                                    : null}
-                                                                                  {q.sample_answer_voice_prompt
-                                                                                    ? renderMediaPreview(
-                                                                                        q.sample_answer_voice_prompt,
-                                                                                        "audio",
-                                                                                        "",
-                                                                                        "Sample answer (audio)",
-                                                                                      )
-                                                                                    : null}
-                                                                                </div>
-                                                                              </div>
-                                                                            ) : null}
-                                                                            {q.audio_correct_answer_text ? (
-                                                                              <div className="rounded-lg border border-blue-100 bg-blue-50/40 px-3 py-2.5">
-                                                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
-                                                                                  Sample answer text
-                                                                                </p>
-                                                                                <p className="mt-1 text-sm leading-relaxed text-blue-900/90">
-                                                                                  {q.audio_correct_answer_text}
-                                                                                </p>
-                                                                              </div>
-                                                                            ) : null}
-                                                                          </div>
-                                                                        </div>
-                                                                      </li>
-                                                                    )
-                                                                  })}
-                                                                </ul>
-                                                              ) : null}
-                                                            </div>
-                                                          </div>
-                                                        )}
+                                                        {/* Question bank for lessons is shown inside the Edit lesson dialog. */}
                                                         </>
                                                       ) : (
                                                         <p className="text-center text-xs text-grayScale-400">
@@ -2980,6 +2756,168 @@ export function HumanLanguagePage() {
                 ? renderMediaPreview(lessonForm.introVideoUrl, "video", "", "Intro video")
                 : null}
             </div>
+
+              {lessonDialog.open && lessonDialog.questionSetId > 0 ? (
+                (() => {
+                  const lessonQuestionSetId = lessonDialog.questionSetId
+                  const lessonId = lessonDialog.lessonId
+                  const lessonFetch = lessonQuestionsState[lessonQuestionSetId]
+                  const lessonDetailFetch = lessonDetailState[lessonId]
+                  const questionCount =
+                    lessonDetailFetch?.status === "ok"
+                      ? lessonDetailFetch.data.question_count
+                      : lessonFetch?.status === "ok"
+                        ? lessonFetch.questions.length
+                        : 0
+
+                  return (
+                    <div className="overflow-hidden rounded-xl border border-grayScale-200/90 bg-gradient-to-b from-white to-grayScale-50/80 shadow-sm">
+                      <div className="border-b border-grayScale-100 bg-white/90 px-4 py-3.5">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grayScale-400">
+                              Question bank
+                            </p>
+                            <h4 className="mt-0.5 truncate text-base font-semibold text-grayScale-900">
+                              {lessonForm.title}
+                            </h4>
+                            <p className="mt-1 text-xs text-grayScale-500">
+                              {questionCount} {questionCount === 1 ? "question" : "questions"} in this lesson
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs"
+                              onClick={() => openCreateQuestionDialog(lessonQuestionSetId, "lesson")}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              Add question
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        {lessonFetch?.status !== "ok" ? (
+                          <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-grayScale-500">
+                            <SpinnerIcon className="h-5 w-5 text-brand-500" alt="" />
+                            Loading questions…
+                          </div>
+                        ) : lessonFetch.questions.length === 0 ? (
+                          <div className="rounded-lg border border-dashed border-grayScale-200 bg-white px-4 py-10 text-center">
+                            <ClipboardList className="mx-auto mb-2 h-8 w-8 text-grayScale-300" aria-hidden />
+                            <p className="text-sm text-grayScale-600">No questions in this lesson yet.</p>
+                            <p className="mt-1 text-xs text-grayScale-500">
+                              Add them via <span className="font-medium text-grayScale-700">Open editor</span>.
+                            </p>
+                          </div>
+                        ) : (
+                          <ul className="max-h-[min(28rem,calc(100vh-16rem))] space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                            {lessonFetch.questions.map((q, qIdx) => {
+                              const qType = String(q.question_type ?? "—")
+                              const embeddedUrls = extractUrls(q.question_text || "")
+                              return (
+                                <li
+                                  key={q.question_id ?? q.id}
+                                  className="relative overflow-hidden rounded-xl border border-grayScale-100 bg-white shadow-sm ring-1 ring-black/[0.02] transition-shadow hover:shadow-md"
+                                >
+                                  <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-brand-400 to-violet-500" />
+                                  <div className="flex gap-3 px-4 py-4 pl-5">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/15 to-violet-500/15 text-sm font-bold tabular-nums text-brand-800" aria-hidden>
+                                      {qIdx + 1}
+                                    </div>
+                                    <div className="min-w-0 flex-1 space-y-3">
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <Badge
+                                            className={cn(
+                                              "h-6 rounded-md px-2 py-0 text-[11px] font-semibold",
+                                              questionTypeBadgeClass(qType),
+                                            )}
+                                          >
+                                            {formatQuestionTypeLabel(qType)}
+                                          </Badge>
+                                          {q.points != null && q.points > 0 ? (
+                                            <span className="rounded-md bg-grayScale-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-grayScale-700">
+                                              {q.points} pts
+                                            </span>
+                                          ) : null}
+                                          {q.difficulty_level ? (
+                                            <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900 ring-1 ring-inset ring-amber-100">
+                                              {q.difficulty_level}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-7 gap-1 px-2 text-[10px]"
+                                            disabled={loadingQuestionEditId === (q.question_id ?? q.id)}
+                                            onClick={() => void openEditQuestionDialog(lessonQuestionSetId, q, "lesson")}
+                                          >
+                                            {loadingQuestionEditId === (q.question_id ?? q.id) ? (
+                                              <SpinnerIcon className="h-3 w-3" alt="" />
+                                            ) : null}
+                                            Edit
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700"
+                                            onClick={() =>
+                                              setQuestionTargetDelete({
+                                                id: q.question_id ?? q.id,
+                                                practiceId: lessonQuestionSetId,
+                                                text: q.question_text || "Question",
+                                                target: "lesson",
+                                              })
+                                            }
+                                          >
+                                            Delete
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <p className="text-[13px] font-medium uppercase tracking-wide text-grayScale-400">
+                                          Prompt
+                                        </p>
+                                        <p className="mt-1 text-[15px] leading-relaxed text-grayScale-900">
+                                          {q.question_text?.trim() || (
+                                            <span className="italic text-grayScale-400">No prompt text</span>
+                                          )}
+                                        </p>
+                                      </div>
+                                      {embeddedUrls.length > 0 ? (
+                                        <div className="space-y-2">
+                                          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-500">
+                                            <Link2 className="h-3 w-3" aria-hidden />
+                                            Media in prompt
+                                          </p>
+                                          <div className="grid gap-2 sm:grid-cols-2">
+                                            {embeddedUrls.map((u) => (
+                                              <div key={u}>{renderMediaPreview(u, undefined, "", "Embedded link")}</div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()
+              ) : null}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setLessonDialog({ open: false })}>

@@ -631,8 +631,12 @@ export const getHumanLanguageLessonsByCourse = (courseId: number, cefr_level: st
     params: { cefr_level },
   })
 
-export const getHumanLanguageHierarchy = () =>
-  withSingleRetry(() => http.get<GetHumanLanguageHierarchyResponse>("/course-management/hierarchy")).then(async (res) => {
+export const getHumanLanguageHierarchy = (options?: { cacheBust?: boolean }) =>
+  withSingleRetry(() =>
+    http.get<GetHumanLanguageHierarchyResponse>("/course-management/hierarchy", {
+      params: options?.cacheBust ? { _t: Date.now() } : undefined,
+    }),
+  ).then(async (res) => {
     const payload = res.data?.data as unknown
     if (payload && typeof payload === "object" && !Array.isArray(payload) && "sub_categories" in payload) {
       return res

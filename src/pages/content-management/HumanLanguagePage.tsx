@@ -426,10 +426,10 @@ export function HumanLanguagePage() {
     label?: string,
   ) => <MediaPreviewCard urlRaw={urlRaw} hint={hint} className={className} label={label} />
 
-  const loadHierarchy = async (showLoading = true) => {
+  const loadHierarchy = async (showLoading = true, forceRefresh = false) => {
     if (showLoading) setLoading(true)
     try {
-      const res = await getHumanLanguageHierarchy()
+      const res = await getHumanLanguageHierarchy({ cacheBust: forceRefresh })
       const data = res.data?.data
       setCategoryId(data?.category_id ?? null)
       const nextSubCategories = data?.sub_categories ?? []
@@ -1078,7 +1078,7 @@ export function HumanLanguagePage() {
       })
       toast.success("Lesson updated")
       setLessonDialog({ open: false })
-      await loadHierarchy(false)
+      await loadHierarchy(false, true)
     } catch (error) {
       console.error("Failed to update lesson:", error)
       toast.error("Failed to update lesson")

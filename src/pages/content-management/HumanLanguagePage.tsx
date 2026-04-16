@@ -929,7 +929,7 @@ export function HumanLanguagePage() {
     }
   }
 
-  const loadLessonDetailIfNeeded = async (lessonId: number, forceRefresh = false) => {
+  const loadLessonDetailIfNeeded = async (lessonId: number, lessonQuestionSetId?: number, forceRefresh = false) => {
     let skipFetch = false
     setLessonDetailState((prev) => {
       const ex = prev[lessonId]
@@ -953,6 +953,38 @@ export function HumanLanguagePage() {
         [lessonId]: { status: "ok", data },
       }))
     } catch (error) {
+      // Fallback: some environments return lessons via question-set data,
+      // and /sub-module-lessons/:id may not have a corresponding row yet.
+      if (lessonQuestionSetId && lessonQuestionSetId > 0) {
+        try {
+          const setDetail = (await withTimeout(getQuestionSetById(lessonQuestionSetId), 12000)).data?.data
+          if (setDetail) {
+            setLessonDetailState((prev) => ({
+              ...prev,
+              [lessonId]: {
+                status: "ok",
+                data: {
+                  id: lessonId,
+                  sub_module_id: 0,
+                  question_set_id: lessonQuestionSetId,
+                  intro_video_url: setDetail.intro_video_url ?? null,
+                  display_order: 0,
+                  is_active: true,
+                  title: setDetail.title ?? "",
+                  description: setDetail.description ?? "",
+                  status: setDetail.status ?? "DRAFT",
+                  set_type: setDetail.set_type ?? "QUIZ",
+                  question_count: Number(setDetail.question_count ?? 0),
+                },
+              },
+            }))
+            return
+          }
+        } catch (fallbackError) {
+          console.error("Fallback question-set detail failed:", fallbackError)
+        }
+      }
+
       console.error("Failed to load lesson detail:", error)
       setLessonDetailState((prev) => ({
         ...prev,
@@ -1033,18 +1065,38 @@ export function HumanLanguagePage() {
     })
 
     try {
-      const detail = (await getSubModuleLessonById(lesson.id, { cacheBust: true })).data?.data
+      let detail: SubModuleLessonDetail | null =
+        (await getSubModuleLessonById(lesson.id, { cacheBust: true })).data?.data ?? null
+      if (!detail && lesson.question_set_id > 0) {
+        const setDetail = (await getQuestionSetById(lesson.question_set_id)).data?.data
+        detail = setDetail
+          ? ({
+              id: lesson.id,
+              sub_module_id: 0,
+              question_set_id: lesson.question_set_id,
+              intro_video_url: setDetail.intro_video_url ?? null,
+              display_order: 0,
+              is_active: true,
+              title: setDetail.title ?? "",
+              description: setDetail.description ?? "",
+              status: setDetail.status ?? "DRAFT",
+              set_type: setDetail.set_type ?? "QUIZ",
+              question_count: Number(setDetail.question_count ?? 0),
+            } as SubModuleLessonDetail)
+          : null
+      }
       if (lessonEditFetchIdRef.current !== requestId) return
+
+      const normalizedStatus =
+        detail?.status && ["DRAFT", "PUBLISHED", "ARCHIVED"].includes(detail.status)
+          ? (detail.status as "DRAFT" | "PUBLISHED" | "ARCHIVED")
+          : "DRAFT"
 
       setLessonForm({
         title: detail?.title ?? lesson.title ?? "",
         description: detail?.description ?? "",
         introVideoUrl: detail?.intro_video_url ?? "",
-        status:
-          (detail?.status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | undefined) &&
-          ["DRAFT", "PUBLISHED", "ARCHIVED"].includes(detail.status)
-            ? (detail.status as "DRAFT" | "PUBLISHED" | "ARCHIVED")
-            : "DRAFT",
+        status: normalizedStatus,
       })
     } catch (error) {
       if (lessonEditFetchIdRef.current !== requestId) return
@@ -1441,7 +1493,7 @@ export function HumanLanguagePage() {
       const cur = prev[smKey] ?? { lessonId: null, practiceId: null }
       return { ...prev, [smKey]: { ...cur, lessonId: nextLessonId } }
     })
-    if (nextLessonId !== null) void loadLessonDetailIfNeeded(nextLessonId)
+    if (nextLessonId !== null) void loadLessonDetailIfNeeded(nextLessonId, lessonQuestionSetId)
     if (nextLessonId !== null && lessonQuestionSetId > 0) void loadLessonQuestionsIfNeeded(lessonQuestionSetId)
   }
 

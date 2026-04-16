@@ -47,6 +47,7 @@ import {
   getPracticeQuestions,
   getPracticeQuestionsByPractice,
   getQuestionSetById,
+  getQuestionSetQuestions,
   getSubModuleLessonById,
   updateQuestionSet,
   updateQuestion,
@@ -123,6 +124,7 @@ type QuestionDialogState =
       open: true
       mode: "create" | "edit"
       practiceId: number
+      target: "practice" | "lesson"
       questionId?: number
     }
 
@@ -364,6 +366,7 @@ export function HumanLanguagePage() {
   /** Selected lesson / practice card per sub-module (for inline detail panel). */
   const [subModuleCardSelection, setSubModuleCardSelection] = useState<Record<string, SubModuleCardSelection>>({})
   const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
+  const [lessonQuestionsState, setLessonQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
   const [lessonDetailState, setLessonDetailState] = useState<Record<number, LessonDetailFetchState>>({})
   const [practiceDialog, setPracticeDialog] = useState<PracticeDialogState>({ open: false })
   const [lessonDialog, setLessonDialog] = useState<LessonDialogState>({ open: false })
@@ -393,7 +396,12 @@ export function HumanLanguagePage() {
     subModuleKey: string
   } | null>(null)
   const [selectedLessonIdsBySubModule, setSelectedLessonIdsBySubModule] = useState<Record<string, number[]>>({})
-  const [questionTargetDelete, setQuestionTargetDelete] = useState<{ id: number; practiceId: number; text: string } | null>(null)
+  const [questionTargetDelete, setQuestionTargetDelete] = useState<{
+    id: number
+    practiceId: number
+    text: string
+    target: "practice" | "lesson"
+  } | null>(null)
   const [savingPractice, setSavingPractice] = useState(false)
   const [savingLesson, setSavingLesson] = useState(false)
   const [savingQuestion, setSavingQuestion] = useState(false)
@@ -888,6 +896,38 @@ export function HumanLanguagePage() {
     }
   }
 
+  const loadLessonQuestionsIfNeeded = async (questionSetId: number, forceRefresh = false) => {
+    let skipFetch = false
+    setLessonQuestionsState((prev) => {
+      const ex = prev[questionSetId]
+      if (!forceRefresh && ex?.status === "ok") {
+        skipFetch = true
+        return prev
+      }
+      if (!forceRefresh && ex?.status === "loading" && Date.now() - ex.startedAt < 15000) {
+        skipFetch = true
+        return prev
+      }
+      return { ...prev, [questionSetId]: { status: "loading", startedAt: Date.now() } }
+    })
+    if (skipFetch) return
+
+    try {
+      const res = await withTimeout(getQuestionSetQuestions(questionSetId), 12000)
+      const questions = res.data?.data ?? []
+      setLessonQuestionsState((prev) => ({
+        ...prev,
+        [questionSetId]: { status: "ok", questions, totalCount: questions.length },
+      }))
+    } catch (error) {
+      console.error("Failed to load lesson questions:", error)
+      setLessonQuestionsState((prev) => ({
+        ...prev,
+        [questionSetId]: { status: "error", message: "Could not load lesson questions" },
+      }))
+    }
+  }
+
   const loadLessonDetailIfNeeded = async (lessonId: number, forceRefresh = false) => {
     let skipFetch = false
     setLessonDetailState((prev) => {
@@ -1103,14 +1143,18 @@ export function HumanLanguagePage() {
     }
   }
 
-  const openCreateQuestionDialog = (practiceId: number) => {
+  const openCreateQuestionDialog = (practiceId: number, target: "practice" | "lesson") => {
     setQuestionSubmitAttempted(false)
     setQuestionFormTouched(false)
     resetQuestionForm()
-    setQuestionDialog({ open: true, mode: "create", practiceId })
+    setQuestionDialog({ open: true, mode: "create", practiceId, target })
   }
 
-  const openEditQuestionDialog = async (practiceId: number, question: QuestionSetQuestion) => {
+  const openEditQuestionDialog = async (
+    practiceId: number,
+    question: QuestionSetQuestion,
+    target: "practice" | "lesson",
+  ) => {
     setQuestionSubmitAttempted(false)
     setQuestionFormTouched(false)
     const qid = question.question_id ?? question.id
@@ -1183,7 +1227,7 @@ export function HumanLanguagePage() {
         imageUrl: detail.image_url ?? "",
       })
       // Open only after the same form shape as create is fully populated (no empty-state flash).
-      setQuestionDialog({ open: true, mode: "edit", practiceId, questionId: qid })
+      setQuestionDialog({ open: true, mode: "edit", practiceId, questionId: qid, target })
     } catch (error) {
       console.error("Failed to load question detail:", error)
       toast.error("Could not load question details")
@@ -1287,7 +1331,9 @@ export function HumanLanguagePage() {
       setQuestionFormTouched(false)
       resetQuestionForm()
       await Promise.all([
-        loadPracticeQuestionsIfNeeded(questionDialog.practiceId, true),
+        questionDialog.target === "practice"
+          ? loadPracticeQuestionsIfNeeded(questionDialog.practiceId, true)
+          : loadLessonQuestionsIfNeeded(questionDialog.practiceId, true),
         loadHierarchy(),
       ])
     } catch (error) {
@@ -1356,7 +1402,9 @@ export function HumanLanguagePage() {
       await deleteQuestion(questionTargetDelete.id)
       toast.success("Question deleted")
       await Promise.all([
-        loadPracticeQuestionsIfNeeded(questionTargetDelete.practiceId, true),
+        questionTargetDelete.target === "practice"
+          ? loadPracticeQuestionsIfNeeded(questionTargetDelete.practiceId, true)
+          : loadLessonQuestionsIfNeeded(questionTargetDelete.practiceId, true),
         loadHierarchy(),
       ])
       setQuestionTargetDelete(null)
@@ -1368,7 +1416,7 @@ export function HumanLanguagePage() {
     }
   }
 
-  const toggleLessonCard = (smKey: string, lessonId: number) => {
+  const toggleLessonCard = (smKey: string, lessonId: number, lessonQuestionSetId: number) => {
     const currentLessonId = subModuleCardSelection[smKey]?.lessonId ?? null
     const nextLessonId = currentLessonId === lessonId ? null : lessonId
     setSubModuleCardSelection((prev) => {
@@ -1376,6 +1424,7 @@ export function HumanLanguagePage() {
       return { ...prev, [smKey]: { ...cur, lessonId: nextLessonId } }
     })
     if (nextLessonId !== null) void loadLessonDetailIfNeeded(nextLessonId)
+    if (nextLessonId !== null && lessonQuestionSetId > 0) void loadLessonQuestionsIfNeeded(lessonQuestionSetId)
   }
 
   const toggleLessonSelection = (smKey: string, lessonId: number) => {
@@ -1797,6 +1846,10 @@ export function HumanLanguagePage() {
                                             cardSel.lessonId !== null ? lessonDetailState[cardSel.lessonId] : undefined
                                           const selectedLessonDetail =
                                             selectedLessonFetch?.status === "ok" ? selectedLessonFetch.data : null
+                                          const selectedLessonQuestionSetId =
+                                            selectedLessonDetail?.question_set_id ?? selectedLesson?.question_set_id ?? 0
+                                          const lessonFetch =
+                                            selectedLessonQuestionSetId > 0 ? lessonQuestionsState[selectedLessonQuestionSetId] : undefined
                                           const selectedLessonIds = selectedLessonIdsBySubModule[smKey] ?? []
                                           const selectedLessonRows = lessonRows.filter((row) => selectedLessonIds.includes(row.id))
                                           const selectedPracticeMeta =
@@ -1957,7 +2010,7 @@ export function HumanLanguagePage() {
                                                             <button
                                                               key={v.id}
                                                               type="button"
-                                                              onClick={() => toggleLessonCard(smKey, v.id)}
+                                                              onClick={() => toggleLessonCard(smKey, v.id, v.question_set_id)}
                                                               className={cn(
                                                                 "flex flex-col gap-1.5 rounded-xl border bg-white p-3 text-left shadow-sm transition-all hover:border-grayScale-300 hover:shadow-md",
                                                                 isActive
@@ -2033,7 +2086,8 @@ export function HumanLanguagePage() {
                                                         })}
                                                       </div>
                                                       {selectedLesson ? (
-                                                        <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/60 p-4">
+                                                        <>
+                                                          <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/60 p-4">
                                                           <p className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">
                                                             Lesson detail
                                                           </p>
@@ -2094,6 +2148,243 @@ export function HumanLanguagePage() {
                                                             </div>
                                                           </dl>
                                                         </div>
+                                                        {selectedLessonQuestionSetId > 0 && (
+                                                          <div className="overflow-hidden rounded-xl border border-grayScale-200/90 bg-gradient-to-b from-white to-grayScale-50/80 shadow-sm">
+                                                            <div className="border-b border-grayScale-100 bg-white/90 px-4 py-3.5">
+                                                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                                                <div className="min-w-0 flex-1">
+                                                                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-grayScale-400">
+                                                                    Question bank
+                                                                  </p>
+                                                                  <h4 className="mt-0.5 truncate text-base font-semibold text-grayScale-900">
+                                                                    {selectedLessonDetail?.title ?? selectedLesson?.title}
+                                                                  </h4>
+                                                                  <p className="mt-1 text-xs text-grayScale-500">
+                                                                    {selectedLessonDetail?.question_count ?? selectedLesson?.question_count ?? 0}{" "}
+                                                                    {Number(
+                                                                      selectedLessonDetail?.question_count ?? selectedLesson?.question_count ?? 0,
+                                                                    ) === 1
+                                                                      ? "question"
+                                                                      : "questions"}{" "}
+                                                                    in this lesson
+                                                                  </p>
+                                                                </div>
+                                                                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                                                                  <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="h-8 text-xs"
+                                                                    onClick={() =>
+                                                                      openCreateQuestionDialog(selectedLessonQuestionSetId, "lesson")
+                                                                    }
+                                                                  >
+                                                                    <Plus className="h-3.5 w-3.5" />
+                                                                    Add question
+                                                                  </Button>
+                                                                  {lessonFetch?.status === "ok" ? (
+                                                                    <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-100">
+                                                                      {lessonFetch.questions.length} loaded
+                                                                    </span>
+                                                                  ) : null}
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                                            <div className="p-4">
+                                                              {!lessonFetch || lessonFetch.status === "loading" ? (
+                                                                <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-grayScale-500">
+                                                                  <SpinnerIcon className="h-5 w-5 text-brand-500" alt="" />
+                                                                  Loading questions…
+                                                                </div>
+                                                              ) : null}
+                                                              {lessonFetch?.status === "error" ? (
+                                                                <div className="rounded-lg border border-red-100 bg-red-50/50 px-4 py-3">
+                                                                  <div className="flex items-start gap-2">
+                                                                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden />
+                                                                    <div className="space-y-2">
+                                                                      <p className="text-sm font-medium text-red-800">{lessonFetch.message}</p>
+                                                                      <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="border-red-200 text-red-700 hover:bg-red-50"
+                                                                        onClick={() =>
+                                                                          void loadLessonQuestionsIfNeeded(selectedLessonQuestionSetId)
+                                                                        }
+                                                                      >
+                                                                        Retry
+                                                                      </Button>
+                                                                    </div>
+                                                                  </div>
+                                                                </div>
+                                                              ) : null}
+                                                              {lessonFetch?.status === "ok" && lessonFetch.questions.length === 0 ? (
+                                                                <div className="rounded-lg border border-dashed border-grayScale-200 bg-white px-4 py-10 text-center">
+                                                                  <ClipboardList className="mx-auto mb-2 h-8 w-8 text-grayScale-300" aria-hidden />
+                                                                  <p className="text-sm text-grayScale-600">No questions in this lesson yet.</p>
+                                                                  <p className="mt-1 text-xs text-grayScale-500">
+                                                                    Add them via <span className="font-medium text-grayScale-700">Open editor</span>.
+                                                                  </p>
+                                                                </div>
+                                                              ) : null}
+                                                              {lessonFetch?.status === "ok" && lessonFetch.questions.length > 0 ? (
+                                                                <ul className="max-h-[min(28rem,calc(100vh-16rem))] space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                                                                  {lessonFetch.questions.map((q, qIdx) => {
+                                                                    const qType = String(q.question_type ?? "—")
+                                                                    const embeddedUrls = extractUrls(q.question_text || "")
+                                                                    return (
+                                                                      <li
+                                                                        key={q.question_id ?? q.id}
+                                                                        className="relative overflow-hidden rounded-xl border border-grayScale-100 bg-white shadow-sm ring-1 ring-black/[0.02] transition-shadow hover:shadow-md"
+                                                                      >
+                                                                        <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-brand-400 to-violet-500" />
+                                                                        <div className="flex gap-3 px-4 py-4 pl-5">
+                                                                          <div
+                                                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/15 to-violet-500/15 text-sm font-bold tabular-nums text-brand-800"
+                                                                            aria-hidden
+                                                                          >
+                                                                            {qIdx + 1}
+                                                                          </div>
+                                                                          <div className="min-w-0 flex-1 space-y-3">
+                                                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                              <div className="flex flex-wrap items-center gap-2">
+                                                                                <Badge
+                                                                                  className={cn(
+                                                                                    "h-6 rounded-md px-2 py-0 text-[11px] font-semibold",
+                                                                                    questionTypeBadgeClass(qType),
+                                                                                  )}
+                                                                                >
+                                                                                  {formatQuestionTypeLabel(qType)}
+                                                                                </Badge>
+                                                                                {q.points != null && q.points > 0 ? (
+                                                                                  <span className="rounded-md bg-grayScale-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-grayScale-700">
+                                                                                    {q.points} pts
+                                                                                  </span>
+                                                                                ) : null}
+                                                                                {q.difficulty_level ? (
+                                                                                  <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900 ring-1 ring-inset ring-amber-100">
+                                                                                    {q.difficulty_level}
+                                                                                  </span>
+                                                                                ) : null}
+                                                                              </div>
+                                                                              <div className="flex items-center gap-1">
+                                                                                <Button
+                                                                                  type="button"
+                                                                                  size="sm"
+                                                                                  variant="ghost"
+                                                                                  className="h-7 gap-1 px-2 text-[10px]"
+                                                                                  disabled={loadingQuestionEditId === (q.question_id ?? q.id)}
+                                                                                  onClick={() =>
+                                                                                    void openEditQuestionDialog(
+                                                                                      selectedLessonQuestionSetId,
+                                                                                      q,
+                                                                                      "lesson",
+                                                                                    )
+                                                                                  }
+                                                                                >
+                                                                                  {loadingQuestionEditId === (q.question_id ?? q.id) ? (
+                                                                                    <SpinnerIcon className="h-3 w-3" alt="" />
+                                                                                  ) : null}
+                                                                                  Edit
+                                                                                </Button>
+                                                                                <Button
+                                                                                  type="button"
+                                                                                  size="sm"
+                                                                                  variant="ghost"
+                                                                                  className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                                                  onClick={() =>
+                                                                                    setQuestionTargetDelete({
+                                                                                      id: q.question_id ?? q.id,
+                                                                                      practiceId: selectedLessonQuestionSetId,
+                                                                                      text: q.question_text || "Question",
+                                                                                      target: "lesson",
+                                                                                    })
+                                                                                  }
+                                                                                >
+                                                                                  Delete
+                                                                                </Button>
+                                                                              </div>
+                                                                            </div>
+                                                                            <div>
+                                                                              <p className="text-[13px] font-medium uppercase tracking-wide text-grayScale-400">
+                                                                                Prompt
+                                                                              </p>
+                                                                              <p className="mt-1 text-[15px] leading-relaxed text-grayScale-900">
+                                                                                {q.question_text?.trim() || (
+                                                                                  <span className="italic text-grayScale-400">No prompt text</span>
+                                                                                )}
+                                                                              </p>
+                                                                            </div>
+                                                                            {embeddedUrls.length > 0 ? (
+                                                                              <div className="space-y-2">
+                                                                                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-500">
+                                                                                  <Link2 className="h-3 w-3" aria-hidden />
+                                                                                  Media in prompt
+                                                                                </p>
+                                                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                                                  {embeddedUrls.map((u) => (
+                                                                                    <div key={u}>
+                                                                                      {renderMediaPreview(u, undefined, "", "Embedded link")}
+                                                                                    </div>
+                                                                                  ))}
+                                                                                </div>
+                                                                              </div>
+                                                                            ) : null}
+                                                                            {q.tips ? (
+                                                                              <div className="rounded-lg border border-amber-100 bg-amber-50/40 px-3 py-2.5">
+                                                                                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-900">
+                                                                                  <Lightbulb className="h-3.5 w-3.5" aria-hidden />
+                                                                                  Learner tip
+                                                                                </p>
+                                                                                <p className="mt-1 text-sm leading-relaxed text-amber-950/90">{q.tips}</p>
+                                                                              </div>
+                                                                            ) : null}
+                                                                            {q.image_url ||
+                                                                            q.voice_prompt ||
+                                                                            q.sample_answer_voice_prompt ? (
+                                                                              <div className="space-y-2 border-t border-grayScale-100 pt-3">
+                                                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-grayScale-500">
+                                                                                  Assets
+                                                                                </p>
+                                                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                                                  {q.image_url
+                                                                                    ? renderMediaPreview(q.image_url, "image", "", "Image")
+                                                                                    : null}
+                                                                                  {q.voice_prompt
+                                                                                    ? renderMediaPreview(q.voice_prompt, "audio", "", "Voice prompt")
+                                                                                    : null}
+                                                                                  {q.sample_answer_voice_prompt
+                                                                                    ? renderMediaPreview(
+                                                                                        q.sample_answer_voice_prompt,
+                                                                                        "audio",
+                                                                                        "",
+                                                                                        "Sample answer (audio)",
+                                                                                      )
+                                                                                    : null}
+                                                                                </div>
+                                                                              </div>
+                                                                            ) : null}
+                                                                            {q.audio_correct_answer_text ? (
+                                                                              <div className="rounded-lg border border-blue-100 bg-blue-50/40 px-3 py-2.5">
+                                                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                                                                                  Sample answer text
+                                                                                </p>
+                                                                                <p className="mt-1 text-sm leading-relaxed text-blue-900/90">
+                                                                                  {q.audio_correct_answer_text}
+                                                                                </p>
+                                                                              </div>
+                                                                            ) : null}
+                                                                          </div>
+                                                                        </div>
+                                                                      </li>
+                                                                    )
+                                                                  })}
+                                                                </ul>
+                                                              ) : null}
+                                                            </div>
+                                                          </div>
+                                                        )}
+                                                        </>
                                                       ) : (
                                                         <p className="text-center text-xs text-grayScale-400">
                                                           Select a lesson card to view full content.
@@ -2202,7 +2493,7 @@ export function HumanLanguagePage() {
                                                                 size="sm"
                                                                 variant="outline"
                                                                 className="h-8 text-xs"
-                                                                onClick={() => openCreateQuestionDialog(selectedPracticeMeta.id)}
+                                                                onClick={() => openCreateQuestionDialog(selectedPracticeMeta.id, "practice")}
                                                               >
                                                                 <Plus className="h-3.5 w-3.5" />
                                                                 Add question
@@ -2306,6 +2597,7 @@ export function HumanLanguagePage() {
                                                                               void openEditQuestionDialog(
                                                                                 selectedPracticeMeta.id,
                                                                                 q,
+                                                                                "practice",
                                                                               )
                                                                             }
                                                                           >
@@ -2325,6 +2617,7 @@ export function HumanLanguagePage() {
                                                                                 id: q.question_id ?? q.id,
                                                                                 practiceId: selectedPracticeMeta.id,
                                                                                 text: q.question_text || "Question",
+                                                                                target: "practice",
                                                                               })
                                                                             }
                                                                           >

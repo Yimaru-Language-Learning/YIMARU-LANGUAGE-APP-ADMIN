@@ -59,6 +59,7 @@ import type {
   LearningPathPractice,
   QuestionDetail,
   QuestionSetQuestion,
+  SubModuleLessonDetail,
 } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
@@ -81,6 +82,12 @@ type PracticeQuestionsFetchState =
   | { status: "idle" }
   | { status: "loading"; startedAt: number }
   | { status: "ok"; questions: QuestionSetQuestion[]; totalCount: number }
+  | { status: "error"; message: string }
+
+type LessonDetailFetchState =
+  | { status: "idle" }
+  | { status: "loading"; startedAt: number }
+  | { status: "ok"; data: SubModuleLessonDetail }
   | { status: "error"; message: string }
 
 type PracticeDialogState =
@@ -357,6 +364,7 @@ export function HumanLanguagePage() {
   /** Selected lesson / practice card per sub-module (for inline detail panel). */
   const [subModuleCardSelection, setSubModuleCardSelection] = useState<Record<string, SubModuleCardSelection>>({})
   const [practiceQuestionsState, setPracticeQuestionsState] = useState<Record<number, PracticeQuestionsFetchState>>({})
+  const [lessonDetailState, setLessonDetailState] = useState<Record<number, LessonDetailFetchState>>({})
   const [practiceDialog, setPracticeDialog] = useState<PracticeDialogState>({ open: false })
   const [lessonDialog, setLessonDialog] = useState<LessonDialogState>({ open: false })
   const [questionDialog, setQuestionDialog] = useState<QuestionDialogState>({ open: false })
@@ -880,6 +888,38 @@ export function HumanLanguagePage() {
     }
   }
 
+  const loadLessonDetailIfNeeded = async (lessonId: number, forceRefresh = false) => {
+    let skipFetch = false
+    setLessonDetailState((prev) => {
+      const ex = prev[lessonId]
+      if (!forceRefresh && ex?.status === "ok") {
+        skipFetch = true
+        return prev
+      }
+      if (!forceRefresh && ex?.status === "loading" && Date.now() - ex.startedAt < 15000) {
+        skipFetch = true
+        return prev
+      }
+      return { ...prev, [lessonId]: { status: "loading", startedAt: Date.now() } }
+    })
+    if (skipFetch) return
+    try {
+      const res = await withTimeout(getSubModuleLessonById(lessonId), 12000)
+      const data = res.data?.data
+      if (!data) throw new Error("Missing lesson detail payload")
+      setLessonDetailState((prev) => ({
+        ...prev,
+        [lessonId]: { status: "ok", data },
+      }))
+    } catch (error) {
+      console.error("Failed to load lesson detail:", error)
+      setLessonDetailState((prev) => ({
+        ...prev,
+        [lessonId]: { status: "error", message: "Could not load lesson detail" },
+      }))
+    }
+  }
+
   const getSubModuleSelection = (smKey: string): SubModuleCardSelection =>
     subModuleCardSelection[smKey] ?? { lessonId: null, practiceId: null }
 
@@ -1329,11 +1369,13 @@ export function HumanLanguagePage() {
   }
 
   const toggleLessonCard = (smKey: string, lessonId: number) => {
+    const currentLessonId = subModuleCardSelection[smKey]?.lessonId ?? null
+    const nextLessonId = currentLessonId === lessonId ? null : lessonId
     setSubModuleCardSelection((prev) => {
       const cur = prev[smKey] ?? { lessonId: null, practiceId: null }
-      const nextLessonId = cur.lessonId === lessonId ? null : lessonId
       return { ...prev, [smKey]: { ...cur, lessonId: nextLessonId } }
     })
+    if (nextLessonId !== null) void loadLessonDetailIfNeeded(nextLessonId)
   }
 
   const toggleLessonSelection = (smKey: string, lessonId: number) => {
@@ -1751,6 +1793,10 @@ export function HumanLanguagePage() {
                                             cardSel.lessonId !== null
                                               ? lessonRows.find((v) => v.id === cardSel.lessonId) ?? null
                                               : null
+                                          const selectedLessonFetch =
+                                            cardSel.lessonId !== null ? lessonDetailState[cardSel.lessonId] : undefined
+                                          const selectedLessonDetail =
+                                            selectedLessonFetch?.status === "ok" ? selectedLessonFetch.data : null
                                           const selectedLessonIds = selectedLessonIdsBySubModule[smKey] ?? []
                                           const selectedLessonRows = lessonRows.filter((row) => selectedLessonIds.includes(row.id))
                                           const selectedPracticeMeta =
@@ -1992,47 +2038,53 @@ export function HumanLanguagePage() {
                                                             Lesson detail
                                                           </p>
                                                           <h4 className="mt-1 text-base font-semibold text-grayScale-900">
-                                                            {selectedLesson.title}
+                                                            {selectedLessonDetail?.title ?? selectedLesson.title}
                                                           </h4>
+                                                          {selectedLessonFetch?.status === "loading" ? (
+                                                            <p className="mt-2 text-xs text-grayScale-500">Loading latest lesson details...</p>
+                                                          ) : null}
+                                                          {selectedLessonFetch?.status === "error" ? (
+                                                            <p className="mt-2 text-xs text-red-500">{selectedLessonFetch.message}</p>
+                                                          ) : null}
                                                           <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                                                             <div>
                                                               <dt className="text-xs text-grayScale-500">Status</dt>
                                                               <dd className="font-medium text-grayScale-800 capitalize">
-                                                                {(selectedLesson.status ?? "DRAFT").toLowerCase()}
+                                                                {(selectedLessonDetail?.status ?? selectedLesson.status ?? "DRAFT").toLowerCase()}
                                                               </dd>
                                                             </div>
                                                             <div>
                                                               <dt className="text-xs text-grayScale-500">Display order</dt>
                                                               <dd className="font-medium text-grayScale-800">
-                                                                {selectedLesson.display_order}
+                                                                {selectedLessonDetail?.display_order ?? selectedLesson.display_order}
                                                               </dd>
                                                             </div>
                                                             <div>
                                                               <dt className="text-xs text-grayScale-500">Questions</dt>
                                                               <dd className="tabular-nums font-medium text-grayScale-800">
-                                                                {selectedLesson.question_count}
+                                                                {selectedLessonDetail?.question_count ?? selectedLesson.question_count}
                                                               </dd>
                                                             </div>
                                                             <div className="sm:col-span-2">
                                                               <dt className="text-xs text-grayScale-500">Intro video</dt>
                                                               <dd className="mt-0.5 break-all">
-                                                                {selectedLesson.intro_video_url ? (
+                                                                {(selectedLessonDetail?.intro_video_url ?? selectedLesson.intro_video_url) ? (
                                                                   <a
-                                                                    href={selectedLesson.intro_video_url}
+                                                                    href={selectedLessonDetail?.intro_video_url ?? selectedLesson.intro_video_url}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="text-sm font-medium text-grayScale-700 hover:underline"
                                                                   >
-                                                                    {selectedLesson.intro_video_url}
+                                                                    {selectedLessonDetail?.intro_video_url ?? selectedLesson.intro_video_url}
                                                                   </a>
                                                                 ) : (
                                                                   <span className="text-sm text-grayScale-400">
                                                                     No intro video URL set for this lesson.
                                                                   </span>
                                                                 )}
-                                                                {selectedLesson.intro_video_url
+                                                                {(selectedLessonDetail?.intro_video_url ?? selectedLesson.intro_video_url)
                                                                   ? renderMediaPreview(
-                                                                      selectedLesson.intro_video_url,
+                                                                      selectedLessonDetail?.intro_video_url ?? selectedLesson.intro_video_url ?? "",
                                                                       "video",
                                                                       "mt-3",
                                                                       "Intro video preview",

@@ -311,12 +311,6 @@ export const getSubModuleLessonById = (
 ) =>
   http.get<GetSubModuleLessonDetailResponse>(`/course-management/sub-module-lessons/${lessonId}`, {
     params: options?.cacheBust ? { _t: Date.now() } : undefined,
-    headers: options?.cacheBust
-      ? {
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-        }
-      : undefined,
   })
 
 export const createSubCourseVideo = (data: CreateSubCourseVideoRequest) =>

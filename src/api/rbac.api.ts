@@ -5,6 +5,7 @@ import type {
   GetRolesParams,
   CreateRoleRequest,
   CreateRoleResponse,
+  DeleteRoleResponse,
   SetRolePermissionsRequest,
   GetPermissionsResponse,
 } from "../types/rbac.types"
@@ -26,3 +27,6 @@ export const setRolePermissions = (roleId: number, data: SetRolePermissionsReque
 
 export const getAllPermissions = () =>
   http.get<GetPermissionsResponse>("/rbac/permissions")
+
+export const deleteRole = (roleId: number) =>
+  http.delete<DeleteRoleResponse>(`/rbac/roles/${roleId}`)

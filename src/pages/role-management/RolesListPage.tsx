@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
-  Plus, Search, Shield, ShieldCheck, ChevronLeft, ChevronRight,
-  AlertCircle, Eye, X, Pencil, Check,
+  Plus,
+  Search,
+  Shield,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  Eye,
+  X,
+  Pencil,
+  Check,
+  Trash2,
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
@@ -12,7 +22,14 @@ import { Textarea } from "../../components/ui/textarea"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "../../components/ui/dialog"
-import { getRoles, getRoleDetail, getAllPermissions, setRolePermissions, updateRole } from "../../api/rbac.api"
+import {
+  getRoles,
+  getRoleDetail,
+  getAllPermissions,
+  setRolePermissions,
+  updateRole,
+  deleteRole,
+} from "../../api/rbac.api"
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
@@ -35,6 +52,11 @@ export function RolesListPage() {
   const [selectedRole, setSelectedRole] = useState<RoleDetail | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Delete modal state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // Role info editing state
   const [editingRole, setEditingRole] = useState(false)
@@ -94,6 +116,45 @@ export function RolesListPage() {
       setDetailOpen(false)
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  const handleDeleteRoleClick = (role: Role) => {
+    setRoleToDelete(role)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleCancelDeleteRole = () => {
+    setDeleteDialogOpen(false)
+    setRoleToDelete(null)
+  }
+
+  const handleConfirmDeleteRole = async () => {
+    if (!roleToDelete) return
+    setDeleteLoading(true)
+    try {
+      const res = await deleteRole(roleToDelete.id)
+      toast.success(res.data.message ?? "Role deleted successfully")
+
+      // Close dialogs if the deleted role is currently opened.
+      if (selectedRole?.id === roleToDelete.id) {
+        setDetailOpen(false)
+        setSelectedRole(null)
+        setEditingPermissions(false)
+        setEditingRole(false)
+        setPermSearch("")
+      }
+
+      setRoleToDelete(null)
+      setDeleteDialogOpen(false)
+      setPage(1) // trigger list refresh via the existing effect
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Failed to delete role."
+      toast.error(message)
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -360,16 +421,33 @@ export function RolesListPage() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-grayScale-400">Open details to view permissions</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1.5 text-xs"
-                        onClick={() => handleViewRole(role.id)}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        View
-                      </Button>
+                      <span className="text-[11px] text-grayScale-400">
+                        Open details to view permissions
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {!role.is_system && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteRoleClick(role)}
+                            disabled={deleteLoading}
+                            aria-label={`Delete role ${role.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs"
+                          onClick={() => handleViewRole(role.id)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          View
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -701,6 +779,55 @@ export function RolesListPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete role dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open)
+          if (!open) handleCancelDeleteRole()
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete Role
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this role? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {roleToDelete && (
+            <div className="rounded-lg bg-red-50 border border-red-100 p-3">
+              <p className="text-sm font-medium text-red-700">{roleToDelete.name}</p>
+              <p className="text-xs text-red-500 mt-0.5">Role #{roleToDelete.id}</p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelDeleteRole}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1.5"
+              disabled={deleteLoading || !roleToDelete}
+              onClick={handleConfirmDeleteRole}
+            >
+              {deleteLoading ? <SpinnerIcon className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+              {deleteLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -47,6 +47,7 @@ import type {
   GetSubCoursePrerequisitesResponse,
   AddSubCoursePrerequisiteRequest,
   GetLearningPathResponse,
+  GetSubModuleLessonDetailResponse,
   GetHumanLanguageLessonsResponse,
   GetHumanLanguageHierarchyResponse,
   CreateHumanLanguageLessonRequest,
@@ -297,6 +298,9 @@ export const deleteSubModule = (subModuleId: number) =>
 // Sub-Module Video APIs
 export const getVideosBySubModule = (subModuleId: number) =>
   http.get<GetSubCourseVideosResponse>(`/course-management/sub-modules/${subModuleId}/videos`)
+
+export const getSubModuleLessonById = (lessonId: number) =>
+  http.get<GetSubModuleLessonDetailResponse>(`/course-management/sub-module-lessons/${lessonId}`)
 
 export const createSubCourseVideo = (data: CreateSubCourseVideoRequest) =>
   http.post("/course-management/sub-module-videos", {

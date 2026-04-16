@@ -47,6 +47,7 @@ import {
   getPracticeQuestions,
   getPracticeQuestionsByPractice,
   getQuestionSetById,
+  getSubModuleLessonById,
   updateQuestionSet,
   updateQuestion,
 } from "../../api/courses.api"
@@ -941,7 +942,7 @@ export function HumanLanguagePage() {
     setLessonDialog({ open: true, lessonId: lesson.id, questionSetId: lesson.question_set_id })
     setSavingLesson(false)
     try {
-      const detail = (await getQuestionSetById(lesson.question_set_id)).data?.data
+      const detail = (await getSubModuleLessonById(lesson.id)).data?.data
       setLessonForm({
         title: detail?.title ?? lesson.title ?? "",
         description: detail?.description ?? "",

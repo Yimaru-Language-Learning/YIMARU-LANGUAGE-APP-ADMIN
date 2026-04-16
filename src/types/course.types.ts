@@ -702,6 +702,28 @@ export interface HumanLanguageLesson {
   practices: LearningPathPractice[]
 }
 
+export interface SubModuleLessonDetail {
+  id: number
+  sub_module_id: number
+  question_set_id: number
+  intro_video_url?: string | null
+  display_order: number
+  is_active: boolean
+  title: string
+  description?: string | null
+  status: string
+  set_type: string
+  question_count: number
+}
+
+export interface GetSubModuleLessonDetailResponse {
+  message: string
+  data: SubModuleLessonDetail
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
 export interface GetHumanLanguageLessonsResponse {
   message: string
   data: {

@@ -1065,8 +1065,15 @@ export function HumanLanguagePage() {
     })
 
     try {
-      let detail: SubModuleLessonDetail | null =
-        (await getSubModuleLessonById(lesson.id, { cacheBust: true })).data?.data ?? null
+      let detail: SubModuleLessonDetail | null = null
+
+      try {
+        detail = (await getSubModuleLessonById(lesson.id, { cacheBust: true })).data?.data ?? null
+      } catch {
+        // If the lesson row isn't available yet, fall back to the question set detail below.
+        detail = null
+      }
+
       if (!detail && lesson.question_set_id > 0) {
         const setDetail = (await getQuestionSetById(lesson.question_set_id)).data?.data
         detail = setDetail

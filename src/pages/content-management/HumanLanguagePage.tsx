@@ -339,6 +339,7 @@ export function HumanLanguagePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const emptyStateRetryCountRef = useRef(0)
+  const lessonEditFetchIdRef = useRef(0)
   const [loading, setLoading] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [subCategories, setSubCategories] = useState<HumanLanguageSubCategoryTree[]>([])
@@ -1019,20 +1020,34 @@ export function HumanLanguagePage() {
   }
 
   const openEditLessonDialog = async (lesson: { id: number; question_set_id: number; title: string }) => {
+    const requestId = ++lessonEditFetchIdRef.current
     setLessonDialog({ open: true, lessonId: lesson.id, questionSetId: lesson.question_set_id })
     setSavingLesson(false)
+
+    // Set something immediately to avoid showing stale values while the refetch is in-flight.
+    setLessonForm({
+      title: lesson.title ?? "",
+      description: "",
+      introVideoUrl: "",
+      status: "DRAFT",
+    })
+
     try {
       const detail = (await getSubModuleLessonById(lesson.id, { cacheBust: true })).data?.data
+      if (lessonEditFetchIdRef.current !== requestId) return
+
       setLessonForm({
         title: detail?.title ?? lesson.title ?? "",
         description: detail?.description ?? "",
         introVideoUrl: detail?.intro_video_url ?? "",
         status:
-          (detail?.status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | undefined) && ["DRAFT", "PUBLISHED", "ARCHIVED"].includes(detail.status)
+          (detail?.status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | undefined) &&
+          ["DRAFT", "PUBLISHED", "ARCHIVED"].includes(detail.status)
             ? (detail.status as "DRAFT" | "PUBLISHED" | "ARCHIVED")
             : "DRAFT",
       })
     } catch (error) {
+      if (lessonEditFetchIdRef.current !== requestId) return
       console.error("Failed to load lesson detail:", error)
       setLessonForm({
         title: lesson.title ?? "",

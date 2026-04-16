@@ -3088,8 +3088,13 @@ export function HumanLanguagePage() {
                 {questionDialog.open && questionDialog.mode === "edit" ? "Edit question" : "Add question"}
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed">
-                Same layout as <span className="font-medium text-grayScale-700">Add New Practice → Step 3: Questions</span>. Add MCQ,
-                True/False, Short Answer, or Audio; optional tips and voice prompts below.
+                {questionDialog.open && questionDialog.target === "practice" ? (
+                  <>
+                    Same layout as{" "}
+                    <span className="font-medium text-grayScale-700">Add New Practice → Step 3: Questions</span>. Add MCQ, True/False,
+                    Short Answer, or Audio; optional tips and voice prompts below.
+                  </>
+                ) : null}
                 {!questionCanSave ? (
                   <span className="mt-2 block text-amber-800/90">
                     Fix the highlighted fields before saving. Save stays disabled until the form is valid.
@@ -3100,12 +3105,14 @@ export function HumanLanguagePage() {
           </div>
 
           <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
-            <div className="rounded-2xl border border-grayScale-200/80 bg-gradient-to-r from-grayScale-50/80 to-white px-4 py-4 shadow-sm sm:px-6 sm:py-5">
-              <h2 className="text-base font-semibold tracking-tight text-grayScale-900 sm:text-lg">Step 3: Questions</h2>
-              <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
-                Add MCQ, True/False, Short Answer, or Audio items. Use the full width for stems and options.
-              </p>
-            </div>
+            {questionDialog.open && questionDialog.target === "practice" ? (
+              <div className="rounded-2xl border border-grayScale-200/80 bg-gradient-to-r from-grayScale-50/80 to-white px-4 py-4 shadow-sm sm:px-6 sm:py-5">
+                <h2 className="text-base font-semibold tracking-tight text-grayScale-900 sm:text-lg">Step 3: Questions</h2>
+                <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
+                  Add MCQ, True/False, Short Answer, or Audio items. Use the full width for stems and options.
+                </p>
+              </div>
+            ) : null}
 
             <Card className="border border-grayScale-200/90 border-l-4 border-l-brand-500 p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6 lg:p-8">
               <div className="flex items-start justify-between gap-3">

@@ -944,7 +944,7 @@ export function HumanLanguagePage() {
     })
     if (skipFetch) return
     try {
-      const res = await withTimeout(getSubModuleLessonById(lessonId), 12000)
+      const res = await withTimeout(getSubModuleLessonById(lessonId, { cacheBust: forceRefresh }), 12000)
       const data = res.data?.data
       if (!data) throw new Error("Missing lesson detail payload")
       setLessonDetailState((prev) => ({
@@ -1022,7 +1022,7 @@ export function HumanLanguagePage() {
     setLessonDialog({ open: true, lessonId: lesson.id, questionSetId: lesson.question_set_id })
     setSavingLesson(false)
     try {
-      const detail = (await getSubModuleLessonById(lesson.id)).data?.data
+      const detail = (await getSubModuleLessonById(lesson.id, { cacheBust: true })).data?.data
       setLessonForm({
         title: detail?.title ?? lesson.title ?? "",
         description: detail?.description ?? "",
@@ -2704,7 +2704,7 @@ export function HumanLanguagePage() {
           if (!open) setLessonDialog({ open: false })
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-5xl max-h-[calc(100vh-6rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit lesson</DialogTitle>
             <DialogDescription>Update lesson metadata stored in the linked question set.</DialogDescription>
@@ -2800,7 +2800,7 @@ export function HumanLanguagePage() {
                         </div>
                       </div>
 
-                      <div className="p-4">
+                          <div className="p-4">
                         {lessonFetch?.status !== "ok" ? (
                           <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-grayScale-500">
                             <SpinnerIcon className="h-5 w-5 text-brand-500" alt="" />
@@ -2815,7 +2815,7 @@ export function HumanLanguagePage() {
                             </p>
                           </div>
                         ) : (
-                          <ul className="max-h-[min(28rem,calc(100vh-16rem))] space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+                          <ul className="space-y-3 pr-1 [scrollbar-gutter:stable]">
                             {lessonFetch.questions.map((q, qIdx) => {
                               const qType = String(q.question_type ?? "—")
                               const embeddedUrls = extractUrls(q.question_text || "")

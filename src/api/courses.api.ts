@@ -299,8 +299,19 @@ export const deleteSubModule = (subModuleId: number) =>
 export const getVideosBySubModule = (subModuleId: number) =>
   http.get<GetSubCourseVideosResponse>(`/course-management/sub-modules/${subModuleId}/videos`)
 
-export const getSubModuleLessonById = (lessonId: number) =>
-  http.get<GetSubModuleLessonDetailResponse>(`/course-management/sub-module-lessons/${lessonId}`)
+export const getSubModuleLessonById = (
+  lessonId: number,
+  options?: {
+    /**
+     * Cache-bust the request to avoid serving stale lesson data after edits.
+     * This is intentionally implemented via query string to work with default axios config.
+     */
+    cacheBust?: boolean
+  },
+) =>
+  http.get<GetSubModuleLessonDetailResponse>(`/course-management/sub-module-lessons/${lessonId}`, {
+    params: options?.cacheBust ? { _t: Date.now() } : undefined,
+  })
 
 export const createSubCourseVideo = (data: CreateSubCourseVideoRequest) =>
   http.post("/course-management/sub-module-videos", {

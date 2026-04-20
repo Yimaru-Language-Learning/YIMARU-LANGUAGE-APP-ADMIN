@@ -49,7 +49,18 @@ import type {
   GetLearningPathResponse,
   GetSubModuleLessonDetailResponse,
   GetHumanLanguageLessonsResponse,
-  GetHumanLanguageHierarchyResponse,
+  GetSubModuleLessonsResponse,
+  GetHumanLanguageSubCategoriesResponse,
+  GetCategorySubCategoriesResponse,
+  GetSubCategoryCoursesResponse,
+  GetCourseLevelsForCourseResponse,
+  GetCourseLevelsAllResponse,
+  GetCourseLevelByIdResponse,
+  GetHumanLanguageHierarchyFlatResponse,
+  GetCourseHierarchyResponse,
+  GetSubModulesByModuleResponse,
+  CourseHierarchyRow,
+  SubCourse,
   CreateHumanLanguageLessonRequest,
   GetSubCourseEntryAssessmentResponse,
   ReorderItem,
@@ -57,6 +68,8 @@ import type {
   GetRatingsParams,
   GetVimeoSampleResponse,
   CreateCourseVideoRequest,
+  UpdateSubModuleLessonRequest,
+  UpdateSubModuleLessonResponse,
 } from "../types/course.types"
 
 type UnifiedHierarchyRow = {
@@ -66,17 +79,6 @@ type UnifiedHierarchyRow = {
   sub_category_name?: string | null
   course_id?: number | null
   course_title?: string | null
-}
-
-type CourseHierarchyRow = {
-  course_id: number
-  course_title: string
-  level_id?: number | null
-  cefr_level?: string | null
-  module_id?: number | null
-  module_title?: string | null
-  sub_module_id?: number | null
-  sub_module_title?: string | null
 }
 
 async function withSingleRetry<T>(request: () => Promise<T>, retryDelayMs = 400): Promise<T> {
@@ -169,6 +171,26 @@ export const deleteCourseCategory = (categoryId: number) =>
 export const deleteCourseSubCategory = (subCategoryId: number) =>
   http.delete(`/course-management/sub-categories/${subCategoryId}`)
 
+export const getSubCategoriesByCategoryId = (categoryId: number) =>
+  http.get<GetCategorySubCategoriesResponse>(`/course-management/categories/${categoryId}/sub-categories`)
+
+export const createSubCategory = (payload: {
+  category_id: number
+  name: string
+  description?: string | null
+  display_order?: number
+}) => http.post("/course-management/sub-categories", payload)
+
+export const updateSubCategory = (
+  subCategoryId: number,
+  payload: Partial<{
+    name: string
+    description: string | null
+    is_active: boolean
+    display_order: number
+  }>,
+) => http.patch(`/course-management/sub-categories/${subCategoryId}`, payload)
+
 export const getCoursesByCategory = (categoryId: number) =>
   withSingleRetry(() => http.get("/course-management/hierarchy")).then((res) => {
     const rows: UnifiedHierarchyRow[] = res.data?.data ?? []
@@ -221,17 +243,39 @@ export const updateCourseStatus = (courseId: number, isActive: boolean) =>
 export const updateCourse = (courseId: number, data: UpdateCourseRequest) =>
   http.put(`/course-management/courses/${courseId}`, data)
 
+export const getCourseHierarchyByCourseId = (courseId: number) =>
+  http.get<GetCourseHierarchyResponse>(`/course-management/courses/${courseId}/hierarchy`)
+
 // Sub-Module APIs (Unified Hierarchy)
 export const getSubModulesByCourse = (courseId: number) =>
-  http.get(`/course-management/courses/${courseId}/hierarchy`).then((res) => {
-    const rows: CourseHierarchyRow[] = res.data?.data ?? []
-    const subModuleMap = new Map<number, { id: number; course_id: number; module_id?: number; title: string; description: string; level: string; cefr_level?: string; thumbnail: string; display_order: number; sub_level?: string; is_active: boolean }>()
+  getCourseHierarchyByCourseId(courseId).then((res) => {
+    const raw = res.data?.data
+    const rows: CourseHierarchyRow[] = Array.isArray(raw) ? raw : []
+    const subModuleMap = new Map<
+      number,
+      {
+        id: number
+        course_id: number
+        level_id?: number
+        module_id?: number
+        title: string
+        description: string
+        level: string
+        cefr_level?: string
+        thumbnail: string
+        display_order: number
+        sub_level?: string
+        is_active: boolean
+      }
+    >()
     rows.forEach((r, idx) => {
       if (!r.sub_module_id) return
-      if (!subModuleMap.has(r.sub_module_id)) {
+      const existing = subModuleMap.get(r.sub_module_id)
+      if (!existing) {
         subModuleMap.set(r.sub_module_id, {
           id: r.sub_module_id,
           course_id: courseId,
+          level_id: r.level_id ?? undefined,
           module_id: r.module_id ?? undefined,
           title: r.sub_module_title ?? "",
           description: "",
@@ -242,7 +286,17 @@ export const getSubModulesByCourse = (courseId: number) =>
           sub_level: r.cefr_level ?? undefined,
           is_active: true,
         })
+        return
       }
+      subModuleMap.set(r.sub_module_id, {
+        ...existing,
+        module_id: existing.module_id ?? r.module_id ?? undefined,
+        level_id: existing.level_id ?? r.level_id ?? undefined,
+        title: existing.title || r.sub_module_title || "",
+        level: existing.level || r.cefr_level || "",
+        cefr_level: existing.cefr_level ?? r.cefr_level ?? undefined,
+        sub_level: existing.sub_level ?? r.cefr_level ?? undefined,
+      })
     })
     const sub_courses = Array.from(subModuleMap.values())
     return {
@@ -299,6 +353,11 @@ export const deleteSubModule = (subModuleId: number) =>
 export const getVideosBySubModule = (subModuleId: number) =>
   http.get<GetSubCourseVideosResponse>(`/course-management/sub-modules/${subModuleId}/videos`)
 
+export const getLessonsBySubModule = (subModuleId: number, options?: { includeInactive?: boolean }) =>
+  http.get<GetSubModuleLessonsResponse>(`/course-management/sub-modules/${subModuleId}/lessons`, {
+    params: { include_inactive: options?.includeInactive ?? true },
+  })
+
 export const getSubModuleLessonById = (
   lessonId: number,
   options?: {
@@ -311,6 +370,14 @@ export const getSubModuleLessonById = (
 ) =>
   http.get<GetSubModuleLessonDetailResponse>(`/course-management/sub-module-lessons/${lessonId}`, {
     params: options?.cacheBust ? { _t: Date.now() } : undefined,
+  })
+
+export const updateSubModuleLesson = (lessonId: number, data: UpdateSubModuleLessonRequest) =>
+  http.put<UpdateSubModuleLessonResponse>(`/course-management/sub-module-lessons/${lessonId}`, data)
+
+export const softDeleteSubModuleLesson = (lessonId: number) =>
+  http.put<UpdateSubModuleLessonResponse>(`/course-management/sub-module-lessons/${lessonId}`, {
+    is_active: false,
   })
 
 export const createSubCourseVideo = (data: CreateSubCourseVideoRequest) =>
@@ -631,270 +698,92 @@ export const getHumanLanguageLessonsByCourse = (courseId: number, cefr_level: st
     params: { cefr_level },
   })
 
+export const getHumanLanguageSubCategories = () =>
+  http.get<GetHumanLanguageSubCategoriesResponse>("/course-management/human-language/sub-categories")
+
+export const getCoursesBySubCategoryId = (subCategoryId: number) =>
+  http.get<GetSubCategoryCoursesResponse>(`/course-management/sub-categories/${subCategoryId}/courses`)
+
+export const getSubModulesByModuleId = (moduleId: number) =>
+  http.get<GetSubModulesByModuleResponse>(`/course-management/modules/${moduleId}/sub-modules`)
+
+/**
+ * Finds a sub-module under a course by walking levels → modules → sub-modules APIs.
+ * Use when the legacy hierarchy flatten (`getSubModulesByCourse`) does not include the row.
+ */
+export async function resolveSubModuleForCourse(
+  courseId: number,
+  subModuleId: number,
+): Promise<SubCourse | null> {
+  try {
+    const levelsRes = await getCourseLevelsForCourse(courseId)
+    const levels = Array.isArray(levelsRes.data?.data?.levels) ? levelsRes.data.data.levels : []
+    const sortedLevels = [...levels].sort((a, b) => {
+      const o = (a.display_order ?? 0) - (b.display_order ?? 0)
+      if (o !== 0) return o
+      return String(a.cefr_level ?? "").localeCompare(String(b.cefr_level ?? ""))
+    })
+
+    const modulesNested = await Promise.all(
+      sortedLevels.map(async (level) => {
+        const modsRes = await getModulesByLevel(level.id)
+        const rawMods = modsRes.data?.data?.modules
+        const modules = Array.isArray(rawMods) ? rawMods : []
+        const sortedMods = [...modules].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        return sortedMods.map((module) => ({ level, module }))
+      }),
+    )
+    const modulePairs = modulesNested.flat()
+
+    const bundles = await Promise.all(
+      modulePairs.map(async ({ level, module }) => {
+        const subsRes = await getSubModulesByModuleId(module.id)
+        const rawSubs = subsRes.data?.data?.sub_modules
+        const subs = Array.isArray(rawSubs) ? rawSubs : []
+        const sortedSubs = [...subs].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        return { level, module, subs: sortedSubs }
+      }),
+    )
+
+    for (const { level, module, subs } of bundles) {
+      const found = subs.find((s) => s.id === subModuleId)
+      if (found) {
+        return {
+          id: found.id,
+          course_id: courseId,
+          level_id: level.id,
+          module_id: module.id,
+          title: found.title,
+          description: found.description ?? "",
+          level: level.cefr_level,
+          cefr_level: level.cefr_level,
+          thumbnail: found.thumbnail ?? "",
+          display_order: found.display_order,
+          sub_level: level.cefr_level,
+          is_active: found.is_active,
+        }
+      }
+    }
+  } catch (e) {
+    console.error("resolveSubModuleForCourse failed:", e)
+  }
+  return null
+}
+
+export const getCourseLevelsForCourse = (courseId: number) =>
+  http.get<GetCourseLevelsForCourseResponse>(`/course-management/courses/${courseId}/levels`)
+
+export const getAllCourseLevels = () => http.get<GetCourseLevelsAllResponse>("/course-management/levels")
+
+export const getCourseLevelById = (levelId: number) =>
+  http.get<GetCourseLevelByIdResponse>(`/course-management/levels/${levelId}`)
+
 export const getHumanLanguageHierarchy = (options?: { cacheBust?: boolean }) =>
   withSingleRetry(() =>
-    http.get<GetHumanLanguageHierarchyResponse>("/course-management/hierarchy", {
+    http.get<GetHumanLanguageHierarchyFlatResponse>("/course-management/human-language/hierarchy", {
       params: options?.cacheBust ? { _t: Date.now() } : undefined,
     }),
-  ).then(async (res) => {
-    const payload = res.data?.data as unknown
-    if (payload && typeof payload === "object" && !Array.isArray(payload) && "sub_categories" in payload) {
-      return res
-    }
-
-    const rows: UnifiedHierarchyRow[] = Array.isArray(payload) ? payload : []
-    const categoryMap = new Map<
-      number,
-      {
-        category_id: number
-        category_name: string
-        sub_categories: Map<
-          number,
-          {
-            sub_category_id: number
-            sub_category_name: string
-            courses: Map<
-              number,
-              {
-                course_id: number
-                course_name: string
-              }
-            >
-          }
-        >
-      }
-    >()
-
-    rows.forEach((row) => {
-      const categoryId = Number(row.category_id)
-      if (!Number.isFinite(categoryId)) return
-
-      if (!categoryMap.has(categoryId)) {
-        categoryMap.set(categoryId, {
-          category_id: categoryId,
-          category_name: row.category_name ?? "",
-          sub_categories: new Map(),
-        })
-      }
-
-      if (!row.sub_category_id) return
-      const subCategoryId = Number(row.sub_category_id)
-      if (!Number.isFinite(subCategoryId)) return
-
-      const categoryNode = categoryMap.get(categoryId)!
-      if (!categoryNode.sub_categories.has(subCategoryId)) {
-        categoryNode.sub_categories.set(subCategoryId, {
-          sub_category_id: subCategoryId,
-          sub_category_name: row.sub_category_name ?? "",
-          courses: new Map(),
-        })
-      }
-
-      if (!row.course_id) return
-      const courseId = Number(row.course_id)
-      if (!Number.isFinite(courseId)) return
-
-      const subCategoryNode = categoryNode.sub_categories.get(subCategoryId)!
-      if (!subCategoryNode.courses.has(courseId)) {
-        subCategoryNode.courses.set(courseId, {
-          course_id: courseId,
-          course_name: row.course_title ?? "",
-        })
-      }
-    })
-
-    const categories = Array.from(categoryMap.values())
-    const humanLanguageCandidates = categories.filter((c) => c.category_name.toLowerCase().includes("human"))
-
-    const selectedCategory = (humanLanguageCandidates.length ? humanLanguageCandidates : categories).sort((a, b) => {
-      const aSubCategoryCount = a.sub_categories.size
-      const bSubCategoryCount = b.sub_categories.size
-      if (aSubCategoryCount !== bSubCategoryCount) return bSubCategoryCount - aSubCategoryCount
-
-      const aCourseCount = Array.from(a.sub_categories.values()).reduce((sum, sub) => sum + sub.courses.size, 0)
-      const bCourseCount = Array.from(b.sub_categories.values()).reduce((sum, sub) => sum + sub.courses.size, 0)
-      if (aCourseCount !== bCourseCount) return bCourseCount - aCourseCount
-
-      // If tied on richness, pick the latest category id.
-      return b.category_id - a.category_id
-    })[0]
-
-    if (!selectedCategory) {
-      return {
-        ...res,
-        data: {
-          ...res.data,
-          data: {
-            category_id: 0,
-            category_name: "",
-            sub_categories: [],
-          },
-        },
-      } as unknown as { data: GetHumanLanguageHierarchyResponse }
-    }
-
-    const courses = Array.from(selectedCategory.sub_categories.values()).flatMap((sub) =>
-      Array.from(sub.courses.values()).map((course) => ({ sub_category_id: sub.sub_category_id, course })),
-    )
-
-    const hierarchyResponses = await Promise.all(
-      courses.map(({ course }) =>
-        http
-          .get(`/course-management/courses/${course.course_id}/hierarchy`)
-          .then((courseRes) => ({ course_id: course.course_id, rows: (courseRes.data?.data ?? []) as CourseHierarchyRow[] }))
-          .catch(() => ({ course_id: course.course_id, rows: [] as CourseHierarchyRow[] })),
-      ),
-    )
-
-    const hierarchyByCourse = new Map<number, CourseHierarchyRow[]>(
-      hierarchyResponses.map((h) => [h.course_id, h.rows]),
-    )
-
-    const subCategories = Array.from(selectedCategory.sub_categories.values()).map((sub) => ({
-      sub_category_id: sub.sub_category_id,
-      sub_category_name: sub.sub_category_name,
-      courses: Array.from(sub.courses.values()).map((course) => {
-        const levelMap = new Map<
-          string,
-          {
-            level_id?: number
-            level: string
-            modules: Map<
-              number,
-              {
-                id: number
-                title: string
-                sub_modules: Map<number, { id: number; title: string; videos: []; practices: [] }>
-              }
-            >
-          }
-        >()
-
-        ;(hierarchyByCourse.get(course.course_id) ?? []).forEach((row) => {
-          if (!row.level_id || !row.cefr_level) return
-          const levelKey = String(row.cefr_level).toUpperCase()
-          if (!levelMap.has(levelKey)) {
-            levelMap.set(levelKey, { level_id: Number(row.level_id), level: levelKey, modules: new Map() })
-          }
-
-          if (!row.module_id) return
-          const levelNode = levelMap.get(levelKey)!
-          const moduleId = Number(row.module_id)
-          if (!levelNode.modules.has(moduleId)) {
-            levelNode.modules.set(moduleId, {
-              id: moduleId,
-              title: row.module_title ?? "",
-              sub_modules: new Map(),
-            })
-          }
-
-          if (!row.sub_module_id) return
-          const moduleNode = levelNode.modules.get(moduleId)!
-          const subModuleId = Number(row.sub_module_id)
-          if (!moduleNode.sub_modules.has(subModuleId)) {
-            moduleNode.sub_modules.set(subModuleId, {
-              id: subModuleId,
-              title: row.sub_module_title ?? "",
-              videos: [],
-              lessons: [],
-              practices: [],
-            })
-          }
-        })
-
-        return {
-          course_id: course.course_id,
-          course_name: course.course_name,
-          levels: Array.from(levelMap.values()).map((levelNode) => ({
-            level_id: levelNode.level_id,
-            level: levelNode.level,
-            modules: Array.from(levelNode.modules.values()).map((moduleNode) => ({
-              id: moduleNode.id,
-              title: moduleNode.title,
-              sub_modules: Array.from(moduleNode.sub_modules.values()),
-            })),
-          })),
-        }
-      }),
-    }))
-
-    const subModuleIds = subCategories.flatMap((sub) =>
-      sub.courses.flatMap((course) =>
-        course.levels.flatMap((levelNode) => levelNode.modules.flatMap((moduleNode) => moduleNode.sub_modules.map((sm) => sm.id))),
-      ),
-    )
-
-    type QuestionSetListItem = {
-      id: number
-      title?: string
-      set_type?: string
-      status?: string
-      intro_video_url?: string | null
-      question_count?: number
-      created_at?: string
-    }
-
-    const questionSetsBySubModule = new Map<number, QuestionSetListItem[]>()
-    await Promise.all(
-      subModuleIds.map(async (subModuleID) => {
-        try {
-          const questionSetRes = await http.get<GetQuestionSetsResponse>("/question-sets/by-owner", {
-            params: { owner_type: "SUB_MODULE", owner_id: subModuleID },
-          })
-          const payload = questionSetRes.data?.data
-          const sets = Array.isArray(payload)
-            ? payload
-            : Array.isArray((payload as { question_sets?: QuestionSetListItem[] } | undefined)?.question_sets)
-              ? ((payload as { question_sets: QuestionSetListItem[] }).question_sets ?? [])
-              : []
-          questionSetsBySubModule.set(subModuleID, sets as QuestionSetListItem[])
-        } catch {
-          questionSetsBySubModule.set(subModuleID, [])
-        }
-      }),
-    )
-
-    subCategories.forEach((sub) => {
-      sub.courses.forEach((course) => {
-        course.levels.forEach((levelNode) => {
-          levelNode.modules.forEach((moduleNode) => {
-            moduleNode.sub_modules.forEach((subModuleNode) => {
-              const sets = questionSetsBySubModule.get(subModuleNode.id) ?? []
-              const lessons = sets
-                .filter((set) => String(set.set_type ?? "").toUpperCase() === "QUIZ")
-                .sort((a, b) => {
-                  const ad = Date.parse(String(a.created_at ?? "")) || 0
-                  const bd = Date.parse(String(b.created_at ?? "")) || 0
-                  return ad - bd
-                })
-                .map((set, idx) => ({
-                  id: Number(set.id),
-                  question_set_id: Number(set.id),
-                  title: set.title?.trim() || `Lesson ${idx + 1}`,
-                  status: set.status ?? "DRAFT",
-                  question_count: Number(set.question_count ?? 0),
-                  display_order: idx + 1,
-                  intro_video_url: set.intro_video_url ?? null,
-                }))
-              subModuleNode.lessons = lessons
-            })
-          })
-        })
-      })
-    })
-
-    return {
-      ...res,
-      data: {
-        ...res.data,
-        data: {
-          category_id: selectedCategory.category_id,
-          category_name: selectedCategory.category_name,
-          sub_categories: subCategories,
-        },
-      },
-    } as unknown as { data: GetHumanLanguageHierarchyResponse }
-  })
+  )
 
 export const createHumanLanguageLesson = (data: CreateHumanLanguageLessonRequest) =>
   http

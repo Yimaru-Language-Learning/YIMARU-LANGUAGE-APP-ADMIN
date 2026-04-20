@@ -13,9 +13,6 @@ export function AppLayout() {
   const routeKey = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
 
   const token = localStorage.getItem("access_token")
-  if (!token) {
-    return <Navigate to="/login" replace />
-  }
 
   const handleSidebarToggle = useCallback(() => {
     setSidebarOpen((prev) => !prev)
@@ -57,6 +54,10 @@ export function AppLayout() {
       window.removeEventListener("beforeunload", onBeforeUnload)
     }
   }, [routeKey])
+
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
 
   return (
     <div className="flex min-h-screen bg-grayScale-100">

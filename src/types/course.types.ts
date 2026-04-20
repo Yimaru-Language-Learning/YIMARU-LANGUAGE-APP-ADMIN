@@ -173,7 +173,13 @@ export interface GetModulesResponse {
 export interface CreateModuleRequest {
   level_id: number
   title: string
-  content: string
+  /** Legacy field kept for backward compatibility. */
+  content?: string
+  /** Preferred field for module detail text. */
+  description?: string
+  icon_url?: string
+  display_order?: number
+  is_active?: boolean
 }
 
 /** @deprecated Use UpdateSubCourseRequest instead */
@@ -193,6 +199,8 @@ export interface UpdateModuleStatusRequest {
 export interface SubCourse {
   id: number
   course_id: number
+  /** Present when derived from course hierarchy rows (levels → modules → sub-modules). */
+  level_id?: number
   module_id?: number
   title: string
   description: string
@@ -705,20 +713,64 @@ export interface HumanLanguageLesson {
 export interface SubModuleLessonDetail {
   id: number
   sub_module_id: number
-  question_set_id: number
-  intro_video_url?: string | null
   display_order: number
   is_active: boolean
+  created_at: string
   title: string
   description?: string | null
-  status: string
-  set_type: string
-  question_count: number
+  thumbnail?: string | null
+  teaching_text?: string | null
+  teaching_image_url?: string | null
+  teaching_audio_url?: string | null
+  teaching_video_url?: string | null
+}
+
+export interface SubModuleLesson {
+  id: number
+  sub_module_id: number
+  display_order: number
+  is_active: boolean
+  created_at: string
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  teaching_text?: string | null
+  teaching_image_url?: string | null
+  teaching_audio_url?: string | null
+  teaching_video_url?: string | null
 }
 
 export interface GetSubModuleLessonDetailResponse {
   message: string
   data: SubModuleLessonDetail
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface UpdateSubModuleLessonRequest {
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  teaching_text?: string | null
+  teaching_image_url?: string | null
+  teaching_audio_url?: string | null
+  teaching_video_url?: string | null
+  display_order: number
+  is_active: boolean
+}
+
+export interface UpdateSubModuleLessonResponse {
+  message: string
+  data: SubModuleLessonDetail
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetSubModuleLessonsResponse {
+  message: string
+  data: SubModuleLesson[]
   success: boolean
   status_code: number
   metadata: unknown
@@ -732,6 +784,196 @@ export interface GetHumanLanguageLessonsResponse {
     cefr_level: string
     lessons: HumanLanguageLesson[]
   }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/human-language/sub-categories */
+export interface HumanLanguageSubCategoryListItem {
+  id: number
+  category_id: number
+  category_name: string
+  name: string
+  description?: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  /** Present on some payloads; ignore if unused. */
+  total_count?: number
+}
+
+export interface GetHumanLanguageSubCategoriesResponse {
+  message: string
+  data: {
+    sub_categories: HumanLanguageSubCategoryListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/categories/:categoryId/sub-categories */
+export interface CategorySubCategoryListItem {
+  id: number
+  category_id: number
+  category_name: string
+  name: string
+  description?: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  /** Sometimes echoed per row by the API; safe to ignore. */
+  total_count?: number
+}
+
+export interface GetCategorySubCategoriesResponse {
+  message: string
+  data: {
+    sub_categories: CategorySubCategoryListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/sub-categories/:subCategoryId/courses */
+export interface SubCategoryCourseListItem {
+  id: number
+  category_id: number
+  sub_category_id: number
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  intro_video_url?: string | null
+  is_active: boolean
+  total_count?: number
+}
+
+export interface GetSubCategoryCoursesResponse {
+  message: string
+  data: {
+    courses: SubCategoryCourseListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/courses/:courseId/levels or GET /course-management/levels */
+export interface CourseLevelRow {
+  id: number
+  course_id: number
+  cefr_level: string
+  display_order: number
+  is_active: boolean
+  created_at: string
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  total_count?: number
+}
+
+export interface GetCourseLevelsForCourseResponse {
+  message: string
+  data: {
+    levels: CourseLevelRow[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetCourseLevelsAllResponse {
+  message: string
+  data: {
+    levels: CourseLevelRow[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetCourseLevelByIdResponse {
+  message: string
+  data: CourseLevelRow
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/modules/:moduleId/sub-modules */
+export interface CourseSubModuleListItem {
+  id: number
+  module_id: number
+  title: string
+  description?: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  legacy_sub_course_id?: number | null
+  thumbnail?: string | null
+  tips?: string | null
+  total_count?: number
+}
+
+export interface GetSubModulesByModuleResponse {
+  message: string
+  data: {
+    sub_modules: CourseSubModuleListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/human-language/hierarchy */
+export interface HumanLanguageHierarchyFlatRow {
+  category_id: number
+  category_name: string
+  sub_category_id?: number | null
+  sub_category_name?: string | null
+  course_id?: number | null
+  course_title?: string | null
+}
+
+export interface GetHumanLanguageHierarchyFlatResponse {
+  message: string
+  data: HumanLanguageHierarchyFlatRow[]
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/courses/:courseId/hierarchy */
+export interface CourseHierarchyRow {
+  course_id: number
+  course_title: string
+  level_id?: number | null
+  cefr_level?: string | null
+  level_title?: string | null
+  level_description?: string | null
+  level_thumbnail?: string | null
+  module_id?: number | null
+  module_title?: string | null
+  module_icon_url?: string | null
+  sub_module_id?: number | null
+  sub_module_title?: string | null
+  sub_module_description?: string | null
+  sub_module_thumbnail?: string | null
+  sub_module_tips?: string | null
+  sub_module_display_order?: number | null
+}
+
+export interface GetCourseHierarchyResponse {
+  message: string
+  data: CourseHierarchyRow[]
   success: boolean
   status_code: number
   metadata: unknown

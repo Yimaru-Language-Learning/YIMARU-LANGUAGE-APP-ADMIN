@@ -1,6 +1,6 @@
-import * as React from "react"
-import { ChevronDown } from "lucide-react"
-import { cn } from "../../lib/utils"
+import * as React from "react";
+import { ChevronDown } from "lucide-react";
+import { cn } from "../../lib/utils";
 
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
 
@@ -18,10 +18,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         >
           {children}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-600" />
       </div>
-    )
+    );
   },
-)
-Select.displayName = "Select"
-
+);
+Select.displayName = "Select";

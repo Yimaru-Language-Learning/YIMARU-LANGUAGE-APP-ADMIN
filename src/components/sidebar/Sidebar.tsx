@@ -13,57 +13,65 @@ import {
   Users,
   Users2,
   X,
-} from "lucide-react"
-import { type ComponentType, useEffect, useState } from "react"
-import { NavLink } from "react-router-dom"
-import { cn } from "../../lib/utils"
-import { BrandLogo } from "../brand/BrandLogo"
-import { getUnreadCount } from "../../api/notifications.api"
+} from "lucide-react";
+import { type ComponentType, useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
+import { cn } from "../../lib/utils";
+import { BrandLogo } from "../brand/BrandLogo";
+import { getUnreadCount } from "../../api/notifications.api";
 
 type NavItem = {
-  label: string
-  to: string
-  icon: ComponentType<{ className?: string }>
-}
+  label: string;
+  to: string;
+  icon: ComponentType<{ className?: string }>;
+};
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "User Management", to: "/users", icon: Users },
   { label: "Role Management", to: "/roles", icon: Shield },
   { label: "Content Management", to: "/content", icon: BookOpen },
+  { label: "New Content", to: "/new-content", icon: BookOpen },
+
   { label: "Notifications", to: "/notifications", icon: Bell },
   { label: "User Log", to: "/user-log", icon: ClipboardList },
   { label: "Issue Reports", to: "/issues", icon: CircleAlert },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
   { label: "Team Management", to: "/team", icon: Users2 },
   { label: "Profile", to: "/profile", icon: UserCircle2 },
-]
+];
 
 type SidebarProps = {
-  isOpen: boolean
-  isCollapsed: boolean
-  onToggleCollapse: () => void
-  onClose: () => void
-}
+  isOpen: boolean;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  onClose: () => void;
+};
 
-export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: SidebarProps) {
-  const [unreadCount, setUnreadCount] = useState(0)
+export function Sidebar({
+  isOpen,
+  isCollapsed,
+  onToggleCollapse,
+  onClose,
+}: SidebarProps) {
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const res = await getUnreadCount()
-        setUnreadCount(res.data.unread)
+        const res = await getUnreadCount();
+        setUnreadCount(res.data.unread);
       } catch {
         // silently fail
       }
-    }
+    };
 
-    fetchUnread()
+    fetchUnread();
 
-    window.addEventListener("notifications-updated", fetchUnread)
-    return () => window.removeEventListener("notifications-updated", fetchUnread)
-  }, [])
+    window.addEventListener("notifications-updated", fetchUnread);
+    return () =>
+      window.removeEventListener("notifications-updated", fetchUnread);
+  }, []);
 
   return (
     <>
@@ -86,7 +94,12 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className={cn("flex items-center justify-between px-2", isCollapsed && "justify-center")}>
+        <div
+          className={cn(
+            "flex items-center justify-between px-2",
+            isCollapsed && "justify-center",
+          )}
+        >
           {isCollapsed ? (
             <span className="h-10 w-10 overflow-hidden">
               <BrandLogo className="h-10 w-auto max-w-none" />
@@ -103,7 +116,11 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
             onClick={onToggleCollapse}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+            {isCollapsed ? (
+              <ChevronRight className="h-5 w-5" />
+            ) : (
+              <ChevronLeft className="h-5 w-5" />
+            )}
           </button>
           <button
             type="button"
@@ -117,7 +134,7 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
 
         <nav className="mt-6 flex-1 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const Icon = item.icon
+            const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
@@ -143,25 +160,36 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
                       )}
                     >
                       <Icon className="h-4 w-4" />
-                      {isCollapsed && item.to === "/notifications" && unreadCount > 0 && (
-                        <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-destructive" />
-                      )}
+                      {isCollapsed &&
+                        item.to === "/notifications" &&
+                        unreadCount > 0 && (
+                          <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-destructive" />
+                        )}
                     </span>
-                    {!isCollapsed && <span className="truncate">{item.label}</span>}
-                    {!isCollapsed && item.to === "/notifications" && unreadCount > 0 && (
-                      <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </span>
+                    {!isCollapsed && (
+                      <span className="truncate">{item.label}</span>
                     )}
-                    {!isCollapsed && item.to !== "/notifications" && isActive ? (
+                    {!isCollapsed &&
+                      item.to === "/notifications" &&
+                      unreadCount > 0 && (
+                        <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    {!isCollapsed &&
+                    item.to !== "/notifications" &&
+                    isActive ? (
                       <span className="ml-auto h-6 w-1 rounded-full bg-brand-500/80" />
-                    ) : !isCollapsed && item.to === "/notifications" && unreadCount === 0 && isActive ? (
+                    ) : !isCollapsed &&
+                      item.to === "/notifications" &&
+                      unreadCount === 0 &&
+                      isActive ? (
                       <span className="ml-auto h-6 w-1 rounded-full bg-brand-500/80" />
                     ) : null}
                   </>
                 )}
               </NavLink>
-            )
+            );
           })}
         </nav>
 
@@ -169,8 +197,8 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
           <button
             type="button"
             onClick={() => {
-              localStorage.clear()
-              window.location.href = "/login"
+              localStorage.clear();
+              window.location.href = "/login";
             }}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600",
@@ -184,5 +212,5 @@ export function Sidebar({ isOpen, isCollapsed, onToggleCollapse, onClose }: Side
         </div>
       </aside>
     </>
-  )
+  );
 }

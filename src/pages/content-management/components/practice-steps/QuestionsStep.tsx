@@ -34,7 +34,7 @@ export function QuestionsStep({
   return (
     <div className="space-y-6">
       <div className="space-y-1 px-2">
-        <h2 className="text-2xl font-extrabold text-grayScale-700">
+        <h2 className="text-2xl font-bold text-grayScale-700">
           Create Practice Questions
         </h2>
         <p className="text-grayScale-400 text-lg">
@@ -52,7 +52,7 @@ export function QuestionsStep({
               <div className="flex items-center justify-between border-b border-grayScale-50 pb-4 mb-4">
                 <div className="flex items-center gap-3">
                   <GripVertical className="h-5 w-5 text-brand-500 cursor-grab" />
-                  <span className="font-bold text-grayScale-500 text-lg">
+                  <span className="font-bold text-grayScale-500 text-base">
                     Question {i + 1}
                   </span>
                 </div>
@@ -67,7 +67,7 @@ export function QuestionsStep({
                     setFormData({ ...formData, questions: newQuestions });
                   }}
                 >
-                  <Trash2 className="h-5 w-5" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -82,7 +82,7 @@ export function QuestionsStep({
                       newQuestions[i].text = e.target.value;
                       setFormData({ ...formData, questions: newQuestions });
                     }}
-                    className="h-16 rounded-xl border-grayScale-200 focus:border-brand-500 font-medium px-6 text-lg placeholder:text-grayScale-300 bg-white"
+                    className="h-16 rounded-xl border-grayScale-200 font-medium px-6 text-base placeholder:text-grayScale-400 bg-white text-grayScale-700"
                     placeholder="e.g. How long have you been studying English?"
                   />
                 </div>
@@ -90,14 +90,30 @@ export function QuestionsStep({
                   <label className="text-[10px] font-bold text-grayScale-700 uppercase tracking-widest">
                     VOICE PROMPT
                   </label>
-                  <VoicePrompt filename={q.voicePrompt} />
+                  <VoicePrompt
+                    src={q.voicePrompt}
+                    filename={q.voicePrompt}
+                    onRemove={() => {
+                      const newQuestions = [...formData.questions];
+                      newQuestions[i].voicePrompt = "";
+                      setFormData({ ...formData, questions: newQuestions });
+                    }}
+                  />
                 </div>
               </div>
               <div className="md:w-1/3 space-y-3">
                 <label className="text-[10px] font-bold text-grayScale-700 uppercase tracking-widest">
                   SAMPLE ANSWER PROMPT
                 </label>
-                <VoicePrompt filename={q.sampleAnswer} />
+                <VoicePrompt
+                  src={q.sampleAnswer}
+                  filename={q.sampleAnswer}
+                  onRemove={() => {
+                    const newQuestions = [...formData.questions];
+                    newQuestions[i].sampleAnswer = "";
+                    setFormData({ ...formData, questions: newQuestions });
+                  }}
+                />
               </div>
             </div>
           </Card>
@@ -124,13 +140,13 @@ export function QuestionsStep({
         <Button
           onClick={prevStep}
           variant="outline"
-          className="h-12 w-28 rounded-xl border-grayScale-200 font-bold text-grayScale-600 shadow-sm"
+          className="h-10 w-20 rounded-[6px] border-grayScale-200 font-bold text-grayScale-600 shadow-sm"
         >
           Back
         </Button>
         <Button
           onClick={nextStep}
-          className="h-12 rounded-xl bg-brand-500 px-8 font-bold hover:bg-brand-600 shadow-md shadow-brand-500/20"
+          className="h-10 rounded-[6px] bg-brand-500 px-8 font-bold  "
         >
           Next: Review <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

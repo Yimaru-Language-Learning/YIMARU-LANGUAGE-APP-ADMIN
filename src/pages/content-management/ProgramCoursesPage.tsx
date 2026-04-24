@@ -45,7 +45,7 @@ export function ProgramCoursesPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-10">
       {/* Navigation */}
       <Link
         to="/new-content/learn-english"
@@ -189,12 +189,27 @@ export function ProgramCoursesPage() {
         </div>
       </div>
 
+      {/* Gradient Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div className="w-full border-t border-grayScale-200" />
+        </div>
+        <div className="relative flex justify-center">
+          <div
+            className="h-[0.5px] w-full opacity-20 rounded-full"
+            style={{
+              background: "gray",
+            }}
+          />
+        </div>
+      </div>
+
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-warp gap-10 ">
         {courses.map((course) => (
           <Card
             key={course.id}
-            className="group overflow-hidden  border border-grayScale-100 shadow-soft transition-all duration-300 hover:shadow-lg"
+            className="group w-[290px] overflow-hidden  border border-grayScale-100 shadow-soft transition-all duration-300 hover:shadow-lg"
           >
             {/* Gradient Header */}
             <div

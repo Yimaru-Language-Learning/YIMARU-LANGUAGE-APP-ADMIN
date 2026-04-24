@@ -25,6 +25,7 @@ export function AddPracticeFlow() {
   const moduleId = searchParams.get("moduleId");
 
   const isModuleContext = backTo === "module";
+  const isCourseContext = backTo === "modules";
 
   const backLabel =
     backTo === "module"
@@ -73,7 +74,7 @@ export function AddPracticeFlow() {
 
   if (isPublished) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center pb-20 animate-in fade-in zoom-in duration-500 bg-white">
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center pb-20 animate-in fade-in zoom-in duration-500">
         <div className="mb-10 relative">
           <div className="absolute inset-0 bg-brand-500/10 blur-3xl rounded-full" />
           <img
@@ -82,16 +83,16 @@ export function AddPracticeFlow() {
             className="h-[128px] w-[128px] relative"
           />
         </div>
-        <h1 className="text-[32px] font-bold text-grayScale-900 mb-4">
+        <h1 className="text-[28px] font-bold text-grayScale-900 mb-2">
           Practice Published Successfully!
         </h1>
-        <p className="text-grayScale-600 text-lg mb-14 max-w-lg font-medium leading-relaxed">
+        <p className="text-grayScale-600 text-md mb-14 max-w-lg font-medium leading-relaxed">
           Your speaking practice is now active and available inside the module.
         </p>
         <div className="flex flex-col gap-4 w-full max-w-[400px]">
           <Button
             onClick={() => navigate(backPath)}
-            className="h-14 rounded-2xl bg-brand-500 font-bold shadow-xl shadow-brand-500/20 text-[17px] text-white hover:bg-brand-600 transition-all active:scale-95"
+            className="h-14 rounded-[6px] bg-[#9E2891] font-bold shadow-xl shadow-brand-500/20 text-[16px] text-white "
           >
             Go back to Module
           </Button>
@@ -106,7 +107,7 @@ export function AddPracticeFlow() {
               });
             }}
             variant="outline"
-            className="h-14 rounded-2xl border-brand-200 text-brand-500 font-bold hover:bg-brand-50 transition-all text-[17px] bg-white"
+            className="h-14 rounded-[6px] border-[#9E2891] text-[#9E2891] font-semibold text-[16px] bg-white "
           >
             Add Another Practice
           </Button>
@@ -128,6 +129,7 @@ export function AddPracticeFlow() {
               navigate={navigate}
               level={level!}
               isModuleContext={isModuleContext}
+              isCourseContext={isCourseContext}
             />
           );
         case 2:
@@ -182,6 +184,7 @@ export function AddPracticeFlow() {
               navigate={navigate}
               level={level!}
               isModuleContext={isModuleContext}
+              isCourseContext={isCourseContext}
             />
           );
         case 2:
@@ -219,40 +222,46 @@ export function AddPracticeFlow() {
   };
 
   return (
-    <div className="space-y-8 pb-32 px-6 pt-6 min-h-screen bg-[#F8FAFC]">
+    <div className="space-y-8 pb-32 px-6 pt-6 min-h-screen ">
       {/* Header */}
       <div className="mx-auto max-w-7xl w-full">
         <div className="flex items-center justify-between mb-8">
           <Link
             to={backPath}
-            className="flex items-center gap-2 text-[15px] font-medium text-grayScale-500 transition-colors hover:text-brand-500 decoration-none"
+            className="flex items-center gap-2 text-[15px] font-medium text-grayScale-600 transition-colors hover:text-brand-500 decoration-none"
           >
             <ArrowLeft className="h-4 w-4" />
             {backLabel}
           </Link>
-          <Button
-            variant="outline"
-            className="rounded-[8px] border-grayScale-200 text-grayScale-600 h-10 px-6 font-bold bg-white hover:bg-grayScale-50"
-            onClick={() => navigate(backPath)}
-          >
-            Cancel
-          </Button>
         </div>
 
-        <div className="space-y-4 mb-10">
-          <h1 className="text-4xl font-bold text-[#0F172A]">
-            Add New Practice
-          </h1>
-          <p className="text-grayScale-400 text-lg">
+        <div className=" mb-10">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-[#0F172A]">
+              Add New Practice
+            </h1>
+            <Button
+              variant="outline"
+              className="rounded-[8px] border-grayScale-200 text-grayScale-600 h-10 px-6 font-bold bg-white hover:bg-grayScale-50"
+              onClick={() => navigate(backPath)}
+            >
+              Cancel
+            </Button>
+          </div>
+          <p className="text-grayScale-400 text-base">
             Create a new immersive practice session for students.
           </p>
         </div>
 
-        <div className="mx-auto max-w-4xl mb-12">
+        <div className="mx-auto w-[70%] mb-12">
           <Stepper steps={flowSteps} currentStep={currentStep} />
         </div>
 
-        <div className="mx-auto max-w-4xl">{renderStep()}</div>
+        <div
+          className={`mx-auto ${(!isModuleContext && currentStep === 3) || (isModuleContext && currentStep === 2) || currentStep === 5 ? "max-w-6xl" : "max-w-4xl"}`}
+        >
+          {renderStep()}
+        </div>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { Stepper } from "../../components/ui/stepper";
 
 import { VideoDetailStep } from "./components/video-steps/VideoDetailStep";
 import { ReviewPublishStep } from "./components/video-steps/ReviewPublishStep";
+import successIcon from "../../assets/success.svg";
 
 const STEPS = [
   { id: 1, label: "Video Detail" },
@@ -37,43 +38,31 @@ export function AddVideoFlow() {
 
   if (isPublished) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center pb-20 animate-in fade-in zoom-in duration-500 bg-white">
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center pb-20 animate-in fade-in zoom-in duration-500 ">
         {/* Success Icon Wrapper (Jagged Circle Style) */}
         <div className="mb-12 relative scale-110">
           <div className="absolute inset-0 bg-brand-500/5 blur-3xl rounded-full" />
           <div className="relative">
-            <div
-              className="h-24 w-24 bg-brand-500 flex items-center justify-center"
-              style={{
-                clipPath:
-                  "polygon(50% 0%, 61% 10%, 75% 10%, 80% 24%, 94% 30%, 90% 44%, 100% 56%, 90% 68%, 94% 82%, 80% 88%, 75% 100%, 61% 100%, 50% 90%, 39% 100%, 25% 100%, 20% 88%, 6% 82%, 10% 68%, 0% 56%, 10% 44%, 6% 30%, 20% 24%, 25% 10%, 39% 10%)",
-              }}
-            >
-              <Check className="h-12 w-12 text-white stroke-[4px]" />
-            </div>
-            {/* Sub-Jagged layer for depth if needed */}
-            <div
-              className="absolute inset-0 bg-brand-500/20 scale-110 -z-10"
-              style={{
-                clipPath:
-                  "polygon(50% 0%, 61% 10%, 75% 10%, 80% 24%, 94% 30%, 90% 44%, 100% 56%, 90% 68%, 94% 82%, 80% 88%, 75% 100%, 61% 100%, 50% 90%, 39% 100%, 25% 100%, 20% 88%, 6% 82%, 10% 68%, 0% 56%, 10% 44%, 6% 30%, 20% 24%, 25% 10%, 39% 10%)",
-                opacity: 0.3,
-              }}
+            <div className="absolute inset-0 bg-brand-500/10 blur-3xl rounded-full" />
+            <img
+              src={successIcon}
+              alt="Success"
+              className="h-[128px] w-[128px] relative"
             />
           </div>
         </div>
 
-        <h1 className="text-[32px] font-bold text-grayScale-900 mb-4">
+        <h1 className="text-[26px] font-bold text-grayScale-900 mb-4">
           Video Published Successfully!
         </h1>
-        <p className="text-grayScale-600 text-lg mb-14 max-w-lg font-medium leading-relaxed">
+        <p className="text-grayScale-600 text-base mb-14 max-w-lg font-medium leading-relaxed">
           Your video is now live and available inside the selected module.
         </p>
 
         <div className="flex flex-col gap-4 w-full max-w-[400px]">
           <Button
             onClick={() => navigate(`/new-content/learn-english/${level}`)}
-            className="h-14 rounded-2xl bg-brand-500 font-bold shadow-xl shadow-brand-500/20 text-[17px] text-white hover:bg-brand-600 transition-all active:scale-95"
+            className="h-12 rounded-[6px] bg-brand-500 font-bold text-[17px] text-white  transition-all active:scale-95"
           >
             Go back to Learn English
           </Button>
@@ -90,7 +79,7 @@ export function AddVideoFlow() {
               setCurrentStep(1);
             }}
             variant="outline"
-            className="h-14 rounded-2xl border-brand-200 text-brand-500 font-bold hover:bg-brand-50 transition-all text-[17px] active:scale-95 bg-white"
+            className="h-12 rounded-[6px] border-brand-200 text-brand-500 font-bold text-[17px] active:scale-95 bg-white"
           >
             Add Another Video
           </Button>
@@ -100,7 +89,7 @@ export function AddVideoFlow() {
   }
 
   return (
-    <div className="space-y-8 pb-32 px-6 pt-6 min-h-screen bg-[#F8FAFC]">
+    <div className="space-y-8 pb-32 px-6 pt-6 min-h-screen ">
       {/* Header */}
       <div className="mx-auto max-w-7xl w-full">
         <div className="flex items-center justify-between mb-8">
@@ -120,7 +109,7 @@ export function AddVideoFlow() {
           </Button>
         </div>
 
-        <h1 className="text-4xl font-bold text-[#0F172A] mb-10">
+        <h1 className="text-2xl font-bold text-[#0F172A] mb-10">
           Add New Video
         </h1>
 

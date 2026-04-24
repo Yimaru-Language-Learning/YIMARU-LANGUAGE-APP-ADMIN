@@ -52,7 +52,7 @@ export function LearnEnglishPage() {
 
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="h-11 rounded-xl bg-brand-500 px-6 font-semibold hover:bg-brand-600">
+            <Button className="h-11 rounded-[6px] bg-brand-500 px-6 font-semibold ">
               <Plus className="mr-2 h-5 w-5" />
               Add Program
             </Button>
@@ -72,7 +72,7 @@ export function LearnEnglishPage() {
                 className="absolute inset-0 flex items-center"
                 aria-hidden="true"
               >
-                <div className="w-full border-t border-grayScale-100" />
+                <div className="w-full border-t border-grayScale-200" />
               </div>
               <div className="relative flex justify-center">
                 <div
@@ -86,17 +86,17 @@ export function LearnEnglishPage() {
 
             <form className="space-y-6 p-8 pt-4">
               <div className="space-y-2">
-                <label className="text-[15px] font-medium text-grayScale-700">
+                <label className="text-[15px] text-grayScale-700">
                   Program Name
                 </label>
                 <Input
                   placeholder="e.g. Beginner"
-                  className="h-12 rounded-xl"
+                  className="h-12 rounded-xl ring-0"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[15px] font-medium text-grayScale-700">
+                <label className="text-[15px] text-grayScale-700">
                   Description
                 </label>
                 <Input
@@ -106,7 +106,7 @@ export function LearnEnglishPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[15px] font-medium text-grayScale-700">
+                <label className="text-[15px]  text-grayScale-700">
                   Program Order
                 </label>
                 <Select className="h-12 rounded-xl">
@@ -117,7 +117,7 @@ export function LearnEnglishPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[15px] font-medium text-grayScale-700">
+                <label className="text-[15px] text-grayScale-700">
                   Thumbnail
                 </label>
                 <div className="relative group cursor-pointer">
@@ -148,12 +148,12 @@ export function LearnEnglishPage() {
                 <DialogClose asChild>
                   <Button
                     variant="outline"
-                    className="h-12 min-w-[120px] rounded-xl border-grayScale-200 font-semibold"
+                    className="h-12 min-w-[120px] rounded-[6px] border-grayScale-200 font-semibold"
                   >
                     Cancel
                   </Button>
                 </DialogClose>
-                <Button className="h-12 min-w-[160px] rounded-xl bg-brand-500 font-semibold hover:bg-brand-600">
+                <Button className="h-12 min-w-[160px] rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600">
                   Create Program
                 </Button>
               </div>
@@ -165,7 +165,7 @@ export function LearnEnglishPage() {
       {/* Gradient Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-grayScale-100" />
+          <div className="w-full border-t border-grayScale-200" />
         </div>
         <div className="relative flex justify-center">
           <div
@@ -178,11 +178,11 @@ export function LearnEnglishPage() {
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-warp gap-10">
         {levels.map((level) => (
           <Card
             key={level.title}
-            className="group overflow-hidden border-none shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+            className="group w-[290px] overflow-hidden border-none shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
           >
             {/* Gradient Header */}
             <div
@@ -192,15 +192,17 @@ export function LearnEnglishPage() {
                   "linear-gradient(135deg, #9E289180 0%, #9E2891 100%)",
               }}
             />
-            <CardContent className="bg-white p-6">
-              <h3 className="text-xl font-bold text-grayScale-700">
-                {level.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-grayScale-500">
-                {level.description}
-              </p>
+            <CardContent className="bg-white p-6 flex flex-col h-[280px]">
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-grayScale-700">
+                  {level.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-grayScale-500">
+                  {level.description}
+                </p>
+              </div>
               <Link to={`/new-content/learn-english/${level.id}/courses`}>
-                <Button className="mt-8 h-11 w-full rounded-xl bg-brand-500 font-semibold hover:bg-brand-600">
+                <Button className="h-11 w-full rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600">
                   View Courses
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>

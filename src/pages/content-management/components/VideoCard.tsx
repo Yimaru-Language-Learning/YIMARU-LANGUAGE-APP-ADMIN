@@ -67,7 +67,7 @@ export function VideoCard({
           </button>
         </div>
 
-        <h3 className="text-[17px] font-bold text-grayScale-900 line-clamp-2 leading-snug">
+        <h3 className="text-[16px] font-medium text-grayScale-900 line-clamp-2 leading-snug">
           {title}
         </h3>
 
@@ -76,7 +76,7 @@ export function VideoCard({
           <Button
             variant="outline"
             onClick={onEdit}
-            className="w-full h-11 rounded-xl border-grayScale-100 text-grayScale-600 font-bold hover:bg-grayScale-50 transition-all flex items-center justify-center gap-2"
+            className="w-full h-10 rounded-xl border-grayScale-200 text-grayScale-600 font-bold hover:bg-grayScale-50 transition-all flex items-center justify-center gap-2"
           >
             <Edit2 className="h-4 w-4" />
             Edit
@@ -85,7 +85,7 @@ export function VideoCard({
             disabled={status === "Published"}
             onClick={onPublish}
             className={cn(
-              "w-full h-11 rounded-xl font-bold transition-all shadow-sm",
+              "w-full h-10 rounded-xl font-bold transition-all shadow-sm",
               status === "Published"
                 ? "bg-[#E9D5E5] text-white opacity-100 cursor-default"
                 : "bg-brand-500 text-white hover:bg-brand-600 shadow-brand-500/10",

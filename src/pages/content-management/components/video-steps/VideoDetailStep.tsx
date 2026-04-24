@@ -6,6 +6,7 @@ import {
   Lightbulb,
   ChevronRight,
   ImageIcon,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
@@ -55,7 +56,7 @@ export function VideoDetailStep({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-[1200px] mx-auto pb-20">
       {/* Single Unified Card for Everything */}
-      <div className="bg-white rounded-[24px] border border-grayScale-50 p-10 shadow-sm space-y-12">
+      <div className="bg-white rounded-[24px] border border-grayScale-50 p-10 shadow-sm space-y-8">
         {/* 1. Upload Video Section */}
         <div className="space-y-6">
           <h3 className="text-[20px] font-bold text-grayScale-900 ml-1">
@@ -71,7 +72,7 @@ export function VideoDetailStep({
                   </div>
                 </div>
               </div>
-              <h4 className="text-[17px] font-bold text-grayScale-900 mb-2">
+              <h4 className="text-[17px]  text-grayScale-900 mb-2">
                 Drag and drop video files here
               </h4>
               <p className="text-grayScale-400 font-medium text-[13px] mb-8">
@@ -79,11 +80,11 @@ export function VideoDetailStep({
               </p>
 
               <div className="flex items-center gap-4 w-full max-w-[200px] mb-8">
-                <div className="flex-1 h-[1px] bg-grayScale-100" />
-                <span className="text-[10px] font-bold text-grayScale-300 uppercase tracking-widest">
+                <div className="flex-1 h-[1px] bg-grayScale-200" />
+                <span className="text-[12px] font-bold text-grayScale-300 uppercase tracking-widest">
                   OR
                 </span>
-                <div className="flex-1 h-[1px] bg-grayScale-100" />
+                <div className="flex-1 h-[1px] bg-grayScale-200" />
               </div>
 
               <Button
@@ -95,18 +96,35 @@ export function VideoDetailStep({
             </div>
           </div>
         </div>
+        {/* Gradient Divider */}
+        <div className="relative">
+          <div
+            className="absolute inset-0 flex items-center"
+            aria-hidden="true"
+          >
+            <div className="w-full border-t border-grayScale-200" />
+          </div>
+          <div className="relative flex justify-center">
+            <div
+              className="h-[0.5px] w-full opacity-20 rounded-full"
+              style={{
+                background: "gray",
+              }}
+            />
+          </div>
+        </div>
 
         {/* 2. Form & Side Panel Grid */}
-        <div className="flex flex-col lg:flex-row gap-12 items-start pt-4 border-t border-grayScale-50">
+        <div className="flex flex-col lg:flex-row gap-12 items-start">
           {/* Left Column: Title, Order, Description */}
           <div className="flex-1 w-full space-y-10">
             <div className="space-y-3">
-              <label className="text-[14px] font-bold text-grayScale-900 ml-1">
+              <label className="text-[14px] font-medium text-grayScale-900 ml-1">
                 Video Title
               </label>
               <Input
                 placeholder="e.g., Introduction to Past Tense Verbs"
-                className="h-14 rounded-xl border-grayScale-100 bg-white px-6 text-[15px] text-grayScale-800 placeholder:text-grayScale-300 focus:border-brand-500 font-medium transition-all shadow-sm"
+                className="h-12 rounded-xl border-grayScale-200 bg-white px-6 text-[15px] text-grayScale-800 placeholder:text-grayScale-500 focus:border-brand-500 font-medium transition-all shadow-sm"
                 value={formData.title}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
@@ -115,11 +133,11 @@ export function VideoDetailStep({
             </div>
 
             <div className="space-y-3">
-              <label className="text-[14px] font-bold text-grayScale-900 ml-1">
+              <label className="text-[14px] font-medium text-grayScale-900 ml-1">
                 Video Order
               </label>
               <Select
-                className="h-14 rounded-xl border-grayScale-100 bg-white px-6 text-[15px] text-grayScale-800 font-medium cursor-pointer focus:border-brand-500 shadow-sm"
+                className="h-12 rounded-xl border-grayScale-200 bg-white px-6 text-[15px] text-grayScale-800 font-medium cursor-pointer focus:border-brand-500 shadow-sm"
                 value={formData.order}
                 onChange={(e) =>
                   setFormData({ ...formData, order: (e.target as any).value })
@@ -132,12 +150,12 @@ export function VideoDetailStep({
             </div>
 
             <div className="space-y-3">
-              <label className="text-[14px] font-bold text-grayScale-900 ml-1">
+              <label className="text-[14px] font-medium text-grayScale-900 ml-1">
                 Description
               </label>
-              <div className="rounded-xl border border-grayScale-100 bg-white overflow-hidden flex flex-col min-h-[380px] shadow-sm focus-within:border-brand-200 transition-all">
+              <div className="rounded-xl border border-grayScale-200 bg-white overflow-hidden flex flex-col min-h-[200px] shadow-sm focus-within:border-brand-200 transition-all">
                 {/* Toolbar */}
-                <div className="flex items-center gap-1 p-2 bg-[#F8FAFC]">
+                <div className="flex items-center gap-1  bg-[#F8FAFC]">
                   <div className="flex items-center gap-1 w-fit bg-transparent px-2 py-1 rounded-lg">
                     <button
                       onClick={() => handleCommand("bold")}
@@ -182,8 +200,7 @@ export function VideoDetailStep({
                     ref={editorRef}
                     contentEditable
                     onInput={handleInput}
-                    className="w-full h-full min-h-[300px] focus:outline-none text-[15px] text-grayScale-700 font-medium leading-relaxed prose prose-sm max-w-none"
-                    // Removed dangerouslySetInnerHTML to prevent cursor jumping
+                    className="w-full min-h-[140px] focus:outline-none text-[15px] text-grayScale-700 font-medium leading-relaxed prose prose-sm max-w-none"
                   />
                 </div>
               </div>
@@ -191,11 +208,11 @@ export function VideoDetailStep({
           </div>
 
           {/* Right Column: Thumbnail, Pro Tip */}
-          <div className="w-full lg:w-[320px] space-y-10">
+          <div className="w-full lg:w-[320px] space-y-5">
             {/* Thumbnail Section */}
             <div className="space-y-4">
               <div className="space-y-1 ml-1">
-                <h3 className="text-[14px] font-bold text-grayScale-900">
+                <h3 className="text-[14px] font-medium text-grayScale-900">
                   Thumbnail
                 </h3>
                 <p className="text-[12px] text-grayScale-400 font-medium leading-relaxed">
@@ -203,11 +220,11 @@ export function VideoDetailStep({
                 </p>
               </div>
               <div className="relative group cursor-pointer aspect-video">
-                <div className="h-full w-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E2E8F0] bg-[#F8FAFC]/50 p-6 transition-all group-hover:border-brand-200">
-                  <div className="h-10 w-10 rounded bg-white shadow-sm flex items-center justify-center mb-3">
-                    <ImageIcon className="h-5 w-5 text-grayScale-400" />
+                <div className="h-full w-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-grayScale-200 bg-[#F8FAFC]/50 p-6 transition-all group-hover:border-brand-200">
+                  <div className="h-10 w-10 flex items-center justify-center mb-3">
+                    <ImageIcon className="h-7 w-7 text-grayScale-400" />
                   </div>
-                  <p className="text-[13px] font-bold text-brand-500">
+                  <p className="text-[13px] font-bold text-brand-400">
                     Click to upload
                   </p>
                 </div>
@@ -215,40 +232,38 @@ export function VideoDetailStep({
             </div>
 
             {/* Pro Tip Section */}
-            <div className="bg-[#FAF5FF] rounded-xl border border-[#F3E8FF] p-6 space-y-3">
+            <div className="bg-brand-500/5 flex items-start gap-3 rounded-xl border border-[#F3E8FF] p-6 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 flex-shrink-0 rounded-full bg-white flex items-center justify-center border border-[#F3E8FF] shadow-sm">
+                <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center">
                   <Lightbulb className="h-4 w-4 text-brand-50" fill="#A855F7" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Lightbulb className="h-4 w-4 text-brand-500" />
-                  </div>
                 </div>
+              </div>
+              <div className="relative top-[-10px]">
                 <h3 className="text-[14px] font-bold text-grayScale-900">
                   Pro Tip
                 </h3>
+                <p className="text-[12px] text-grayScale-700 font-medium leading-relaxed">
+                  Short, descriptive titles work best. Include keywords like
+                  "Grammar" or "Vocabulary" to help students find your content.
+                </p>
               </div>
-              <p className="text-[12px] text-grayScale-700 font-medium leading-relaxed">
-                Short, descriptive titles work best. Include keywords like
-                "Grammar" or "Vocabulary" to help students find your content.
-              </p>
             </div>
           </div>
         </div>
 
         {/* Footer (Inside Card Container) */}
-        <div className="pt-10 border-t border-grayScale-50 flex items-center justify-between">
+        <div className="pt-5 border-t border-grayScale-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
-            <span className="text-[14px] font-bold text-grayScale-400">
+            <span className="text-[14px] font-medium text-grayScale-600">
               Last saved: Just now
             </span>
           </div>
           <Button
             onClick={nextStep}
-            className="h-12 px-10 rounded-xl bg-brand-500 font-bold text-white hover:bg-brand-600 shadow-lg shadow-brand-500/20 transition-all flex items-center gap-2 text-sm group active:scale-95"
+            className="h-10 px-10 rounded-[6px] bg-brand-500 font-bold text-white transition-all flex items-center gap-2 text-sm group active:scale-95"
           >
             Continue
-            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </div>

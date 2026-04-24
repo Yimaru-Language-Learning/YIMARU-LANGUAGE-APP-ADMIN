@@ -22,6 +22,13 @@ import { CourseDetailPage } from "../pages/content-management/CourseDetailPage";
 import { ModuleDetailPage } from "../pages/content-management/ModuleDetailPage";
 import { AddVideoFlow } from "../pages/content-management/AddVideoFlow";
 import { AddPracticeFlow } from "../pages/content-management/AddPracticeFlow";
+import { CourseModuleDetailPage } from "../pages/content-management/CourseModuleDetailPage";
+import { AttachPracticeFlow } from "../pages/content-management/AttachPracticeFlow";
+import { AttachProgramPracticeFlow } from "../pages/content-management/AttachProgramPracticeFlow";
+import { ProgramTypeSelectionPage } from "../pages/content-management/ProgramTypeSelectionPage";
+import { ProgramDetailPage } from "../pages/content-management/ProgramDetailPage";
+import { CourseManagementPage } from "../pages/content-management/CourseManagementPage";
+import { UnitManagementPage } from "../pages/content-management/UnitManagementPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { NotificationsPage } from "../pages/notifications/NotificationsPage";
 import { CreateNotificationPage } from "../pages/notifications/CreateNotificationPage";
@@ -154,6 +161,34 @@ export function AppRoutes() {
         </Route>
 
         <Route path="/new-content" element={<NewContentPage />} />
+        <Route
+          path="/new-content/courses"
+          element={<ProgramTypeSelectionPage />}
+        />
+        <Route
+          path="/new-content/courses/:programType"
+          element={<ProgramDetailPage />}
+        />
+        <Route
+          path="/new-content/courses/:programType/attach-practice"
+          element={<AttachProgramPracticeFlow />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/unit/:unitId/module/:moduleId/attach-practice"
+          element={<AttachPracticeFlow />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId"
+          element={<CourseManagementPage />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/:unitId"
+          element={<UnitManagementPage />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/:moduleId"
+          element={<CourseModuleDetailPage />}
+        />
         <Route
           path="/new-content/learn-english"
           element={<LearnEnglishPage />}

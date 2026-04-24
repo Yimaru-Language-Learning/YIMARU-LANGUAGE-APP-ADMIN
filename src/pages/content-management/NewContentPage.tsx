@@ -41,7 +41,7 @@ export function NewContentPage() {
               <Mic className="h-10 w-10 text-brand-500" />
             </div>
           </div>
-          <CardContent className="border-t border-grayScale-100 bg-white p-8 text-center">
+          <CardContent className="border-t border-grayScale-200 bg-white p-8 text-center">
             <h3 className="text-xl font-bold text-grayScale-700">
               Learn English
             </h3>
@@ -50,7 +50,7 @@ export function NewContentPage() {
               modules.
             </p>
             <Link to="/new-content/learn-english">
-              <Button className="mt-8 h-12 w-full rounded-xl bg-brand-500 text-base font-semibold hover:bg-brand-600">
+              <Button className="mt-8 h-12 w-full rounded-[6px] bg-brand-500 text-base font-semibold ">
                 Manage Learn English
               </Button>
             </Link>
@@ -64,15 +64,17 @@ export function NewContentPage() {
               <Mic className="h-10 w-10 text-brand-500" />
             </div>
           </div>
-          <CardContent className="border-t border-grayScale-100 bg-white p-8 text-center">
+          <CardContent className="border-t border-grayScale-200 bg-white p-8 text-center">
             <h3 className="text-xl font-bold text-grayScale-700">Courses</h3>
             <p className="mt-3 text-sm leading-relaxed text-grayScale-500">
               Manage skill-based and exam preparation courses such as Duolingo
               and IELTS.
             </p>
-            <Button className="mt-8 h-12 w-full rounded-xl bg-brand-500 text-base font-semibold hover:bg-brand-600">
-              Manage Courses
-            </Button>
+            <Link to="/new-content/courses" className="block w-full">
+              <Button className="mt-8 h-12 w-full rounded-[6px] bg-brand-500 text-base font-semibold ">
+                Manage Courses
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

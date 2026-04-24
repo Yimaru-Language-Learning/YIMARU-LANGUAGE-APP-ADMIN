@@ -18,15 +18,18 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
             key={step}
             className="flex-1 relative flex flex-col items-center group"
           >
-            {/* Connector Line (Behind) */}
+            {/* Connector Line - floats between circles with gap on both sides */}
             {index < steps.length - 1 && (
-              <div className="absolute left-1/2 w-[100%] mx-auto top-5 h-[2px] bg-grayScale-200 z-0" />
+              <div
+                className="absolute top-4 h-[1.5px] bg-grayScale-200 z-0"
+                style={{ left: "calc(50% + 24px)", right: "calc(-50% + 24px)" }}
+              />
             )}
 
             {/* Circle */}
             <div
               className={cn(
-                "relative z-10 grid h-10 w-10 place-items-center rounded-full border-2 text-sm font-bold transition-all duration-300 mb-3",
+                "relative z-10 grid h-8 w-8 place-items-center rounded-full border-2 text-sm font-bold transition-all duration-300 mb-3",
                 isCurrent
                   ? "border-brand-500 bg-brand-500 text-white shadow-md scale-110"
                   : "border-grayScale-100 bg-white text-grayScale-400 font-medium",
@@ -38,7 +41,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
             {/* Label */}
             <span
               className={cn(
-                "relative z-10 text-[13px] font-bold transition-colors duration-300",
+                "relative z-10 text-[12px] font-bold transition-colors duration-300",
                 isCurrent ? "text-brand-500" : "text-grayScale-400 font-medium",
               )}
             >

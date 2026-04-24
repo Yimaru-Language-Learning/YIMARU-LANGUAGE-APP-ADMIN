@@ -28,10 +28,6 @@ export function AddModuleModal({ isOpen, onClose }: AddModuleModalProps) {
           <DialogDescription className="text-sm text-grayScale-400">
             Create a module to organize videos and practices.
           </DialogDescription>
-          <DialogClose className="absolute right-8 top-8 flex h-10 w-10 items-center justify-center rounded-full hover:bg-grayScale-50 transition-all">
-            <X className="h-6 w-6 text-grayScale-400" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
         </DialogHeader>
 
         {/* Gradient Divider */}

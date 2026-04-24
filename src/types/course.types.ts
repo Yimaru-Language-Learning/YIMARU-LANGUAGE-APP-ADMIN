@@ -57,6 +57,148 @@ export interface UpdateCourseRequest {
   is_active?: boolean
 }
 
+/** Row from GET /programs (e.g. Beginner / Intermediate program buckets) */
+export interface LearningProgramListItem {
+  id: number
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  sort_order: number
+  created_at: string
+}
+
+export interface UpdateLearningProgramRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+export interface CreateLearningProgramRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+export interface CreateLearningProgramResponse {
+  message: string
+  data: LearningProgramListItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetLearningProgramsResponse {
+  message: string
+  data: {
+    programs: LearningProgramListItem[]
+    total_count: number
+    limit?: number
+    offset?: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /programs/:program_id/courses */
+export interface ProgramCourseListItem {
+  id: number
+  program_id: number
+  name: string
+  description: string
+  sort_order: number
+  created_at: string
+  thumbnail?: string | null
+  /** Some list endpoints may expose the image as `thumbnail_url` instead. */
+  thumbnail_url?: string | null
+  /** When the API adds aggregates, map these for the course cards. */
+  modules_count?: number
+  videos_count?: number
+  practices_count?: number
+}
+
+/** Body for PUT /courses/:id (program-linked Learn English courses). */
+export interface UpdateTopLevelCourseRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+/** Body for POST /programs/:program_id/courses */
+export interface CreateProgramCourseRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+export interface CreateProgramCourseResponse {
+  message: string
+  data: ProgramCourseListItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetProgramCoursesResponse {
+  message: string
+  data: {
+    total_count: number
+    limit: number
+    offset: number
+    courses: ProgramCourseListItem[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Row from GET /courses/:courseId/modules (Learn English track). */
+export interface TopLevelCourseModuleItem {
+  id: number
+  program_id: number
+  course_id: number
+  name: string
+  description: string
+  icon?: string | null
+  sort_order: number
+  created_at: string
+}
+
+export interface GetTopLevelCourseModulesResponse {
+  message: string
+  data: {
+    limit: number
+    offset: number
+    modules: TopLevelCourseModuleItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Body for PUT /modules/:id (Learn English top-level modules). */
+export interface UpdateTopLevelCourseModuleRequest {
+  name: string
+  description: string
+  icon: string
+}
+
+/** Body for POST /courses/:courseId/modules */
+export interface CreateTopLevelCourseModuleRequest {
+  name: string
+  description: string
+  icon: string
+}
+
+export interface CreateTopLevelCourseModuleResponse {
+  message: string
+  data: TopLevelCourseModuleItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
 // ============================================
 // Legacy Types (deprecated - using SubCourse hierarchy now)
 // Keeping for backward compatibility with existing API endpoints

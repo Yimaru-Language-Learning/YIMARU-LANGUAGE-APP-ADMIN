@@ -59,7 +59,6 @@ export function SubCategoryCoursesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32">
         <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
-        <p className="mt-4 text-sm text-grayScale-500">Loading courses…</p>
       </div>
     )
   }

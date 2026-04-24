@@ -12,6 +12,7 @@ let failedQueue: Array<{
   resolve: (token: string) => void;
   reject: (error: Error) => void;
 }> = [];
+const TOKEN_REFRESH_BUFFER_SECONDS = 120;
 
 const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -32,23 +33,47 @@ const clearAuthAndRedirect = () => {
   window.location.href = "/login";
 };
 
-const refreshAccessToken = async (): Promise<string> => {
-  const accessToken = localStorage.getItem("access_token");
-  const refreshToken = localStorage.getItem("refresh_token");
-  const role = localStorage.getItem("role");
-  const memberId = localStorage.getItem("member_id");
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const json = atob(padded);
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
 
-  if (!refreshToken || !memberId) {
+const isAccessTokenExpiringSoon = (token: string) => {
+  const payload = decodeJwtPayload(token);
+  const exp = Number(payload?.exp);
+  if (!Number.isFinite(exp)) return true;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return exp - nowSeconds <= TOKEN_REFRESH_BUFFER_SECONDS;
+};
+
+const isAuthEndpointRequest = (url?: string) => {
+  if (!url) return false;
+  return (
+    url.includes("/team/login") ||
+    url.includes("/team/google-login") ||
+    url.includes("/team/refresh")
+  );
+};
+
+const refreshAccessToken = async (): Promise<string> => {
+  const refreshToken = localStorage.getItem("refresh_token");
+
+  if (!refreshToken) {
     throw new Error("No refresh token available");
   }
 
   const response = await axios.post(
-    `${import.meta.env.VITE_API_BASE_URL}/auth/refresh`,
+    `${import.meta.env.VITE_API_BASE_URL}/team/refresh`,
     {
-      access_token: accessToken,
       refresh_token: refreshToken,
-      role: role || "admin",
-      member_id: Number(memberId),
     }
   );
 
@@ -65,9 +90,43 @@ const refreshAccessToken = async (): Promise<string> => {
   return newAccessToken;
 };
 
+const getValidAccessToken = async (forceRefresh = false): Promise<string> => {
+  const currentToken = localStorage.getItem("access_token");
+  if (!forceRefresh && currentToken && !isAccessTokenExpiringSoon(currentToken)) {
+    return currentToken;
+  }
+
+  if (isRefreshing) {
+    return new Promise((resolve, reject) => {
+      failedQueue.push({ resolve, reject });
+    });
+  }
+
+  isRefreshing = true;
+  try {
+    const newToken = await refreshAccessToken();
+    processQueue(null, newToken);
+    return newToken;
+  } catch (refreshError) {
+    processQueue(refreshError as Error, null);
+    clearAuthAndRedirect();
+    throw refreshError;
+  } finally {
+    isRefreshing = false;
+  }
+};
+
 // Attach access token to every request
-http.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
+http.interceptors.request.use(async (config) => {
+  if (isAuthEndpointRequest(config.url)) {
+    return config;
+  }
+
+  let token = localStorage.getItem("access_token");
+  if (token && isAccessTokenExpiringSoon(token)) {
+    token = await getValidAccessToken();
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -80,32 +139,19 @@ http.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return http(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpointRequest(originalRequest.url)
+    ) {
       originalRequest._retry = true;
-      isRefreshing = true;
 
       try {
-        const newToken = await refreshAccessToken();
-        processQueue(null, newToken);
+        const newToken = await getValidAccessToken(true);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return http(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError as Error, null);
-        clearAuthAndRedirect();
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
 

@@ -1,16 +1,18 @@
-import { useState, useCallback } from "react"
-import { Navigate, Outlet } from "react-router-dom"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { Sidebar } from "../components/sidebar/Sidebar"
 import { Topbar } from "../components/topbar/Topbar"
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const mainRef = useRef<HTMLElement | null>(null)
+  const previousRouteKeyRef = useRef<string>("")
+  const location = useLocation()
+  const scrollStoragePrefix = "app:scroll:"
+  const routeKey = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
 
   const token = localStorage.getItem("access_token")
-  if (!token) {
-    return <Navigate to="/login" replace />
-  }
 
   const handleSidebarToggle = useCallback(() => {
     setSidebarOpen((prev) => !prev)
@@ -19,6 +21,43 @@ export function AppLayout() {
   const handleSidebarClose = useCallback(() => {
     setSidebarOpen(false)
   }, [])
+
+  useEffect(() => {
+    const container = mainRef.current
+    if (!container) return
+
+    const saveScroll = (key: string) => {
+      sessionStorage.setItem(`${scrollStoragePrefix}${key}`, String(container.scrollTop || 0))
+    }
+
+    const previousKey = previousRouteKeyRef.current
+    if (previousKey && previousKey !== routeKey) {
+      saveScroll(previousKey)
+    }
+    previousRouteKeyRef.current = routeKey
+
+    const restoreRaw = sessionStorage.getItem(`${scrollStoragePrefix}${routeKey}`)
+    const restoreTop = restoreRaw ? Number(restoreRaw) : 0
+    const top = Number.isFinite(restoreTop) && restoreTop > 0 ? restoreTop : 0
+    requestAnimationFrame(() => {
+      container.scrollTo({ top, behavior: "auto" })
+    })
+
+    const onScroll = () => saveScroll(routeKey)
+    const onBeforeUnload = () => saveScroll(routeKey)
+    container.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("beforeunload", onBeforeUnload)
+
+    return () => {
+      saveScroll(routeKey)
+      container.removeEventListener("scroll", onScroll)
+      window.removeEventListener("beforeunload", onBeforeUnload)
+    }
+  }, [routeKey])
+
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
 
   return (
     <div className="flex min-h-screen bg-grayScale-100">
@@ -34,7 +73,7 @@ export function AppLayout() {
         }`}
       >
         <Topbar onSidebarToggle={handleSidebarToggle} />
-        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-8 pt-4 sm:px-4 lg:px-6">
+        <main ref={mainRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-8 pt-4 sm:px-4 lg:px-6">
           <Outlet />
         </main>
         <footer className="border-t bg-grayScale-50 px-4 py-3 lg:px-6">

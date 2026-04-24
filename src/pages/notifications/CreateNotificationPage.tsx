@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bell, Loader2, Mail, MailOpen, Megaphone } from "lucide-react"
+import { Bell, Mail, MailOpen, Megaphone } from "lucide-react"
 import { Card, CardContent } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Textarea } from "../../components/ui/textarea"
 import { FileUpload } from "../../components/ui/file-upload"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { cn } from "../../lib/utils"
 import { getTeamMembers } from "../../api/team.api"
 import type { TeamMember } from "../../types/team.types"
@@ -282,7 +283,7 @@ export function CreateNotificationPage() {
               >
                 {sending ? (
                   <>
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    <SpinnerIcon className="mr-2 h-3.5 w-3.5" alt="" />
                     Sending…
                   </>
                 ) : (
@@ -347,7 +348,7 @@ export function CreateNotificationPage() {
                 <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-lg border border-grayScale-100 bg-grayScale-50/60 p-2">
                   {recipientsLoading && (
                     <div className="flex items-center justify-center py-6 text-xs text-grayScale-400">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <SpinnerIcon className="mr-2 h-4 w-4" alt="" />
                       Loading users…
                     </div>
                   )}

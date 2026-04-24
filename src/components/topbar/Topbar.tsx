@@ -45,7 +45,7 @@ export function Topbar({ onSidebarToggle }: TopbarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-3 border-b bg-grayScale-50/85 px-4 backdrop-blur lg:justify-end lg:px-6">
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b bg-grayScale-50/85 px-4 backdrop-blur lg:justify-end lg:px-6">
       {/* Sidebar toggle */}
       <button
         type="button"

@@ -60,6 +60,14 @@ export interface CreateRoleResponse {
   metadata: unknown
 }
 
+export interface DeleteRoleResponse {
+  message: string
+  success: boolean
+  status_code: number
+  // Some backends may include extra fields; keep it optional for compatibility.
+  metadata?: unknown
+}
+
 export interface SetRolePermissionsRequest {
   permission_ids: number[]
 }

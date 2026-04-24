@@ -1,14 +1,27 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import { Plus, ArrowLeft, ToggleLeft, ToggleRight, X, Trash2, Edit, AlertCircle, Star, MessageSquare, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
+import {
+  Plus,
+  ArrowLeft,
+  ToggleLeft,
+  ToggleRight,
+  X,
+  Trash2,
+  Edit,
+  AlertCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  BookOpen,
+  Eye,
+} from "lucide-react"
 import practiceSrc from "../../assets/Practice.svg"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import alertSrc from "../../assets/Alert.svg"
 import { Button } from "../../components/ui/button"
 import { Badge } from "../../components/ui/badge"
 import { Input } from "../../components/ui/input"
-import { FileUpload } from "../../components/ui/file-upload"
 import {
   Table,
   TableBody,
@@ -18,24 +31,19 @@ import {
   TableRow,
 } from "../../components/ui/table"
 import {
-  getCoursesByCategory,
+  getSubCategoriesByCategoryId,
   getCourseCategories,
-  createCourse,
-  deleteCourse,
-  updateCourseStatus,
-  updateCourse,
-  updateCourseThumbnail,
-  getRatings,
+  createSubCategory,
+  deleteCourseSubCategory,
+  updateSubCategory,
 } from "../../api/courses.api"
-import { uploadImageFile } from "../../api/files.api"
-import type { Course, CourseCategory, Rating } from "../../types/course.types"
+import type { CategorySubCategoryListItem, CourseCategory } from "../../types/course.types"
 import { cn } from "../../lib/utils"
-import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 export function CoursesPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
   const navigate = useNavigate()
-  const [courses, setCourses] = useState<Course[]>([])
+  const [subCategories, setSubCategories] = useState<CategorySubCategoryListItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [category, setCategory] = useState<CourseCategory | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,36 +52,32 @@ export function CoursesPage() {
   const [showModal, setShowModal] = useState(false)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [displayOrder, setDisplayOrder] = useState("")
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [courseToDelete, setCourseToDelete] = useState<Course | null>(null)
+  const [subCategoryToDelete, setSubCategoryToDelete] = useState<CategorySubCategoryListItem | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [togglingId, setTogglingId] = useState<number | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null)
+  const [subCategoryToEdit, setSubCategoryToEdit] = useState<CategorySubCategoryListItem | null>(null)
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
-  const [editThumbnail, setEditThumbnail] = useState("")
-  const [editThumbnailFile, setEditThumbnailFile] = useState<File | null>(null)
+  const [editDisplayOrder, setEditDisplayOrder] = useState(0)
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
-  const [showRatingsModal, setShowRatingsModal] = useState(false)
-  const [ratingsCourseId, setRatingsCourseId] = useState<number | null>(null)
-  const [courseRatings, setCourseRatings] = useState<Rating[]>([])
-  const [courseRatingsLoading, setCourseRatingsLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const fetchCourses = async () => {
+  const fetchSubCategories = async () => {
     if (!categoryId) return
 
     try {
-      const coursesRes = await getCoursesByCategory(Number(categoryId))
-      console.log("Courses response:", coursesRes.data.data.courses)
-      setCourses(coursesRes.data.data.courses ?? [])
+      const res = await getSubCategoriesByCategoryId(Number(categoryId))
+      const raw = res.data?.data?.sub_categories
+      setSubCategories(Array.isArray(raw) ? raw : [])
     } catch (err) {
-      console.error("Failed to fetch courses:", err)
+      console.error("Failed to fetch sub-categories:", err)
     }
   }
 
@@ -82,18 +86,19 @@ export function CoursesPage() {
       if (!categoryId) return
 
       try {
-        const [coursesRes, categoriesRes] = await Promise.all([
-          getCoursesByCategory(Number(categoryId)),
+        const [subRes, categoriesRes] = await Promise.all([
+          getSubCategoriesByCategoryId(Number(categoryId)),
           getCourseCategories(),
         ])
 
-        setCourses(coursesRes.data.data.courses ?? [])
-        const foundCategory = categoriesRes.data.data.categories.find(
-          (c) => c.id === Number(categoryId)
+        const raw = subRes.data?.data?.sub_categories
+        setSubCategories(Array.isArray(raw) ? raw : [])
+        const foundCategory = categoriesRes.data?.data?.categories?.find(
+          (c) => c.id === Number(categoryId),
         )
         setCategory(foundCategory ?? null)
       } catch (err) {
-        console.error("Failed to fetch courses:", err)
+        console.error("Failed to fetch sub-categories:", err)
         setError("Failed to load sub-categories")
       } finally {
         setLoading(false)
@@ -110,6 +115,7 @@ export function CoursesPage() {
   const handleOpenModal = () => {
     setTitle("")
     setDescription("")
+    setDisplayOrder("")
     setSaveError(null)
     setShowModal(true)
   }
@@ -118,16 +124,13 @@ export function CoursesPage() {
     setShowModal(false)
     setTitle("")
     setDescription("")
+    setDisplayOrder("")
     setSaveError(null)
   }
 
   const handleSave = async () => {
     if (!title.trim()) {
-      setSaveError("Title is required")
-      return
-    }
-    if (!description.trim()) {
-      setSaveError("Description is required")
+      setSaveError("Name is required")
       return
     }
 
@@ -135,13 +138,15 @@ export function CoursesPage() {
     setSaveError(null)
 
     try {
-      await createCourse({
+      const orderParsed = parseInt(displayOrder.trim(), 10)
+      await createSubCategory({
         category_id: Number(categoryId),
-        title: title.trim(),
-        description: description.trim(),
+        name: title.trim(),
+        description: description.trim() || null,
+        ...(Number.isFinite(orderParsed) && orderParsed >= 0 ? { display_order: orderParsed } : {}),
       })
       handleCloseModal()
-      await fetchCourses()
+      await fetchSubCategories()
     } catch (err: any) {
       console.error("Failed to create course:", err)
       setSaveError(err.response?.data?.message || "Failed to create sub-category")
@@ -150,20 +155,20 @@ export function CoursesPage() {
     }
   }
 
-  const handleDeleteClick = (course: Course) => {
-    setCourseToDelete(course)
+  const handleDeleteClick = (sub: CategorySubCategoryListItem) => {
+    setSubCategoryToDelete(sub)
     setShowDeleteModal(true)
   }
 
   const handleConfirmDelete = async () => {
-    if (!courseToDelete) return
+    if (!subCategoryToDelete) return
 
     setDeleting(true)
     try {
-      await deleteCourse(courseToDelete.id)
+      await deleteCourseSubCategory(subCategoryToDelete.id)
       setShowDeleteModal(false)
-      setCourseToDelete(null)
-      await fetchCourses()
+      setSubCategoryToDelete(null)
+      await fetchSubCategories()
     } catch (err) {
       console.error("Failed to delete course:", err)
     } finally {
@@ -171,11 +176,11 @@ export function CoursesPage() {
     }
   }
 
-  const handleToggleStatus = async (course: Course) => {
-    setTogglingId(course.id)
+  const handleToggleStatus = async (sub: CategorySubCategoryListItem) => {
+    setTogglingId(sub.id)
     try {
-      await updateCourseStatus(course.id, !course.is_active)
-      await fetchCourses()
+      await updateSubCategory(sub.id, { is_active: !sub.is_active })
+      await fetchSubCategories()
     } catch (err) {
       console.error("Failed to update course status:", err)
     } finally {
@@ -183,35 +188,29 @@ export function CoursesPage() {
     }
   }
 
-  const handleEditClick = (course: Course) => {
-    setCourseToEdit(course)
-    setEditTitle(course.title || "")
-    setEditDescription(course.description || "")
-    setEditThumbnail(course.thumbnail || "")
-    setEditThumbnailFile(null)
+  const handleEditClick = (sub: CategorySubCategoryListItem) => {
+    setSubCategoryToEdit(sub)
+    setEditTitle(sub.name || "")
+    setEditDescription(sub.description ?? "")
+    setEditDisplayOrder(sub.display_order ?? 0)
     setUpdateError(null)
     setShowEditModal(true)
   }
 
   const handleCloseEditModal = () => {
     setShowEditModal(false)
-    setCourseToEdit(null)
+    setSubCategoryToEdit(null)
     setEditTitle("")
     setEditDescription("")
-    setEditThumbnail("")
-    setEditThumbnailFile(null)
+    setEditDisplayOrder(0)
     setUpdateError(null)
   }
 
   const handleUpdate = async () => {
-    if (!courseToEdit) return
+    if (!subCategoryToEdit) return
 
     if (!editTitle.trim()) {
-      setUpdateError("Title is required")
-      return
-    }
-    if (!editDescription.trim()) {
-      setUpdateError("Description is required")
+      setUpdateError("Name is required")
       return
     }
 
@@ -219,23 +218,15 @@ export function CoursesPage() {
     setUpdateError(null)
 
     try {
-      await updateCourse(courseToEdit.id, {
-        title: editTitle.trim(),
-        description: editDescription.trim(),
-        is_active: courseToEdit.is_active,
+      await updateSubCategory(subCategoryToEdit.id, {
+        name: editTitle.trim(),
+        description: editDescription.trim() || null,
+        display_order: Math.max(0, Number(editDisplayOrder) || 0),
+        is_active: subCategoryToEdit.is_active,
       })
 
-      const thumbnailUrl =
-        editThumbnailFile
-          ? (await uploadImageFile(editThumbnailFile)).data?.data?.url?.trim()
-          : editThumbnail.trim() || ""
-
-      if (thumbnailUrl) {
-        await updateCourseThumbnail(courseToEdit.id, thumbnailUrl)
-      }
-
       handleCloseEditModal()
-      await fetchCourses()
+      await fetchSubCategories()
     } catch (err: any) {
       console.error("Failed to update course:", err)
       setUpdateError(err.response?.data?.message || "Failed to update sub-category")
@@ -244,32 +235,19 @@ export function CoursesPage() {
     }
   }
 
-  const handleCourseClick = (courseId: number) => {
-    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-modules`)
+  const handleOpenSubCategory = (subCategoryId: number) => {
+    navigate(`/content/category/${categoryId}/sub-categories/${subCategoryId}/courses`)
   }
 
-  const handleViewRatings = async (courseId: number) => {
-    setRatingsCourseId(courseId)
-    setShowRatingsModal(true)
-    setCourseRatingsLoading(true)
-    try {
-      const res = await getRatings({ target_type: "course", target_id: courseId, limit: 10 })
-      setCourseRatings(res.data.data ?? [])
-    } catch (err) {
-      console.error("Failed to fetch ratings:", err)
-    } finally {
-      setCourseRatingsLoading(false)
-    }
-  }
-
-  const filteredCourses = useMemo(() => {
+  const filteredSubCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return courses
-    return courses.filter((course) => {
-      const haystack = `${course.title} ${course.description ?? ""} ${course.id}`.toLowerCase()
+    if (!q) return subCategories
+    return subCategories.filter((sub) => {
+      const haystack =
+        `${sub.name} ${sub.description ?? ""} ${sub.category_name} ${sub.id} ${sub.display_order}`.toLowerCase()
       return haystack.includes(q)
     })
-  }, [courses, searchQuery])
+  }, [subCategories, searchQuery])
 
   if (loading) {
     return (
@@ -290,12 +268,28 @@ export function CoursesPage() {
     )
   }
 
-  const totalCount = filteredCourses.length
+  const totalCount = filteredSubCategories.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage = Math.min(page, totalPages)
-  const paginatedCourses = filteredCourses.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const paginatedSubCategories = filteredSubCategories.slice((safePage - 1) * pageSize, safePage * pageSize)
   const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
   const endEntry = Math.min(safePage * pageSize, totalCount)
+
+  const formatId = (id: number) => `#${id}`
+
+  const formatCreatedAt = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    } catch {
+      return iso
+    }
+  }
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
@@ -328,7 +322,7 @@ export function CoursesPage() {
                 {category?.name} Sub-categories
               </h1>
               <p className="mt-0.5 text-sm text-grayScale-400">
-                <span className="font-medium text-grayScale-500">{courses.length}</span> sub-categories available
+                <span className="font-medium text-grayScale-500">{subCategories.length}</span> sub-categories available
               </p>
             </div>
           </div>
@@ -339,219 +333,246 @@ export function CoursesPage() {
         </div>
       </div>
 
-      {/* Course table or empty state */}
-      <Card className="shadow-soft">
-        <CardHeader className="border-b border-grayScale-200 pb-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base font-semibold text-grayScale-600">
-              Sub-category Management
-            </CardTitle>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search sub-categories..."
-                className="pl-9"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {courses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-16 text-center">
-              <img src={practiceSrc} alt="" className="h-16 w-16" />
-              <h3 className="mt-4 text-base font-semibold text-grayScale-600">No sub-categories yet</h3>
-              <p className="mt-1.5 text-sm text-grayScale-400">
-                No sub-categories found in this category.
-              </p>
-              <Button
-                variant="outline"
-                className="mt-5 border-brand-200 text-brand-600 transition-colors hover:bg-brand-50"
-                onClick={handleOpenModal}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add your first sub-category
-              </Button>
-            </div>
-          ) : filteredCourses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-grayScale-200 py-16 text-center">
-              <p className="text-base font-semibold text-grayScale-600">No matching sub-categories</p>
-              <p className="mt-1.5 text-sm text-grayScale-400">
-                Try a different search term.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-xl border bg-white">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Sub-category</TableHead>
-                    <TableHead className="hidden md:table-cell">Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedCourses.map((course) => (
-                    <TableRow
-                      key={course.id}
-                      className="group cursor-pointer"
-                      onClick={() => handleCourseClick(course.id)}
-                    >
-                      <TableCell className="max-w-md py-3.5">
-                        <div className="truncate text-sm font-semibold text-grayScale-700">
-                          {course.title}
-                        </div>
-                        {course.description && (
-                          <div className="mt-1 truncate text-xs text-grayScale-400">
-                            {course.description}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden py-3.5 md:table-cell">
-                        <Badge
-                          variant={course.is_active ? "success" : "secondary"}
-                          className="text-[11px] font-semibold"
-                        >
-                          {course.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-amber-400 hover:bg-amber-50 hover:text-amber-500"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleViewRatings(course.id)
-                            }}
-                          >
-                            <Star className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-700"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditClick(course)
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-700"
-                            disabled={togglingId === course.id}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleToggleStatus(course)
-                            }}
-                          >
-                            {course.is_active ? (
-                              <ToggleLeft className="h-4 w-4" />
-                            ) : (
-                              <ToggleRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteClick(course)
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      {/* Sub-category table — layout aligned with Activity Log (UserLogPage) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
+        <h2 className="text-base font-semibold text-grayScale-600">Sub-category Management</h2>
+        <div className="relative w-full min-w-[200px] flex-1 sm:max-w-xs sm:flex-initial">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search sub-categories..."
+            className="pl-9"
+          />
+        </div>
+      </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
-                <div className="flex items-center gap-2">
-                  <span>Showing</span>
-                  <span className="font-medium text-grayScale-600">
-                    {startEntry}-{endEntry}
-                  </span>
-                  <span>of</span>
-                  <span className="font-medium text-grayScale-600">{totalCount}</span>
-                  <span className="mr-4">entries</span>
-                  <span className="border-l pl-4">Rows per page</span>
-                  <div className="relative">
-                    <select
-                      value={pageSize}
-                      onChange={(e) => {
-                        setPageSize(Number(e.target.value))
-                        setPage(1)
-                      }}
-                      className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
-                    >
-                      {[10, 20, 50].map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => safePage > 1 && setPage(safePage - 1)}
-                    disabled={safePage === 1}
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
-                      safePage === 1 && "cursor-not-allowed opacity-50",
-                    )}
+      {subCategories.length === 0 ? (
+        <div className="rounded-xl border bg-white">
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <img src={practiceSrc} alt="" className="h-16 w-16" />
+            <h3 className="mt-4 text-base font-semibold text-grayScale-600">No sub-categories yet</h3>
+            <p className="mt-1.5 text-sm text-grayScale-400">No sub-categories found in this category.</p>
+            <Button
+              variant="outline"
+              className="mt-5 border-brand-200 text-brand-600 transition-colors hover:bg-brand-50"
+              onClick={handleOpenModal}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add your first sub-category
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[88px] whitespace-nowrap">ID</TableHead>
+                <TableHead className="min-w-[160px]">SUB-CATEGORY</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[140px]">CATEGORY</TableHead>
+                <TableHead className="min-w-[220px]">DESCRIPTION</TableHead>
+                <TableHead className="hidden xl:table-cell w-[100px] whitespace-nowrap">ORDER</TableHead>
+                <TableHead className="hidden md:table-cell whitespace-nowrap">CATEGORY ID</TableHead>
+                <TableHead className="hidden xl:table-cell min-w-[140px] whitespace-nowrap">CREATED</TableHead>
+                <TableHead className="whitespace-nowrap">STATUS</TableHead>
+                <TableHead className="text-right">ACTIONS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSubCategories.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <Search className="h-8 w-8 text-grayScale-200" />
+                      <div>
+                        <p className="text-sm font-medium text-grayScale-500">No matching sub-categories</p>
+                        <p className="mt-1 text-xs text-grayScale-400">Try a different search term.</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedSubCategories.map((sub) => (
+                  <TableRow
+                    key={sub.id}
+                    className="group cursor-pointer"
+                    onClick={() => handleOpenSubCategory(sub.id)}
                   >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  {getPageNumbers().map((n, idx) =>
-                    typeof n === "string" ? (
-                      <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
-                        ...
-                      </span>
-                    ) : (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setPage(n)}
-                        className={cn(
-                          "h-8 w-8 rounded-md border text-sm font-medium",
-                          n === safePage
-                            ? "border-brand-500 bg-brand-500 text-white"
-                            : "bg-white text-grayScale-600 hover:bg-grayScale-50",
-                        )}
+                    <TableCell className="tabular-nums text-sm text-grayScale-500">{formatId(sub.id)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 transition-colors group-hover:bg-brand-500 group-hover:text-white">
+                          <BookOpen className="h-4 w-4" />
+                        </div>
+                        <p className="min-w-0 text-sm font-medium text-grayScale-600">{sub.name}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <span className="text-sm text-grayScale-600">{sub.category_name}</span>
+                    </TableCell>
+                    <TableCell>
+                      <p className="max-w-md truncate text-sm text-grayScale-600" title={sub.description || undefined}>
+                        {sub.description?.trim() ? sub.description : "—"}
+                      </p>
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell tabular-nums text-sm text-grayScale-600">
+                      {sub.display_order}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <span className="text-sm tabular-nums text-grayScale-600">{formatId(sub.category_id)}</span>
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell text-sm text-grayScale-500">
+                      {formatCreatedAt(sub.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={sub.is_active ? "success" : "secondary"}
+                        className="text-[11px] font-semibold"
                       >
-                        {n}
-                      </button>
-                    ),
-                  )}
-                  <button
-                    onClick={() => safePage < totalPages && setPage(safePage + 1)}
-                    disabled={safePage === totalPages}
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
-                      safePage === totalPages && "cursor-not-allowed opacity-50",
-                    )}
+                        {sub.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-700"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenSubCategory(sub.id)
+                          }}
+                          title="View courses"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-700"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditClick(sub)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-700"
+                          disabled={togglingId === sub.id}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleStatus(sub)
+                          }}
+                        >
+                          {sub.is_active ? (
+                            <ToggleLeft className="h-4 w-4" />
+                          ) : (
+                            <ToggleRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteClick(sub)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {totalCount > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
+              <div className="flex flex-wrap items-center gap-2">
+                <span>Showing</span>
+                <span className="font-medium text-grayScale-600">
+                  {startEntry}–{endEntry}
+                </span>
+                <span>of</span>
+                <span className="font-medium text-grayScale-600">{totalCount}</span>
+                <span className="mr-4">entries</span>
+                <span className="border-l pl-4">Rows per page</span>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value))
+                      setPage(1)
+                    }}
+                    className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                   >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
+                    {[10, 20, 50].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => safePage > 1 && setPage(safePage - 1)}
+                  disabled={safePage === 1}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    safePage === 1 && "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {getPageNumbers().map((n, idx) =>
+                  typeof n === "string" ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPage(n)}
+                      className={cn(
+                        "h-8 w-8 rounded-md border text-sm font-medium",
+                        n === safePage
+                          ? "border-brand-500 bg-brand-500 text-white"
+                          : "bg-white text-grayScale-600 hover:bg-grayScale-50",
+                      )}
+                    >
+                      {n}
+                    </button>
+                  ),
+                )}
+                <button
+                  type="button"
+                  onClick={() => safePage < totalPages && setPage(safePage + 1)}
+                  disabled={safePage === totalPages}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    safePage === totalPages && "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          ) : null}
+        </div>
+      )}
 
-      {/* Add Course Modal */}
+      {/* Add Sub-category Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-2xl animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
@@ -575,14 +596,14 @@ export function CoursesPage() {
 
               <div>
                 <label
-                  htmlFor="course-title"
+                  htmlFor="subcat-name"
                   className="mb-2 block text-sm font-medium text-grayScale-600"
                 >
-                  Title <span className="text-red-400">*</span>
+                  Name <span className="text-red-400">*</span>
                 </label>
                 <Input
-                  id="course-title"
-                  placeholder="Enter sub-category title"
+                  id="subcat-name"
+                  placeholder="Enter sub-category name"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
@@ -590,18 +611,32 @@ export function CoursesPage() {
 
               <div>
                 <label
-                  htmlFor="course-description"
+                  htmlFor="subcat-description"
                   className="mb-2 block text-sm font-medium text-grayScale-600"
                 >
-                  Description <span className="text-red-400">*</span>
+                  Description
                 </label>
                 <textarea
-                  id="course-description"
-                  placeholder="Enter sub-category description"
+                  id="subcat-description"
+                  placeholder="Optional description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   className="flex w-full rounded-xl border border-grayScale-200 bg-white px-3.5 py-2.5 text-sm transition-colors ring-offset-background placeholder:text-grayScale-400 focus-visible:border-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-100"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="subcat-order" className="mb-2 block text-sm font-medium text-grayScale-600">
+                  Display order
+                </label>
+                <Input
+                  id="subcat-order"
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={displayOrder}
+                  onChange={(e) => setDisplayOrder(e.target.value)}
                 />
               </div>
 
@@ -626,8 +661,8 @@ export function CoursesPage() {
         </div>
       )}
 
-      {/* Edit Course Modal */}
-      {showEditModal && courseToEdit && (
+      {/* Edit Sub-category Modal */}
+      {showEditModal && subCategoryToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
@@ -650,14 +685,14 @@ export function CoursesPage() {
 
               <div>
                 <label
-                  htmlFor="edit-course-title"
+                  htmlFor="edit-subcat-name"
                   className="mb-2 block text-sm font-medium text-grayScale-600"
                 >
-                  Title <span className="text-red-400">*</span>
+                  Name <span className="text-red-400">*</span>
                 </label>
                 <Input
-                  id="edit-course-title"
-                  placeholder="Enter sub-category title"
+                  id="edit-subcat-name"
+                  placeholder="Enter sub-category name"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                 />
@@ -665,14 +700,14 @@ export function CoursesPage() {
 
               <div>
                 <label
-                  htmlFor="edit-course-description"
+                  htmlFor="edit-subcat-description"
                   className="mb-2 block text-sm font-medium text-grayScale-600"
                 >
-                  Description <span className="text-red-400">*</span>
+                  Description
                 </label>
                 <textarea
-                  id="edit-course-description"
-                  placeholder="Enter sub-category description"
+                  id="edit-subcat-description"
+                  placeholder="Optional description"
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={4}
@@ -681,27 +716,16 @@ export function CoursesPage() {
               </div>
 
               <div>
-                <label
-                  htmlFor="edit-course-thumbnail"
-                  className="mb-2 block text-sm font-medium text-grayScale-600"
-                >
-                  Thumbnail
+                <label htmlFor="edit-subcat-order" className="mb-2 block text-sm font-medium text-grayScale-600">
+                  Display order
                 </label>
-                <div className="space-y-2">
-                  <FileUpload
-                    accept="image/*"
-                    onFileSelect={(file) => setEditThumbnailFile(file)}
-                    label="Upload thumbnail"
-                    description="JPEG, PNG, WEBP"
-                    className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
-                  />
-                  <Input
-                    id="edit-course-thumbnail"
-                    placeholder="Or paste thumbnail URL (https://...)"
-                    value={editThumbnail}
-                    onChange={(e) => setEditThumbnail(e.target.value)}
-                  />
-                </div>
+                <Input
+                  id="edit-subcat-order"
+                  type="number"
+                  min={0}
+                  value={editDisplayOrder}
+                  onChange={(e) => setEditDisplayOrder(Number(e.target.value))}
+                />
               </div>
             </div>
 
@@ -721,122 +745,8 @@ export function CoursesPage() {
         </div>
       )}
 
-      {/* Ratings Modal */}
-      {showRatingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-lg animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
-              <h2 className="text-lg font-bold text-grayScale-700">Sub-category Ratings</h2>
-              <button
-                onClick={() => {
-                  setShowRatingsModal(false)
-                  setRatingsCourseId(null)
-                  setCourseRatings([])
-                }}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
-              {courseRatingsLoading ? (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <SpinnerIcon className="h-8 w-8" />
-                  <p className="mt-4 text-sm font-medium text-grayScale-500">Loading ratings…</p>
-                </div>
-              ) : courseRatings.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-grayScale-200 bg-grayScale-50/50 py-16">
-                  <div className="rounded-full bg-amber-50 p-4">
-                    <Star className="h-8 w-8 text-amber-400" />
-                  </div>
-                  <p className="mt-4 text-sm font-semibold text-grayScale-700">No ratings yet</p>
-                  <p className="mt-1 text-sm text-grayScale-400">
-                    Ratings will appear here once learners start reviewing this sub-category.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Summary bar */}
-                  <div className="flex flex-wrap items-center gap-6 rounded-xl border border-grayScale-200 px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-5 w-5 text-amber-400" fill="currentColor" />
-                      <span className="text-lg font-bold text-grayScale-800">
-                        {(courseRatings.reduce((sum, r) => sum + r.stars, 0) / courseRatings.length).toFixed(1)}
-                      </span>
-                      <span className="text-sm text-grayScale-400">/ 5</span>
-                    </div>
-                    <div className="h-5 w-px bg-grayScale-200" />
-                    <span className="text-sm text-grayScale-500">
-                      {courseRatings.length} review{courseRatings.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  {/* Rating cards */}
-                  <div className="space-y-3">
-                    {courseRatings.map((rating) => (
-                      <div
-                        key={rating.id}
-                        className="rounded-xl border border-grayScale-200 bg-white p-5 space-y-3"
-                      >
-                        {/* Header row */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-600">
-                              U{rating.user_id}
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-grayScale-700">User #{rating.user_id}</p>
-                              <p className="text-[11px] text-grayScale-400">
-                                {new Date(rating.created_at).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
-                                {rating.updated_at !== rating.created_at && (
-                                  <span className="ml-1.5 text-grayScale-300">· edited</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Stars */}
-                          <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star
-                                key={s}
-                                className={`h-4 w-4 ${
-                                  s <= rating.stars
-                                    ? "text-amber-400"
-                                    : "text-grayScale-200"
-                                }`}
-                                fill={s <= rating.stars ? "currentColor" : "none"}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Review text */}
-                        {rating.review && (
-                          <div className="flex gap-2">
-                            <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-grayScale-300" />
-                            <p className="text-sm leading-relaxed text-grayScale-600">
-                              {rating.review}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Course Modal */}
-      {showDeleteModal && courseToDelete && (
+      {/* Delete Sub-category Modal */}
+      {showDeleteModal && subCategoryToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
@@ -855,7 +765,7 @@ export function CoursesPage() {
               </div>
               <p className="text-center text-sm leading-relaxed text-grayScale-600">
                 Are you sure you want to delete{" "}
-                <span className="font-semibold text-grayScale-700">{courseToDelete.title}</span>? This action cannot
+                <span className="font-semibold text-grayScale-700">{subCategoryToDelete.name}</span>? This action cannot
                 be undone.
               </p>
             </div>

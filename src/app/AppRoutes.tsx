@@ -10,8 +10,8 @@ import { ContentOverviewPage } from "../pages/content-management/ContentOverview
 import { CoursesPage } from "../pages/content-management/CoursesPage"
 import { PracticeQuestionsPage } from "../pages/content-management/PracticeQuestionsPage"
 import { AddNewPracticePage } from "../pages/content-management/AddNewPracticePage"
+import { AddNewLessonPage } from "../pages/content-management/AddNewLessonPage"
 import { SubModulesPage } from "../pages/content-management/SubCoursesPage"
-import { SubModuleContentPage } from "../pages/content-management/SubCourseContentPage"
 import { SpeakingPage } from "../pages/content-management/SpeakingPage"
 import { AddVideoPage } from "../pages/content-management/AddVideoPage"
 import { AddPracticePage } from "../pages/content-management/AddPracticePage"
@@ -31,8 +31,9 @@ import { PracticeDetailsPage } from "../pages/content-management/PracticeDetails
 import { PracticeMembersPage } from "../pages/content-management/PracticeMembersPage"
 import { QuestionsPage } from "../pages/content-management/QuestionsPage"
 import { AddQuestionPage } from "../pages/content-management/AddQuestionPage"
-import { HumanLanguagePage } from "../pages/content-management/HumanLanguagePage"
+import { HumanLanguageHierarchyPage } from "../pages/content-management/HumanLanguageHierarchyPage"
 import { HumanLanguageSubModulePage } from "../pages/content-management/HumanLanguageSubModulePage"
+import { SubCategoryCoursesPage } from "../pages/content-management/SubCategoryCoursesPage"
 import { UserLogPage } from "../pages/user-log/UserLogPage"
 import { IssuesPage } from "../pages/issues/IssuesPage"
 import { ProfilePage } from "../pages/ProfilePage"
@@ -78,13 +79,21 @@ export function AppRoutes() {
           <Route index element={<CourseCategoryPage />} />
           <Route path="courses" element={<AllCoursesPage />} />
           <Route path="flows" element={<CourseFlowBuilderPage />} />
-          <Route path="human-language" element={<HumanLanguagePage />} />
+          <Route path="human-language" element={<HumanLanguageHierarchyPage />} />
           <Route
             path="human-language/:categoryId/:courseId/sub-module/:subModuleId/add-practice"
             element={<AddNewPracticePage />}
           />
           <Route
+            path="human-language/:categoryId/:courseId/sub-module/:subModuleId/add-lesson"
+            element={<AddNewLessonPage />}
+          />
+          <Route
             path="human-language/:categoryId/:courseId/sub-module/:subModuleId/practices/:practiceId/questions"
+            element={<PracticeQuestionsPage />}
+          />
+          <Route
+            path="human-language/:categoryId/:courseId/level/:levelId/practices/:practiceId/questions"
             element={<PracticeQuestionsPage />}
           />
           <Route
@@ -92,16 +101,22 @@ export function AppRoutes() {
             element={<HumanLanguageSubModulePage />}
           />
           <Route path="category/:categoryId" element={<ContentOverviewPage />} />
+          <Route
+            path="category/:categoryId/sub-categories/:subCategoryId/courses"
+            element={<SubCategoryCoursesPage />}
+          />
           <Route path="category/:categoryId/courses" element={<CoursesPage />} />
           {/* Course → Sub-module → Lesson/Practice */}
           <Route path="category/:categoryId/courses/:courseId/sub-modules" element={<SubModulesPage />} />
-          <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId" element={<SubModuleContentPage />} />
+          <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId" element={<HumanLanguageSubModulePage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId/add-practice" element={<AddNewPracticePage />} />
+          <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId/add-lesson" element={<AddNewLessonPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-modules/:subModuleId/practices/:practiceId/questions" element={<PracticeQuestionsPage />} />
           {/* Legacy aliases */}
           <Route path="category/:categoryId/courses/:courseId/sub-courses" element={<SubModulesPage />} />
-          <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId" element={<SubModuleContentPage />} />
+          <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId" element={<HumanLanguageSubModulePage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId/add-practice" element={<AddNewPracticePage />} />
+          <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId/add-lesson" element={<AddNewLessonPage />} />
           <Route path="category/:categoryId/courses/:courseId/sub-courses/:subModuleId/practices/:practiceId/questions" element={<PracticeQuestionsPage />} />
           <Route path="category/:categoryId/courses/add-video" element={<AddVideoPage />} />
           <Route path="speaking" element={<SpeakingPage />} />

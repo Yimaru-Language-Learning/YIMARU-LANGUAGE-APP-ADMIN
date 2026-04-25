@@ -515,6 +515,12 @@ export function CourseDetailPage() {
                           onClick={() =>
                             navigate(
                               `/new-content/learn-english/${programIdParam}/courses/${courseIdParam}/modules/${module.id}`,
+                              {
+                                state: {
+                                  moduleName: module.name,
+                                  moduleDescription: module.description?.trim() ?? "",
+                                },
+                              },
                             )
                           }
                         >

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
   Video,
@@ -7,42 +7,39 @@ import {
   Layers,
   Edit2,
   Trash2,
+  X,
 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import {
+  deleteTopLevelModuleLesson,
+  getModuleLessons,
+  getTopLevelCourseModules,
+  updateTopLevelModuleLesson,
+} from "../../api/courses.api";
+import type { TopLevelModuleLessonItem } from "../../types/course.types";
 import { Button } from "../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { resolveThumbnailForPreview } from "../../lib/videoPreview";
 import { cn } from "../../lib/utils";
+import { LessonMediaUploadField } from "./components/LessonMediaUploadField";
 import { VideoCard } from "./components/VideoCard";
 
-const MOCK_VIDEOS = [
-  {
-    id: "v1",
-    title: "1.1 Introduction to Formal Greetings",
-    duration: "08:45",
-    status: "Draft",
-    thumbnailGradient: "from-[#CBD5E1] to-[#94A3B8]",
-  },
-  {
-    id: "v2",
-    title: "1.2 Understanding Email Structure",
-    duration: "08:45",
-    status: "Published",
-    thumbnailGradient: "from-[#DBEAFE] to-[#93C5FD]",
-  },
-  {
-    id: "v3",
-    title: "1.3 Common Business Idioms",
-    duration: "08:45",
-    status: "Published",
-    thumbnailGradient: "from-[#FEF3C7] to-[#FCD34D]",
-  },
-  {
-    id: "v4",
-    title: "1.4 Video Conference Etiquette",
-    duration: "08:45",
-    status: "Published",
-    thumbnailGradient: "from-[#FCE7F3] to-[#F9A8D4]",
-  },
-];
+const LESSON_THUMB_GRADIENTS = [
+  "from-[#CBD5E1] to-[#94A3B8]",
+  "from-[#DBEAFE] to-[#93C5FD]",
+  "from-[#FEF3C7] to-[#FCD34D]",
+  "from-[#FCE7F3] to-[#F9A8D4]",
+] as const;
 
 const MOCK_PRACTICES = [
   {
@@ -75,8 +72,15 @@ const MOCK_PRACTICES = [
   },
 ];
 
+type ModuleDetailState = {
+  moduleName?: string;
+  moduleDescription?: string;
+};
+
 export function ModuleDetailPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const navState = location.state as ModuleDetailState | null;
   const { level, courseId, moduleId } = useParams<{
     level: string;
     courseId: string;
@@ -84,14 +88,211 @@ export function ModuleDetailPage() {
   }>();
   const [activeTab, setActiveTab] = useState<"video" | "practice">("video");
   const [activeFilter, setActiveFilter] = useState("Draft");
-  const [videos] = useState(MOCK_VIDEOS);
+  const [lessons, setLessons] = useState<TopLevelModuleLessonItem[]>([]);
+  const [lessonsLoading, setLessonsLoading] = useState(true);
+  const [lessonsLoadError, setLessonsLoadError] = useState<string | null>(null);
+  const [editingLesson, setEditingLesson] =
+    useState<TopLevelModuleLessonItem | null>(null);
+  const [editLessonTitle, setEditLessonTitle] = useState("");
+  const [editLessonVideoUrl, setEditLessonVideoUrl] = useState("");
+  const [editLessonThumbnail, setEditLessonThumbnail] = useState("");
+  const [editLessonDescription, setEditLessonDescription] = useState("");
+  const [savingLessonEdit, setSavingLessonEdit] = useState(false);
+  const [thumbUploadBusy, setThumbUploadBusy] = useState(false);
+  const [videoUploadBusy, setVideoUploadBusy] = useState(false);
+  const lessonMediaUploadBusy = thumbUploadBusy || videoUploadBusy;
+  const [deletingLesson, setDeletingLesson] =
+    useState<TopLevelModuleLessonItem | null>(null);
+  const [deletingLessonInFlight, setDeletingLessonInFlight] = useState(false);
   const [practices] = useState(MOCK_PRACTICES);
+  const [loadedModuleName, setLoadedModuleName] = useState<string | null>(null);
+  const [loadedModuleDescription, setLoadedModuleDescription] = useState<
+    string | null
+  >(null);
+  const [moduleListResolved, setModuleListResolved] = useState(
+    Boolean(navState?.moduleName?.trim()),
+  );
 
-  const moduleTitle =
+  const moduleTitleFallback =
     moduleId
       ?.split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ") || "Business English Fundamentals";
+      .join(" ") || "Module";
+
+  const displayModuleName =
+    navState?.moduleName?.trim() ||
+    loadedModuleName ||
+    moduleTitleFallback;
+
+  const hasNavName = Boolean(navState?.moduleName?.trim());
+
+  const displayModuleDescription = (() => {
+    if (hasNavName) {
+      return navState?.moduleDescription?.trim() || "—";
+    }
+    if (!moduleListResolved) {
+      return "Loading…";
+    }
+    if (loadedModuleDescription !== null) {
+      return loadedModuleDescription.trim() || "—";
+    }
+    return "—";
+  })();
+
+  useEffect(() => {
+    if (navState?.moduleName?.trim()) {
+      return;
+    }
+    const id = Number(moduleId);
+    const cid = Number(courseId);
+    if (!Number.isFinite(id) || id < 1 || !Number.isFinite(cid) || cid < 1) {
+      setModuleListResolved(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getTopLevelCourseModules(cid, { limit: 100, offset: 0 });
+        if (cancelled) return;
+        const list = res.data?.data?.modules;
+        if (Array.isArray(list)) {
+          const m = list.find((mod) => mod.id === id);
+          if (m) {
+            setLoadedModuleName(m.name);
+            setLoadedModuleDescription(m.description ?? "");
+          } else {
+            setLoadedModuleName(null);
+            setLoadedModuleDescription("");
+          }
+        } else {
+          setLoadedModuleName(null);
+          setLoadedModuleDescription(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setLoadedModuleName(null);
+          setLoadedModuleDescription(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setModuleListResolved(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navState?.moduleName, courseId, moduleId]);
+
+  const loadModuleLessons = useCallback(
+    async (options?: { showPageLoading?: boolean }) => {
+      const showPageLoading = options?.showPageLoading ?? true;
+      const mid = Number(moduleId);
+      if (!Number.isFinite(mid) || mid < 1) {
+        setLessons([]);
+        setLessonsLoadError(null);
+        setLessonsLoading(false);
+        return;
+      }
+      if (showPageLoading) {
+        setLessonsLoading(true);
+        setLessonsLoadError(null);
+      }
+      try {
+        const res = await getModuleLessons(mid, { limit: 100, offset: 0 });
+        const list = res.data?.data?.lessons;
+        if (Array.isArray(list)) {
+          setLessons(
+            [...list].sort(
+              (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+            ),
+          );
+        } else {
+          setLessons([]);
+        }
+        if (showPageLoading) {
+          setLessonsLoadError(null);
+        }
+      } catch {
+        if (showPageLoading) {
+          setLessons([]);
+          setLessonsLoadError("Failed to load lessons. Please try again.");
+        } else {
+          toast.error("Failed to refresh lessons");
+        }
+      } finally {
+        if (showPageLoading) {
+          setLessonsLoading(false);
+        }
+      }
+    },
+    [moduleId],
+  );
+
+  useEffect(() => {
+    void loadModuleLessons({ showPageLoading: true });
+  }, [loadModuleLessons]);
+
+  const openEditLesson = (lesson: TopLevelModuleLessonItem) => {
+    setEditingLesson(lesson);
+    setEditLessonTitle(lesson.title ?? "");
+    setEditLessonVideoUrl(lesson.video_url ?? "");
+    setEditLessonThumbnail(lesson.thumbnail ?? "");
+    setEditLessonDescription(lesson.description ?? "");
+  };
+
+  const closeEditLesson = () => {
+    if (savingLessonEdit || lessonMediaUploadBusy) return;
+    setEditingLesson(null);
+  };
+
+  const handleSaveLessonEdit = async () => {
+    if (!editingLesson) return;
+    const title = editLessonTitle.trim();
+    if (!title) {
+      toast.error("Title is required");
+      return;
+    }
+    setSavingLessonEdit(true);
+    try {
+      await updateTopLevelModuleLesson(editingLesson.id, {
+        title,
+        video_url: editLessonVideoUrl.trim(),
+        thumbnail: editLessonThumbnail.trim(),
+        description: editLessonDescription.trim(),
+      });
+      toast.success("Lesson updated");
+      setEditingLesson(null);
+      await loadModuleLessons({ showPageLoading: false });
+    } catch (e: unknown) {
+      console.error(e);
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update lesson";
+      toast.error(msg);
+    } finally {
+      setSavingLessonEdit(false);
+    }
+  };
+
+  const handleConfirmDeleteLesson = async () => {
+    if (!deletingLesson) return;
+    setDeletingLessonInFlight(true);
+    try {
+      await deleteTopLevelModuleLesson(deletingLesson.id);
+      toast.success("Lesson deleted");
+      setDeletingLesson(null);
+      await loadModuleLessons({ showPageLoading: false });
+    } catch (e: unknown) {
+      console.error(e);
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to delete lesson";
+      toast.error(msg);
+    } finally {
+      setDeletingLessonInFlight(false);
+    }
+  };
 
   return (
     <div className="space-y-10 pt-10 pb-20 animate-in fade-in duration-500">
@@ -110,12 +311,10 @@ export function ModuleDetailPage() {
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="">
           <h1 className="text-2xl font-medium text-grayScale-900 tracking-tight">
-            Module 3: {moduleTitle}
+            {displayModuleName}
           </h1>
           <p className="text-grayScale-500 text-[14px] max-w-2xl">
-            This module covers essential vocabulary and phrases used in modern
-            business environments, including email etiquette and meeting
-            protocols.
+            {displayModuleDescription}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -142,7 +341,7 @@ export function ModuleDetailPage() {
             <div className="h-4 w-4 flex items-center justify-center">
               <span className="text-xl leading-none font-light">+</span>
             </div>
-            Add Video
+            Add Lesson
           </Button>
         </div>
       </div>
@@ -159,7 +358,7 @@ export function ModuleDetailPage() {
                 : "text-grayScale-400 hover:text-grayScale-600",
             )}
           >
-            Video
+            Lesson
           </button>
           <button
             onClick={() => setActiveTab("practice")}
@@ -178,14 +377,27 @@ export function ModuleDetailPage() {
       {/* Content */}
       <div className="mt-8">
         {activeTab === "video" ? (
-          videos.length > 0 ? (
+          lessonsLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 text-grayScale-500 text-[15px] font-medium">
+              Loading lessons…
+            </div>
+          ) : lessonsLoadError ? (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 px-6 py-8 text-center text-sm text-amber-900 max-w-lg mx-auto">
+              {lessonsLoadError}
+            </div>
+          ) : lessons.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {videos.map((video) => (
+              {lessons.map((lesson, i) => (
                 <VideoCard
-                  key={video.id}
-                  {...(video as any)}
-                  onEdit={() => console.log("Edit", video.id)}
-                  onPublish={() => console.log("Publish", video.id)}
+                  key={lesson.id}
+                  id={lesson.id}
+                  title={lesson.title}
+                  videoUrl={lesson.video_url}
+                  hoverModuleActions
+                  thumbnailUrl={resolveThumbnailForPreview(lesson.thumbnail)}
+                  thumbnailGradient={LESSON_THUMB_GRADIENTS[i % LESSON_THUMB_GRADIENTS.length]}
+                  onEdit={() => openEditLesson(lesson)}
+                  onDelete={() => setDeletingLesson(lesson)}
                 />
               ))}
             </div>
@@ -197,11 +409,11 @@ export function ModuleDetailPage() {
                 </div>
               </div>
               <h2 className="text-2xl font-extrabold text-grayScale-900 mb-3">
-                No videos added to this module yet
+                No lessons in this module yet
               </h2>
               <p className="text-grayScale-400 font-medium text-[15px] text-center max-w-sm mb-10 leading-relaxed">
-                Videos are a great way to engage students. Start building your
-                module by adding your first video lesson now.
+                Lessons are a great way to engage students. Add your first
+                lesson to get started.
               </p>
               <Button
                 variant="outline"
@@ -213,7 +425,7 @@ export function ModuleDetailPage() {
                 }
               >
                 <Video className="h-5 w-5" />
-                Add Video
+                Add Lesson
               </Button>
             </div>
           )
@@ -251,6 +463,149 @@ export function ModuleDetailPage() {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={editingLesson !== null}
+        onOpenChange={(open) => {
+          if (!open && (savingLessonEdit || lessonMediaUploadBusy)) return;
+          if (!open) closeEditLesson();
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit lesson</DialogTitle>
+            <DialogDescription>
+              Update details. Video and thumbnail files use{" "}
+              <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
+                POST /files/upload
+              </code>
+              ; the form is saved with{" "}
+              <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
+                PUT /lessons/:id
+              </code>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-grayScale-700"
+                htmlFor="edit-lesson-title"
+              >
+                Title
+              </label>
+              <Input
+                id="edit-lesson-title"
+                value={editLessonTitle}
+                onChange={(e) => setEditLessonTitle(e.target.value)}
+                disabled={savingLessonEdit}
+              />
+            </div>
+            <LessonMediaUploadField
+              kind="video"
+              value={editLessonVideoUrl}
+              onChange={setEditLessonVideoUrl}
+              disabled={savingLessonEdit}
+              onUploadBusyChange={setVideoUploadBusy}
+            />
+            <LessonMediaUploadField
+              kind="thumbnail"
+              value={editLessonThumbnail}
+              onChange={setEditLessonThumbnail}
+              disabled={savingLessonEdit}
+              onUploadBusyChange={setThumbUploadBusy}
+            />
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-grayScale-700"
+                htmlFor="edit-lesson-desc"
+              >
+                Description
+              </label>
+              <Textarea
+                id="edit-lesson-desc"
+                value={editLessonDescription}
+                onChange={(e) => setEditLessonDescription(e.target.value)}
+                rows={4}
+                disabled={savingLessonEdit}
+                className="min-h-[100px] resize-y"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeEditLesson}
+              disabled={savingLessonEdit || lessonMediaUploadBusy}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSaveLessonEdit()}
+              disabled={savingLessonEdit || lessonMediaUploadBusy}
+            >
+              {savingLessonEdit ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {deletingLesson && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
+              <h2 className="text-lg font-bold text-grayScale-700">
+                Delete lesson
+              </h2>
+              <button
+                type="button"
+                onClick={() =>
+                  !deletingLessonInFlight && setDeletingLesson(null)
+                }
+                disabled={deletingLessonInFlight}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 disabled:pointer-events-none disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-6">
+              <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-red-50">
+                <Trash2 className="h-5 w-5 text-red-500" />
+              </div>
+              <p className="text-center text-sm leading-relaxed text-grayScale-600">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-grayScale-700">
+                  {deletingLesson.title}
+                </span>
+                ? This cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDeletingLesson(null)}
+                disabled={deletingLessonInFlight}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="w-full bg-red-500 shadow-sm transition-all hover:bg-red-600 hover:shadow-md sm:w-auto"
+                disabled={deletingLessonInFlight}
+                onClick={() => void handleConfirmDeleteLesson()}
+              >
+                {deletingLessonInFlight ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

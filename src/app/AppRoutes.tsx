@@ -3,7 +3,6 @@ import { AppLayout } from "../layouts/AppLayout";
 import { DashboardPage } from "../pages/DashboardPage";
 import { AnalyticsPage } from "../pages/analytics/AnalyticsPage";
 import { ContentManagementLayout } from "../pages/content-management/ContentManagementLayout";
-import { CourseCategoryPage } from "../pages/content-management/CourseCategoryPage";
 import { AllCoursesPage } from "../pages/content-management/AllCoursesPage";
 import { CourseFlowBuilderPage } from "../pages/content-management/CourseFlowBuilderPage";
 import { ContentOverviewPage } from "../pages/content-management/ContentOverviewPage";
@@ -89,7 +88,7 @@ export function AppRoutes() {
         </Route>
 
         <Route path="/content" element={<ContentManagementLayout />}>
-          <Route index element={<CourseCategoryPage />} />
+          <Route index element={<Navigate to="practices" replace />} />
           <Route path="courses" element={<AllCoursesPage />} />
           <Route path="flows" element={<CourseFlowBuilderPage />} />
           <Route path="human-language" element={<HumanLanguageHierarchyPage />} />

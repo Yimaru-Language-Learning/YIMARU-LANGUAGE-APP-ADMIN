@@ -568,9 +568,11 @@ export function ProgramCoursesPage() {
       ) : (
         <div className="flex flex-wrap gap-10">
           {courses.map((course) => {
-            const modules = course.modules_count ?? 0;
-            const videos = course.videos_count ?? 0;
-            const practices = course.practices_count ?? 0;
+            const modules =
+              course.module_count ?? course.modules_count ?? 0;
+            const lessons = course.lesson_count ?? course.videos_count ?? 0;
+            const practices =
+              course.practice_count ?? course.practices_count ?? 0;
             const thumbnailSrc =
               course.thumbnail?.trim() || course.thumbnail_url?.trim() || "";
             return (
@@ -634,10 +636,10 @@ export function ProgramCoursesPage() {
                     </div>
                     <div className="text-center">
                       <p className="text-base font-bold text-grayScale-700">
-                        {videos}
+                        {lessons}
                       </p>
                       <p className="text-[10px] font-medium uppercase tracking-wider text-grayScale-400">
-                        Videos
+                        Lessons
                       </p>
                     </div>
                     <div className="text-center">

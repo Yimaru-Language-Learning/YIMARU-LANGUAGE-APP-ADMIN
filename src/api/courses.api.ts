@@ -78,6 +78,15 @@ import type {
   CreateTopLevelCourseModuleResponse,
   CreateProgramCourseRequest,
   CreateProgramCourseResponse,
+  GetTopLevelModuleLessonsResponse,
+  GetPracticesByParentContextResponse,
+  CreateParentLinkedPracticeRequest,
+  CreateParentLinkedPracticeResponse,
+  UpdateParentLinkedPracticeRequest,
+  UpdateParentLinkedPracticeResponse,
+  UpdateTopLevelModuleLessonRequest,
+  CreateTopLevelModuleLessonRequest,
+  CreateTopLevelModuleLessonResponse,
 } from "../types/course.types"
 
 type UnifiedHierarchyRow = {
@@ -472,6 +481,69 @@ export const updateTopLevelCourseModule = (
 /** Learn English top-level module — DELETE /modules/:id */
 export const deleteTopLevelCourseModule = (moduleId: number) =>
   http.delete(`/modules/${moduleId}`)
+
+/** Learn English top-level module lessons — GET /modules/:moduleId/lessons */
+export const getModuleLessons = (
+  moduleId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetTopLevelModuleLessonsResponse>(`/modules/${moduleId}/lessons`, {
+    params,
+  })
+
+/** Learn English top-level module lesson — POST /modules/:moduleId/lessons */
+export const createModuleLesson = (
+  moduleId: number,
+  data: CreateTopLevelModuleLessonRequest,
+) =>
+  http.post<CreateTopLevelModuleLessonResponse>(`/modules/${moduleId}/lessons`, data)
+
+/** Learn English top-level module lesson — PUT /lessons/:id */
+export const updateTopLevelModuleLesson = (
+  lessonId: number,
+  data: UpdateTopLevelModuleLessonRequest,
+) => http.put(`/lessons/${lessonId}`, data)
+
+/** Learn English top-level module lesson — DELETE /lessons/:id */
+export const deleteTopLevelModuleLesson = (lessonId: number) =>
+  http.delete(`/lessons/${lessonId}`)
+
+/** GET /courses/:courseId/practices — practices linked to a top-level course (at most one in normal use). */
+export const getPracticesByParentCourse = (
+  courseId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetPracticesByParentContextResponse>(`/courses/${courseId}/practices`, { params })
+
+/** GET /modules/:moduleId/practices */
+export const getPracticesByParentModule = (
+  moduleId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetPracticesByParentContextResponse>(`/modules/${moduleId}/practices`, { params })
+
+/** GET /lessons/:lessonId/practices */
+export const getPracticesByParentLesson = (
+  lessonId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetPracticesByParentContextResponse>(`/lessons/${lessonId}/practices`, { params })
+
+/** POST /practices — create a practice (story + question set) for course / module / lesson. */
+export const createParentLinkedPractice = (data: CreateParentLinkedPracticeRequest) =>
+  http.post<CreateParentLinkedPracticeResponse>("/practices", data)
+
+/** PUT /practices/:id */
+export const updateParentLinkedPractice = (
+  practiceId: number,
+  data: UpdateParentLinkedPracticeRequest,
+) => http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
+
+/** DELETE /practices/:id */
+export const deleteParentLinkedPractice = (practiceId: number) =>
+  http.delete<{ message: string; success: boolean; status_code: number; metadata: unknown }>(
+    `/practices/${practiceId}`,
+  )
 
 export const updateLearningProgram = (programId: number, data: UpdateLearningProgramRequest) =>
   http.put(`/programs/${programId}`, data)

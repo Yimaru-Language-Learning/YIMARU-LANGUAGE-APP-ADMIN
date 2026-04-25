@@ -111,7 +111,11 @@ export interface ProgramCourseListItem {
   thumbnail?: string | null
   /** Some list endpoints may expose the image as `thumbnail_url` instead. */
   thumbnail_url?: string | null
-  /** When the API adds aggregates, map these for the course cards. */
+  /** GET /programs/:id/courses aggregates. */
+  module_count?: number
+  lesson_count?: number
+  practice_count?: number
+  /** Legacy aggregate field names; prefer module_count, lesson_count, practice_count. */
   modules_count?: number
   videos_count?: number
   practices_count?: number
@@ -194,6 +198,122 @@ export interface CreateTopLevelCourseModuleRequest {
 export interface CreateTopLevelCourseModuleResponse {
   message: string
   data: TopLevelCourseModuleItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Row from GET /modules/:moduleId/lessons (Learn English top-level module lessons). */
+export interface TopLevelModuleLessonItem {
+  id: number
+  module_id: number
+  title: string
+  video_url: string
+  thumbnail: string
+  description: string
+  sort_order: number
+  created_at: string
+}
+
+export interface GetTopLevelModuleLessonsResponse {
+  message: string
+  data: {
+    total_count: number
+    limit: number
+    offset: number
+    lessons: TopLevelModuleLessonItem[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Practice returned by GET /courses|modules|lessons/.../practices (Learn English parent-linked practice). */
+export interface ParentContextPractice {
+  id: number
+  parent_kind: string
+  parent_id: number
+  title: string
+  story_description: string
+  story_image: string
+  question_set_id: number
+  quick_tips: string
+  persona_id?: number | null
+  created_at: string
+}
+
+export interface GetPracticesByParentContextResponse {
+  message: string
+  data: {
+    offset: number
+    limit: number
+    practices: ParentContextPractice[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export type PracticeParentKind = "COURSE" | "MODULE" | "LESSON"
+
+/** POST /practices — create practice linked to a course, module, or lesson (Learn English). */
+export interface CreateParentLinkedPracticeRequest {
+  parent_kind: PracticeParentKind
+  parent_id: number
+  title: string
+  story_description: string
+  story_image: string
+  question_set_id: number
+  quick_tips: string
+  persona_id?: number
+}
+
+export interface CreateParentLinkedPracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Body for PUT /practices/:id (Learn English parent-linked practice). */
+export interface UpdateParentLinkedPracticeRequest {
+  title: string
+  story_description: string
+  story_image: string
+  question_set_id: number
+  quick_tips: string
+  persona_id?: number | null
+}
+
+export interface UpdateParentLinkedPracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Body for PUT /lessons/:id (Learn English top-level module lessons). */
+export interface UpdateTopLevelModuleLessonRequest {
+  title: string
+  video_url: string
+  thumbnail: string
+  description: string
+}
+
+/** Body for POST /modules/:moduleId/lessons. */
+export interface CreateTopLevelModuleLessonRequest {
+  title: string
+  video_url: string
+  thumbnail: string
+  description: string
+}
+
+export interface CreateTopLevelModuleLessonResponse {
+  message: string
+  data: TopLevelModuleLessonItem
   success: boolean
   status_code: number
   metadata: unknown | null

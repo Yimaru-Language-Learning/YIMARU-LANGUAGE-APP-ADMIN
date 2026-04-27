@@ -52,28 +52,6 @@ function isLikelyImageUrl(src: string): boolean {
   );
 }
 
-function isSignedS3Url(src: string): boolean {
-  const trimmed = src.trim();
-  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-    return false;
-  }
-  try {
-    const url = new URL(trimmed);
-    return url.searchParams.has("X-Amz-Signature");
-  } catch {
-    return false;
-  }
-}
-
-function extractObjectKeyFromUrl(src: string): string {
-  try {
-    const url = new URL(src);
-    return url.pathname.replace(/^\/+/, "").trim();
-  } catch {
-    return "";
-  }
-}
-
 /** Default purple gradient with optional cover image; gradient stays if URL missing or image errors. */
 function ModuleCardTopMedia({ iconSrc }: { iconSrc: string }) {
   const [coverFailed, setCoverFailed] = useState(false);
@@ -223,11 +201,11 @@ export function CourseDetailPage() {
         const refreshed = await Promise.all(
           list.map(async (module) => {
             const icon = module.icon?.trim() ?? "";
-            if (!icon || !isSignedS3Url(icon)) return module;
-            const objectKey = extractObjectKeyFromUrl(icon);
-            if (!objectKey) return module;
+            // If backend already returns a full MinIO/S3 URL (including presigned),
+            // use it directly. Only resolve raw object keys via /files/url.
+            if (!icon || isLikelyImageUrl(icon)) return module;
             try {
-              const resolved = await resolveFileUrl(objectKey);
+              const resolved = await resolveFileUrl(icon);
               const freshUrl = resolved.data?.data?.url?.trim();
               if (!freshUrl) return module;
               return { ...module, icon: freshUrl };

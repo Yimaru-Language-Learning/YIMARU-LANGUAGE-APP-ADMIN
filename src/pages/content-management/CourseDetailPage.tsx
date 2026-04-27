@@ -86,19 +86,7 @@ export function CourseDetailPage() {
           </Button>
         </div>
       </div>
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-grayScale-200" />
-        </div>
-        <div className="relative flex justify-center">
-          <div
-            className="h-[0.5px] w-full opacity-20 rounded-full"
-            style={{
-              background: "gray",
-            }}
-          />
-        </div>
-      </div>
+    
 
       <AddModuleModal
         isOpen={isAddModuleOpen}

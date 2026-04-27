@@ -63,6 +63,27 @@ const isAuthEndpointRequest = (url?: string) => {
   );
 };
 
+const ABSOLUTE_URL_REGEX = /^https?:\/\//i;
+
+const safeOrigin = (url?: string): string | null => {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+};
+
+const API_BASE_ORIGIN = safeOrigin(import.meta.env.VITE_API_BASE_URL);
+
+const shouldAttachApiAuth = (url?: string): boolean => {
+  if (!url) return true;
+  if (!ABSOLUTE_URL_REGEX.test(url)) return true;
+  const requestOrigin = safeOrigin(url);
+  if (!requestOrigin || !API_BASE_ORIGIN) return false;
+  return requestOrigin === API_BASE_ORIGIN;
+};
+
 const refreshAccessToken = async (): Promise<string> => {
   const refreshToken = localStorage.getItem("refresh_token");
 
@@ -118,6 +139,10 @@ const getValidAccessToken = async (forceRefresh = false): Promise<string> => {
 
 // Attach access token to every request
 http.interceptors.request.use(async (config) => {
+  if (!shouldAttachApiAuth(config.url)) {
+    return config;
+  }
+
   if (isAuthEndpointRequest(config.url)) {
     return config;
   }
@@ -142,6 +167,7 @@ http.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
+      shouldAttachApiAuth(originalRequest.url) &&
       !isAuthEndpointRequest(originalRequest.url)
     ) {
       originalRequest._retry = true;
@@ -156,7 +182,7 @@ http.interceptors.response.use(
     }
 
     // Backend is down (network error, timeout, connection refused)
-    if (!error.response) {
+    if (!error.response && shouldAttachApiAuth(originalRequest.url)) {
       clearAuthAndRedirect();
       return Promise.reject(error);
     }

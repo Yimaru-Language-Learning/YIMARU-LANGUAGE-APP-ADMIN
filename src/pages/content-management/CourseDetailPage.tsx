@@ -31,6 +31,7 @@ import {
   getTopLevelCourseModules,
   updateTopLevelCourseModule,
 } from "../../api/courses.api";
+import { resolveFileUrl } from "../../api/files.api";
 import type {
   ProgramCourseListItem,
   TopLevelCourseModuleItem,
@@ -49,6 +50,28 @@ function isLikelyImageUrl(src: string): boolean {
     t.startsWith("/") ||
     t.startsWith("data:")
   );
+}
+
+function isSignedS3Url(src: string): boolean {
+  const trimmed = src.trim();
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+    return false;
+  }
+  try {
+    const url = new URL(trimmed);
+    return url.searchParams.has("X-Amz-Signature");
+  } catch {
+    return false;
+  }
+}
+
+function extractObjectKeyFromUrl(src: string): string {
+  try {
+    const url = new URL(src);
+    return url.pathname.replace(/^\/+/, "").trim();
+  } catch {
+    return "";
+  }
 }
 
 /** Default purple gradient with optional cover image; gradient stays if URL missing or image errors. */
@@ -197,7 +220,23 @@ export function CourseDetailPage() {
       if (modulesOutcome.status === "fulfilled") {
         const raw = modulesOutcome.value.data?.data?.modules;
         const list = Array.isArray(raw) ? raw : [];
-        const sorted = [...list].sort(
+        const refreshed = await Promise.all(
+          list.map(async (module) => {
+            const icon = module.icon?.trim() ?? "";
+            if (!icon || !isSignedS3Url(icon)) return module;
+            const objectKey = extractObjectKeyFromUrl(icon);
+            if (!objectKey) return module;
+            try {
+              const resolved = await resolveFileUrl(objectKey);
+              const freshUrl = resolved.data?.data?.url?.trim();
+              if (!freshUrl) return module;
+              return { ...module, icon: freshUrl };
+            } catch {
+              return module;
+            }
+          }),
+        );
+        const sorted = [...refreshed].sort(
           (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
         );
         setModules(sorted);

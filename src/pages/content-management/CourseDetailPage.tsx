@@ -31,7 +31,7 @@ import {
   getTopLevelCourseModules,
   updateTopLevelCourseModule,
 } from "../../api/courses.api";
-import { resolveFileUrl } from "../../api/files.api";
+import { refreshFileUrl, resolveFileUrl } from "../../api/files.api";
 import type {
   ProgramCourseListItem,
   TopLevelCourseModuleItem,
@@ -50,6 +50,17 @@ function isLikelyImageUrl(src: string): boolean {
     t.startsWith("/") ||
     t.startsWith("data:")
   );
+}
+
+function isSignedMinioUrl(src: string): boolean {
+  const value = src.trim();
+  if (!value.startsWith("http://") && !value.startsWith("https://")) return false;
+  try {
+    const url = new URL(value);
+    return url.searchParams.has("X-Amz-Signature");
+  } catch {
+    return false;
+  }
 }
 
 /** Default purple gradient with optional cover image; gradient stays if URL missing or image errors. */
@@ -201,10 +212,17 @@ export function CourseDetailPage() {
         const refreshed = await Promise.all(
           list.map(async (module) => {
             const icon = module.icon?.trim() ?? "";
-            // If backend already returns a full MinIO/S3 URL (including presigned),
-            // use it directly. Only resolve raw object keys via /files/url.
-            if (!icon || isLikelyImageUrl(icon)) return module;
+            if (!icon) return module;
             try {
+              if (isSignedMinioUrl(icon)) {
+                const refreshedRes = await refreshFileUrl(icon);
+                const refreshedUrl = refreshedRes.data?.data?.url?.trim();
+                if (refreshedUrl) {
+                  return { ...module, icon: refreshedUrl };
+                }
+                return module;
+              }
+              if (isLikelyImageUrl(icon)) return module;
               const resolved = await resolveFileUrl(icon);
               const freshUrl = resolved.data?.data?.url?.trim();
               if (!freshUrl) return module;

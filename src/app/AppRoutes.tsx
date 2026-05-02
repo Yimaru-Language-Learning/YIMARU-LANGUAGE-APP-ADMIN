@@ -28,6 +28,8 @@ import { ProgramTypeSelectionPage } from "../pages/content-management/ProgramTyp
 import { ProgramDetailPage } from "../pages/content-management/ProgramDetailPage";
 import { CourseManagementPage } from "../pages/content-management/CourseManagementPage";
 import { UnitManagementPage } from "../pages/content-management/UnitManagementPage";
+import { QuestionTypeLibraryPage } from "../pages/content-management/QuestionTypeLibraryPage";
+import { CreateQuestionTypeFlow } from "../pages/content-management/CreateQuestionTypeFlow";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { NotificationsPage } from "../pages/notifications/NotificationsPage";
 import { CreateNotificationPage } from "../pages/notifications/CreateNotificationPage";
@@ -163,6 +165,14 @@ export function AppRoutes() {
         <Route
           path="/new-content/courses"
           element={<ProgramTypeSelectionPage />}
+        />
+        <Route
+          path="/new-content/question-types"
+          element={<QuestionTypeLibraryPage />}
+        />
+        <Route
+          path="/new-content/question-types/create"
+          element={<CreateQuestionTypeFlow />}
         />
         <Route
           path="/new-content/courses/:programType"

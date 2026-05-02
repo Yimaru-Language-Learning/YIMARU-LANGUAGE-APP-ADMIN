@@ -16,9 +16,11 @@ export function ProgramTypeSelectionPage() {
             exams. Select a program type to manage curriculum and modules.
           </p>
         </div>
-        <Button className="h-10 px-6 rounded-[6px] bg-brand-500 font-bold text-white shadow-sm hover:bg-brand-600 transition-all flex items-center gap-2 mt-4">
-          Manage Question Types
-        </Button>
+        <Link to="/new-content/question-types">
+          <Button className="h-10 px-6 rounded-[6px] bg-brand-500 font-bold text-white shadow-sm hover:bg-brand-600 transition-all flex items-center gap-2 mt-4">
+            Manage Question Types
+          </Button>
+        </Link>
       </div>
 
       {/* Gradient Divider */}

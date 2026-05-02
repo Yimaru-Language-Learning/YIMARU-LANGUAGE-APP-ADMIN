@@ -22,7 +22,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
             {index < steps.length - 1 && (
               <div
                 className="absolute top-4 h-[1.5px] bg-grayScale-200 z-0"
-                style={{ left: "calc(50% + 24px)", right: "calc(-50% + 24px)" }}
+                style={{ left: "calc(50% + 50px)", right: "calc(-50% + 50px)" }}
               />
             )}
 

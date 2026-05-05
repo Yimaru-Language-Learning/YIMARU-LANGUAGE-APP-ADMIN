@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -5,11 +6,14 @@ import {
   MessageCircle,
   PlayCircle,
   ClipboardCheck,
+  Pencil,
+  Trash2,
   ArrowRight,
   X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
+import { Textarea } from "../../components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +23,16 @@ import {
   DialogClose,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
 import uploadIcon from "../../assets/icons/upload.png";
+import { toast } from "sonner";
+import { ResolvedImage } from "../../components/media/ResolvedImage";
+import {
+  createExamPrepUnitModule,
+  getExamPrepUnitModules,
+  updateExamPrepUnitModule,
+  deleteExamPrepUnitModule,
+} from "../../api/courses.api";
+import { uploadImageFile } from "../../api/files.api";
 
 export function UnitManagementPage() {
   const navigate = useNavigate();
@@ -40,35 +52,386 @@ export function UnitManagementPage() {
   const unitDisplayName =
     unitTitles[unitId || ""] || "Greetings & Introductions";
 
-  const modules = [
-    {
-      id: "mod1",
-      name: "Module 1: Basic Phrases",
-      description: "Learn essential phrases for daily conversations.",
-      videos: 3,
-      practices: 3,
-      gradient:
-        "linear-gradient(135deg, rgba(158, 40, 145, 0.4) 0%, rgba(158, 40, 145, 0.7) 100%)",
-    },
-    {
-      id: "mod2",
-      name: "Module 1: Basic Phrases", // Matching Image 2092-1 labels
-      description: "Learn essential phrases for daily conversations.",
-      videos: 3,
-      practices: 3,
-      gradient:
-        "linear-gradient(135deg, rgba(79, 70, 229, 0.4) 0%, rgba(79, 70, 229, 0.7) 100%)",
-    },
-    {
-      id: "mod3",
-      name: "Module 1: Basic Phrases",
-      description: "Learn essential phrases for daily conversations.",
-      videos: 3,
-      practices: 3,
-      gradient:
-        "linear-gradient(135deg, rgba(124, 58, 237, 0.4) 0%, rgba(124, 58, 237, 0.7) 100%)",
-    },
-  ];
+  const parsedUnitId = Number(unitId);
+  const [addModuleOpen, setAddModuleOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createThumbnail, setCreateThumbnail] = useState("");
+  const [createIcon, setCreateIcon] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
+  const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+  const createIconFileInputRef = useRef<HTMLInputElement>(null);
+  const [modulesLoading, setModulesLoading] = useState(false);
+  const [modules, setModules] = useState<
+    Array<{
+      id: number;
+      name: string;
+      description: string;
+      thumbnail: string;
+      icon: string;
+      sortOrder: number;
+      videos: number;
+      practices: number;
+      gradient: string;
+    }>
+  >([]);
+  const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editThumbnail, setEditThumbnail] = useState("");
+  const [editIcon, setEditIcon] = useState("");
+  const [editSortOrder, setEditSortOrder] = useState("1");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingEditThumbnail, setUploadingEditThumbnail] = useState(false);
+  const [uploadingEditIcon, setUploadingEditIcon] = useState(false);
+  const editThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+  const editIconFileInputRef = useRef<HTMLInputElement>(null);
+  const [deletingModuleId, setDeletingModuleId] = useState<number | null>(null);
+  const [deletingModule, setDeletingModule] = useState(false);
+
+  const isHttpUrl = (value: string) =>
+    value.startsWith("http://") || value.startsWith("https://");
+
+  const isMinioUrl = (value: string) => {
+    try {
+      const url = new URL(value);
+      return url.host === "s3.yimaruacademy.com";
+    } catch {
+      return false;
+    }
+  };
+
+  const resolveToMinioUrl = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return "";
+    if (!isHttpUrl(trimmed) || isMinioUrl(trimmed)) return trimmed;
+    const uploaded = await uploadImageFile(trimmed);
+    const uploadedUrl = uploaded.data?.data?.url?.trim();
+    if (!uploadedUrl) throw new Error("Failed to upload URL to MinIO");
+    return uploadedUrl;
+  };
+
+  const loadModules = useCallback(async () => {
+    if (!Number.isFinite(parsedUnitId) || parsedUnitId < 1) {
+      setModules([]);
+      return;
+    }
+    setModulesLoading(true);
+    try {
+      const response = await getExamPrepUnitModules(parsedUnitId, {
+        limit: 20,
+        offset: 0,
+      });
+      const rows = response.data?.data?.modules;
+      const list = Array.isArray(rows) ? rows : [];
+      setModules(
+        list.map((row, index) => ({
+          id: Number(row.id),
+          name: row.name?.trim() || `Module ${row.id}`,
+          description: row.description?.trim() || "—",
+          thumbnail: row.thumbnail?.trim() || "",
+          icon: row.icon?.trim() || "",
+          sortOrder: Number(row.sort_order ?? 0),
+          videos: Number(row.lessons_count ?? row.videos_count ?? 0),
+          practices: Number(row.practices_count ?? 0),
+          gradient:
+            index % 3 === 1
+              ? "linear-gradient(135deg, rgba(79, 70, 229, 0.4) 0%, rgba(79, 70, 229, 0.7) 100%)"
+              : index % 3 === 2
+                ? "linear-gradient(135deg, rgba(124, 58, 237, 0.4) 0%, rgba(124, 58, 237, 0.7) 100%)"
+                : "linear-gradient(135deg, rgba(158, 40, 145, 0.4) 0%, rgba(158, 40, 145, 0.7) 100%)",
+        })),
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load modules");
+      setModules([]);
+    } finally {
+      setModulesLoading(false);
+    }
+  }, [parsedUnitId]);
+
+  useEffect(() => {
+    void loadModules();
+  }, [loadModules]);
+
+  const clearCreateModuleForm = () => {
+    setCreateName("");
+    setCreateDescription("");
+    setCreateThumbnail("");
+    setCreateIcon("");
+    if (createThumbnailFileInputRef.current) {
+      createThumbnailFileInputRef.current.value = "";
+    }
+    if (createIconFileInputRef.current) {
+      createIconFileInputRef.current.value = "";
+    }
+  };
+
+  const handleCreateImageFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    target: "thumbnail" | "icon",
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+
+    if (target === "thumbnail") {
+      setUploadingThumbnail(true);
+    } else {
+      setUploadingIcon(true);
+    }
+    try {
+      const res = await uploadImageFile(file);
+      const url = res.data?.data?.url?.trim();
+      if (!url) throw new Error("Upload did not return a file URL");
+      if (target === "thumbnail") {
+        setCreateThumbnail(url);
+      } else {
+        setCreateIcon(url);
+      }
+      toast.success(`${target === "thumbnail" ? "Thumbnail" : "Icon"} uploaded`);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload image";
+      toast.error(message);
+    } finally {
+      if (target === "thumbnail") {
+        setUploadingThumbnail(false);
+      } else {
+        setUploadingIcon(false);
+      }
+    }
+  };
+
+  const autoUploadCreateUrl = async (
+    value: string,
+    target: "thumbnail" | "icon",
+  ) => {
+    const trimmed = value.trim();
+    if (!trimmed || !isHttpUrl(trimmed) || isMinioUrl(trimmed)) return;
+    if (target === "thumbnail") {
+      setUploadingThumbnail(true);
+    } else {
+      setUploadingIcon(true);
+    }
+    try {
+      const minioUrl = await resolveToMinioUrl(trimmed);
+      if (target === "thumbnail") {
+        setCreateThumbnail(minioUrl);
+      } else {
+        setCreateIcon(minioUrl);
+      }
+      if (minioUrl !== trimmed) {
+        toast.success(`${target === "thumbnail" ? "Thumbnail" : "Icon"} uploaded to MinIO`);
+      }
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload URL to MinIO";
+      toast.error(message);
+    } finally {
+      if (target === "thumbnail") {
+        setUploadingThumbnail(false);
+      } else {
+        setUploadingIcon(false);
+      }
+    }
+  };
+
+  const handleCreateModule = async () => {
+    if (!Number.isFinite(parsedUnitId) || parsedUnitId < 1) {
+      toast.error("Invalid unit");
+      return;
+    }
+    const name = createName.trim();
+    if (!name) {
+      toast.error("Module name is required");
+      return;
+    }
+    setCreating(true);
+    try {
+      const minioThumbnail = await resolveToMinioUrl(createThumbnail);
+      const minioIcon = await resolveToMinioUrl(createIcon);
+      await createExamPrepUnitModule(parsedUnitId, {
+        name,
+        description: createDescription.trim() || null,
+        thumbnail: minioThumbnail || null,
+        icon: minioIcon || null,
+      });
+      await loadModules();
+      toast.success("Module created");
+      clearCreateModuleForm();
+      setAddModuleOpen(false);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to create module";
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const openEditModule = (module: (typeof modules)[number]) => {
+    setEditingModuleId(module.id);
+    setEditName(module.name ?? "");
+    setEditDescription(module.description ?? "");
+    setEditThumbnail(module.thumbnail ?? "");
+    setEditIcon(module.icon ?? "");
+    setEditSortOrder(String(module.sortOrder ?? 1));
+  };
+
+  const closeEditModule = () => {
+    if (savingEdit || uploadingEditThumbnail || uploadingEditIcon) return;
+    setEditingModuleId(null);
+    setEditName("");
+    setEditDescription("");
+    setEditThumbnail("");
+    setEditIcon("");
+    setEditSortOrder("1");
+  };
+
+  const handleEditImageFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    target: "thumbnail" | "icon",
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (target === "thumbnail") {
+      setUploadingEditThumbnail(true);
+    } else {
+      setUploadingEditIcon(true);
+    }
+    try {
+      const res = await uploadImageFile(file);
+      const url = res.data?.data?.url?.trim();
+      if (!url) throw new Error("Upload did not return a file URL");
+      if (target === "thumbnail") {
+        setEditThumbnail(url);
+      } else {
+        setEditIcon(url);
+      }
+      toast.success(`${target === "thumbnail" ? "Thumbnail" : "Icon"} uploaded`);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload image";
+      toast.error(message);
+    } finally {
+      if (target === "thumbnail") {
+        setUploadingEditThumbnail(false);
+      } else {
+        setUploadingEditIcon(false);
+      }
+    }
+  };
+
+  const autoUploadEditUrl = async (value: string, target: "thumbnail" | "icon") => {
+    const trimmed = value.trim();
+    if (!trimmed || !isHttpUrl(trimmed) || isMinioUrl(trimmed)) return;
+    if (target === "thumbnail") {
+      setUploadingEditThumbnail(true);
+    } else {
+      setUploadingEditIcon(true);
+    }
+    try {
+      const minioUrl = await resolveToMinioUrl(trimmed);
+      if (target === "thumbnail") {
+        setEditThumbnail(minioUrl);
+      } else {
+        setEditIcon(minioUrl);
+      }
+      if (minioUrl !== trimmed) {
+        toast.success(`${target === "thumbnail" ? "Thumbnail" : "Icon"} uploaded to MinIO`);
+      }
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload URL to MinIO";
+      toast.error(message);
+    } finally {
+      if (target === "thumbnail") {
+        setUploadingEditThumbnail(false);
+      } else {
+        setUploadingEditIcon(false);
+      }
+    }
+  };
+
+  const handleSaveEditModule = async () => {
+    if (!editingModuleId) return;
+    const name = editName.trim();
+    if (!name) {
+      toast.error("Module name is required");
+      return;
+    }
+    const sortOrderNum = Number(editSortOrder);
+    if (!Number.isFinite(sortOrderNum) || sortOrderNum < 0) {
+      toast.error("Sort order must be a valid number");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const minioThumbnail = await resolveToMinioUrl(editThumbnail);
+      const minioIcon = await resolveToMinioUrl(editIcon);
+      await updateExamPrepUnitModule(editingModuleId, {
+        name,
+        description: editDescription.trim() || null,
+        thumbnail: minioThumbnail || null,
+        icon: minioIcon || null,
+        sort_order: sortOrderNum,
+      });
+      await loadModules();
+      toast.success("Module updated");
+      closeEditModule();
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update module";
+      toast.error(message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteModule = async () => {
+    if (!deletingModuleId) return;
+    setDeletingModule(true);
+    try {
+      await deleteExamPrepUnitModule(deletingModuleId);
+      await loadModules();
+      toast.success("Module deleted");
+      setDeletingModuleId(null);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to delete module";
+      toast.error(message);
+    } finally {
+      setDeletingModule(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -87,15 +450,21 @@ export function UnitManagementPage() {
           {unitDisplayName}
         </h1>
 
-        <Dialog>
+        <Dialog
+          open={addModuleOpen}
+          onOpenChange={(open) => {
+            if (!open && (creating || uploadingThumbnail || uploadingIcon)) return;
+            setAddModuleOpen(open);
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="h-10 px-6 rounded-[6px] bg-brand-500 font-bold text-white shadow-sm hover:bg-brand-600 transition-all flex items-center gap-2">
               <Plus className="h-5 w-5" />
               Add Modules
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-[600px] p-0 border-none rounded-[16px] overflow-hidden">
-            <div className="bg-white">
+          <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
+            <div className="flex min-h-0 flex-1 flex-col bg-white">
               <DialogHeader className="px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
                 <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
                   Create Modules
@@ -106,30 +475,50 @@ export function UnitManagementPage() {
                 </DialogClose>
               </DialogHeader>
 
-              <div className="p-8 space-y-8">
+              <div className="min-h-0 flex-1 overflow-y-auto p-8 space-y-8">
                 <div className="space-y-3">
                   <label className="text-[15px] text-grayScale-800">
                     Module Title
                   </label>
                   <Input
-                    placeholder="e.g. 1.1 Exam types"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                    placeholder="e.g. Present tense"
                     className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
                   />
                 </div>
 
                 <div className="space-y-3">
                   <label className="text-[15px] text-grayScale-800">
-                    Module Order
+                    Description
                   </label>
-                  <Select defaultValue="1">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                  </Select>
+                  <Textarea
+                    value={createDescription}
+                    onChange={(e) => setCreateDescription(e.target.value)}
+                    placeholder="Optional module description"
+                    rows={4}
+                    className="min-h-[96px] rounded-[8px] border-grayScale-400"
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                  />
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[15px] text-grayScale-800">Icon</label>
-                  <div className="relative group cursor-pointer">
+                  <label className="text-[15px] text-grayScale-800">Thumbnail</label>
+                  <input
+                    ref={createThumbnailFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => void handleCreateImageFile(e, "thumbnail")}
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                  />
+                  <button
+                    type="button"
+                    className="relative group w-full cursor-pointer"
+                    onClick={() => createThumbnailFileInputRef.current?.click()}
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                  >
                     <div className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white py-8 px-10 transition-all ">
                       <div className="mb-4">
                         <img
@@ -140,31 +529,124 @@ export function UnitManagementPage() {
                       </div>
                       <p className="text-[15px]">
                         <span className="text-brand-500 font-bold hover:underline">
-                          Click to upload
+                          {uploadingThumbnail ? "Uploading…" : "Click to upload"}
                         </span>{" "}
                         <span className="text-grayScale-500">
-                          or drag and drop
+                          or paste a URL below
                         </span>
                       </p>
                       <p className="mt-1.5 text-[12px] text-grayScale-400 uppercase tracking-widest">
-                        JPG, PNG (MAX 1 MB)
+                        JPG, PNG (MAX 5 MB)
                       </p>
                     </div>
-                  </div>
+                  </button>
+                  {createThumbnail.trim() ? (
+                    <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                      <ResolvedImage
+                        src={createThumbnail.trim()}
+                        alt=""
+                        className="h-28 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+                  <Input
+                    value={createThumbnail}
+                    onChange={(e) => setCreateThumbnail(e.target.value)}
+                    onPaste={(event) => {
+                      const pasted = event.clipboardData?.getData("text")?.trim();
+                      if (!pasted) return;
+                      setTimeout(() => {
+                        void autoUploadCreateUrl(pasted, "thumbnail");
+                      }, 0);
+                    }}
+                    placeholder="Optional thumbnail URL (or leave empty for null)"
+                    className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[15px] text-grayScale-800">Icon</label>
+                  <input
+                    ref={createIconFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => void handleCreateImageFile(e, "icon")}
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                  />
+                  <button
+                    type="button"
+                    className="relative group w-full cursor-pointer"
+                    onClick={() => createIconFileInputRef.current?.click()}
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                  >
+                    <div className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white py-8 px-10 transition-all ">
+                      <div className="mb-4">
+                        <img
+                          src={uploadIcon}
+                          alt="Upload icon"
+                          className="h-10 w-10"
+                        />
+                      </div>
+                      <p className="text-[15px]">
+                        <span className="text-brand-500 font-bold hover:underline">
+                          {uploadingIcon ? "Uploading…" : "Click to upload"}
+                        </span>{" "}
+                        <span className="text-grayScale-500">
+                          or paste a URL below
+                        </span>
+                      </p>
+                      <p className="mt-1.5 text-[12px] text-grayScale-400 uppercase tracking-widest">
+                        JPG, PNG (MAX 5 MB)
+                      </p>
+                    </div>
+                  </button>
+                  {createIcon.trim() ? (
+                    <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                      <ResolvedImage
+                        src={createIcon.trim()}
+                        alt=""
+                        className="h-24 w-full object-contain bg-white p-2"
+                      />
+                    </div>
+                  ) : null}
+                  <Input
+                    value={createIcon}
+                    onChange={(e) => setCreateIcon(e.target.value)}
+                    onPaste={(event) => {
+                      const pasted = event.clipboardData?.getData("text")?.trim();
+                      if (!pasted) return;
+                      setTimeout(() => {
+                        void autoUploadCreateUrl(pasted, "icon");
+                      }, 0);
+                    }}
+                    placeholder="Optional icon URL (or leave empty for null)"
+                    className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                  />
                 </div>
               </div>
 
               <div className="px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-200 flex justify-end gap-3">
                 <DialogClose asChild>
                   <Button
+                    type="button"
                     variant="outline"
                     className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                    disabled={creating || uploadingThumbnail || uploadingIcon}
+                    onClick={clearCreateModuleForm}
                   >
                     Cancel
                   </Button>
                 </DialogClose>
-                <Button className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600">
-                  Create Module
+                <Button
+                  type="button"
+                  className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                  onClick={() => void handleCreateModule()}
+                  disabled={creating || uploadingThumbnail || uploadingIcon}
+                >
+                  {creating ? "Creating..." : "Create Module"}
                 </Button>
               </div>
             </div>
@@ -189,66 +671,337 @@ export function UnitManagementPage() {
 
       {/* Grid of Modules */}
       <div className="flex flex-wrap gap-4 pt-4">
-        {modules.map((module, index) => (
-          <Card
-            key={`${module.id}-${index}`}
-            className="group flex w-[400px] flex-col bg-white rounded-[12px] border border-grayScale-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
-          >
-            {/* Gradient Header */}
-            <div
-              className="h-36 w-full"
-              style={{ background: module.gradient }}
-            />
-
-            <div className="p-5 flex flex-col space-y-4">
-              <div className="flex items-start gap-3">
-                {/* Chat Icon */}
-                <div className="mt-1 h-10 w-10 shrink-0 rounded-full bg-[#9E28911A] border border-[#9E289133] flex items-center justify-center">
-                  <MessageCircle className="h-5 w-5 text-brand-500" />
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="text-[16px] font-medium text-grayScale-900 leading-tight">
-                    {module.name}
-                  </h3>
-                  <p className="text-[12px] text-grayScale-500 font-medium">
-                    {module.description}
-                  </p>
-                </div>
+        {modulesLoading ? (
+          <p className="text-sm text-grayScale-500">Loading modules...</p>
+        ) : modules.length === 0 ? (
+          <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+            <p className="text-sm font-medium text-grayScale-600">
+              No modules for this unit yet
+            </p>
+            <p className="mt-1 text-sm text-grayScale-400">
+              Create your first module to start organizing videos and practices.
+            </p>
+          </div>
+        ) : (
+          modules.map((module, index) => (
+            <Card
+              key={`${module.id}-${index}`}
+              className="group relative flex w-[400px] flex-col bg-white rounded-[12px] border border-grayScale-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
+            >
+              <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                  onClick={() => openEditModule(module)}
+                  aria-label={`Edit ${module.name}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                  onClick={() => setDeletingModuleId(module.id)}
+                  aria-label={`Delete ${module.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
-
-              {/* Stats Pills */}
-              <div className="flex items-center gap-3">
-                <div className="h-8 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">
-                  <PlayCircle className="h-3.5 w-3.5 text-grayScale-400" />
-                  <span className="text-[12px] font-bold">
-                    {module.videos} Videos
-                  </span>
-                </div>
-                <div className="h-8 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">
-                  <ClipboardCheck className="h-3.5 w-3.5 text-grayScale-400" />
-                  <span className="text-[12px] font-bold">
-                    {module.practices} Practices
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <Button
-                className="w-full h-10 bg-brand-500 text-white rounded-[6px] font-bold flex items-center justify-center gap-2 group/btn"
-                onClick={() =>
-                  navigate(
-                    `/new-content/courses/${programType}/${courseId}/${unitId}/${module.id}`,
-                  )
-                }
+              {/* Header */}
+              <div
+                className="h-36 w-full overflow-hidden"
+                style={{ background: module.gradient }}
               >
-                View Detail
-                <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                {module.thumbnail ? (
+                  <ResolvedImage
+                    src={module.thumbnail}
+                    alt={`${module.name} thumbnail`}
+                    className="h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : null}
+              </div>
+
+              <div className="p-5 flex flex-col space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 h-10 w-10 shrink-0 rounded-full bg-[#9E28911A] border border-[#9E289133] flex items-center justify-center overflow-hidden">
+                    {module.icon ? (
+                      <ResolvedImage
+                        src={module.icon}
+                        alt={`${module.name} icon`}
+                        className="h-full w-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <MessageCircle className="h-5 w-5 text-brand-500" />
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-[16px] font-medium text-grayScale-900 leading-tight">
+                      {module.name}
+                    </h3>
+                    <p className="text-[12px] text-grayScale-500 font-medium line-clamp-2">
+                      {module.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Stats Pills */}
+                <div className="flex items-center gap-3">
+                  <div className="h-8 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">
+                    <PlayCircle className="h-3.5 w-3.5 text-grayScale-400" />
+                    <span className="text-[12px] font-bold">
+                      {module.videos} Videos
+                    </span>
+                  </div>
+                  <div className="h-8 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">
+                    <ClipboardCheck className="h-3.5 w-3.5 text-grayScale-400" />
+                    <span className="text-[12px] font-bold">
+                      {module.practices} Practices
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <Button
+                  className="w-full h-10 bg-brand-500 text-white rounded-[6px] font-bold flex items-center justify-center gap-2 group/btn"
+                  onClick={() =>
+                    navigate(
+                      `/new-content/courses/${programType}/${courseId}/${unitId}/${module.id}`,
+                    )
+                  }
+                >
+                  View Detail
+                  <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                </Button>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Dialog
+        open={editingModuleId !== null}
+        onOpenChange={(open) => {
+          if (!open && (savingEdit || uploadingEditThumbnail || uploadingEditIcon)) return;
+          if (!open) closeEditModule();
+        }}
+      >
+        <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
+          <div className="flex min-h-0 flex-1 flex-col bg-white">
+            <DialogHeader className="px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
+              <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
+                Edit Module
+              </DialogTitle>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Module Title</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Description</label>
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={4}
+                  className="min-h-[96px] rounded-[8px] border-grayScale-400"
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Sort Order</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editSortOrder}
+                  onChange={(e) => setEditSortOrder(e.target.value)}
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Thumbnail</label>
+                <input
+                  ref={editThumbnailFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => void handleEditImageFile(e, "thumbnail")}
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                />
+                <button
+                  type="button"
+                  className="relative group w-full cursor-pointer"
+                  onClick={() => editThumbnailFileInputRef.current?.click()}
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                >
+                  <div className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white py-8 px-10 transition-all ">
+                    <div className="mb-4">
+                      <img src={uploadIcon} alt="Upload icon" className="h-10 w-10" />
+                    </div>
+                    <p className="text-[15px]">
+                      <span className="text-brand-500 font-bold hover:underline">
+                        {uploadingEditThumbnail ? "Uploading…" : "Click to upload"}
+                      </span>{" "}
+                      <span className="text-grayScale-500">or paste a URL below</span>
+                    </p>
+                    <p className="mt-1.5 text-[12px] text-grayScale-400 uppercase tracking-widest">
+                      JPG, PNG (MAX 5 MB)
+                    </p>
+                  </div>
+                </button>
+                {editThumbnail.trim() ? (
+                  <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                    <ResolvedImage
+                      src={editThumbnail.trim()}
+                      alt=""
+                      className="h-28 w-full object-cover"
+                    />
+                  </div>
+                ) : null}
+                <Input
+                  value={editThumbnail}
+                  onChange={(e) => setEditThumbnail(e.target.value)}
+                  onPaste={(event) => {
+                    const pasted = event.clipboardData?.getData("text")?.trim();
+                    if (!pasted) return;
+                    setTimeout(() => {
+                      void autoUploadEditUrl(pasted, "thumbnail");
+                    }, 0);
+                  }}
+                  placeholder="Optional thumbnail URL (or leave empty for null)"
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Icon</label>
+                <input
+                  ref={editIconFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => void handleEditImageFile(e, "icon")}
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                />
+                <button
+                  type="button"
+                  className="relative group w-full cursor-pointer"
+                  onClick={() => editIconFileInputRef.current?.click()}
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                >
+                  <div className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white py-8 px-10 transition-all ">
+                    <div className="mb-4">
+                      <img src={uploadIcon} alt="Upload icon" className="h-10 w-10" />
+                    </div>
+                    <p className="text-[15px]">
+                      <span className="text-brand-500 font-bold hover:underline">
+                        {uploadingEditIcon ? "Uploading…" : "Click to upload"}
+                      </span>{" "}
+                      <span className="text-grayScale-500">or paste a URL below</span>
+                    </p>
+                    <p className="mt-1.5 text-[12px] text-grayScale-400 uppercase tracking-widest">
+                      JPG, PNG (MAX 5 MB)
+                    </p>
+                  </div>
+                </button>
+                {editIcon.trim() ? (
+                  <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                    <ResolvedImage
+                      src={editIcon.trim()}
+                      alt=""
+                      className="h-24 w-full object-contain bg-white p-2"
+                    />
+                  </div>
+                ) : null}
+                <Input
+                  value={editIcon}
+                  onChange={(e) => setEditIcon(e.target.value)}
+                  onPaste={(event) => {
+                    const pasted = event.clipboardData?.getData("text")?.trim();
+                    if (!pasted) return;
+                    setTimeout(() => {
+                      void autoUploadEditUrl(pasted, "icon");
+                    }, 0);
+                  }}
+                  placeholder="Optional icon URL (or leave empty for null)"
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                />
+              </div>
+            </div>
+            <div className="px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-200 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+                onClick={closeEditModule}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                onClick={() => void handleSaveEditModule()}
+                disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
+              >
+                {savingEdit ? "Saving..." : "Save Changes"}
               </Button>
             </div>
-          </Card>
-        ))}
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deletingModuleId !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingModule) setDeletingModuleId(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-[16px] border-none p-0 overflow-hidden">
+          <div className="bg-white">
+            <DialogHeader className="border-b border-grayScale-100 px-6 py-5">
+              <DialogTitle className="text-lg font-bold text-grayScale-900">
+                Delete Module
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 py-6 text-sm text-grayScale-600">
+              Are you sure you want to delete this module? This action cannot be undone.
+            </div>
+            <div className="flex justify-end gap-3 border-t border-grayScale-100 px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingModuleId(null)}
+                disabled={deletingModule}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-500 hover:bg-red-600"
+                onClick={() => void handleDeleteModule()}
+                disabled={deletingModule}
+              >
+                {deletingModule ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

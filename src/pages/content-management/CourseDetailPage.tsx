@@ -348,23 +348,40 @@ export function CourseDetailPage() {
             Try again
           </Button>
         </div>
-      </div>
-    
-
-      <AddModuleModal
-        isOpen={isAddModuleOpen}
-        onClose={() => setIsAddModuleOpen(false)}
-      />
-      {/* Gradient Divider */}
-
-      {/* Gradient Grid */}
-      <div className="flex flex-warp gap-10">
-        {MODULES.map((module) => (
-          <Card
-            key={module.id}
-            className="group overflow-hidden border w-[330px] border-grayScale-50 shadow-sm hover:shadow-lg transition-all duration-300 rounded-[16px] bg-white flex flex-col h-full"
-          >
-            {/* Gradient Banner */}
+      ) : (
+        <>
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-medium tracking-tight text-grayScale-900">
+                {displayTitle}
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm font-medium text-grayScale-500">
+                {displayDescription}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                className="rounded-[6px] border-brand-500 text-brand-500 "
+                onClick={() =>
+                  navigate(
+                    `/new-content/learn-english/${programIdParam}/courses/add-practice?backTo=modules&courseId=${courseIdParam}`,
+                  )
+                }
+              >
+                <Calendar className="h-4 w-4" />
+                Add Practice
+              </Button>
+              <Button
+                className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
+                onClick={() => setIsAddModuleOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Add Module
+              </Button>
+            </div>
+          </div>
+          <div className="relative">
             <div
               className="absolute inset-0 flex items-center"
               aria-hidden="true"

@@ -1,4 +1,4 @@
-import { resolveFileUrl } from "../api/files.api"
+import { resolveDisplayMediaUrl } from "./mediaUrl"
 
 export function normalizeObjectKey(value: string): string {
   const trimmed = value.trim()
@@ -12,10 +12,7 @@ export function normalizeObjectKey(value: string): string {
 }
 
 export async function resolveMediaPreviewUrl(value: string): Promise<string> {
-  if (!value.trim()) return ""
-  if (value.startsWith("http://") || value.startsWith("https://")) return value
-  const key = normalizeObjectKey(value)
-  if (!key) return ""
-  const res = await resolveFileUrl(key)
-  return res.data?.data?.url ?? ""
+  const normalized = normalizeObjectKey(value)
+  if (!normalized) return ""
+  return resolveDisplayMediaUrl(normalized)
 }

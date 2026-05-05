@@ -72,7 +72,7 @@ export function UnitManagementPage() {
       thumbnail: string;
       icon: string;
       sortOrder: number;
-      videos: number;
+      lessons: number;
       practices: number;
       gradient: string;
     }>
@@ -134,7 +134,7 @@ export function UnitManagementPage() {
           thumbnail: row.thumbnail?.trim() || "",
           icon: row.icon?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
-          videos: Number(row.lessons_count ?? row.videos_count ?? 0),
+          lessons: Number(row.lessons_count ?? row.videos_count ?? 0),
           practices: Number(row.practices_count ?? 0),
           gradient:
             index % 3 === 1
@@ -679,7 +679,7 @@ export function UnitManagementPage() {
               No modules for this unit yet
             </p>
             <p className="mt-1 text-sm text-grayScale-400">
-              Create your first module to start organizing videos and practices.
+              Create your first module to start organizing lessons and practices.
             </p>
           </div>
         ) : (
@@ -759,7 +759,7 @@ export function UnitManagementPage() {
                   <div className="h-8 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">
                     <PlayCircle className="h-3.5 w-3.5 text-grayScale-400" />
                     <span className="text-[12px] font-bold">
-                      {module.videos} Videos
+                      {module.lessons} Lessons
                     </span>
                   </div>
                   <div className="h-8 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">

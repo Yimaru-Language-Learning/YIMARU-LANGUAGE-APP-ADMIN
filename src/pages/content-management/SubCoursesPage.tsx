@@ -1,451 +1,181 @@
-import { useEffect, useState, useRef } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeft,
-  ToggleLeft,
-  ToggleRight,
-  MoreVertical,
-  X,
-  Trash2,
-  AlertCircle,
-  Edit,
-  Link2,
-  Plus,
-  LayoutGrid,
-  GitBranch,
+  BookOpen,
   ChevronDown,
-  Lock,
-  ArrowRight,
-} from "lucide-react";
-import practiceSrc from "../../assets/Practice.svg";
-import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg";
-import { Card, CardContent } from "../../components/ui/card";
-import alertSrc from "../../assets/Alert.svg";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
+  ChevronRight,
+  GraduationCap,
+  LayoutList,
+  Layers,
+} from "lucide-react"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
+import alertSrc from "../../assets/Alert.svg"
+import { Badge } from "../../components/ui/badge"
+import { Button } from "../../components/ui/button"
+import { Card, CardContent } from "../../components/ui/card"
 import {
-  getSubModulesByCourse,
+  getCourseLevelsForCourse,
   getCoursesByCategory,
   getCourseCategories,
-  createSubModule,
-  updateSubModule,
-  updateSubModuleStatus,
-  deleteSubModule,
-  getSubModulePrerequisites,
-  addSubModulePrerequisite,
-  removeSubModulePrerequisite,
-} from "../../api/courses.api";
-import { uploadImageFile } from "../../api/files.api";
-import { Input } from "../../components/ui/input";
-import { FileUpload } from "../../components/ui/file-upload";
+  getModulesByLevel,
+  getSubModulesByModuleId,
+} from "../../api/courses.api"
 import type {
-  SubCourse,
+  CourseLevelRow,
+  CourseSubModuleListItem,
   Course,
   CourseCategory,
-  SubCoursePrerequisite,
-} from "../../types/course.types";
-import { SpinnerIcon } from "../../components/ui/spinner-icon";
-import { toast } from "sonner";
+  Module,
+} from "../../types/course.types"
+
+type ModuleRow = Module & { description?: string | null; icon_url?: string | null; created_at?: string }
 
 export function SubModulesPage() {
   const { categoryId, courseId } = useParams<{
-    categoryId: string;
-    courseId: string;
-  }>();
-  const navigate = useNavigate();
-  const [subCourses, setSubCourses] = useState<SubCourse[]>([]);
-  const [course, setCourse] = useState<Course | null>(null);
-  const [category, setCategory] = useState<CourseCategory | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    categoryId: string
+    courseId: string
+  }>()
+  const navigate = useNavigate()
 
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [togglingId, setTogglingId] = useState<number | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [subCourseToDelete, setSubCourseToDelete] = useState<SubCourse | null>(
-    null,
-  );
-  const [deleting, setDeleting] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [course, setCourse] = useState<Course | null>(null)
+  const [category, setCategory] = useState<CourseCategory | null>(null)
+  const [levels, setLevels] = useState<CourseLevelRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [subCourseToEdit, setSubCourseToEdit] = useState<SubCourse | null>(
-    null,
-  );
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [level, setLevel] = useState("BEGINNER");
-  const [subLevel, setSubLevel] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [displayOrder, setDisplayOrder] = useState("1");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [expandedLevelIds, setExpandedLevelIds] = useState<Set<number>>(new Set())
+  const [modulesByLevelId, setModulesByLevelId] = useState<Record<number, ModuleRow[]>>({})
+  const [loadingModulesLevelId, setLoadingModulesLevelId] = useState<number | null>(null)
 
-  // View mode
-  const [viewMode, setViewMode] = useState<"grid" | "flow">("grid");
+  const [expandedModuleIds, setExpandedModuleIds] = useState<Set<number>>(new Set())
+  const [subModulesByModuleId, setSubModulesByModuleId] = useState<
+    Record<number, CourseSubModuleListItem[]>
+  >({})
+  const [loadingSubModulesModuleId, setLoadingSubModulesModuleId] = useState<number | null>(null)
 
-  // All prerequisites map: subCourseId -> prerequisites[]
-  const [allPrereqMap, setAllPrereqMap] = useState<
-    Record<number, SubCoursePrerequisite[]>
-  >({});
-  const [allPrereqLoading, setAllPrereqLoading] = useState(false);
-
-  // Prerequisites state
-  const [showPrereqModal, setShowPrereqModal] = useState(false);
-  const [prereqSubCourse, setPrereqSubCourse] = useState<SubCourse | null>(
-    null,
-  );
-  const [prerequisites, setPrerequisites] = useState<SubCoursePrerequisite[]>(
-    [],
-  );
-  const [prereqLoading, setPrereqLoading] = useState(false);
-  const [prereqAdding, setPrereqAdding] = useState(false);
-  const [prereqRemoving, setPrereqRemoving] = useState<number | null>(null);
-  const [selectedPrereqId, setSelectedPrereqId] = useState<number | 0>(0);
+  const modulesFetchedForLevelRef = useRef<Set<number>>(new Set())
+  const subModulesFetchedForModuleRef = useRef<Set<number>>(new Set())
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpenMenuId(null);
-      }
-    };
-
-    if (openMenuId !== null) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openMenuId]);
-
-  const fetchSubCourses = async () => {
-    if (!courseId) return;
-
-    try {
-      const subCoursesRes = await getSubModulesByCourse(Number(courseId));
-      setSubCourses(subCoursesRes.data.data.sub_courses ?? []);
-    } catch (err) {
-      console.error("Failed to fetch sub-modules:", err);
-    }
-  };
-
-  const fetchAllPrerequisites = async (scs: SubCourse[]) => {
-    if (scs.length === 0) return;
-    setAllPrereqLoading(true);
-    try {
-      const results = await Promise.all(
-        scs.map((sc) =>
-          getSubModulePrerequisites(sc.id).then((res) => ({
-            id: sc.id,
-            data: res.data.data ?? [],
-          })),
-        ),
-      );
-      const map: Record<number, SubCoursePrerequisite[]> = {};
-      for (const r of results) {
-        map[r.id] = r.data;
-      }
-      setAllPrereqMap(map);
-    } catch (err) {
-      console.error("Failed to fetch all prerequisites:", err);
-    } finally {
-      setAllPrereqLoading(false);
-    }
-  };
+    modulesFetchedForLevelRef.current.clear()
+    subModulesFetchedForModuleRef.current.clear()
+    setExpandedLevelIds(new Set())
+    setExpandedModuleIds(new Set())
+    setModulesByLevelId({})
+    setSubModulesByModuleId({})
+  }, [courseId])
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!courseId || !categoryId) return;
-
+    const run = async () => {
+      if (!courseId || !categoryId) return
+      setLoading(true)
+      setError(null)
       try {
-        const [subCoursesRes, coursesRes, categoriesRes] = await Promise.all([
-          getSubModulesByCourse(Number(courseId)),
+        const [levelsRes, coursesRes, categoriesRes] = await Promise.all([
+          getCourseLevelsForCourse(Number(courseId)),
           getCoursesByCategory(Number(categoryId)),
           getCourseCategories(),
-        ]);
+        ])
 
-        setSubCourses(subCoursesRes.data.data.sub_courses ?? []);
+        const rawLevels = levelsRes.data?.data?.levels
+        const list = Array.isArray(rawLevels) ? rawLevels : []
+        setLevels(
+          [...list].sort((a, b) => {
+            const o = (a.display_order ?? 0) - (b.display_order ?? 0)
+            if (o !== 0) return o
+            return String(a.cefr_level ?? "").localeCompare(String(b.cefr_level ?? ""))
+          }),
+        )
 
-        const foundCourse = coursesRes.data.data.courses?.find(
-          (c) => c.id === Number(courseId),
-        );
-        setCourse(foundCourse ?? null);
+        const foundCourse = coursesRes.data?.data?.courses?.find((c) => c.id === Number(courseId))
+        setCourse(foundCourse ?? null)
 
-        const foundCategory = categoriesRes.data.data.categories?.find(
+        const foundCategory = categoriesRes.data?.data?.categories?.find(
           (c) => c.id === Number(categoryId),
-        );
-        setCategory(foundCategory ?? null);
-      } catch (err) {
-        console.error("Failed to fetch sub-modules:", err);
-        setError("Failed to load courses");
+        )
+        setCategory(foundCategory ?? null)
+      } catch (e) {
+        console.error(e)
+        setError("Failed to load course structure")
       } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [courseId, categoryId]);
-
-  useEffect(() => {
-    if (subCourses.length > 0) {
-      fetchAllPrerequisites(subCourses);
-    }
-  }, [subCourses]);
-
-  const handleToggleStatus = async (subCourse: SubCourse) => {
-    setTogglingId(subCourse.id);
-    try {
-      await updateSubModuleStatus(subCourse.id, {
-        is_active: !subCourse.is_active,
-        level: subCourse.level,
-        title: subCourse.title,
-      });
-      await fetchSubCourses();
-    } catch (err) {
-      console.error("Failed to update sub-course status:", err);
-    } finally {
-      setTogglingId(null);
-    }
-  };
-
-  const handleDeleteClick = (subCourse: SubCourse) => {
-    setSubCourseToDelete(subCourse);
-    setShowDeleteModal(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!subCourseToDelete) return;
-
-    setDeleting(true);
-    try {
-      await deleteSubModule(subCourseToDelete.id);
-      setShowDeleteModal(false);
-      setSubCourseToDelete(null);
-      await fetchSubCourses();
-    } catch (err) {
-      console.error("Failed to delete sub-course:", err);
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const nextSubCourseDisplayOrder = () =>
-    subCourses.length === 0
-      ? 1
-      : Math.max(0, ...subCourses.map((s) => s.display_order ?? 0)) + 1;
-
-  const handleAddSubCourse = () => {
-    setTitle("");
-    setDescription("");
-    setLevel("BEGINNER");
-    setSubLevel("");
-    setThumbnailUrl("");
-    setThumbnailFile(null);
-    setDisplayOrder(String(nextSubCourseDisplayOrder()));
-    setSaveError(null);
-    setShowAddModal(true);
-  };
-
-  const handleSaveNewSubCourse = async () => {
-    if (!courseId) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      let thumbnail = thumbnailUrl.trim();
-      if (thumbnailFile) {
-        const uploadRes = await uploadImageFile(thumbnailFile);
-        const uploadedUrl = uploadRes.data?.data?.url?.trim();
-        if (!uploadedUrl) throw new Error("Missing uploaded image url");
-        thumbnail = uploadedUrl;
-      }
-
-      const parsedOrder = parseInt(displayOrder, 10);
-      const display_order = Number.isFinite(parsedOrder) && parsedOrder >= 0
-        ? parsedOrder
-        : nextSubCourseDisplayOrder();
-
-      await createSubModule({
-        course_id: Number(courseId),
-        title: title.trim(),
-        description: description.trim(),
-        thumbnail,
-        display_order,
-        level: level.trim() || "BEGINNER",
-        sub_level: subLevel.trim(),
-      });
-      setShowAddModal(false);
-      setTitle("");
-      setDescription("");
-      setLevel("BEGINNER");
-      setSubLevel("");
-      setThumbnailUrl("");
-      setThumbnailFile(null);
-      setDisplayOrder("1");
-      await fetchSubCourses();
-      toast.success("Course created successfully");
-    } catch (err: unknown) {
-      console.error("Failed to create sub-course:", err);
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to create course";
-      setSaveError(msg);
-      toast.error(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleEditClick = (subCourse: SubCourse) => {
-    setSubCourseToEdit(subCourse);
-    setTitle(subCourse.title);
-    setDescription(subCourse.description);
-    setLevel(subCourse.level);
-    setSaveError(null);
-    setShowEditModal(true);
-  };
-
-  const handleSaveEditSubCourse = async () => {
-    if (!subCourseToEdit) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      await updateSubModule(subCourseToEdit.id, {
-        title,
-        description,
-        level,
-      });
-      setShowEditModal(false);
-      setSubCourseToEdit(null);
-      setTitle("");
-      setDescription("");
-      setLevel("");
-      await fetchSubCourses();
-    } catch (err) {
-      console.error("Failed to update sub-course:", err);
-      setSaveError("Failed to update course");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSubModuleClick = (subModuleId: number) => {
-    navigate(
-      `/content/category/${categoryId}/courses/${courseId}/sub-modules/${subModuleId}`,
-    );
-  };
-
-  const handlePrereqClick = async (subCourse: SubCourse) => {
-    setPrereqSubCourse(subCourse);
-    setShowPrereqModal(true);
-    setPrereqLoading(true);
-    setSelectedPrereqId(0);
-    try {
-      const res = await getSubModulePrerequisites(subCourse.id);
-      setPrerequisites(res.data.data ?? []);
-    } catch (err) {
-      console.error("Failed to fetch prerequisites:", err);
-      setPrerequisites([]);
-    } finally {
-      setPrereqLoading(false);
-    }
-  };
-
-  const handleAddPrerequisite = async () => {
-    if (!prereqSubCourse || !selectedPrereqId) return;
-    setPrereqAdding(true);
-    try {
-      await addSubModulePrerequisite(prereqSubCourse.id, {
-        prerequisite_sub_course_id: selectedPrereqId,
-      });
-      const res = await getSubModulePrerequisites(prereqSubCourse.id);
-      setPrerequisites(res.data.data ?? []);
-      setSelectedPrereqId(0);
-    } catch (err) {
-      console.error("Failed to add prerequisite:", err);
-    } finally {
-      setPrereqAdding(false);
-    }
-  };
-
-  const handleRemovePrerequisite = async (prereqId: number) => {
-    if (!prereqSubCourse) return;
-    setPrereqRemoving(prereqId);
-    try {
-      await removeSubModulePrerequisite(prereqSubCourse.id, prereqId);
-      const res = await getSubModulePrerequisites(prereqSubCourse.id);
-      setPrerequisites(res.data.data ?? []);
-    } catch (err) {
-      console.error("Failed to remove prerequisite:", err);
-    } finally {
-      setPrereqRemoving(null);
-    }
-  };
-
-  // Build flow layers using topological sort
-  const flowLayers = (() => {
-    if (subCourses.length === 0) return [];
-
-    // Find sub-modules with no prerequisites (roots)
-    const hasPrereqs = new Set<number>();
-    const isPrereqOf = new Map<number, number[]>(); // prereqId -> [subCourseIds that depend on it]
-
-    for (const sc of subCourses) {
-      const prereqs = allPrereqMap[sc.id] ?? [];
-      if (prereqs.length > 0) {
-        hasPrereqs.add(sc.id);
-      }
-      for (const p of prereqs) {
-        const dependents = isPrereqOf.get(p.prerequisite_sub_course_id) ?? [];
-        dependents.push(sc.id);
-        isPrereqOf.set(p.prerequisite_sub_course_id, dependents);
+        setLoading(false)
       }
     }
+    void run()
+  }, [courseId, categoryId])
 
-    // BFS-based layering
-    const layers: SubCourse[][] = [];
-    const placed = new Set<number>();
-
-    // Layer 0: no prerequisites
-    const roots = subCourses.filter((sc) => !hasPrereqs.has(sc.id));
-    if (roots.length > 0) {
-      layers.push(roots);
-      roots.forEach((sc) => placed.add(sc.id));
+  const loadModulesForLevel = useCallback(async (levelId: number) => {
+    if (modulesFetchedForLevelRef.current.has(levelId)) return
+    modulesFetchedForLevelRef.current.add(levelId)
+    setLoadingModulesLevelId(levelId)
+    try {
+      const res = await getModulesByLevel(levelId)
+      const raw = res.data?.data?.modules
+      const modules = Array.isArray(raw) ? raw : []
+      const sorted = [...modules].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)) as ModuleRow[]
+      setModulesByLevelId((prev) => ({ ...prev, [levelId]: sorted }))
+    } catch (e) {
+      console.error(e)
+      setModulesByLevelId((prev) => ({ ...prev, [levelId]: [] }))
+    } finally {
+      setLoadingModulesLevelId(null)
     }
+  }, [])
 
-    // Subsequent layers: all prereqs already placed
-    let maxIterations = subCourses.length;
-    while (placed.size < subCourses.length && maxIterations-- > 0) {
-      const nextLayer = subCourses.filter((sc) => {
-        if (placed.has(sc.id)) return false;
-        const prereqs = allPrereqMap[sc.id] ?? [];
-        return prereqs.every((p) => placed.has(p.prerequisite_sub_course_id));
-      });
-      if (nextLayer.length === 0) {
-        // Remaining have circular deps or missing prereqs — just add them
-        const remaining = subCourses.filter((sc) => !placed.has(sc.id));
-        if (remaining.length > 0) layers.push(remaining);
-        break;
+  const loadSubModulesForModule = useCallback(async (moduleId: number) => {
+    if (subModulesFetchedForModuleRef.current.has(moduleId)) return
+    subModulesFetchedForModuleRef.current.add(moduleId)
+    setLoadingSubModulesModuleId(moduleId)
+    try {
+      const res = await getSubModulesByModuleId(moduleId)
+      const raw = res.data?.data?.sub_modules
+      const subs = Array.isArray(raw) ? raw : []
+      const sorted = [...subs].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      setSubModulesByModuleId((prev) => ({ ...prev, [moduleId]: sorted }))
+    } catch (e) {
+      console.error(e)
+      setSubModulesByModuleId((prev) => ({ ...prev, [moduleId]: [] }))
+    } finally {
+      setLoadingSubModulesModuleId(null)
+    }
+  }, [])
+
+  const toggleLevel = (levelId: number) => {
+    setExpandedLevelIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(levelId)) next.delete(levelId)
+      else {
+        next.add(levelId)
+        void loadModulesForLevel(levelId)
       }
-      layers.push(nextLayer);
-      nextLayer.forEach((sc) => placed.add(sc.id));
-    }
+      return next
+    })
+  }
 
-    return layers;
-  })();
+  const toggleModule = (moduleId: number) => {
+    setExpandedModuleIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(moduleId)) next.delete(moduleId)
+      else {
+        next.add(moduleId)
+        void loadSubModulesForModule(moduleId)
+      }
+      return next
+    })
+  }
 
-  const availablePrerequisites = subCourses.filter(
-    (sc) =>
-      prereqSubCourse &&
-      sc.id !== prereqSubCourse.id &&
-      !prerequisites.some((p) => p.prerequisite_sub_course_id === sc.id),
-  );
+  const openSubModule = (subModuleId: number) => {
+    navigate(`/content/category/${categoryId}/courses/${courseId}/sub-modules/${subModuleId}`)
+  }
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
+        <p className="mt-3 text-sm text-grayScale-500">Loading course structure…</p>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -456,650 +186,185 @@ export function SubModulesPage() {
           <p className="text-sm font-medium text-red-600">{error}</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 min-w-0">
           <Link
             to={`/content/category/${categoryId}/courses`}
-            className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-grayScale-200 bg-white text-grayScale-500 shadow-sm transition-all hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 hover:shadow-md"
+            className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-grayScale-200 bg-white text-grayScale-500 shadow-sm transition-all hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-grayScale-400">
-              <span className="truncate max-w-[100px] rounded bg-grayScale-50 px-1.5 py-0.5 sm:max-w-none">
-                {category?.name}
-              </span>
-              <span className="shrink-0 text-grayScale-300">→</span>
-              <span className="truncate max-w-[100px] rounded bg-grayScale-50 px-1.5 py-0.5 sm:max-w-none">
-                {course?.title}
+            <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs font-medium text-grayScale-400">
+              <span className="truncate rounded bg-grayScale-50 px-1.5 py-0.5">{category?.name ?? "Category"}</span>
+              <span className="text-grayScale-300">→</span>
+              <span className="truncate rounded bg-grayScale-50 px-1.5 py-0.5">
+                {course?.title ?? `Course #${courseId}`}
               </span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">
-              Courses
-            </h1>
-            <p className="mt-0.5 text-sm text-grayScale-400">
-              {subCourses.length} course{subCourses.length !== 1 ? "s" : ""}{" "}
-              available
+            <h1 className="text-2xl font-bold tracking-tight text-grayScale-800">Course structure</h1>
+            <p className="mt-1 text-sm text-grayScale-500">
+              Open a level, then a module, then choose a sub-module to manage practices, lessons, and capstones.
             </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {subCourses.length > 0 && (
-            <div className="flex rounded-xl border border-grayScale-200 bg-white p-0.5 shadow-sm">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                  viewMode === "grid"
-                    ? "bg-brand-500 text-white shadow-sm"
-                    : "text-grayScale-500 hover:text-grayScale-700"
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Grid
-              </button>
-              <button
-                onClick={() => setViewMode("flow")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                  viewMode === "flow"
-                    ? "bg-brand-500 text-white shadow-sm"
-                    : "text-grayScale-500 hover:text-grayScale-700"
-                }`}
-              >
-                <GitBranch className="h-3.5 w-3.5" />
-                Flow
-              </button>
-            </div>
-          )}
-          <Button
-            className="w-full rounded-xl bg-brand-500 px-5 shadow-sm transition-all hover:bg-brand-600 hover:shadow-md sm:w-auto"
-            onClick={handleAddSubCourse}
-          >
-            Add New Course
-          </Button>
         </div>
       </div>
 
-      {/* Sub-course grid or empty state */}
-      {subCourses.length === 0 ? (
-        <Card className="border border-dashed border-grayScale-200 shadow-none">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <img src={practiceSrc} alt="" className="h-20 w-20" />
-            <h3 className="mt-5 text-base font-semibold text-grayScale-600">
-              No courses yet
-            </h3>
-            <p className="mt-1.5 max-w-xs text-center text-sm text-grayScale-400">
-              Get started by adding your first course to this sub-category
+      {levels.length === 0 ? (
+        <Card className="border-dashed border-grayScale-200 bg-grayScale-50/40">
+          <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+            <GraduationCap className="h-12 w-12 text-grayScale-300" />
+            <p className="mt-4 text-sm font-semibold text-grayScale-600">No levels yet</p>
+            <p className="mt-1 max-w-sm text-sm text-grayScale-400">
+              This course has no CEFR levels. Add levels in the backend or learning-path tools, then refresh.
             </p>
-            <Button
-              className="mt-5 rounded-xl bg-brand-500 px-5 shadow-sm hover:bg-brand-600 hover:shadow-md"
-              onClick={handleAddSubCourse}
-            >
-              Add your first course
-            </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {subCourses.map((subCourse, index) => {
-            const gradients = [
-              "bg-gradient-to-br from-blue-100 to-blue-200",
-              "bg-gradient-to-br from-purple-100 to-purple-200",
-              "bg-gradient-to-br from-green-100 to-green-200",
-              "bg-gradient-to-br from-yellow-100 to-yellow-200",
-            ];
+        <div className="space-y-3">
+          {levels.map((level) => {
+            const isLevelOpen = expandedLevelIds.has(level.id)
+            const modules = modulesByLevelId[level.id]
+            const loadingMods = loadingModulesLevelId === level.id
+
             return (
               <Card
-                key={subCourse.id}
-                className="group cursor-pointer overflow-hidden border border-grayScale-100 bg-white shadow-sm transition-all duration-200 hover:shadow-soft hover:-translate-y-1 hover:border-brand-100"
-                onClick={() => handleSubModuleClick(subCourse.id)}
+                key={level.id}
+                className="overflow-hidden border border-grayScale-200/80 shadow-sm transition-shadow hover:shadow-md"
               >
-                {/* Thumbnail with level badge */}
-                <div className="relative aspect-video w-full overflow-hidden">
-                  {subCourse.thumbnail ? (
-                    <img
-                      src={subCourse.thumbnail}
-                      alt={subCourse.title}
-                      className="h-full w-full object-cover rounded-t-lg transition-transform duration-300 group-hover:scale-105"
-                    />
+                <button
+                  type="button"
+                  onClick={() => toggleLevel(level.id)}
+                  className="flex w-full items-center gap-3 border-b border-transparent bg-white px-4 py-3.5 text-left transition-colors hover:bg-grayScale-50/80"
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
+                    <LayoutList className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-grayScale-800">{level.title || level.cefr_level}</span>
+                      <Badge variant="secondary" className="text-[11px] font-semibold">
+                        {level.cefr_level}
+                      </Badge>
+                      {!level.is_active ? (
+                        <Badge variant="outline" className="text-[11px] text-amber-700">
+                          Inactive
+                        </Badge>
+                      ) : null}
+                    </div>
+                    {level.description ? (
+                      <p className="mt-0.5 line-clamp-2 text-xs text-grayScale-500">{level.description}</p>
+                    ) : null}
+                  </div>
+                  {isLevelOpen ? (
+                    <ChevronDown className="h-5 w-5 shrink-0 text-grayScale-400" />
                   ) : (
-                    <div
-                      className={`h-full w-full rounded-t-lg transition-transform duration-300 group-hover:scale-105 ${gradients[index % gradients.length]}`}
-                    />
+                    <ChevronRight className="h-5 w-5 shrink-0 text-grayScale-400" />
                   )}
-                  {subCourse.level && (
-                    <div className="absolute bottom-2.5 right-2.5 rounded-md bg-brand-600/90 px-2.5 py-1 text-xs font-semibold tracking-wide text-white shadow-sm backdrop-blur-sm">
-                      {subCourse.level}
-                    </div>
-                  )}
-                </div>
+                </button>
 
-                {/* Content */}
-                <div className="flex flex-col gap-3 p-4">
-                  {/* Status and menu */}
-                  <div className="flex items-center justify-between">
-                    <Badge
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
-                        subCourse.is_active
-                          ? "border border-green-200 bg-green-50 text-green-700"
-                          : "border border-grayScale-200 bg-grayScale-50 text-grayScale-500"
-                      }`}
-                    >
-                      <span
-                        className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${subCourse.is_active ? "bg-green-500" : "bg-grayScale-400"}`}
-                      />
-                      {subCourse.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                    <div
-                      className="relative"
-                      ref={openMenuId === subCourse.id ? menuRef : undefined}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={() =>
-                          setOpenMenuId(
-                            openMenuId === subCourse.id ? null : subCourse.id,
-                          )
-                        }
-                        className="grid h-7 w-7 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                      {openMenuId === subCourse.id && (
-                        <div className="absolute right-0 top-full z-10 mt-1.5 w-44 overflow-hidden rounded-xl border border-grayScale-100 bg-white py-1 shadow-lg">
-                          <button
-                            onClick={() => {
-                              handlePrereqClick(subCourse);
-                              setOpenMenuId(null);
-                            }}
-                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-grayScale-600 transition-colors hover:bg-grayScale-50"
-                          >
-                            <Link2 className="h-4 w-4" />
-                            Prerequisites
-                          </button>
-                          <div className="mx-3 border-t border-grayScale-100" />
-                          <button
-                            onClick={() => {
-                              handleToggleStatus(subCourse);
-                              setOpenMenuId(null);
-                            }}
-                            disabled={togglingId === subCourse.id}
-                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-grayScale-600 transition-colors hover:bg-grayScale-50 disabled:opacity-50"
-                          >
-                            {subCourse.is_active ? (
-                              <>
-                                <ToggleLeft className="h-4 w-4" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <ToggleRight className="h-4 w-4" />
-                                Activate
-                              </>
-                            )}
-                          </button>
-                          <div className="mx-3 border-t border-grayScale-100" />
-                          <button
-                            onClick={() => {
-                              handleDeleteClick(subCourse);
-                              setOpenMenuId(null);
-                            }}
-                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                {isLevelOpen ? (
+                  <CardContent className="space-y-2 border-t border-grayScale-100 bg-grayScale-50/30 px-3 py-3 sm:px-4">
+                    {loadingMods ? (
+                      <div className="flex items-center gap-2 py-6 text-sm text-grayScale-500">
+                        <img src={spinnerSrc} alt="" className="h-5 w-5 animate-spin" />
+                        Loading modules…
+                      </div>
+                    ) : !modules || modules.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-grayScale-500">No modules in this level.</p>
+                    ) : (
+                      modules.map((mod) => {
+                        const isModOpen = expandedModuleIds.has(mod.id)
+                        const subs = subModulesByModuleId[mod.id]
+                        const loadingSubs = loadingSubModulesModuleId === mod.id
 
-                  {/* Title */}
-                  <div>
-                    <h3 className="font-semibold text-grayScale-700 group-hover:text-brand-600 transition-colors">
-                      {subCourse.title}
-                    </h3>
-                    <p className="mt-1 text-sm leading-relaxed text-grayScale-400 line-clamp-2">
-                      {subCourse.description || "No description available"}
-                    </p>
-                  </div>
+                        return (
+                          <div
+                            key={mod.id}
+                            className="overflow-hidden rounded-xl border border-grayScale-200 bg-white shadow-sm"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => toggleModule(mod.id)}
+                              className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-grayScale-50"
+                            >
+                              <Layers className="h-4 w-4 shrink-0 text-violet-500" />
+                              <div className="min-w-0 flex-1">
+                                <span className="font-medium text-grayScale-800">{mod.title}</span>
+                                <span className="ml-2 tabular-nums text-xs text-grayScale-400">#{mod.id}</span>
+                                {mod.description ? (
+                                  <p className="mt-0.5 line-clamp-1 text-xs text-grayScale-500">{mod.description}</p>
+                                ) : null}
+                              </div>
+                              {isModOpen ? (
+                                <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-400" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 shrink-0 text-grayScale-400" />
+                              )}
+                            </button>
 
-                  {/* Edit button */}
-                  <Button
-                    variant="outline"
-                    className="mt-auto w-full rounded-lg border-grayScale-200 text-grayScale-500 transition-all hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditClick(subCourse);
-                    }}
-                  >
-                    <Edit className="mr-2 h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                </div>
+                            {isModOpen ? (
+                              <div className="border-t border-grayScale-100 bg-grayScale-50/50 px-2 py-2">
+                                {loadingSubs ? (
+                                  <div className="flex items-center gap-2 py-4 text-xs text-grayScale-500">
+                                    <img src={spinnerSrc} alt="" className="h-4 w-4 animate-spin" />
+                                    Loading sub-modules…
+                                  </div>
+                                ) : !subs || subs.length === 0 ? (
+                                  <p className="py-3 text-center text-xs text-grayScale-500">No sub-modules.</p>
+                                ) : (
+                                  <ul className="space-y-1.5">
+                                    {subs.map((sub) => (
+                                      <li key={sub.id}>
+                                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-grayScale-100 bg-white px-3 py-2 transition-colors hover:border-brand-200 hover:bg-brand-50/30">
+                                          <BookOpen className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+                                          <div className="min-w-0 flex-1">
+                                            <span className="text-sm font-medium text-grayScale-800">{sub.title}</span>
+                                            <span className="ml-2 text-xs tabular-nums text-grayScale-400">
+                                              #{sub.id}
+                                            </span>
+                                            {sub.description ? (
+                                              <p className="mt-0.5 line-clamp-1 text-xs text-grayScale-500">
+                                                {sub.description}
+                                              </p>
+                                            ) : null}
+                                          </div>
+                                          {!sub.is_active ? (
+                                            <Badge variant="outline" className="text-[10px]">
+                                              Off
+                                            </Badge>
+                                          ) : null}
+                                          <Button
+                                            size="sm"
+                                            className="shrink-0 bg-brand-500 hover:bg-brand-600"
+                                            type="button"
+                                            onClick={() => openSubModule(sub.id)}
+                                          >
+                                            Open
+                                          </Button>
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        )
+                      })
+                    )}
+                  </CardContent>
+                ) : null}
               </Card>
-            );
+            )
           })}
         </div>
       )}
-
-      {/* Delete Modal */}
-      {showDeleteModal && subCourseToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
-          <div className="my-auto w-full max-w-sm rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
-              <h2 className="text-lg font-semibold text-grayScale-700">
-                Delete Course
-              </h2>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="px-6 py-6">
-              <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-red-50">
-                <Trash2 className="h-5 w-5 text-red-500" />
-              </div>
-              <p className="text-center text-sm leading-relaxed text-grayScale-600">
-                Are you sure you want to delete{" "}
-                <span className="font-semibold text-grayScale-700">
-                  {subCourseToDelete.title}
-                </span>
-                ? This action cannot be undone.
-              </p>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={deleting}
-                className="w-full rounded-lg sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                className="w-full rounded-lg bg-red-500 shadow-sm hover:bg-red-600 sm:w-auto"
-                onClick={handleConfirmDelete}
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Sub-module Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="my-auto w-full max-w-4xl flex-shrink-0 rounded-2xl bg-white shadow-2xl"
-          >
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-3 sm:px-6 sm:py-4">
-              <h2 className="text-base font-semibold text-grayScale-700 sm:text-lg">
-                Add New Course
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="grid h-10 w-10 min-h-[44px] min-w-[44px] place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[min(78vh,840px)] overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-6 md:gap-y-4">
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Title
-                  </label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter course title"
-                    className="min-h-[44px]"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Description
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Enter course description"
-                    className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Level
-                  </label>
-                  <select
-                    value={level}
-                    onChange={(e) => setLevel(e.target.value)}
-                    className="min-h-[44px] w-full rounded-lg border border-grayScale-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  >
-                    <option value="BEGINNER">BEGINNER</option>
-                    <option value="INTERMEDIATE">INTERMEDIATE</option>
-                    <option value="ADVANCED">ADVANCED</option>
-                    <option value="EXPERT">EXPERT</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Sub-level
-                  </label>
-                  <Input
-                    value={subLevel}
-                    onChange={(e) => setSubLevel(e.target.value)}
-                    placeholder='e.g. A1, B2 (CEFR or your scale)'
-                    className="min-h-[44px]"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2 md:max-w-xs">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Display order
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={displayOrder}
-                    onChange={(e) => setDisplayOrder(e.target.value)}
-                    placeholder="1"
-                    className="min-h-[44px]"
-                  />
-                </div>
-                <div className="space-y-3 md:col-span-2">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Thumbnail
-                  </label>
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
-                    <FileUpload
-                      variant="compact"
-                      accept="image/*"
-                      onFileSelect={setThumbnailFile}
-                      label="Upload thumbnail image"
-                      description="JPEG, PNG, WEBP — or paste a URL"
-                      className="border-grayScale-200 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
-                    />
-                    <div className="space-y-1.5">
-                      <span className="text-xs font-medium text-grayScale-500">
-                        Thumbnail URL (optional)
-                      </span>
-                      <Input
-                        value={thumbnailUrl}
-                        onChange={(e) => setThumbnailUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="min-h-[44px]"
-                      />
-                    </div>
-                  </div>
-                </div>
-                {saveError && (
-                  <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 md:col-span-2">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    {saveError}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
-              <Button
-                variant="outline"
-                onClick={() => setShowAddModal(false)}
-                disabled={saving}
-                className="w-full rounded-lg sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                className="w-full rounded-lg bg-brand-500 shadow-sm hover:bg-brand-600 sm:w-auto"
-                onClick={handleSaveNewSubCourse}
-                disabled={saving || !title.trim()}
-              >
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Prerequisites Modal */}
-      {showPrereqModal && prereqSubCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-grayScale-700">
-                  Prerequisites
-                </h2>
-                <p className="mt-0.5 text-sm text-grayScale-400">
-                  Manage prerequisites for{" "}
-                  <span className="font-medium text-grayScale-600">
-                    {prereqSubCourse.title}
-                  </span>
-                </p>
-              </div>
-              <button
-                onClick={() => setShowPrereqModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="px-6 py-5">
-              {/* Add prerequisite */}
-              {availablePrerequisites.length > 0 && (
-                <div className="mb-5">
-                  <label className="mb-1.5 block text-sm font-semibold text-grayScale-600">
-                    Add Prerequisite
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedPrereqId}
-                      onChange={(e) =>
-                        setSelectedPrereqId(Number(e.target.value))
-                      }
-                      className="flex-1 rounded-lg border border-grayScale-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                    >
-                      <option value={0}>Select a course...</option>
-                      {availablePrerequisites.map((sc) => (
-                        <option key={sc.id} value={sc.id}>
-                          {sc.title} {sc.level ? `(${sc.level})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      className="shrink-0 rounded-lg bg-brand-500 px-4 shadow-sm hover:bg-brand-600"
-                      onClick={handleAddPrerequisite}
-                      disabled={prereqAdding || !selectedPrereqId}
-                    >
-                      {prereqAdding ? (
-                        <SpinnerIcon className="h-4 w-4" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Current prerequisites list */}
-              {prereqLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <img
-                    src={spinnerSrc}
-                    alt=""
-                    className="h-8 w-8 animate-spin"
-                  />
-                </div>
-              ) : prerequisites.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-grayScale-200 px-4 py-8 text-center">
-                  <Link2 className="mx-auto h-8 w-8 text-grayScale-300" />
-                  <p className="mt-2 text-sm font-medium text-grayScale-500">
-                    No prerequisites
-                  </p>
-                  <p className="mt-0.5 text-xs text-grayScale-400">
-                    This course is accessible without completing others first
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-grayScale-600">
-                    Current Prerequisites ({prerequisites.length})
-                  </p>
-                  {prerequisites.map((prereq) => (
-                    <div
-                      key={prereq.id}
-                      className="flex items-center justify-between rounded-xl border border-grayScale-100 bg-grayScale-25 px-4 py-3 transition-colors hover:border-grayScale-200"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-grayScale-700 truncate">
-                          {prereq.prerequisite_title}
-                        </p>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          {prereq.prerequisite_level && (
-                            <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[11px] font-medium text-brand-600">
-                              {prereq.prerequisite_level}
-                            </span>
-                          )}
-                          <span className="text-[11px] text-grayScale-400">
-                            Order: {prereq.prerequisite_display_order}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleRemovePrerequisite(prereq.id)}
-                        disabled={prereqRemoving === prereq.id}
-                        className="ml-3 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-                      >
-                        {prereqRemoving === prereq.id ? (
-                          <SpinnerIcon className="h-4 w-4" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end border-t border-grayScale-100 px-6 py-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowPrereqModal(false)}
-                className="rounded-lg"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Sub-course Modal */}
-      {showEditModal && subCourseToEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 p-3 backdrop-blur-sm sm:p-6">
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="my-auto w-full max-w-3xl flex-shrink-0 rounded-2xl bg-white shadow-2xl"
-          >
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-3 sm:px-6 sm:py-4">
-              <h2 className="text-base font-semibold text-grayScale-700 sm:text-lg">
-                Edit Course
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowEditModal(false)}
-                className="grid h-10 w-10 min-h-[44px] min-w-[44px] place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[min(78vh,640px)] overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-6 md:gap-y-4">
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Title
-                  </label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter course title"
-                    className="min-h-[44px]"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Description
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Enter course description"
-                    className="w-full rounded-lg border border-grayScale-200 px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2 md:max-w-md">
-                  <label className="text-sm font-semibold text-grayScale-600">
-                    Level
-                  </label>
-                  <Input
-                    value={level}
-                    onChange={(e) => setLevel(e.target.value)}
-                    placeholder="e.g., BEGINNER, Intermediate, Advanced"
-                    className="min-h-[44px]"
-                  />
-                </div>
-                {saveError && (
-                  <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 md:col-span-2">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    {saveError}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
-              <Button
-                variant="outline"
-                onClick={() => setShowEditModal(false)}
-                disabled={saving}
-                className="w-full rounded-lg sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                className="w-full rounded-lg bg-brand-500 shadow-sm hover:bg-brand-600 sm:w-auto"
-                onClick={handleSaveEditSubCourse}
-                disabled={saving || !title.trim()}
-              >
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-  );
+  )
 }

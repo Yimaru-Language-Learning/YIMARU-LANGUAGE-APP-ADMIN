@@ -1,32 +1,36 @@
-import { useRef, useEffect } from "react";
 import {
-  Video,
-  List,
-  Link as LinkIcon,
-  Lightbulb,
-  ChevronRight,
-  ImageIcon,
-  ArrowRight,
-} from "lucide-react";
+  useRef,
+  useEffect,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import { List, Link as LinkIcon, Lightbulb, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
-import { Select } from "../../../../components/ui/select";
+import type { AddLessonFormData } from "../../AddVideoFlow";
+import { LessonMediaUploadField } from "../LessonMediaUploadField";
+
+function isDescriptionEmpty(raw: string): boolean {
+  if (!raw?.trim()) return true;
+  const t = raw.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+  return t.length === 0;
+}
 
 interface VideoDetailStepProps {
-  formData: any;
-  setFormData: (data: any) => void;
-  nextStep: () => void;
+  formData: AddLessonFormData;
+  setFormData: Dispatch<SetStateAction<AddLessonFormData>>;
+  onContinue: () => void;
 }
 
 export function VideoDetailStep({
   formData,
   setFormData,
-  nextStep,
+  onContinue,
 }: VideoDetailStepProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalChange = useRef(false);
 
-  // Initialize editor content only once or when needed from outside
   useEffect(() => {
     if (editorRef.current && !isInternalChange.current) {
       editorRef.current.innerHTML = formData.description || "";
@@ -41,8 +45,10 @@ export function VideoDetailStep({
   const syncState = () => {
     if (editorRef.current) {
       isInternalChange.current = true;
-      setFormData({ ...formData, description: editorRef.current.innerHTML });
-      // Reset after a short delay to allow exterior updates if any (e.g., from step change)
+      setFormData((prev) => ({
+        ...prev,
+        description: editorRef.current!.innerHTML,
+      }));
       setTimeout(() => {
         isInternalChange.current = false;
       }, 0);
@@ -53,50 +59,57 @@ export function VideoDetailStep({
     syncState();
   };
 
+  const handleContinue = () => {
+    if (editorRef.current) {
+      setFormData((prev) => ({
+        ...prev,
+        description: editorRef.current!.innerHTML,
+      }));
+    }
+    if (!formData.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    if (!formData.videoUrl.trim()) {
+      toast.error("Add a video URL or upload a video");
+      return;
+    }
+    if (!formData.thumbnailUrl.trim()) {
+      toast.error("Add a thumbnail or upload an image");
+      return;
+    }
+    const descHtml = editorRef.current?.innerHTML ?? formData.description;
+    if (isDescriptionEmpty(descHtml)) {
+      toast.error("Description is required");
+      return;
+    }
+    onContinue();
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-[1200px] mx-auto pb-20">
-      {/* Single Unified Card for Everything */}
       <div className="bg-white rounded-[24px] border border-grayScale-50 p-10 shadow-sm space-y-8">
-        {/* 1. Upload Video Section */}
-        <div className="space-y-6">
+        <div className="space-y-3">
           <h3 className="text-[20px] font-bold text-grayScale-900 ml-1">
-            Upload Video
+            Video
           </h3>
-          <div className="relative group cursor-pointer">
-            <div className="flex flex-col items-center justify-center rounded-[20px] border-2 border-dashed border-[#E2E8F0] bg-[#F8FAFC]/30 p-14 transition-all hover:border-brand-200 hover:bg-brand-50/5">
-              <div className="h-16 w-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-6">
-                <div className="h-10 w-10 rounded-full bg-[#FAF5FF] flex items-center justify-center">
-                  <div className="h-6 w-6 relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-brand-500/10 rounded-full blur-sm" />
-                    <Video className="h-5 w-5 text-brand-500 relative" />
-                  </div>
-                </div>
-              </div>
-              <h4 className="text-[17px]  text-grayScale-900 mb-2">
-                Drag and drop video files here
-              </h4>
-              <p className="text-grayScale-400 font-medium text-[13px] mb-8">
-                MP4, MOV, WebM. Max size 2GB.
-              </p>
-
-              <div className="flex items-center gap-4 w-full max-w-[200px] mb-8">
-                <div className="flex-1 h-[1px] bg-grayScale-200" />
-                <span className="text-[12px] font-bold text-grayScale-300 uppercase tracking-widest">
-                  OR
-                </span>
-                <div className="flex-1 h-[1px] bg-grayScale-200" />
-              </div>
-
-              <Button
-                variant="outline"
-                className="h-11 px-8 rounded-xl border-grayScale-200 bg-white font-bold text-brand-500 hover:border-brand-500 hover:bg-brand-50 transition-all shadow-sm text-sm"
-              >
-                Browse Files
-              </Button>
-            </div>
-          </div>
+          <p className="text-sm text-grayScale-500 ml-1 max-w-2xl">
+            Upload a file or paste a link (Vimeo, hosted file, etc.). Files are
+            sent to your storage via{" "}
+            <code className="rounded bg-grayScale-100 px-1 text-[11px]">
+              POST /files/upload
+            </code>
+            .
+          </p>
+          <LessonMediaUploadField
+            kind="video"
+            value={formData.videoUrl}
+            onChange={(v) =>
+              setFormData((prev) => ({ ...prev, videoUrl: v }))
+            }
+          />
         </div>
-        {/* Gradient Divider */}
+
         <div className="relative">
           <div
             className="absolute inset-0 flex items-center"
@@ -107,46 +120,25 @@ export function VideoDetailStep({
           <div className="relative flex justify-center">
             <div
               className="h-[0.5px] w-full opacity-20 rounded-full"
-              style={{
-                background: "gray",
-              }}
+              style={{ background: "gray" }}
             />
           </div>
         </div>
 
-        {/* 2. Form & Side Panel Grid */}
         <div className="flex flex-col lg:flex-row gap-12 items-start">
-          {/* Left Column: Title, Order, Description */}
           <div className="flex-1 w-full space-y-10">
             <div className="space-y-3">
               <label className="text-[14px] font-medium text-grayScale-900 ml-1">
-                Video Title
+                Lesson title
               </label>
               <Input
-                placeholder="e.g., Introduction to Past Tense Verbs"
+                placeholder="e.g. Introduction to Past Tense"
                 className="h-12 rounded-xl border-grayScale-200 bg-white px-6 text-[15px] text-grayScale-800 placeholder:text-grayScale-500 focus:border-brand-500 font-medium transition-all shadow-sm"
                 value={formData.title}
                 onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
+                  setFormData((prev) => ({ ...prev, title: e.target.value }))
                 }
               />
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[14px] font-medium text-grayScale-900 ml-1">
-                Video Order
-              </label>
-              <Select
-                className="h-12 rounded-xl border-grayScale-200 bg-white px-6 text-[15px] text-grayScale-800 font-medium cursor-pointer focus:border-brand-500 shadow-sm"
-                value={formData.order}
-                onChange={(e) =>
-                  setFormData({ ...formData, order: (e.target as any).value })
-                }
-              >
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-              </Select>
             </div>
 
             <div className="space-y-3">
@@ -154,28 +146,31 @@ export function VideoDetailStep({
                 Description
               </label>
               <div className="rounded-xl border border-grayScale-200 bg-white overflow-hidden flex flex-col min-h-[200px] shadow-sm focus-within:border-brand-200 transition-all">
-                {/* Toolbar */}
                 <div className="flex items-center gap-1  bg-[#F8FAFC]">
                   <div className="flex items-center gap-1 w-fit bg-transparent px-2 py-1 rounded-lg">
                     <button
+                      type="button"
                       onClick={() => handleCommand("bold")}
                       className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-grayScale-900 transition-all font-serif font-bold text-[17px] pb-0.5 active:bg-grayScale-50"
                     >
                       B
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleCommand("italic")}
                       className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-grayScale-900 transition-all font-serif italic text-[17px] pr-0.5 active:bg-grayScale-50"
                     >
                       I
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleCommand("insertUnorderedList")}
                       className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-grayScale-900 transition-all active:bg-grayScale-50"
                     >
                       <List className="h-5 w-5" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         const url = prompt("Enter URL:");
                         if (url) handleCommand("createLink", url);
@@ -188,12 +183,9 @@ export function VideoDetailStep({
                 </div>
 
                 <div className="relative p-6 flex-1">
-                  {(!formData.description ||
-                    formData.description === "<br>" ||
-                    formData.description === "" ||
-                    formData.description === "<div><br></div>") && (
+                  {isDescriptionEmpty(formData.description) && (
                     <div className="absolute top-6 left-6 text-grayScale-300 font-medium text-[15px] pointer-events-none">
-                      Provide a brief summary of what the student will learn...
+                      What will students learn in this lesson?
                     </div>
                   )}
                   <div
@@ -207,59 +199,44 @@ export function VideoDetailStep({
             </div>
           </div>
 
-          {/* Right Column: Thumbnail, Pro Tip */}
-          <div className="w-full lg:w-[320px] space-y-5">
-            {/* Thumbnail Section */}
-            <div className="space-y-4">
-              <div className="space-y-1 ml-1">
-                <h3 className="text-[14px] font-medium text-grayScale-900">
-                  Thumbnail
-                </h3>
-                <p className="text-[12px] text-grayScale-400 font-medium leading-relaxed">
-                  Upload your video thumbnail. 1280×720px recommended.
-                </p>
-              </div>
-              <div className="relative group cursor-pointer aspect-video">
-                <div className="h-full w-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-grayScale-200 bg-[#F8FAFC]/50 p-6 transition-all group-hover:border-brand-200">
-                  <div className="h-10 w-10 flex items-center justify-center mb-3">
-                    <ImageIcon className="h-7 w-7 text-grayScale-400" />
-                  </div>
-                  <p className="text-[13px] font-bold text-brand-400">
-                    Click to upload
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pro Tip Section */}
+          <div className="w-full lg:w-[360px] space-y-5">
+            <LessonMediaUploadField
+              kind="thumbnail"
+              value={formData.thumbnailUrl}
+              onChange={(v) =>
+                setFormData((prev) => ({ ...prev, thumbnailUrl: v }))
+              }
+            />
             <div className="bg-brand-500/5 flex items-start gap-3 rounded-xl border border-[#F3E8FF] p-6 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center">
-                  <Lightbulb className="h-4 w-4 text-brand-50" fill="#A855F7" />
+                  <Lightbulb
+                    className="h-4 w-4 text-brand-50"
+                    fill="#A855F7"
+                  />
                 </div>
               </div>
               <div className="relative top-[-10px]">
                 <h3 className="text-[14px] font-bold text-grayScale-900">
-                  Pro Tip
+                  Pro tip
                 </h3>
                 <p className="text-[12px] text-grayScale-700 font-medium leading-relaxed">
-                  Short, descriptive titles work best. Include keywords like
-                  "Grammar" or "Vocabulary" to help students find your content.
+                  Use clear titles and a thumbnail that matches the lesson. The
+                  lesson is created with{" "}
+                  <code className="rounded bg-white/80 px-1 text-[10px]">
+                    POST /modules/:moduleId/lessons
+                  </code>{" "}
+                  when you publish.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer (Inside Card Container) */}
-        <div className="pt-5 border-t border-grayScale-200 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-[14px] font-medium text-grayScale-600">
-              Last saved: Just now
-            </span>
-          </div>
+        <div className="pt-5 border-t border-grayScale-200 flex items-center justify-end">
           <Button
-            onClick={nextStep}
+            type="button"
+            onClick={handleContinue}
             className="h-10 px-10 rounded-[6px] bg-brand-500 font-bold text-white transition-all flex items-center gap-2 text-sm group active:scale-95"
           >
             Continue

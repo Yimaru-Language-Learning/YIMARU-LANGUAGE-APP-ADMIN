@@ -44,18 +44,49 @@ import type {
   GetQuestionsResponse,
   CreateVimeoVideoRequest,
   CreateCourseCategoryRequest,
+  GetCategorySubCategoriesResponse,
+  GetSubCategoryCoursesResponse,
   GetSubCoursePrerequisitesResponse,
   AddSubCoursePrerequisiteRequest,
   GetLearningPathResponse,
   GetHumanLanguageLessonsResponse,
   GetHumanLanguageHierarchyResponse,
+  GetCourseHierarchyResponse,
   CreateHumanLanguageLessonRequest,
+  GetSubModuleLessonsResponse,
+  GetSubModuleLessonDetailResponse,
+  UpdateSubModuleLessonRequest,
+  UpdateSubModuleLessonResponse,
+  GetCourseLevelsForCourseResponse,
+  GetSubModulesByModuleResponse,
+  SubCourse,
   GetSubCourseEntryAssessmentResponse,
   ReorderItem,
   GetRatingsResponse,
   GetRatingsParams,
   GetVimeoSampleResponse,
   CreateCourseVideoRequest,
+  GetLearningProgramsResponse,
+  UpdateLearningProgramRequest,
+  CreateLearningProgramRequest,
+  CreateLearningProgramResponse,
+  GetProgramCoursesResponse,
+  GetTopLevelCourseModulesResponse,
+  UpdateTopLevelCourseRequest,
+  UpdateTopLevelCourseModuleRequest,
+  CreateTopLevelCourseModuleRequest,
+  CreateTopLevelCourseModuleResponse,
+  CreateProgramCourseRequest,
+  CreateProgramCourseResponse,
+  GetTopLevelModuleLessonsResponse,
+  GetPracticesByParentContextResponse,
+  CreateParentLinkedPracticeRequest,
+  CreateParentLinkedPracticeResponse,
+  UpdateParentLinkedPracticeRequest,
+  UpdateParentLinkedPracticeResponse,
+  UpdateTopLevelModuleLessonRequest,
+  CreateTopLevelModuleLessonRequest,
+  CreateTopLevelModuleLessonResponse,
 } from "../types/course.types"
 
 type UnifiedHierarchyRow = {
@@ -110,6 +141,35 @@ export const createCourseCategory = (data: CreateCourseCategoryRequest) =>
     ? http.post("/course-management/sub-categories", { category_id: data.parent_id, name: data.name })
     : http.post("/course-management/categories", { name: data.name })
 
+export const deleteCourseCategory = (categoryId: number) =>
+  http.delete(`/course-management/categories/${categoryId}`)
+
+export const getSubCategoriesByCategoryId = (categoryId: number) =>
+  http.get<GetCategorySubCategoriesResponse>(`/course-management/categories/${categoryId}/sub-categories`)
+
+export const getCoursesBySubCategoryId = (subCategoryId: number) =>
+  http.get<GetSubCategoryCoursesResponse>(`/course-management/sub-categories/${subCategoryId}/courses`)
+
+export const createSubCategory = (payload: {
+  category_id: number
+  name: string
+  description?: string | null
+  display_order?: number
+}) => http.post("/course-management/sub-categories", payload)
+
+export const deleteCourseSubCategory = (subCategoryId: number) =>
+  http.delete(`/course-management/sub-categories/${subCategoryId}`)
+
+export const updateSubCategory = (
+  subCategoryId: number,
+  payload: Partial<{
+    name: string
+    description: string | null
+    is_active: boolean
+    display_order: number
+  }>,
+) => http.patch(`/course-management/sub-categories/${subCategoryId}`, payload)
+
 export const getCoursesByCategory = (categoryId: number) =>
   http.get("/course-management/hierarchy").then((res) => {
     const rows: UnifiedHierarchyRow[] = res.data?.data ?? []
@@ -148,9 +208,13 @@ export const updateCourse = (courseId: number, data: UpdateCourseRequest) =>
   http.put(`/course-management/courses/${courseId}`, data)
 
 // Sub-Module APIs (Unified Hierarchy)
+export const getCourseHierarchyByCourseId = (courseId: number) =>
+  http.get<GetCourseHierarchyResponse>(`/course-management/courses/${courseId}/hierarchy`)
+
 export const getSubModulesByCourse = (courseId: number) =>
   http.get(`/course-management/courses/${courseId}/hierarchy`).then((res) => {
-    const rows: CourseHierarchyRow[] = res.data?.data ?? []
+    const raw = res.data?.data
+    const rows: CourseHierarchyRow[] = Array.isArray(raw) ? raw : []
     const subModuleMap = new Map<number, { id: number; course_id: number; module_id?: number; title: string; description: string; level: string; cefr_level?: string; thumbnail: string; display_order: number; sub_level?: string; is_active: boolean }>()
     rows.forEach((r, idx) => {
       if (!r.sub_module_id) return
@@ -224,6 +288,27 @@ export const deleteSubModule = (subModuleId: number) =>
 // Sub-Module Video APIs
 export const getVideosBySubModule = (subModuleId: number) =>
   http.get<GetSubCourseVideosResponse>(`/course-management/sub-modules/${subModuleId}/videos`)
+
+export const getLessonsBySubModule = (subModuleId: number, options?: { includeInactive?: boolean }) =>
+  http.get<GetSubModuleLessonsResponse>(`/course-management/sub-modules/${subModuleId}/lessons`, {
+    params: { include_inactive: options?.includeInactive ?? true },
+  })
+
+export const getSubModuleLessonById = (
+  lessonId: number,
+  options?: { cacheBust?: boolean },
+) =>
+  http.get<GetSubModuleLessonDetailResponse>(`/course-management/sub-module-lessons/${lessonId}`, {
+    params: options?.cacheBust ? { _t: Date.now() } : undefined,
+  })
+
+export const updateSubModuleLesson = (lessonId: number, data: UpdateSubModuleLessonRequest) =>
+  http.put<UpdateSubModuleLessonResponse>(`/course-management/sub-module-lessons/${lessonId}`, data)
+
+export const softDeleteSubModuleLesson = (lessonId: number) =>
+  http.put<UpdateSubModuleLessonResponse>(`/course-management/sub-module-lessons/${lessonId}`, {
+    is_active: false,
+  })
 
 export const createSubCourseVideo = (data: CreateSubCourseVideoRequest) =>
   http.post("/course-management/sub-module-videos", {
@@ -345,6 +430,126 @@ export const updatePracticeQuestion = (questionId: number, data: UpdatePracticeQ
 export const deletePracticeQuestion = (questionId: number) =>
   http.delete(`/questions/${questionId}`)
 
+/** Top-level learning programs (Learn English cards, etc.) — GET /programs */
+export const getLearningPrograms = (params?: { limit?: number; offset?: number }) =>
+  http.get<GetLearningProgramsResponse>("/programs", { params })
+
+export const createLearningProgram = (data: CreateLearningProgramRequest) =>
+  http.post<CreateLearningProgramResponse>("/programs", data)
+
+export const getProgramCourses = (
+  programId: number,
+  params?: { limit?: number; offset?: number },
+) => http.get<GetProgramCoursesResponse>(`/programs/${programId}/courses`, { params })
+
+export const createProgramCourse = (
+  programId: number,
+  data: CreateProgramCourseRequest,
+) => http.post<CreateProgramCourseResponse>(`/programs/${programId}/courses`, data)
+
+/** Top-level course resource (Learn English track) — PUT /courses/:id */
+export const updateTopLevelCourse = (courseId: number, data: UpdateTopLevelCourseRequest) =>
+  http.put(`/courses/${courseId}`, data)
+
+export const deleteTopLevelCourse = (courseId: number) =>
+  http.delete(`/courses/${courseId}`)
+
+export const getTopLevelCourseModules = (
+  courseId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetTopLevelCourseModulesResponse>(`/courses/${courseId}/modules`, {
+    params,
+  })
+
+/** Learn English top-level module — POST /courses/:courseId/modules */
+export const createTopLevelCourseModule = (
+  courseId: number,
+  data: CreateTopLevelCourseModuleRequest,
+) =>
+  http.post<CreateTopLevelCourseModuleResponse>(
+    `/courses/${courseId}/modules`,
+    data,
+  )
+
+/** Learn English top-level module — PUT /modules/:id */
+export const updateTopLevelCourseModule = (
+  moduleId: number,
+  data: UpdateTopLevelCourseModuleRequest,
+) => http.put(`/modules/${moduleId}`, data)
+
+/** Learn English top-level module — DELETE /modules/:id */
+export const deleteTopLevelCourseModule = (moduleId: number) =>
+  http.delete(`/modules/${moduleId}`)
+
+/** Learn English top-level module lessons — GET /modules/:moduleId/lessons */
+export const getModuleLessons = (
+  moduleId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetTopLevelModuleLessonsResponse>(`/modules/${moduleId}/lessons`, {
+    params,
+  })
+
+/** Learn English top-level module lesson — POST /modules/:moduleId/lessons */
+export const createModuleLesson = (
+  moduleId: number,
+  data: CreateTopLevelModuleLessonRequest,
+) =>
+  http.post<CreateTopLevelModuleLessonResponse>(`/modules/${moduleId}/lessons`, data)
+
+/** Learn English top-level module lesson — PUT /lessons/:id */
+export const updateTopLevelModuleLesson = (
+  lessonId: number,
+  data: UpdateTopLevelModuleLessonRequest,
+) => http.put(`/lessons/${lessonId}`, data)
+
+/** Learn English top-level module lesson — DELETE /lessons/:id */
+export const deleteTopLevelModuleLesson = (lessonId: number) =>
+  http.delete(`/lessons/${lessonId}`)
+
+/** GET /courses/:courseId/practices — practices linked to a top-level course (at most one in normal use). */
+export const getPracticesByParentCourse = (
+  courseId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetPracticesByParentContextResponse>(`/courses/${courseId}/practices`, { params })
+
+/** GET /modules/:moduleId/practices */
+export const getPracticesByParentModule = (
+  moduleId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetPracticesByParentContextResponse>(`/modules/${moduleId}/practices`, { params })
+
+/** GET /lessons/:lessonId/practices */
+export const getPracticesByParentLesson = (
+  lessonId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetPracticesByParentContextResponse>(`/lessons/${lessonId}/practices`, { params })
+
+/** POST /practices — create a practice (story + question set) for course / module / lesson. */
+export const createParentLinkedPractice = (data: CreateParentLinkedPracticeRequest) =>
+  http.post<CreateParentLinkedPracticeResponse>("/practices", data)
+
+/** PUT /practices/:id */
+export const updateParentLinkedPractice = (
+  practiceId: number,
+  data: UpdateParentLinkedPracticeRequest,
+) => http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
+
+/** DELETE /practices/:id */
+export const deleteParentLinkedPractice = (practiceId: number) =>
+  http.delete<{ message: string; success: boolean; status_code: number; metadata: unknown }>(
+    `/practices/${practiceId}`,
+  )
+
+export const updateLearningProgram = (programId: number, data: UpdateLearningProgramRequest) =>
+  http.put(`/programs/${programId}`, data)
+
+export const deleteLearningProgram = (programId: number) => http.delete(`/programs/${programId}`)
+
 // ============================================
 // Legacy APIs (deprecated - using SubCourse hierarchy now)
 // Keeping for backward compatibility
@@ -382,6 +587,74 @@ export const deleteLevel = (levelId: number) =>
 
 export const getModulesByLevel = (levelId: number) =>
   http.get<GetModulesResponse>(`/course-management/levels/${levelId}/modules`)
+
+export const getCourseLevelsForCourse = (courseId: number) =>
+  http.get<GetCourseLevelsForCourseResponse>(`/course-management/courses/${courseId}/levels`)
+
+export const getSubModulesByModuleId = (moduleId: number) =>
+  http.get<GetSubModulesByModuleResponse>(`/course-management/modules/${moduleId}/sub-modules`)
+
+/**
+ * Finds a sub-module under a course by walking levels → modules → sub-modules APIs.
+ */
+export async function resolveSubModuleForCourse(
+  courseId: number,
+  subModuleId: number,
+): Promise<SubCourse | null> {
+  try {
+    const levelsRes = await getCourseLevelsForCourse(courseId)
+    const levels = Array.isArray(levelsRes.data?.data?.levels) ? levelsRes.data.data.levels : []
+    const sortedLevels = [...levels].sort((a, b) => {
+      const o = (a.display_order ?? 0) - (b.display_order ?? 0)
+      if (o !== 0) return o
+      return String(a.cefr_level ?? "").localeCompare(String(b.cefr_level ?? ""))
+    })
+
+    const modulesNested = await Promise.all(
+      sortedLevels.map(async (level) => {
+        const modsRes = await getModulesByLevel(level.id)
+        const rawMods = modsRes.data?.data?.modules
+        const modules = Array.isArray(rawMods) ? rawMods : []
+        const sortedMods = [...modules].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        return sortedMods.map((module) => ({ level, module }))
+      }),
+    )
+    const modulePairs = modulesNested.flat()
+
+    const bundles = await Promise.all(
+      modulePairs.map(async ({ level, module }) => {
+        const subsRes = await getSubModulesByModuleId(module.id)
+        const rawSubs = subsRes.data?.data?.sub_modules
+        const subs = Array.isArray(rawSubs) ? rawSubs : []
+        const sortedSubs = [...subs].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        return { level, module, subs: sortedSubs }
+      }),
+    )
+
+    for (const { level, module, subs } of bundles) {
+      const found = subs.find((s) => s.id === subModuleId)
+      if (found) {
+        return {
+          id: found.id,
+          course_id: courseId,
+          level_id: level.id,
+          module_id: module.id,
+          title: found.title,
+          description: found.description ?? "",
+          level: level.cefr_level,
+          cefr_level: level.cefr_level,
+          thumbnail: found.thumbnail ?? "",
+          display_order: found.display_order,
+          sub_level: level.cefr_level,
+          is_active: found.is_active,
+        }
+      }
+    }
+  } catch (e) {
+    console.error("resolveSubModuleForCourse failed:", e)
+  }
+  return null
+}
 
 export const createModule = (data: CreateModuleRequest) =>
   http.post("/course-management/modules", data)

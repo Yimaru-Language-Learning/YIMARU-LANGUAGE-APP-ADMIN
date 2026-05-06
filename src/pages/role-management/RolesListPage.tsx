@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
-  Plus, Search, Shield, ShieldCheck, ChevronLeft, ChevronRight,
-  AlertCircle, Eye, X, Pencil, Check,
+  Plus,
+  Search,
+  Shield,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  Eye,
+  X,
+  Pencil,
+  Check,
+  Trash2,
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
@@ -12,7 +22,14 @@ import { Textarea } from "../../components/ui/textarea"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "../../components/ui/dialog"
-import { getRoles, getRoleDetail, getAllPermissions, setRolePermissions, updateRole } from "../../api/rbac.api"
+import {
+  getRoles,
+  getRoleDetail,
+  getAllPermissions,
+  setRolePermissions,
+  updateRole,
+  deleteRole,
+} from "../../api/rbac.api"
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
@@ -35,6 +52,11 @@ export function RolesListPage() {
   const [selectedRole, setSelectedRole] = useState<RoleDetail | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Delete modal state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // Role info editing state
   const [editingRole, setEditingRole] = useState(false)
@@ -59,27 +81,28 @@ export function RolesListPage() {
     return () => clearTimeout(timer)
   }, [query])
 
+  const fetchRoles = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getRoles({
+        query: debouncedQuery || undefined,
+        page,
+        page_size: pageSize,
+      })
+      setRoles(res.data.data.roles ?? [])
+      setTotal(res.data.data.total ?? 0)
+    } catch {
+      setError("Failed to load roles.")
+    } finally {
+      setLoading(false)
+    }
+  }, [debouncedQuery, page, pageSize])
+
   // Fetch roles
   useEffect(() => {
-    const fetchRoles = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await getRoles({
-          query: debouncedQuery || undefined,
-          page,
-          page_size: pageSize,
-        })
-        setRoles(res.data.data.roles ?? [])
-        setTotal(res.data.data.total ?? 0)
-      } catch {
-        setError("Failed to load roles.")
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchRoles()
-  }, [debouncedQuery, page, pageSize])
+  }, [fetchRoles])
 
   // Open role detail
   const handleViewRole = async (roleId: number) => {
@@ -94,6 +117,45 @@ export function RolesListPage() {
       setDetailOpen(false)
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  const handleDeleteRoleClick = (role: Role) => {
+    setRoleToDelete(role)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleCancelDeleteRole = () => {
+    setDeleteDialogOpen(false)
+    setRoleToDelete(null)
+  }
+
+  const handleConfirmDeleteRole = async () => {
+    if (!roleToDelete) return
+    setDeleteLoading(true)
+    try {
+      const res = await deleteRole(roleToDelete.id)
+      toast.success(res.data.message ?? "Role deleted successfully")
+
+      // Close dialogs if the deleted role is currently opened.
+      if (selectedRole?.id === roleToDelete.id) {
+        setDetailOpen(false)
+        setSelectedRole(null)
+        setEditingPermissions(false)
+        setEditingRole(false)
+        setPermSearch("")
+      }
+
+      setRoleToDelete(null)
+      setDeleteDialogOpen(false)
+      await fetchRoles()
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Failed to delete role."
+      toast.error(message)
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -302,7 +364,7 @@ export function RolesListPage() {
               {roles.map((role) => (
                 <Card
                   key={role.id}
-                  className="overflow-hidden shadow-sm transition-shadow hover:shadow-md"
+                  className="overflow-hidden border border-grayScale-100 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div
                     className={cn(
@@ -312,7 +374,7 @@ export function RolesListPage() {
                         : "bg-gradient-to-r from-brand-500 to-brand-600",
                     )}
                   />
-                  <CardContent className="p-5">
+                  <CardContent className="space-y-4 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5">
                         <div
@@ -330,32 +392,63 @@ export function RolesListPage() {
                           )}
                         </div>
                         <div>
-                          <h3 className="text-sm font-semibold text-grayScale-700">{role.name}</h3>
-                          <p className="mt-0.5 text-xs text-grayScale-400 line-clamp-1">
-                            {role.description}
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-grayScale-700">
+                            {role.name}
+                          </h3>
+                          <p className="mt-0.5 text-xs text-grayScale-500 line-clamp-2">
+                            {role.description?.trim() || "No description provided for this role."}
                           </p>
                         </div>
                       </div>
-                      {role.is_system && (
-                        <Badge variant="warning" className="shrink-0 text-[10px]">
-                          System
-                        </Badge>
-                      )}
+                      <Badge
+                        variant={role.is_system ? "warning" : "outline"}
+                        className="shrink-0 text-[10px]"
+                      >
+                        {role.is_system ? "System" : "Custom"}
+                      </Badge>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between">
+                    <div className="grid grid-cols-2 gap-2 rounded-xl border border-grayScale-100 bg-grayScale-50/70 p-2.5 text-[11px]">
+                      <div>
+                        <p className="text-grayScale-400">Role ID</p>
+                        <p className="font-semibold text-grayScale-700">#{role.id}</p>
+                      </div>
+                      <div>
+                        <p className="text-grayScale-400">Created</p>
+                        <p className="font-semibold text-grayScale-700">
+                          {new Date(role.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
                       <span className="text-[11px] text-grayScale-400">
-                        Created {new Date(role.created_at).toLocaleDateString()}
+                        Open details to view permissions
                       </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1.5 text-xs"
-                        onClick={() => handleViewRole(role.id)}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        View
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {!role.is_system && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteRoleClick(role)}
+                            disabled={deleteLoading}
+                            aria-label={`Delete role ${role.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs"
+                          onClick={() => handleViewRole(role.id)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          View
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -687,6 +780,55 @@ export function RolesListPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete role dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open)
+          if (!open) handleCancelDeleteRole()
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete Role
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this role? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {roleToDelete && (
+            <div className="rounded-lg bg-red-50 border border-red-100 p-3">
+              <p className="text-sm font-medium text-red-700">{roleToDelete.name}</p>
+              <p className="text-xs text-red-500 mt-0.5">Role #{roleToDelete.id}</p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelDeleteRole}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1.5"
+              disabled={deleteLoading || !roleToDelete}
+              onClick={handleConfirmDeleteRole}
+            >
+              {deleteLoading ? <SpinnerIcon className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+              {deleteLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

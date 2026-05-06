@@ -28,7 +28,7 @@ import {
 import { Textarea } from "../../components/ui/textarea"
 import { toast } from "sonner"
 import { cn } from "../../lib/utils"
-import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 
 type CourseWithCategory = Course & { category_name: string }
 
@@ -230,10 +230,7 @@ export function AllCoursesPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
-        <div className="rounded-2xl bg-white shadow-sm p-6">
-          <SpinnerIcon className="h-10 w-10" />
-        </div>
-        <p className="mt-4 text-sm font-medium text-grayScale-400">Loading all sub-categories…</p>
+        <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
       </div>
     )
   }

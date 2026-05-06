@@ -103,9 +103,10 @@ export function SubModuleContentPage() {
 
       try {
         const subCoursesRes = await getSubModulesByCourse(Number(courseId))
-        const foundSubCourse = subCoursesRes.data.data.sub_courses?.find(
-          (sc) => sc.id === Number(subModuleId)
-        )
+        const list = subCoursesRes.data?.data?.sub_courses
+        const foundSubCourse = Array.isArray(list)
+          ? list.find((sc) => sc.id === Number(subModuleId))
+          : undefined
         setSubCourse(foundSubCourse ?? null)
       } catch (err) {
         console.error("Failed to fetch course data:", err)
@@ -123,7 +124,9 @@ export function SubModuleContentPage() {
     setPracticesLoading(true)
     try {
       const res = await getQuestionSetsByOwner("SUB_MODULE", Number(subModuleId))
-      setPractices(res.data.data ?? [])
+      const raw = res.data?.data
+      const list = Array.isArray(raw) ? raw : (raw as { question_sets?: QuestionSet[] })?.question_sets ?? []
+      setPractices(Array.isArray(list) ? list : [])
     } catch (err) {
       console.error("Failed to fetch practices:", err)
     } finally {
@@ -136,7 +139,8 @@ export function SubModuleContentPage() {
     setVideosLoading(true)
     try {
       const res = await getVideosBySubModule(Number(subModuleId))
-      setVideos(res.data.data.videos ?? [])
+      const vids = res.data?.data?.videos ?? []
+      setVideos(Array.isArray(vids) ? vids : [])
     } catch (err) {
       console.error("Failed to fetch videos:", err)
     } finally {
@@ -154,7 +158,7 @@ export function SubModuleContentPage() {
         limit: ratingsPageSize,
         offset,
       })
-      setRatings(res.data.data ?? [])
+      setRatings(res.data?.data ?? [])
     } catch (err) {
       console.error("Failed to fetch ratings:", err)
     } finally {
@@ -405,8 +409,8 @@ export function SubModuleContentPage() {
       const idMatch = video.video_url?.match(/(\d{5,})/)
       const vimeoId = idMatch?.[1] ?? "76979871" // fallback to Big Buck Bunny
       const res = await getVimeoSample(vimeoId)
-      setPreviewIframe(res.data.data.iframe)
-      setPreviewVideo(res.data.data.video)
+      setPreviewIframe(res.data?.data?.iframe ?? "")
+      setPreviewVideo(res.data?.data?.video ?? null)
     } catch {
       setPreviewIframe("")
     } finally {
@@ -414,7 +418,7 @@ export function SubModuleContentPage() {
     }
   }
 
-  const filteredPractices = practices.filter((practice) => {
+  const filteredPractices = (Array.isArray(practices) ? practices : []).filter((practice) => {
     if (statusFilter === "all") return true
     if (statusFilter === "published") return practice.status === "PUBLISHED"
     if (statusFilter === "draft") return practice.status === "DRAFT"
@@ -436,6 +440,19 @@ export function SubModuleContentPage() {
       <div className="flex flex-col items-center justify-center py-20">
         <img src={alertSrc} alt="" className="h-12 w-12" />
         <p className="mt-3 text-sm font-medium text-red-600">{error}</p>
+      </div>
+    )
+  }
+
+  if (!subCourse) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <img src={alertSrc} alt="" className="h-12 w-12" />
+        <p className="mt-3 text-sm font-medium text-grayScale-600">Sub-module not found</p>
+        <p className="mt-1 text-sm text-grayScale-400">It may have been removed or the link is invalid.</p>
+        <Button className="mt-6" variant="outline" asChild>
+          <Link to={`/content/category/${categoryId}/courses/${courseId}/sub-modules`}>Back to sub-modules</Link>
+        </Button>
       </div>
     )
   }
@@ -590,7 +607,7 @@ export function SubModuleContentPage() {
                       <div className="flex items-center gap-3 text-xs text-grayScale-400">
                         <div className="flex items-center gap-1.5">
                           <Layers className="h-3.5 w-3.5" />
-                          <span>{practice.owner_type.replace("_", " ")}</span>
+                          <span>{String(practice.owner_type ?? "SUB_MODULE").replace(/_/g, " ")}</span>
                         </div>
                         {practice.shuffle_questions && (
                           <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-600 ring-1 ring-inset ring-amber-200">Shuffle ON</span>
@@ -599,11 +616,13 @@ export function SubModuleContentPage() {
 
                       <div className="mt-auto flex items-center justify-between border-t border-grayScale-100 pt-3">
                         <span className="text-xs font-medium text-grayScale-400">
-                          {new Date(practice.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {practice.created_at
+                            ? new Date(practice.created_at).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "—"}
                         </span>
                         <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                           <button

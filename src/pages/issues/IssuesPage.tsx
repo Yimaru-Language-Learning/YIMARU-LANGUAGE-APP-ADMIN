@@ -95,12 +95,13 @@ function getStatusConfig(status: string): {
   }
 }
 
-function getIssueTypeConfig(type: string): {
+function getIssueTypeConfig(type: string | null | undefined): {
   label: string;
   classes: string;
   icon: typeof Bug;
 } {
-  switch (type) {
+  const t = String(type ?? "").trim();
+  switch (t) {
     case "bug":
       return {
         label: "Bug",
@@ -133,7 +134,7 @@ function getIssueTypeConfig(type: string): {
       };
     default:
       return {
-        label: type.charAt(0).toUpperCase() + type.slice(1),
+        label: t ? t.charAt(0).toUpperCase() + t.slice(1) : "Other",
         classes: "bg-grayScale-100 text-grayScale-600 border-grayScale-200",
         icon: HelpCircle,
       };
@@ -173,8 +174,10 @@ function getRelativeTime(dateStr: string): string {
   return formatDate(dateStr);
 }
 
-function formatRoleLabel(role: string): string {
-  return role
+function formatRoleLabel(role: string | null | undefined): string {
+  const r = String(role ?? "").trim();
+  if (!r) return "—";
+  return r
     .split("_")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
@@ -221,8 +224,9 @@ export function IssuesPage() {
         offset: (page - 1) * pageSize,
       };
       const res = await getIssues(filters);
-      setIssues(res.data.data.issues);
-      setTotalCount(res.data.data.total_count);
+      const payload = res.data?.data;
+      setIssues(Array.isArray(payload?.issues) ? payload.issues : []);
+      setTotalCount(typeof payload?.total_count === "number" ? payload.total_count : 0);
     } catch (error) {
       console.error("Failed to fetch issues:", error);
       setIssues([]);
@@ -241,7 +245,7 @@ export function IssuesPage() {
     setDetailLoading(true);
     try {
       const res = await getIssueById(issueId);
-      setSelectedIssue(res.data.data);
+      setSelectedIssue(res.data?.data ?? null);
     } catch (error) {
       console.error("Failed to fetch issue detail:", error);
     } finally {
@@ -305,16 +309,15 @@ export function IssuesPage() {
   };
 
   // Client-side filtering (status, type, search)
-  const filteredIssues = issues.filter((issue) => {
+  const filteredIssues = (Array.isArray(issues) ? issues : []).filter((issue) => {
     if (statusFilter && issue.status !== statusFilter) return false;
     if (typeFilter && issue.issue_type !== typeFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      return (
-        issue.subject.toLowerCase().includes(q) ||
-        issue.description.toLowerCase().includes(q) ||
-        issue.issue_type.toLowerCase().includes(q)
-      );
+      const subject = String(issue.subject ?? "").toLowerCase();
+      const description = String(issue.description ?? "").toLowerCase();
+      const issueType = String(issue.issue_type ?? "").toLowerCase();
+      return subject.includes(q) || description.includes(q) || issueType.includes(q);
     }
     return true;
   });
@@ -537,10 +540,10 @@ export function IssuesPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-grayScale-600 truncate">
-                            {issue.subject}
+                            {issue.subject?.trim() ? issue.subject : "—"}
                           </p>
                           <p className="text-xs text-grayScale-400 truncate mt-0.5">
-                            {issue.description}
+                            {issue.description?.trim() ? issue.description : "No description"}
                           </p>
                         </div>
                       </div>
@@ -572,6 +575,9 @@ export function IssuesPage() {
                               {getStatusConfig(s).label}
                             </option>
                           ))}
+                          {!STATUSES.includes(issue.status as (typeof STATUSES)[number]) && issue.status ? (
+                            <option value={issue.status}>{getStatusConfig(issue.status).label}</option>
+                          ) : null}
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 pointer-events-none opacity-50" />
                       </div>

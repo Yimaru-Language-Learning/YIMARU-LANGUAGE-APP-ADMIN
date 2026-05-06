@@ -25,6 +25,16 @@ export interface ResolveFileUrlResponse {
   success?: boolean
 }
 
+export interface RefreshFileUrlResponse {
+  message: string
+  data?: {
+    object_key?: string
+    url?: string
+    expires_in?: number
+  }
+  success?: boolean
+}
+
 export interface UploadMediaOptions {
   title?: string
   description?: string
@@ -84,5 +94,10 @@ export const uploadVideoFile = (fileOrUrl: File | string, options?: UploadMediaO
 export const resolveFileUrl = (key: string) =>
   http.get<ResolveFileUrlResponse>("/files/url", {
     params: { key },
+  })
+
+export const refreshFileUrl = (reference: string) =>
+  http.post<RefreshFileUrlResponse>("/files/refresh-url", {
+    reference,
   })
 

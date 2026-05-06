@@ -45,6 +45,7 @@ export interface GetCoursesResponse {
 
 export interface CreateCourseRequest {
   category_id: number
+  sub_category_id?: number | null
   title: string
   description: string
 }
@@ -54,6 +55,268 @@ export interface UpdateCourseRequest {
   description?: string
   thumbnail?: string
   is_active?: boolean
+}
+
+/** Row from GET /programs (e.g. Beginner / Intermediate program buckets) */
+export interface LearningProgramListItem {
+  id: number
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  sort_order: number
+  created_at: string
+}
+
+export interface UpdateLearningProgramRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+export interface CreateLearningProgramRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+export interface CreateLearningProgramResponse {
+  message: string
+  data: LearningProgramListItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetLearningProgramsResponse {
+  message: string
+  data: {
+    programs: LearningProgramListItem[]
+    total_count: number
+    limit?: number
+    offset?: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /programs/:program_id/courses */
+export interface ProgramCourseListItem {
+  id: number
+  program_id: number
+  name: string
+  description: string
+  sort_order: number
+  created_at: string
+  thumbnail?: string | null
+  /** Some list endpoints may expose the image as `thumbnail_url` instead. */
+  thumbnail_url?: string | null
+  /** GET /programs/:id/courses aggregates. */
+  module_count?: number
+  lesson_count?: number
+  practice_count?: number
+  /** Legacy aggregate field names; prefer module_count, lesson_count, practice_count. */
+  modules_count?: number
+  videos_count?: number
+  practices_count?: number
+}
+
+/** Body for PUT /courses/:id (program-linked Learn English courses). */
+export interface UpdateTopLevelCourseRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+/** Body for POST /programs/:program_id/courses */
+export interface CreateProgramCourseRequest {
+  name: string
+  description: string
+  thumbnail: string
+}
+
+export interface CreateProgramCourseResponse {
+  message: string
+  data: ProgramCourseListItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetProgramCoursesResponse {
+  message: string
+  data: {
+    total_count: number
+    limit: number
+    offset: number
+    courses: ProgramCourseListItem[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Row from GET /courses/:courseId/modules (Learn English track). */
+export interface TopLevelCourseModuleItem {
+  id: number
+  program_id: number
+  course_id: number
+  name: string
+  description: string
+  icon?: string | null
+  sort_order: number
+  created_at: string
+}
+
+export interface GetTopLevelCourseModulesResponse {
+  message: string
+  data: {
+    limit: number
+    offset: number
+    modules: TopLevelCourseModuleItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Body for PUT /modules/:id (Learn English top-level modules). */
+export interface UpdateTopLevelCourseModuleRequest {
+  name: string
+  description: string
+  icon: string
+}
+
+/** Body for POST /courses/:courseId/modules */
+export interface CreateTopLevelCourseModuleRequest {
+  name: string
+  description: string
+  icon: string
+}
+
+export interface CreateTopLevelCourseModuleResponse {
+  message: string
+  data: TopLevelCourseModuleItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Row from GET /modules/:moduleId/lessons (Learn English top-level module lessons). */
+export interface TopLevelModuleLessonItem {
+  id: number
+  module_id: number
+  title: string
+  video_url: string
+  thumbnail: string
+  description: string
+  sort_order: number
+  created_at: string
+}
+
+export interface GetTopLevelModuleLessonsResponse {
+  message: string
+  data: {
+    total_count: number
+    limit: number
+    offset: number
+    lessons: TopLevelModuleLessonItem[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Practice returned by GET /courses|modules|lessons/.../practices (Learn English parent-linked practice). */
+export interface ParentContextPractice {
+  id: number
+  parent_kind: string
+  parent_id: number
+  title: string
+  story_description: string
+  story_image: string
+  question_set_id: number
+  quick_tips: string
+  persona_id?: number | null
+  created_at: string
+}
+
+export interface GetPracticesByParentContextResponse {
+  message: string
+  data: {
+    offset: number
+    limit: number
+    practices: ParentContextPractice[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export type PracticeParentKind = "COURSE" | "MODULE" | "LESSON"
+
+/** POST /practices — create practice linked to a course, module, or lesson (Learn English). */
+export interface CreateParentLinkedPracticeRequest {
+  parent_kind: PracticeParentKind
+  parent_id: number
+  title: string
+  story_description: string
+  story_image: string
+  question_set_id: number
+  quick_tips: string
+  persona_id?: number
+}
+
+export interface CreateParentLinkedPracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Body for PUT /practices/:id (Learn English parent-linked practice). */
+export interface UpdateParentLinkedPracticeRequest {
+  title: string
+  story_description: string
+  story_image: string
+  question_set_id: number
+  quick_tips: string
+  persona_id?: number | null
+}
+
+export interface UpdateParentLinkedPracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Body for PUT /lessons/:id (Learn English top-level module lessons). */
+export interface UpdateTopLevelModuleLessonRequest {
+  title: string
+  video_url: string
+  thumbnail: string
+  description: string
+}
+
+/** Body for POST /modules/:moduleId/lessons. */
+export interface CreateTopLevelModuleLessonRequest {
+  title: string
+  video_url: string
+  thumbnail: string
+  description: string
+}
+
+export interface CreateTopLevelModuleLessonResponse {
+  message: string
+  data: TopLevelModuleLessonItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
 }
 
 // ============================================
@@ -172,7 +435,13 @@ export interface GetModulesResponse {
 export interface CreateModuleRequest {
   level_id: number
   title: string
-  content: string
+  /** Legacy field kept for backward compatibility. */
+  content?: string
+  /** Preferred field for module detail text. */
+  description?: string
+  icon_url?: string
+  display_order?: number
+  is_active?: boolean
 }
 
 /** @deprecated Use UpdateSubCourseRequest instead */
@@ -192,6 +461,8 @@ export interface UpdateModuleStatusRequest {
 export interface SubCourse {
   id: number
   course_id: number
+  /** Present when derived from course hierarchy rows (levels → modules → sub-modules). */
+  level_id?: number
   module_id?: number
   title: string
   description: string
@@ -701,6 +972,72 @@ export interface HumanLanguageLesson {
   practices: LearningPathPractice[]
 }
 
+export interface SubModuleLessonDetail {
+  id: number
+  sub_module_id: number
+  display_order: number
+  is_active: boolean
+  created_at: string
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  teaching_text?: string | null
+  teaching_image_url?: string | null
+  teaching_audio_url?: string | null
+  teaching_video_url?: string | null
+}
+
+export interface SubModuleLesson {
+  id: number
+  sub_module_id: number
+  display_order: number
+  is_active: boolean
+  created_at: string
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  teaching_text?: string | null
+  teaching_image_url?: string | null
+  teaching_audio_url?: string | null
+  teaching_video_url?: string | null
+}
+
+export interface GetSubModuleLessonDetailResponse {
+  message: string
+  data: SubModuleLessonDetail
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface UpdateSubModuleLessonRequest {
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  teaching_text?: string | null
+  teaching_image_url?: string | null
+  teaching_audio_url?: string | null
+  teaching_video_url?: string | null
+  display_order: number
+  is_active: boolean
+}
+
+export interface UpdateSubModuleLessonResponse {
+  message: string
+  data: SubModuleLessonDetail
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetSubModuleLessonsResponse {
+  message: string
+  data: SubModuleLesson[]
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
 export interface GetHumanLanguageLessonsResponse {
   message: string
   data: {
@@ -714,10 +1051,209 @@ export interface GetHumanLanguageLessonsResponse {
   metadata: unknown
 }
 
+/** Row from GET /course-management/human-language/sub-categories */
+export interface HumanLanguageSubCategoryListItem {
+  id: number
+  category_id: number
+  category_name: string
+  name: string
+  description?: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  /** Present on some payloads; ignore if unused. */
+  total_count?: number
+}
+
+export interface GetHumanLanguageSubCategoriesResponse {
+  message: string
+  data: {
+    sub_categories: HumanLanguageSubCategoryListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/categories/:categoryId/sub-categories */
+export interface CategorySubCategoryListItem {
+  id: number
+  category_id: number
+  category_name: string
+  name: string
+  description?: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  /** Sometimes echoed per row by the API; safe to ignore. */
+  total_count?: number
+}
+
+export interface GetCategorySubCategoriesResponse {
+  message: string
+  data: {
+    sub_categories: CategorySubCategoryListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/sub-categories/:subCategoryId/courses */
+export interface SubCategoryCourseListItem {
+  id: number
+  category_id: number
+  sub_category_id: number
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  intro_video_url?: string | null
+  is_active: boolean
+  total_count?: number
+}
+
+export interface GetSubCategoryCoursesResponse {
+  message: string
+  data: {
+    courses: SubCategoryCourseListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/courses/:courseId/levels or GET /course-management/levels */
+export interface CourseLevelRow {
+  id: number
+  course_id: number
+  cefr_level: string
+  display_order: number
+  is_active: boolean
+  created_at: string
+  title: string
+  description?: string | null
+  thumbnail?: string | null
+  total_count?: number
+}
+
+export interface GetCourseLevelsForCourseResponse {
+  message: string
+  data: {
+    levels: CourseLevelRow[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetCourseLevelsAllResponse {
+  message: string
+  data: {
+    levels: CourseLevelRow[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+export interface GetCourseLevelByIdResponse {
+  message: string
+  data: CourseLevelRow
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/modules/:moduleId/sub-modules */
+export interface CourseSubModuleListItem {
+  id: number
+  module_id: number
+  title: string
+  description?: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  legacy_sub_course_id?: number | null
+  thumbnail?: string | null
+  tips?: string | null
+  total_count?: number
+}
+
+export interface GetSubModulesByModuleResponse {
+  message: string
+  data: {
+    sub_modules: CourseSubModuleListItem[]
+    total_count: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/human-language/hierarchy */
+export interface HumanLanguageHierarchyFlatRow {
+  category_id: number
+  category_name: string
+  sub_category_id?: number | null
+  sub_category_name?: string | null
+  course_id?: number | null
+  course_title?: string | null
+}
+
+export interface GetHumanLanguageHierarchyFlatResponse {
+  message: string
+  data: HumanLanguageHierarchyFlatRow[]
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
+/** Row from GET /course-management/courses/:courseId/hierarchy */
+export interface CourseHierarchyRow {
+  course_id: number
+  course_title: string
+  level_id?: number | null
+  cefr_level?: string | null
+  level_title?: string | null
+  level_description?: string | null
+  level_thumbnail?: string | null
+  module_id?: number | null
+  module_title?: string | null
+  module_icon_url?: string | null
+  sub_module_id?: number | null
+  sub_module_title?: string | null
+  sub_module_description?: string | null
+  sub_module_thumbnail?: string | null
+  sub_module_tips?: string | null
+  sub_module_display_order?: number | null
+}
+
+export interface GetCourseHierarchyResponse {
+  message: string
+  data: CourseHierarchyRow[]
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
 export interface HumanLanguageSubModule {
   id: number
   title: string
   videos: LearningPathVideo[]
+  lessons?: {
+    id: number
+    question_set_id: number
+    title: string
+    status: string
+    question_count: number
+    display_order: number
+    intro_video_url?: string | null
+  }[]
   practices: LearningPathPractice[]
 }
 
@@ -728,6 +1264,7 @@ export interface HumanLanguageModule {
 }
 
 export interface HumanLanguageLevelTree {
+  level_id?: number
   level: string
   modules: HumanLanguageModule[]
 }

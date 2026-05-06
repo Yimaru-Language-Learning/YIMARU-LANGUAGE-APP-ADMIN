@@ -3,7 +3,6 @@ import { AppLayout } from "../layouts/AppLayout";
 import { DashboardPage } from "../pages/DashboardPage";
 import { AnalyticsPage } from "../pages/analytics/AnalyticsPage";
 import { ContentManagementLayout } from "../pages/content-management/ContentManagementLayout";
-import { CourseCategoryPage } from "../pages/content-management/CourseCategoryPage";
 import { AllCoursesPage } from "../pages/content-management/AllCoursesPage";
 import { CourseFlowBuilderPage } from "../pages/content-management/CourseFlowBuilderPage";
 import { ContentOverviewPage } from "../pages/content-management/ContentOverviewPage";
@@ -47,7 +46,7 @@ import { PracticeDetailsPage } from "../pages/content-management/PracticeDetails
 import { PracticeMembersPage } from "../pages/content-management/PracticeMembersPage";
 import { QuestionsPage } from "../pages/content-management/QuestionsPage";
 import { AddQuestionPage } from "../pages/content-management/AddQuestionPage";
-import { HumanLanguagePage } from "../pages/content-management/HumanLanguagePage";
+import { HumanLanguageHierarchyPage } from "../pages/content-management/HumanLanguageHierarchyPage";
 import { HumanLanguageSubModulePage } from "../pages/content-management/HumanLanguageSubModulePage";
 import { UserLogPage } from "../pages/user-log/UserLogPage";
 import { IssuesPage } from "../pages/issues/IssuesPage";
@@ -91,10 +90,10 @@ export function AppRoutes() {
         </Route>
 
         <Route path="/content" element={<ContentManagementLayout />}>
-          <Route index element={<CourseCategoryPage />} />
+          <Route index element={<Navigate to="practices" replace />} />
           <Route path="courses" element={<AllCoursesPage />} />
           <Route path="flows" element={<CourseFlowBuilderPage />} />
-          <Route path="human-language" element={<HumanLanguagePage />} />
+          <Route path="human-language" element={<HumanLanguageHierarchyPage />} />
           <Route
             path="human-language/:categoryId/:courseId/sub-module/:subModuleId/add-practice"
             element={<AddNewPracticePage />}

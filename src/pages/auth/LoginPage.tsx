@@ -67,9 +67,6 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   const token = localStorage.getItem("access_token");
-  if (token) {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -161,6 +158,10 @@ export function LoginPage() {
       });
     }
   }, [googleReady, handleGoogleCallback]);
+
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

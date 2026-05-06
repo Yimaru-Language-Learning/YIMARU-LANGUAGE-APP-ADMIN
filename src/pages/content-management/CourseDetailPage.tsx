@@ -349,7 +349,6 @@ export function CourseDetailPage() {
         </div>
       ) : (
         <>
-          {/* Hero Section */}
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-medium tracking-tight text-grayScale-900">

@@ -78,6 +78,26 @@ import type {
   CreateTopLevelCourseModuleResponse,
   CreateProgramCourseRequest,
   CreateProgramCourseResponse,
+  CreateExamPrepCatalogCourseRequest,
+  CreateExamPrepCatalogCourseResponse,
+  GetExamPrepCatalogCoursesResponse,
+  UpdateExamPrepCatalogCourseRequest,
+  UpdateExamPrepCatalogCourseResponse,
+  CreateExamPrepCatalogUnitRequest,
+  CreateExamPrepCatalogUnitResponse,
+  UpdateExamPrepCatalogUnitRequest,
+  UpdateExamPrepCatalogUnitResponse,
+  GetExamPrepCatalogUnitsResponse,
+  CreateExamPrepUnitModuleRequest,
+  CreateExamPrepUnitModuleResponse,
+  UpdateExamPrepUnitModuleRequest,
+  UpdateExamPrepUnitModuleResponse,
+  GetExamPrepUnitModulesResponse,
+  CreateExamPrepModuleLessonRequest,
+  CreateExamPrepModuleLessonResponse,
+  UpdateExamPrepModuleLessonRequest,
+  UpdateExamPrepModuleLessonResponse,
+  GetExamPrepModuleLessonsResponse,
   GetTopLevelModuleLessonsResponse,
   GetPracticesByParentContextResponse,
   CreateParentLinkedPracticeRequest,
@@ -446,6 +466,128 @@ export const createProgramCourse = (
   programId: number,
   data: CreateProgramCourseRequest,
 ) => http.post<CreateProgramCourseResponse>(`/programs/${programId}/courses`, data)
+
+/** English proficiency catalog course — POST /exam-prep/catalog-courses */
+export const createExamPrepCatalogCourse = (
+  data: CreateExamPrepCatalogCourseRequest,
+) => http.post<CreateExamPrepCatalogCourseResponse>("/exam-prep/catalog-courses", data)
+
+/** English proficiency catalog courses — GET /exam-prep/catalog-courses */
+export const getExamPrepCatalogCourses = (params?: { limit?: number; offset?: number }) =>
+  http.get<GetExamPrepCatalogCoursesResponse>("/exam-prep/catalog-courses", { params })
+
+/** English proficiency catalog course — PUT /exam-prep/catalog-courses/:catalogCourseId */
+export const updateExamPrepCatalogCourse = (
+  catalogCourseId: number,
+  data: UpdateExamPrepCatalogCourseRequest,
+) =>
+  http.put<UpdateExamPrepCatalogCourseResponse>(
+    `/exam-prep/catalog-courses/${catalogCourseId}`,
+    data,
+  )
+
+/** English proficiency catalog course — DELETE /exam-prep/catalog-courses/:catalogCourseId */
+export const deleteExamPrepCatalogCourse = (catalogCourseId: number) =>
+  http.delete(`/exam-prep/catalog-courses/${catalogCourseId}`)
+
+/** English proficiency catalog unit — POST /exam-prep/catalog-courses/:catalogCourseId/units */
+export const createExamPrepCatalogUnit = (
+  catalogCourseId: number,
+  data: CreateExamPrepCatalogUnitRequest,
+) =>
+  http.post<CreateExamPrepCatalogUnitResponse>(
+    `/exam-prep/catalog-courses/${catalogCourseId}/units`,
+    data,
+  )
+
+/** English proficiency catalog units — GET /exam-prep/catalog-courses/:catalogCourseId/units */
+export const getExamPrepCatalogUnits = (
+  catalogCourseId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetExamPrepCatalogUnitsResponse>(
+    `/exam-prep/catalog-courses/${catalogCourseId}/units`,
+    { params },
+  )
+
+/** English proficiency unit — PUT /exam-prep/units/:unitId */
+export const updateExamPrepCatalogUnit = (
+  unitId: number,
+  data: UpdateExamPrepCatalogUnitRequest,
+) => http.put<UpdateExamPrepCatalogUnitResponse>(`/exam-prep/units/${unitId}`, data)
+
+/** English proficiency unit — DELETE /exam-prep/units/:unitId */
+export const deleteExamPrepCatalogUnit = (unitId: number) =>
+  http.delete(`/exam-prep/units/${unitId}`)
+
+/** English proficiency unit modules — POST /exam-prep/units/:unitId/modules */
+export const createExamPrepUnitModule = (
+  unitId: number,
+  data: CreateExamPrepUnitModuleRequest,
+) =>
+  http.post<CreateExamPrepUnitModuleResponse>(
+    `/exam-prep/units/${unitId}/modules`,
+    data,
+  )
+
+/** English proficiency unit modules — GET /exam-prep/units/:unitId/modules */
+export const getExamPrepUnitModules = (
+  unitId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetExamPrepUnitModulesResponse>(`/exam-prep/units/${unitId}/modules`, {
+    params,
+  })
+
+/** English proficiency module — PUT /exam-prep/modules/:moduleId */
+export const updateExamPrepUnitModule = (
+  moduleId: number,
+  data: UpdateExamPrepUnitModuleRequest,
+) =>
+  http.put<UpdateExamPrepUnitModuleResponse>(
+    `/exam-prep/modules/${moduleId}`,
+    data,
+  )
+
+/** English proficiency module — DELETE /exam-prep/modules/:moduleId */
+export const deleteExamPrepUnitModule = (moduleId: number) =>
+  http.delete(`/exam-prep/modules/${moduleId}`)
+
+/** English proficiency module lessons — GET /exam-prep/modules/:moduleId/lessons */
+export const getExamPrepModuleLessons = (
+  moduleId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetExamPrepModuleLessonsResponse>(
+    `/exam-prep/modules/${moduleId}/lessons`,
+    {
+      params,
+    },
+  )
+
+/** English proficiency module lesson — POST /exam-prep/modules/:moduleId/lessons */
+export const createExamPrepModuleLesson = (
+  moduleId: number,
+  data: CreateExamPrepModuleLessonRequest,
+) =>
+  http.post<CreateExamPrepModuleLessonResponse>(
+    `/exam-prep/modules/${moduleId}/lessons`,
+    data,
+  )
+
+/** English proficiency lesson — PUT /exam-prep/lessons/:lessonId */
+export const updateExamPrepModuleLesson = (
+  lessonId: number,
+  data: UpdateExamPrepModuleLessonRequest,
+) =>
+  http.put<UpdateExamPrepModuleLessonResponse>(
+    `/exam-prep/lessons/${lessonId}`,
+    data,
+  )
+
+/** English proficiency lesson — DELETE /exam-prep/lessons/:lessonId */
+export const deleteExamPrepModuleLesson = (lessonId: number) =>
+  http.delete(`/exam-prep/lessons/${lessonId}`)
 
 /** Top-level course resource (Learn English track) — PUT /courses/:id */
 export const updateTopLevelCourse = (courseId: number, data: UpdateTopLevelCourseRequest) =>

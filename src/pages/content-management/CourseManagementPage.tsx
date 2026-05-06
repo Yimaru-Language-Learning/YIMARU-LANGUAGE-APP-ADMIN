@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -6,12 +7,15 @@ import {
   LayoutGrid,
   PlayCircle,
   ClipboardCheck,
+  Pencil,
+  Trash2,
   ChevronRight,
   ArrowRight,
   X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
+import { Textarea } from "../../components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +26,15 @@ import {
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import uploadIcon from "../../assets/icons/upload.png";
+import { toast } from "sonner";
+import { ResolvedImage } from "../../components/media/ResolvedImage";
+import {
+  createExamPrepCatalogUnit,
+  updateExamPrepCatalogUnit,
+  deleteExamPrepCatalogUnit,
+  getExamPrepCatalogUnits,
+} from "../../api/courses.api";
+import { uploadImageFile } from "../../api/files.api";
 
 export function CourseManagementPage() {
   const navigate = useNavigate();
@@ -29,6 +42,38 @@ export function CourseManagementPage() {
     programType: string;
     courseId: string;
   }>();
+  const catalogCourseId = Number(courseId);
+  const [addUnitOpen, setAddUnitOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createThumbnail, setCreateThumbnail] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+  const [units, setUnits] = useState<
+    Array<{
+      id: number;
+      name: string;
+      description: string;
+      thumbnail: string;
+      sortOrder: number;
+      modules: number;
+      lessons: number;
+      practices: number;
+      gradient: string;
+    }>
+  >([]);
+  const [unitsLoading, setUnitsLoading] = useState(false);
+  const [editingUnitId, setEditingUnitId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editThumbnail, setEditThumbnail] = useState("");
+  const [editSortOrder, setEditSortOrder] = useState("1");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingEditThumbnail, setUploadingEditThumbnail] = useState(false);
+  const editThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+  const [deletingUnitId, setDeletingUnitId] = useState<number | null>(null);
+  const [deletingUnit, setDeletingUnit] = useState(false);
 
   // Mock data for display titles
   const courseTitles: Record<string, string> = {
@@ -39,41 +84,289 @@ export function CourseManagementPage() {
   const courseDisplayName =
     courseTitles[courseId || ""] || "Duolingo English Test";
 
-  const units = [
-    {
-      id: "unit1",
-      name: "Greetings & Introductions",
-      description:
-        "Learn basic greetings, self-introductions, and polite expressions in everyday situations.",
-      modules: 3,
-      videos: 9,
-      practices: 9,
-      gradient:
-        "linear-gradient(135deg, rgba(158, 40, 145, 0.5) 0%, rgba(158, 40, 145, 0.8) 100%)",
-    },
-    {
-      id: "unit2",
-      name: "Speaking",
-      description:
-        "Core speaking practice and skill building for natural pronunciation and fluency.",
-      modules: 3,
-      videos: 9,
-      practices: 9,
-      gradient:
-        "linear-gradient(135deg, rgba(79, 70, 229, 0.5) 0%, rgba(79, 70, 229, 0.8) 100%)",
-    },
-    {
-      id: "unit3",
-      name: "Reading",
-      description:
-        "Reading comprehension and vocabulary improvement through various text types.",
-      modules: 3,
-      videos: 9,
-      practices: 9,
-      gradient:
-        "linear-gradient(135deg, rgba(124, 58, 237, 0.5) 0%, rgba(124, 58, 237, 0.8) 100%)",
-    },
-  ];
+  const loadUnits = useCallback(async () => {
+    if (!Number.isFinite(catalogCourseId) || catalogCourseId < 1) {
+      setUnits([]);
+      return;
+    }
+    setUnitsLoading(true);
+    try {
+      const response = await getExamPrepCatalogUnits(catalogCourseId, {
+        limit: 20,
+        offset: 0,
+      });
+      const rows = response.data?.data?.units;
+      const list = Array.isArray(rows) ? rows : [];
+      setUnits(
+        list.map((row, index) => ({
+          id: Number(row.id),
+          name: row.name?.trim() || `Unit ${row.id}`,
+          description: row.description?.trim() || "—",
+          thumbnail: row.thumbnail?.trim() || "",
+          sortOrder: Number(row.sort_order ?? 0),
+          modules: Number(row.modules_count ?? 0),
+          lessons: Number(row.lessons_count ?? row.videos_count ?? 0),
+          practices: Number(row.practices_count ?? 0),
+          gradient:
+            index % 3 === 1
+              ? "linear-gradient(135deg, rgba(79, 70, 229, 0.5) 0%, rgba(79, 70, 229, 0.8) 100%)"
+              : index % 3 === 2
+                ? "linear-gradient(135deg, rgba(124, 58, 237, 0.5) 0%, rgba(124, 58, 237, 0.8) 100%)"
+                : "linear-gradient(135deg, rgba(158, 40, 145, 0.5) 0%, rgba(158, 40, 145, 0.8) 100%)",
+        })),
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load units");
+      setUnits([]);
+    } finally {
+      setUnitsLoading(false);
+    }
+  }, [catalogCourseId]);
+
+  useEffect(() => {
+    void loadUnits();
+  }, [loadUnits]);
+
+  const isHttpUrl = (value: string) =>
+    value.startsWith("http://") || value.startsWith("https://");
+
+  const isMinioUrl = (value: string) => {
+    try {
+      const url = new URL(value);
+      return url.host === "s3.yimaruacademy.com";
+    } catch {
+      return false;
+    }
+  };
+
+  const resolveThumbnailToMinioUrl = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return "";
+    if (!isHttpUrl(trimmed) || isMinioUrl(trimmed)) return trimmed;
+    const uploaded = await uploadImageFile(trimmed);
+    const uploadedUrl = uploaded.data?.data?.url?.trim();
+    if (!uploadedUrl) throw new Error("Failed to upload thumbnail URL to MinIO");
+    return uploadedUrl;
+  };
+
+  const clearCreateUnitForm = () => {
+    setCreateName("");
+    setCreateDescription("");
+    setCreateThumbnail("");
+    if (createThumbnailFileInputRef.current) {
+      createThumbnailFileInputRef.current.value = "";
+    }
+  };
+
+  const handleCreateUnitThumbnailFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error("Image is too large", { description: "Maximum size is 5 MB." });
+      return;
+    }
+    setUploadingThumbnail(true);
+    try {
+      const res = await uploadImageFile(file);
+      const url = res.data?.data?.url?.trim();
+      if (!url) throw new Error("Upload did not return a file URL");
+      setCreateThumbnail(url);
+      toast.success("Thumbnail uploaded");
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload thumbnail";
+      toast.error(message);
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
+  const handleCreateUnit = async () => {
+    if (!Number.isFinite(catalogCourseId) || catalogCourseId < 1) {
+      toast.error("Invalid catalog course");
+      return;
+    }
+    const name = createName.trim();
+    if (!name) {
+      toast.error("Unit name is required");
+      return;
+    }
+    setCreating(true);
+    try {
+      const minioThumbnail = await resolveThumbnailToMinioUrl(createThumbnail);
+      const response = await createExamPrepCatalogUnit(catalogCourseId, {
+        name,
+        description: createDescription.trim() || null,
+        thumbnail: minioThumbnail || null,
+      });
+      void response;
+      await loadUnits();
+      toast.success("Unit created");
+      clearCreateUnitForm();
+      setAddUnitOpen(false);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to create unit";
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const autoUploadCreateThumbnailUrl = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed || !isHttpUrl(trimmed) || isMinioUrl(trimmed)) return;
+    setUploadingThumbnail(true);
+    try {
+      const minioUrl = await resolveThumbnailToMinioUrl(trimmed);
+      if (minioUrl && minioUrl !== trimmed) {
+        setCreateThumbnail(minioUrl);
+        toast.success("Thumbnail uploaded to MinIO");
+      }
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload URL to MinIO";
+      toast.error(message);
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
+  const autoUploadEditThumbnailUrl = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed || !isHttpUrl(trimmed) || isMinioUrl(trimmed)) return;
+    setUploadingEditThumbnail(true);
+    try {
+      const minioUrl = await resolveThumbnailToMinioUrl(trimmed);
+      if (minioUrl && minioUrl !== trimmed) {
+        setEditThumbnail(minioUrl);
+        toast.success("Thumbnail uploaded to MinIO");
+      }
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload URL to MinIO";
+      toast.error(message);
+    } finally {
+      setUploadingEditThumbnail(false);
+    }
+  };
+
+  const openEditUnit = (unit: (typeof units)[number]) => {
+    setEditingUnitId(unit.id);
+    setEditName(unit.name ?? "");
+    setEditDescription(unit.description ?? "");
+    setEditThumbnail(unit.thumbnail ?? "");
+    setEditSortOrder(String(unit.sortOrder ?? 1));
+  };
+
+  const closeEditUnit = () => {
+    if (savingEdit || uploadingEditThumbnail) return;
+    setEditingUnitId(null);
+    setEditName("");
+    setEditDescription("");
+    setEditThumbnail("");
+    setEditSortOrder("1");
+  };
+
+  const handleEditUnitThumbnailFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    setUploadingEditThumbnail(true);
+    try {
+      const res = await uploadImageFile(file);
+      const url = res.data?.data?.url?.trim();
+      if (!url) throw new Error("Upload did not return a file URL");
+      setEditThumbnail(url);
+      toast.success("Thumbnail uploaded");
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload thumbnail";
+      toast.error(message);
+    } finally {
+      setUploadingEditThumbnail(false);
+    }
+  };
+
+  const handleSaveEditUnit = async () => {
+    if (!editingUnitId) return;
+    const name = editName.trim();
+    if (!name) {
+      toast.error("Unit name is required");
+      return;
+    }
+    const sortOrderNum = Number(editSortOrder);
+    if (!Number.isFinite(sortOrderNum) || sortOrderNum < 0) {
+      toast.error("Sort order must be a valid number");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
+      await updateExamPrepCatalogUnit(editingUnitId, {
+        name,
+        description: editDescription.trim() || null,
+        thumbnail: minioThumbnail || null,
+        sort_order: sortOrderNum,
+      });
+      await loadUnits();
+      toast.success("Unit updated");
+      closeEditUnit();
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update unit";
+      toast.error(message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteUnit = async () => {
+    if (!deletingUnitId) return;
+    setDeletingUnit(true);
+    try {
+      await deleteExamPrepCatalogUnit(deletingUnitId);
+      await loadUnits();
+      toast.success("Unit deleted");
+      setDeletingUnitId(null);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to delete unit";
+      toast.error(message);
+    } finally {
+      setDeletingUnit(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -98,29 +391,51 @@ export function CourseManagementPage() {
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <Dialog>
+          <Dialog
+            open={addUnitOpen}
+            onOpenChange={(open) => {
+              if (!open && (creating || uploadingThumbnail)) return;
+              setAddUnitOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="h-10 px-6 rounded-[6px] bg-brand-500 font-bold text-white shadow-sm hover:bg-brand-600 transition-all flex items-center gap-2">
                 <Plus className="h-5 w-5" />
                 Add Unit
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[600px] p-0 border-none rounded-[16px] overflow-hidden">
-              <div className="bg-white">
-                <DialogHeader className="px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
+            <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
+              <div className="flex min-h-0 flex-1 flex-col bg-white">
+                <DialogHeader className="shrink-0 px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
                   <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
-                    Create Courses
+                    Create Unit
                   </DialogTitle>
                 </DialogHeader>
 
-                <div className="p-8 space-y-8">
+                <div className="min-h-0 flex-1 overflow-y-auto p-8 space-y-8">
                   <div className="space-y-3">
                     <label className="text-[15px] text-grayScale-800">
                       Unit Name
                     </label>
                     <Input
+                      value={createName}
+                      onChange={(e) => setCreateName(e.target.value)}
                       placeholder="e.g. Reading"
                       className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                      disabled={creating || uploadingThumbnail}
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[15px] text-grayScale-800">
+                      Description
+                    </label>
+                    <Textarea
+                      value={createDescription}
+                      onChange={(e) => setCreateDescription(e.target.value)}
+                      placeholder="Short unit description"
+                      rows={4}
+                      className="min-h-[96px] rounded-[8px] border-grayScale-400"
+                      disabled={creating || uploadingThumbnail}
                     />
                   </div>
 
@@ -128,7 +443,20 @@ export function CourseManagementPage() {
                     <label className="text-[15px] text-grayScale-800">
                       Thumbnail
                     </label>
-                    <div className="relative group cursor-pointer">
+                    <input
+                      ref={createThumbnailFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => void handleCreateUnitThumbnailFile(e)}
+                      disabled={creating || uploadingThumbnail}
+                    />
+                    <button
+                      type="button"
+                      className="relative group w-full cursor-pointer"
+                      onClick={() => createThumbnailFileInputRef.current?.click()}
+                      disabled={creating || uploadingThumbnail}
+                    >
                       <div className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white py-8 px-10 transition-all ">
                         <div className="mb-4">
                           <img
@@ -139,31 +467,62 @@ export function CourseManagementPage() {
                         </div>
                         <p className="text-[15px]">
                           <span className="text-brand-500 font-bold hover:underline">
-                            Click to upload
+                            {uploadingThumbnail ? "Uploading…" : "Click to upload"}
                           </span>{" "}
                           <span className="text-grayScale-500">
-                            or drag and drop
+                            or paste a URL below
                           </span>
                         </p>
                         <p className="mt-1.5 text-[12px] text-grayScale-400 uppercase tracking-widest">
-                          JPG, PNG (MAX 1 MB)
+                          JPG, PNG (MAX 5 MB)
                         </p>
                       </div>
-                    </div>
+                    </button>
+                    {createThumbnail.trim() ? (
+                      <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                        <ResolvedImage
+                          src={createThumbnail.trim()}
+                          alt=""
+                          className="h-28 w-full object-cover"
+                        />
+                      </div>
+                    ) : null}
+                    <Input
+                      value={createThumbnail}
+                      onChange={(e) => setCreateThumbnail(e.target.value)}
+                      onPaste={(event) => {
+                        const pasted = event.clipboardData?.getData("text")?.trim();
+                        if (!pasted) return;
+                        setTimeout(() => {
+                          void autoUploadCreateThumbnailUrl(pasted);
+                        }, 0);
+                      }}
+                      placeholder="Optional thumbnail URL (or leave empty for null)"
+                      className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                      disabled={creating || uploadingThumbnail}
+                    />
                   </div>
                 </div>
 
-                <div className="px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex justify-end gap-3">
+                <div className="shrink-0 px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex justify-end gap-3">
                   <DialogClose asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                      disabled={creating || uploadingThumbnail}
+                      onClick={clearCreateUnitForm}
                     >
                       Cancel
                     </Button>
                   </DialogClose>
-                  <Button className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600">
-                    Create Courses
+                  <Button
+                    type="button"
+                    className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                    disabled={creating || uploadingThumbnail}
+                    onClick={() => void handleCreateUnit()}
+                  >
+                    {creating ? "Creating..." : "Create Unit"}
                   </Button>
                 </div>
               </div>
@@ -200,16 +559,61 @@ export function CourseManagementPage() {
 
       {/* Grid of Units */}
       <div className="flex flex-wrap gap-4 pt-4">
-        {units.map((unit) => (
+        {unitsLoading ? (
+          <p className="text-sm text-grayScale-500">Loading units...</p>
+        ) : units.length === 0 ? (
+          <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+            <p className="text-sm font-medium text-grayScale-600">
+              No units for this course yet
+            </p>
+            <p className="mt-1 text-sm text-grayScale-400">
+              Create your first unit to start organizing modules, lessons, and practices.
+            </p>
+          </div>
+        ) : (
+          units.map((unit) => (
           <Card
             key={unit.id}
-            className="group flex w-[400px] flex-col h-full bg-white rounded-[12px] border border-grayScale-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
+            className="group relative flex w-[400px] flex-col h-full bg-white rounded-[12px] border border-grayScale-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
           >
+            <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                onClick={() => openEditUnit(unit)}
+                aria-label={`Edit ${unit.name}`}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                onClick={() => setDeletingUnitId(unit.id)}
+                aria-label={`Delete ${unit.name}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
             {/* Gradient Header */}
             <div
-              className="h-36 w-full transition-transform duration-500 "
+              className="relative h-36 w-full overflow-hidden transition-transform duration-500"
               style={{ background: unit.gradient }}
-            />
+            >
+              {unit.thumbnail ? (
+                <ResolvedImage
+                  src={unit.thumbnail}
+                  alt={`${unit.name} thumbnail`}
+                  className="h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : null}
+            </div>
 
             <div className="p-4 flex flex-col flex-1 space-y-6">
               <div className="space-y-3 flex-1">
@@ -232,7 +636,7 @@ export function CourseManagementPage() {
                 <div className="h-9 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">
                   <PlayCircle className="h-3.5 w-3.5 text-grayScale-400" />
                   <span className="text-[12px] font-bold">
-                    {unit.videos} Videos
+                    {unit.lessons} Lessons
                   </span>
                 </div>
                 <div className="h-9 px-3 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-600">
@@ -257,8 +661,169 @@ export function CourseManagementPage() {
               </Button>
             </div>
           </Card>
-        ))}
+          ))
+        )}
       </div>
+
+      <Dialog
+        open={editingUnitId !== null}
+        onOpenChange={(open) => {
+          if (!open && (savingEdit || uploadingEditThumbnail)) return;
+          if (!open) closeEditUnit();
+        }}
+      >
+        <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
+          <div className="flex min-h-0 flex-1 flex-col bg-white">
+            <DialogHeader className="shrink-0 px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
+              <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
+                Edit Unit
+              </DialogTitle>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Unit Name</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Description</label>
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={4}
+                  className="min-h-[96px] rounded-[8px] border-grayScale-400"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Sort Order</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editSortOrder}
+                  onChange={(e) => setEditSortOrder(e.target.value)}
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Thumbnail</label>
+                <input
+                  ref={editThumbnailFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => void handleEditUnitThumbnailFile(e)}
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+                <button
+                  type="button"
+                  className="relative group w-full cursor-pointer"
+                  onClick={() => editThumbnailFileInputRef.current?.click()}
+                  disabled={savingEdit || uploadingEditThumbnail}
+                >
+                  <div className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white py-8 px-10 transition-all ">
+                    <div className="mb-4">
+                      <img src={uploadIcon} alt="Upload icon" className="h-10 w-10" />
+                    </div>
+                    <p className="text-[15px]">
+                      <span className="text-brand-500 font-bold hover:underline">
+                        {uploadingEditThumbnail ? "Uploading…" : "Click to upload"}
+                      </span>{" "}
+                      <span className="text-grayScale-500">or paste a URL below</span>
+                    </p>
+                    <p className="mt-1.5 text-[12px] text-grayScale-400 uppercase tracking-widest">
+                      JPG, PNG (MAX 5 MB)
+                    </p>
+                  </div>
+                </button>
+                {editThumbnail.trim() ? (
+                  <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                    <ResolvedImage
+                      src={editThumbnail.trim()}
+                      alt=""
+                      className="h-28 w-full object-cover"
+                    />
+                  </div>
+                ) : null}
+                <Input
+                  value={editThumbnail}
+                  onChange={(e) => setEditThumbnail(e.target.value)}
+                  onPaste={(event) => {
+                    const pasted = event.clipboardData?.getData("text")?.trim();
+                    if (!pasted) return;
+                    setTimeout(() => {
+                      void autoUploadEditThumbnailUrl(pasted);
+                    }, 0);
+                  }}
+                  placeholder="Optional thumbnail URL (or leave empty for null)"
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+            </div>
+            <div className="shrink-0 px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                disabled={savingEdit || uploadingEditThumbnail}
+                onClick={closeEditUnit}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                disabled={savingEdit || uploadingEditThumbnail}
+                onClick={() => void handleSaveEditUnit()}
+              >
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deletingUnitId !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingUnit) setDeletingUnitId(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-[16px] border-none p-0 overflow-hidden">
+          <div className="bg-white">
+            <DialogHeader className="border-b border-grayScale-100 px-6 py-5">
+              <DialogTitle className="text-lg font-bold text-grayScale-900">
+                Delete Unit
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 py-6 text-sm text-grayScale-600">
+              Are you sure you want to delete this unit? This action cannot be undone.
+            </div>
+            <div className="flex justify-end gap-3 border-t border-grayScale-100 px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingUnitId(null)}
+                disabled={deletingUnit}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-500 hover:bg-red-600"
+                onClick={() => void handleDeleteUnit()}
+                disabled={deletingUnit}
+              >
+                {deletingUnit ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

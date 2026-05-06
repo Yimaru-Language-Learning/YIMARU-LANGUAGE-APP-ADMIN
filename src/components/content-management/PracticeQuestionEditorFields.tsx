@@ -14,6 +14,8 @@ import { Select } from "../ui/select"
 import { Button } from "../ui/button"
 import { SpinnerIcon } from "../ui/spinner-icon"
 import { cn } from "../../lib/utils"
+import { ResolvedAudio } from "../media/ResolvedAudio"
+import { ResolvedImage } from "../media/ResolvedImage"
 
 export type PracticeQuestionEditorType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
 export type PracticeQuestionEditorDifficulty = "EASY" | "MEDIUM" | "HARD"
@@ -815,7 +817,7 @@ export function PracticeQuestionEditorFields({
               disabled={controlsDisabled}
             />
             {voicePreviewUrl ? (
-              <audio controls src={voicePreviewUrl} className="h-10 w-full max-w-md" />
+              <ResolvedAudio controls src={voicePreviewUrl} className="h-10 w-full max-w-md" />
             ) : null}
           </div>
         </div>
@@ -862,7 +864,7 @@ export function PracticeQuestionEditorFields({
               disabled={controlsDisabled}
             />
             {samplePreviewUrl ? (
-              <audio controls src={samplePreviewUrl} className="h-10 w-full max-w-md" />
+              <ResolvedAudio controls src={samplePreviewUrl} className="h-10 w-full max-w-md" />
             ) : null}
           </div>
         </div>
@@ -898,7 +900,7 @@ export function PracticeQuestionEditorFields({
               disabled={controlsDisabled}
             />
             {imagePreviewUrl ? (
-              <img
+              <ResolvedImage
                 src={imagePreviewUrl}
                 alt=""
                 className="h-28 w-28 rounded-md border border-grayScale-200 object-cover"

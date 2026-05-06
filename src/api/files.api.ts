@@ -44,6 +44,36 @@ export interface UploadMediaFromUrlPayload extends UploadMediaOptions {
   sourceUrl: string
 }
 
+const GOOGLE_DRIVE_HOSTS = new Set([
+  "drive.google.com",
+  "www.drive.google.com",
+])
+
+const getGoogleDriveFileId = (rawUrl: string): string | null => {
+  try {
+    const url = new URL(rawUrl.trim())
+    if (!GOOGLE_DRIVE_HOSTS.has(url.hostname.toLowerCase())) return null
+    const fromQuery = url.searchParams.get("id")?.trim()
+    if (fromQuery) return fromQuery
+    const fileMatch = url.pathname.match(/\/file\/d\/([^/]+)/i)
+    return fileMatch?.[1]?.trim() || null
+  } catch {
+    return null
+  }
+}
+
+const normalizeSourceUrlForUpload = (
+  mediaType: UploadMediaType,
+  sourceUrl: string,
+): string => {
+  const trimmed = sourceUrl.trim()
+  if (mediaType !== "image") return trimmed
+  const fileId = getGoogleDriveFileId(trimmed)
+  if (!fileId) return trimmed
+  // Use Drive thumbnail endpoint so backend receives actual image bytes, not HTML viewer.
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w2048`
+}
+
 export const uploadMediaFile = (
   mediaType: UploadMediaType,
   file: File,
@@ -67,7 +97,7 @@ export const uploadMediaFromUrl = (
 ) =>
   http.post<UploadMediaResponse>("/files/upload", {
     media_type: mediaType,
-    source_url: payload.sourceUrl,
+    source_url: normalizeSourceUrlForUpload(mediaType, payload.sourceUrl),
     ...(mediaType === "video" && payload.title ? { title: payload.title } : {}),
     ...(mediaType === "video" && payload.description ? { description: payload.description } : {}),
   })

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause, X } from "lucide-react";
 import { cn } from "../../../../lib/utils";
+import { resolveDisplayMediaUrl } from "../../../../lib/mediaUrl";
 
 interface VoicePromptProps {
   /** Either a URL/path to the audio file, or a filename string (for display-only mode) */
@@ -21,13 +22,34 @@ export function VoicePrompt({
   const [bars, setBars] = useState<number[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0); // 0–1
+  const [playableSrc, setPlayableSrc] = useState("");
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const rafRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const raw = src?.trim() || "";
+      if (!raw) {
+        setPlayableSrc("");
+        return;
+      }
+      try {
+        const resolved = await resolveDisplayMediaUrl(raw);
+        if (!cancelled) setPlayableSrc(resolved || raw);
+      } catch {
+        if (!cancelled) setPlayableSrc(raw);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
   // ─── Decode audio and build waveform bars ───────────────────────────────────
   useEffect(() => {
-    if (!src) {
+    if (!playableSrc) {
       // No real audio — generate plausible static bars
       setBars(generateFakeBars());
       return;
@@ -36,7 +58,7 @@ export function VoicePrompt({
     let cancelled = false;
     const audioCtx = new AudioContext();
 
-    fetch(src)
+    fetch(playableSrc)
       .then((r) => r.arrayBuffer())
       .then((buf) => audioCtx.decodeAudioData(buf))
       .then((decoded) => {
@@ -62,7 +84,15 @@ export function VoicePrompt({
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [playableSrc]);
+
+  useEffect(() => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setIsPlaying(false);
+    setProgress(0);
+    stopProgressLoop();
+  }, [playableSrc]);
 
   // ─── Sync progress while playing ────────────────────────────────────────────
   const startProgressLoop = () => {
@@ -84,10 +114,10 @@ export function VoicePrompt({
 
   // ─── Play / Pause ────────────────────────────────────────────────────────────
   const handlePlayPause = () => {
-    if (!src) return;
+    if (!playableSrc) return;
 
     if (!audioRef.current) {
-      audioRef.current = new Audio(src);
+      audioRef.current = new Audio(playableSrc);
       audioRef.current.onended = () => {
         setIsPlaying(false);
         setProgress(0);

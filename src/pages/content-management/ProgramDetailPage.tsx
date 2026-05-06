@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -6,11 +7,13 @@ import {
   ClipboardList,
   ListChecks,
   ChevronRight,
+  Pencil,
+  Trash2,
   X,
-  Upload,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
+import { Textarea } from "../../components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -20,12 +23,51 @@ import {
   DialogClose,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
+import { toast } from "sonner";
+import { ResolvedImage } from "../../components/media/ResolvedImage";
+import {
+  createExamPrepCatalogCourse,
+  getExamPrepCatalogCourses,
+  updateExamPrepCatalogCourse,
+  deleteExamPrepCatalogCourse,
+} from "../../api/courses.api";
+import { uploadImageFile } from "../../api/files.api";
 import uploadIcon from "../../assets/icons/upload.png";
 
 export function ProgramDetailPage() {
   const navigate = useNavigate();
   const { programType } = useParams<{ programType: string }>();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createThumbnail, setCreateThumbnail] = useState("");
+  const [createThumbnailFromUpload, setCreateThumbnailFromUpload] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+  const [createdCourses, setCreatedCourses] = useState<
+    {
+      id: number;
+      name: string;
+      description: string;
+      thumbnail?: string | null;
+      sortOrder: number;
+      unitsCount: number;
+      modulesCount: number;
+      lessonsCount: number;
+    }[]
+  >([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editThumbnail, setEditThumbnail] = useState("");
+  const [editSortOrder, setEditSortOrder] = useState("1");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingEditThumbnail, setUploadingEditThumbnail] = useState(false);
+  const editThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+  const [deletingCourseId, setDeletingCourseId] = useState<number | null>(null);
+  const [deletingCourse, setDeletingCourse] = useState(false);
 
   // Mock data for "proficiency" program type
   const programs: Record<string, any> = {
@@ -33,45 +75,7 @@ export function ProgramDetailPage() {
       title: "English Proficiency Exams",
       description:
         "Manage exam-based learning programs such as Duolingo and IELTS.",
-      courses: [
-        {
-          id: "duolingo",
-          name: "Duolingo English Test",
-          description:
-            "Adaptive exam-style practice for speaking, writing, reading, and listening.",
-          coursesCount: 6,
-          questionTypesCount: 13,
-          logo: (
-            <div className="h-14 w-14 rounded-full bg-[#FFB800] flex items-center justify-center relative overflow-hidden">
-              {/* Simple Duolingo-like representation if image not available */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
-              <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center">
-                <div className="h-4 w-4 bg-[#FFB800] rounded-sm transform rotate-45" />
-              </div>
-            </div>
-          ),
-          buttonText: "Manage Detail",
-        },
-        {
-          id: "ielts",
-          name: "IELTS Academic",
-          description:
-            "Full preparation for IELTS speaking, writing, listening, and reading.",
-          coursesCount: 4,
-          questionTypesCount: 18,
-          logo: (
-            <div className="flex items-center gap-1">
-              <span className="text-[28px] font-black tracking-tighter text-[#E11D48] ">
-                IELTS
-              </span>
-              <span className="text-[8px] font-bold text-[#E11D48] mt-2 tracking-widest uppercase">
-                ™
-              </span>
-            </div>
-          ),
-          buttonText: "View Detail",
-        },
-      ],
+      courses: [],
     },
     "skill-based": {
       title: "Skill-Based Courses",
@@ -83,6 +87,327 @@ export function ProgramDetailPage() {
 
   const currentProgram =
     programs[programType || "proficiency"] || programs.proficiency;
+
+  const loadCatalogCourses = useCallback(async () => {
+    if (programType !== "proficiency") return;
+    setCatalogLoading(true);
+    try {
+      const response = await getExamPrepCatalogCourses({ limit: 20, offset: 0 });
+      const rows = response.data?.data?.catalog_courses;
+      const list = Array.isArray(rows) ? rows : [];
+      setCreatedCourses(
+        list.map((row) => ({
+          id: Number(row.id),
+          name: row.name?.trim() || `Course ${row.id}`,
+          description: row.description?.trim() || "—",
+          thumbnail: row.thumbnail?.trim() || null,
+          sortOrder: Number(row.sort_order ?? 0),
+          unitsCount: Number(row.units_count ?? 0),
+          modulesCount: Number(row.modules_count ?? 0),
+          lessonsCount: Number(row.lessons_count ?? 0),
+        })),
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to fetch catalog courses");
+      setCreatedCourses([]);
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [programType]);
+
+  useEffect(() => {
+    void loadCatalogCourses();
+  }, [loadCatalogCourses]);
+  const proficiencyCourses = [
+    ...currentProgram.courses,
+    ...createdCourses.map((course) => ({
+      id: course.id,
+      name: course.name,
+      description: course.description,
+      units_count: course.unitsCount,
+      modules_count: course.modulesCount,
+      lessons_count: course.lessonsCount,
+      logo: null,
+      thumbnail: course.thumbnail ?? "",
+      sort_order: course.sortOrder,
+      buttonText: "View Detail",
+    })),
+  ];
+
+  const isHttpUrl = (value: string) =>
+    value.startsWith("http://") || value.startsWith("https://");
+
+  const isMinioUrl = (value: string) => {
+    try {
+      const url = new URL(value);
+      return url.host === "s3.yimaruacademy.com";
+    } catch {
+      return false;
+    }
+  };
+
+  const autoUploadThumbnailUrlIfNeeded = async (rawValue: string) => {
+    const candidate = rawValue.trim();
+    if (!candidate) return;
+    if (!isHttpUrl(candidate)) return;
+    if (isMinioUrl(candidate)) return;
+    if (uploadingThumbnail || creating) return;
+
+    setUploadingThumbnail(true);
+    try {
+      const uploaded = await uploadImageFile(candidate);
+      const uploadedUrl = uploaded.data?.data?.url?.trim();
+      if (!uploadedUrl) {
+        throw new Error("Failed to upload thumbnail URL to MinIO");
+      }
+      setCreateThumbnail(uploadedUrl);
+      setCreateThumbnailFromUpload(true);
+      toast.success("Thumbnail URL uploaded to MinIO");
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload thumbnail URL";
+      toast.error(message);
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
+  const resolveThumbnailToMinioUrl = async (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return "";
+    if (!isHttpUrl(trimmed) || isMinioUrl(trimmed)) return trimmed;
+    const uploaded = await uploadImageFile(trimmed);
+    const uploadedUrl = uploaded.data?.data?.url?.trim();
+    if (!uploadedUrl) {
+      throw new Error("Failed to upload thumbnail URL to MinIO");
+    }
+    return uploadedUrl;
+  };
+
+  const handleCreateCourse = async () => {
+    if (programType !== "proficiency") {
+      toast.error("Create Course is supported only for proficiency catalog.");
+      return;
+    }
+    const name = createName.trim();
+    if (!name) {
+      toast.error("Course name is required");
+      return;
+    }
+    setCreating(true);
+    try {
+      let thumbnailToSend: string | null = createThumbnail.trim() || null;
+      if (
+        thumbnailToSend &&
+        !createThumbnailFromUpload &&
+        isHttpUrl(thumbnailToSend) &&
+        !isMinioUrl(thumbnailToSend)
+      ) {
+        const uploaded = await uploadImageFile(thumbnailToSend);
+        const uploadedUrl = uploaded.data?.data?.url?.trim();
+        if (!uploadedUrl) {
+          throw new Error("Failed to upload thumbnail URL to MinIO");
+        }
+        thumbnailToSend = uploadedUrl;
+      }
+
+      const response = await createExamPrepCatalogCourse({
+        name,
+        description: createDescription.trim() || null,
+        thumbnail: thumbnailToSend,
+      });
+      const row = response.data?.data;
+      if (!row?.id) {
+        throw new Error("Missing created course payload");
+      }
+      setCreatedCourses((prev) => [
+        {
+          id: row.id,
+          name: row.name ?? name,
+          description: row.description?.trim() || createDescription.trim() || "—",
+          thumbnail: row.thumbnail?.trim() || null,
+          sortOrder: Number(row.sort_order ?? 0),
+          unitsCount: Number(row.units_count ?? 0),
+          modulesCount: Number(row.modules_count ?? 0),
+          lessonsCount: Number(row.lessons_count ?? 0),
+        },
+        ...prev,
+      ]);
+      await loadCatalogCourses();
+      toast.success("Course created");
+      setCreateName("");
+      setCreateDescription("");
+      setCreateThumbnail("");
+      setCreateThumbnailFromUpload(false);
+      setCreateOpen(false);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to create course";
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const openEditCourse = (course: (typeof proficiencyCourses)[number]) => {
+    const idNum = Number(course.id);
+    if (!Number.isFinite(idNum)) return;
+    setEditingCourseId(idNum);
+    setEditName(String(course.name ?? ""));
+    setEditDescription(String(course.description ?? ""));
+    setEditThumbnail(String(course.thumbnail ?? ""));
+    setEditSortOrder(String(course.sort_order ?? 1));
+  };
+
+  const closeEditCourse = () => {
+    if (savingEdit || uploadingEditThumbnail) return;
+    setEditingCourseId(null);
+    setEditName("");
+    setEditDescription("");
+    setEditThumbnail("");
+    setEditSortOrder("1");
+  };
+
+  const handleEditThumbnailFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    setUploadingEditThumbnail(true);
+    try {
+      const res = await uploadImageFile(file);
+      const url = res.data?.data?.url?.trim();
+      if (!url) throw new Error("Upload did not return a file URL");
+      setEditThumbnail(url);
+      toast.success("Thumbnail uploaded");
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload thumbnail";
+      toast.error(message);
+    } finally {
+      setUploadingEditThumbnail(false);
+    }
+  };
+
+  const handleSaveEditCourse = async () => {
+    if (!editingCourseId) return;
+    const name = editName.trim();
+    if (!name) {
+      toast.error("Course name is required");
+      return;
+    }
+    const sortOrderNum = Number(editSortOrder);
+    if (!Number.isFinite(sortOrderNum) || sortOrderNum < 0) {
+      toast.error("Sort order must be a valid number");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
+      const response = await updateExamPrepCatalogCourse(editingCourseId, {
+        name,
+        description: editDescription.trim() || null,
+        thumbnail: minioThumbnail || null,
+        sort_order: sortOrderNum,
+      });
+      const row = response.data?.data;
+      setCreatedCourses((prev) =>
+        prev.map((course) =>
+          course.id === editingCourseId
+            ? {
+                ...course,
+                name: row?.name ?? name,
+                description: row?.description?.trim() || editDescription.trim() || "—",
+                thumbnail: row?.thumbnail?.trim() || null,
+                sortOrder: Number(row?.sort_order ?? sortOrderNum),
+                unitsCount: Number(row?.units_count ?? course.unitsCount ?? 0),
+                modulesCount: Number(row?.modules_count ?? course.modulesCount ?? 0),
+                lessonsCount: Number(row?.lessons_count ?? course.lessonsCount ?? 0),
+              }
+            : course,
+        ),
+      );
+      await loadCatalogCourses();
+      toast.success("Course updated");
+      closeEditCourse();
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update course";
+      toast.error(message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteCourse = async () => {
+    if (!deletingCourseId) return;
+    setDeletingCourse(true);
+    try {
+      await deleteExamPrepCatalogCourse(deletingCourseId);
+      await loadCatalogCourses();
+      toast.success("Course deleted");
+      setDeletingCourseId(null);
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to delete course";
+      toast.error(message);
+    } finally {
+      setDeletingCourse(false);
+    }
+  };
+
+  const handleCreateCourseThumbnailFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error("Image is too large", { description: "Maximum size is 5 MB." });
+      return;
+    }
+    setUploadingThumbnail(true);
+    try {
+      const res = await uploadImageFile(file);
+      const url = res.data?.data?.url?.trim();
+      if (!url) {
+        throw new Error("Upload did not return a file URL");
+      }
+      setCreateThumbnail(url);
+      setCreateThumbnailFromUpload(true);
+      toast.success("Thumbnail uploaded");
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload thumbnail";
+      toast.error(message);
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -107,84 +432,136 @@ export function ProgramDetailPage() {
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <Dialog>
+          <Dialog
+            open={createOpen}
+            onOpenChange={(open) => {
+              if (!open && (creating || uploadingThumbnail)) return;
+              setCreateOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="h-10 px-6 rounded-[6px] bg-brand-500 font-bold text-white transition-all flex items-center gap-2">
                 <Plus className="h-5 w-5" />
                 Create Course
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[600px] p-0 border-none rounded-[16px] overflow-hidden">
-              <div className="bg-white">
-                <DialogHeader className="px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
+            <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
+              <div className="flex min-h-0 flex-1 flex-col bg-white">
+                <DialogHeader className="shrink-0 border-b border-grayScale-200 px-8 py-6 flex flex-row items-center justify-between">
                   <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
                     Create Course
                   </DialogTitle>
                 </DialogHeader>
 
-                <div className="p-8 space-y-8">
+                <div className="min-h-0 flex-1 space-y-8 overflow-y-auto p-8">
                   <div className="space-y-3">
                     <label className="text-[15px] text-grayScale-800">
                       Name
                     </label>
                     <Input
+                      value={createName}
+                      onChange={(e) => setCreateName(e.target.value)}
                       placeholder="e.g. TOEFL, IELTS"
                       className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                      disabled={creating}
                     />
                   </div>
 
                   <div className="space-y-3">
                     <label className="text-[15px] text-grayScale-800">
-                      Course Order
+                      Description
                     </label>
-                    <Select defaultValue="1">
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="3">3</option>
-                    </Select>
+                    <Textarea
+                      value={createDescription}
+                      onChange={(e) => setCreateDescription(e.target.value)}
+                      placeholder="Optional description"
+                      rows={4}
+                      className="min-h-[96px] rounded-[8px] border-grayScale-400"
+                      disabled={creating}
+                    />
                   </div>
 
-                  {/* Thumbnail Field */}
                   <div className="space-y-3">
                     <label className="text-[15px] text-grayScale-800">
                       Thumbnail
                     </label>
-                    <div className="relative group cursor-pointer">
-                      <div className="flex flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white py-8 px-10 transition-all ">
+                    <input
+                      ref={createThumbnailFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => void handleCreateCourseThumbnailFile(e)}
+                      disabled={creating || uploadingThumbnail}
+                    />
+                    <button
+                      type="button"
+                      className="relative w-full cursor-pointer rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white px-10 py-8 text-left transition-all hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={creating || uploadingThumbnail}
+                      onClick={() => createThumbnailFileInputRef.current?.click()}
+                    >
+                      <div className="flex flex-col items-center justify-center">
                         <div className="mb-4">
-                          <img
-                            src={uploadIcon}
-                            alt="Upload icon"
-                            className="h-10 w-10"
-                          />
+                          <img src={uploadIcon} alt="" className="h-10 w-10" />
                         </div>
                         <p className="text-[15px]">
-                          <span className="text-brand-500 font-bold hover:underline">
-                            Click to upload
+                          <span className="font-bold text-brand-500">
+                            {uploadingThumbnail ? "Uploading…" : "Click to upload"}
                           </span>{" "}
-                          <span className="text-grayScale-500">
-                            or drag and drop
-                          </span>
+                          <span className="text-grayScale-500">or paste a URL below</span>
                         </p>
-                        <p className="mt-1.5 text-[12px] text-grayScale-400 uppercase tracking-widest">
-                          JPG, PNG (MAX 1 MB)
+                        <p className="mt-1.5 text-[12px] uppercase tracking-widest text-grayScale-400">
+                          JPG, PNG (MAX 5 MB)
                         </p>
                       </div>
-                    </div>
+                    </button>
+                    {createThumbnail.trim() ? (
+                      <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                        <ResolvedImage
+                          src={createThumbnail.trim()}
+                          alt=""
+                          className="h-28 w-full object-cover"
+                        />
+                      </div>
+                    ) : null}
+                    <Input
+                      value={createThumbnail}
+                      onChange={(e) => {
+                        setCreateThumbnail(e.target.value);
+                        setCreateThumbnailFromUpload(false);
+                      }}
+                      onBlur={(e) => {
+                        void autoUploadThumbnailUrlIfNeeded(e.target.value);
+                      }}
+                      onPaste={(e) => {
+                        const pasted = e.clipboardData.getData("text");
+                        if (!pasted) return;
+                        setCreateThumbnail(pasted);
+                        setCreateThumbnailFromUpload(false);
+                        void autoUploadThumbnailUrlIfNeeded(pasted);
+                      }}
+                      placeholder="Optional thumbnail URL (or leave empty for null)"
+                      className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                      disabled={creating || uploadingThumbnail}
+                    />
                   </div>
                 </div>
 
-                <div className="px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex justify-end gap-3">
+                <div className="shrink-0 px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex justify-end gap-3">
                   <DialogClose asChild>
                     <Button
                       variant="outline"
                       className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                      disabled={creating || uploadingThumbnail}
                     >
                       Cancel
                     </Button>
                   </DialogClose>
-                  <Button className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600">
-                    Create Program
+                  <Button
+                    className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                    disabled={creating || uploadingThumbnail}
+                    onClick={() => void handleCreateCourse()}
+                  >
+                    {creating ? "Creating..." : "Create Course"}
                   </Button>
                 </div>
               </div>
@@ -221,13 +598,70 @@ export function ProgramDetailPage() {
 
       {/* Cards Grid */}
       <div className="flex flex-wrap gap-8 mt-10">
-        {currentProgram.courses.map((course: any) => (
-          <Card
-            key={course.id}
-            className="bg-white w-[500px] rounded-[20px] border border-grayScale-100 p-6 flex flex-col items-start  shadow-sm hover:shadow-md transition-shadow"
-          >
+        {programType === "proficiency" && catalogLoading ? (
+          <p className="text-sm text-grayScale-500">Loading catalog courses...</p>
+        ) : null}
+        {(programType === "proficiency"
+          ? proficiencyCourses
+          : currentProgram.courses
+        ).length === 0 && !catalogLoading ? (
+          <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+            <p className="text-sm font-medium text-grayScale-600">
+              No catalog courses yet
+            </p>
+            <p className="mt-1 text-sm text-grayScale-400">
+              Create your first exam-prep catalog course to start organizing units, modules, and lessons.
+            </p>
+          </div>
+        ) : (
+          (programType === "proficiency"
+            ? proficiencyCourses
+            : currentProgram.courses
+          ).map((course: any) => (
+            <Card
+              key={course.id}
+              className="group relative bg-white w-[500px] rounded-[20px] border border-grayScale-100 p-6 flex flex-col items-start shadow-sm hover:shadow-md transition-shadow"
+            >
+            {programType === "proficiency" ? (
+              <div className="absolute right-3 top-3 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                  onClick={() => openEditCourse(course)}
+                  aria-label={`Edit ${course.name}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                  onClick={() => setDeletingCourseId(Number(course.id))}
+                  aria-label={`Delete ${course.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : null}
             {/* Logo */}
-            <div className="h-16 flex items-center">{course.logo}</div>
+            <div className="h-16 flex items-center">
+              {course.thumbnail ? (
+                <ResolvedImage
+                  src={course.thumbnail}
+                  alt={course.name}
+                  className="h-14 w-14 rounded-full object-cover"
+                />
+              ) : course.logo ? (
+                course.logo
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-brand-50 text-brand-600 grid place-items-center text-xs font-bold">
+                  {String(course.name ?? "C").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
 
             {/* Content */}
             <div className="space-y-4 pt-2 flex-1">
@@ -244,13 +678,19 @@ export function ProgramDetailPage() {
               <div className="h-10 px-4 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-700">
                 <ClipboardList className="h-3 w-3 text-grayScale-400" />
                 <span className="text-[12px] ">
-                  {course.coursesCount} Courses
+                  {Number(course.units_count ?? 0)} Units
                 </span>
               </div>
               <div className="h-10 px-4 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-700">
                 <ListChecks className="h-3 w-3 text-grayScale-400" />
                 <span className="text-[12px] ">
-                  {course.questionTypesCount} Question Types
+                  {Number(course.modules_count ?? 0)} Modules
+                </span>
+              </div>
+              <div className="h-10 px-4 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-700">
+                <ListChecks className="h-3 w-3 text-grayScale-400" />
+                <span className="text-[12px] ">
+                  {Number(course.lessons_count ?? 0)} Lessons
                 </span>
               </div>
             </div>
@@ -265,9 +705,166 @@ export function ProgramDetailPage() {
               {course.buttonText}
               <ChevronRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-1" />
             </Button>
-          </Card>
-        ))}
+            </Card>
+          ))
+        )}
       </div>
+
+      <Dialog
+        open={editingCourseId !== null}
+        onOpenChange={(open) => {
+          if (!open && (savingEdit || uploadingEditThumbnail)) return;
+          if (!open) closeEditCourse();
+        }}
+      >
+        <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
+          <div className="flex min-h-0 flex-1 flex-col bg-white">
+            <DialogHeader className="shrink-0 border-b border-grayScale-200 px-8 py-6 flex flex-row items-center justify-between">
+              <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
+                Edit Course
+              </DialogTitle>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 space-y-8 overflow-y-auto p-8">
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Name</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Description</label>
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={4}
+                  className="min-h-[96px] rounded-[8px] border-grayScale-400"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Sort Order</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editSortOrder}
+                  onChange={(e) => setEditSortOrder(e.target.value)}
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[15px] text-grayScale-800">Thumbnail</label>
+                <input
+                  ref={editThumbnailFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => void handleEditThumbnailFile(e)}
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+                <button
+                  type="button"
+                  className="relative w-full cursor-pointer rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white px-10 py-8 text-left transition-all hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => editThumbnailFileInputRef.current?.click()}
+                  disabled={savingEdit || uploadingEditThumbnail}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="mb-4">
+                      <img src={uploadIcon} alt="" className="h-10 w-10" />
+                    </div>
+                    <p className="text-[15px]">
+                      <span className="font-bold text-brand-500">
+                        {uploadingEditThumbnail ? "Uploading…" : "Click to upload"}
+                      </span>{" "}
+                      <span className="text-grayScale-500">or paste a URL below</span>
+                    </p>
+                    <p className="mt-1.5 text-[12px] uppercase tracking-widest text-grayScale-400">
+                      JPG, PNG (MAX 5 MB)
+                    </p>
+                  </div>
+                </button>
+                {editThumbnail.trim() ? (
+                  <div className="overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                    <ResolvedImage
+                      src={editThumbnail.trim()}
+                      alt=""
+                      className="h-28 w-full object-cover"
+                    />
+                  </div>
+                ) : null}
+                <Input
+                  value={editThumbnail}
+                  onChange={(e) => setEditThumbnail(e.target.value)}
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                  placeholder="https://..."
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+            </div>
+            <div className="shrink-0 px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                onClick={closeEditCourse}
+                disabled={savingEdit || uploadingEditThumbnail}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                onClick={() => void handleSaveEditCourse()}
+                disabled={savingEdit || uploadingEditThumbnail}
+              >
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deletingCourseId !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingCourse) setDeletingCourseId(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-[16px] border-none p-0 overflow-hidden">
+          <div className="bg-white">
+            <DialogHeader className="border-b border-grayScale-100 px-6 py-5">
+              <DialogTitle className="text-lg font-bold text-grayScale-900">
+                Delete Course
+              </DialogTitle>
+            </DialogHeader>
+            <div className="px-6 py-6 text-sm text-grayScale-600">
+              Are you sure you want to delete this course? This action cannot be undone.
+            </div>
+            <div className="flex justify-end gap-3 border-t border-grayScale-100 px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => setDeletingCourseId(null)}
+                disabled={deletingCourse}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-500 hover:bg-red-600"
+                onClick={() => void handleDeleteCourse()}
+                disabled={deletingCourse}
+              >
+                {deletingCourse ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

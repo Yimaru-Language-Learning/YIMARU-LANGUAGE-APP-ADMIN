@@ -13,7 +13,15 @@ export function toVimeoEmbedUrl(rawUrl: string): string | null {
     const segments = parsed.pathname.split("/").filter(Boolean);
     const videoId = segments.find((segment) => /^\d+$/.test(segment));
     if (!videoId) return null;
-    const hash = parsed.searchParams.get("h");
+    // Vimeo private/unlisted links often come as /<videoId>/<hash> instead of ?h=<hash>.
+    const hashFromPath = (() => {
+      const videoIdx = segments.findIndex((segment) => segment === videoId);
+      if (videoIdx < 0) return null;
+      const maybeHash = segments[videoIdx + 1];
+      if (!maybeHash) return null;
+      return /^[a-zA-Z0-9]+$/.test(maybeHash) ? maybeHash : null;
+    })();
+    const hash = parsed.searchParams.get("h") || hashFromPath;
     return hash
       ? `https://player.vimeo.com/video/${videoId}?h=${encodeURIComponent(hash)}`
       : `https://player.vimeo.com/video/${videoId}`;

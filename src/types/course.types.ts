@@ -143,6 +143,234 @@ export interface CreateProgramCourseResponse {
   metadata: unknown | null
 }
 
+/** Exam prep catalog course row (e.g. IELTS / DET cards) */
+export interface ExamPrepCatalogCourseItem {
+  id: number
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  sort_order?: number
+  units_count?: number
+  modules_count?: number
+  lessons_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateExamPrepCatalogCourseRequest {
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+}
+
+export interface CreateExamPrepCatalogCourseResponse {
+  message: string
+  data: ExamPrepCatalogCourseItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetExamPrepCatalogCoursesResponse {
+  message: string
+  data: {
+    offset: number
+    limit: number
+    total_count: number
+    catalog_courses: ExamPrepCatalogCourseItem[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface UpdateExamPrepCatalogCourseRequest {
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  sort_order: number
+}
+
+export interface UpdateExamPrepCatalogCourseResponse {
+  message: string
+  data: ExamPrepCatalogCourseItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface ExamPrepCatalogUnitItem {
+  id: number
+  catalog_course_id: number
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  sort_order?: number
+  modules_count?: number
+  lessons_count?: number
+  videos_count?: number
+  practices_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateExamPrepCatalogUnitRequest {
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+}
+
+export interface CreateExamPrepCatalogUnitResponse {
+  message: string
+  data: ExamPrepCatalogUnitItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface UpdateExamPrepCatalogUnitRequest {
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  sort_order: number
+}
+
+export interface UpdateExamPrepCatalogUnitResponse {
+  message: string
+  data: ExamPrepCatalogUnitItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetExamPrepCatalogUnitsResponse {
+  message: string
+  data: {
+    offset: number
+    limit: number
+    total_count: number
+    units: ExamPrepCatalogUnitItem[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface ExamPrepUnitModuleItem {
+  id: number
+  unit_id: number
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  icon?: string | null
+  sort_order?: number
+  lessons_count?: number
+  videos_count?: number
+  practices_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateExamPrepUnitModuleRequest {
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  icon?: string | null
+}
+
+export interface CreateExamPrepUnitModuleResponse {
+  message: string
+  data: ExamPrepUnitModuleItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface UpdateExamPrepUnitModuleRequest {
+  name: string
+  description?: string | null
+  thumbnail?: string | null
+  icon?: string | null
+  sort_order: number
+}
+
+export interface UpdateExamPrepUnitModuleResponse {
+  message: string
+  data: ExamPrepUnitModuleItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetExamPrepUnitModulesResponse {
+  message: string
+  data: {
+    offset: number
+    limit: number
+    total_count: number
+    modules: ExamPrepUnitModuleItem[]
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface ExamPrepModuleLessonItem {
+  id: number
+  unit_module_id: number
+  title: string
+  video_url: string
+  thumbnail?: string | null
+  description?: string | null
+  sort_order?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CreateExamPrepModuleLessonRequest {
+  title: string
+  video_url: string
+  thumbnail?: string | null
+  description?: string | null
+}
+
+export interface CreateExamPrepModuleLessonResponse {
+  message: string
+  data: ExamPrepModuleLessonItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface UpdateExamPrepModuleLessonRequest {
+  title: string
+  video_url?: string | null
+  thumbnail?: string | null
+  description?: string | null
+  sort_order: number
+}
+
+export interface UpdateExamPrepModuleLessonResponse {
+  message: string
+  data: ExamPrepModuleLessonItem
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetExamPrepModuleLessonsResponse {
+  message: string
+  data: {
+    lessons: ExamPrepModuleLessonItem[]
+    total_count: number
+    limit: number
+    offset: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
 export interface GetProgramCoursesResponse {
   message: string
   data: {

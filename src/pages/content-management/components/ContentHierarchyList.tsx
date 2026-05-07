@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   DndContext,
   closestCenter,
@@ -33,8 +33,15 @@ import {
   Edit2,
   Trash2,
   Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { cn } from "../../../lib/utils";
+import {
+  getLearningPrograms,
+  getProgramCourses,
+  getTopLevelCourseModules,
+  getModuleLessons,
+} from "../../../api/courses.api";
 
 // --- Types ---
 export type ItemType = "program" | "course" | "module" | "lesson";
@@ -55,46 +62,6 @@ export interface Module extends BaseItem {
 export interface Lesson extends BaseItem {
   moduleId: string;
 }
-
-// --- Mock Data ---
-const initialPrograms: Program[] = [
-  {
-    id: "p1",
-    name: "Web Development Masterclass",
-    thumbnail:
-      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=100&h=100&fit=crop",
-  },
-  {
-    id: "p2",
-    name: "Mobile App Development",
-    thumbnail:
-      "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=100&h=100&fit=crop",
-  },
-  {
-    id: "p3",
-    name: "UI/UX Design Fundamentals",
-    thumbnail:
-      "https://images.unsplash.com/photo-1586717791821-3f44a563eb4c?w=100&h=100&fit=crop",
-  },
-];
-
-const initialCourses: Course[] = [
-  { id: "c1", name: "React for Beginners", programId: "p1" },
-  { id: "c2", name: "Advanced Node.js", programId: "p1" },
-  { id: "c3", name: "Swift UI Intro", programId: "p2" },
-];
-
-const initialModules: Module[] = [
-  { id: "m1", name: "Introduction to Hooks", courseId: "c1" },
-  { id: "m2", name: "State Management", courseId: "c1" },
-  { id: "m3", name: "Backend Architecture", courseId: "c2" },
-];
-
-const initialLessons: Lesson[] = [
-  { id: "l1", name: "What is useState?", moduleId: "m1" },
-  { id: "l2", name: "useEffect deep dive", moduleId: "m1" },
-  { id: "l3", name: "Redux Setup", moduleId: "m2" },
-];
 
 // --- Components ---
 
@@ -345,13 +312,99 @@ function HierarchySection({
 }
 
 export function ContentHierarchyList() {
-  const [programs, setPrograms] = useState<Program[]>(initialPrograms);
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
-  const [modules, setModules] = useState<Module[]>(initialModules);
-  const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     program: true,
   });
+
+  const fetchHierarchy = useCallback(async () => {
+    setLoading({ program: true });
+    try {
+      // 1. Fetch Programs
+      const programsRes = await getLearningPrograms();
+      const programData = programsRes.data?.data;
+      const fetchedPrograms: Program[] = (programData?.programs || []).map(
+        (p) => ({
+          id: String(p.id),
+          name: p.name,
+          thumbnail: p.thumbnail || undefined,
+        }),
+      );
+      setPrograms(fetchedPrograms);
+      setLoading((prev) => ({ ...prev, program: false }));
+
+      if (fetchedPrograms.length === 0) return;
+
+      // 2. Fetch Courses for all programs
+      setLoading((prev) => ({ ...prev, course: true }));
+      const coursesPromises = fetchedPrograms.map((p) =>
+        getProgramCourses(Number(p.id)),
+      );
+      const coursesResults = await Promise.all(coursesPromises);
+      const fetchedCourses: Course[] = coursesResults.flatMap((res, idx) => {
+        const courseData = res.data?.data;
+        return (courseData?.courses || []).map((c) => ({
+          id: String(c.id),
+          name: c.name,
+          thumbnail: c.thumbnail_url || c.thumbnail || undefined,
+          programId: fetchedPrograms[idx].id,
+        }));
+      });
+      setCourses(fetchedCourses);
+      setLoading((prev) => ({ ...prev, course: false }));
+
+      if (fetchedCourses.length === 0) return;
+
+      // 3. Fetch Modules for all courses
+      setLoading((prev) => ({ ...prev, module: true }));
+      const modulesPromises = fetchedCourses.map((c) =>
+        getTopLevelCourseModules(Number(c.id)),
+      );
+      const modulesResults = await Promise.all(modulesPromises);
+      const fetchedModules: Module[] = modulesResults.flatMap((res, idx) => {
+        const moduleData = res.data?.data;
+        return (moduleData?.modules || []).map((m) => ({
+          id: String(m.id),
+          name: m.name,
+          thumbnail: m.icon || undefined,
+          courseId: fetchedCourses[idx].id,
+        }));
+      });
+      setModules(fetchedModules);
+      setLoading((prev) => ({ ...prev, module: false }));
+
+      if (fetchedModules.length === 0) return;
+
+      // 4. Fetch Lessons for all modules
+      setLoading((prev) => ({ ...prev, lesson: true }));
+      const lessonsPromises = fetchedModules.map((m) =>
+        getModuleLessons(Number(m.id)),
+      );
+      const lessonsResults = await Promise.all(lessonsPromises);
+      const fetchedLessons: Lesson[] = lessonsResults.flatMap((res, idx) => {
+        const lessonData = res.data?.data;
+        return (lessonData?.lessons || []).map((l) => ({
+          id: String(l.id),
+          name: l.title,
+          thumbnail: l.thumbnail || undefined,
+          moduleId: fetchedModules[idx].id,
+        }));
+      });
+      setLessons(fetchedLessons);
+    } catch (error) {
+      console.error("Failed to fetch content hierarchy:", error);
+    } finally {
+      setLoading({});
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHierarchy();
+  }, [fetchHierarchy]);
 
   const toggleSection = (id: string) => {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -360,11 +413,11 @@ export function ContentHierarchyList() {
   const reorder = <T extends BaseItem>(
     list: T[],
     setList: React.Dispatch<React.SetStateAction<T[]>>,
-    activeId: string,
-    overId: string,
+    activeId: UniqueIdentifier,
+    overId: UniqueIdentifier,
   ) => {
-    const oldIndex = list.findIndex((i) => i.id === activeId);
-    const newIndex = list.findIndex((i) => i.id === overId);
+    const oldIndex = list.findIndex((i) => i.id === String(activeId));
+    const newIndex = list.findIndex((i) => i.id === String(overId));
     if (oldIndex !== -1 && newIndex !== -1) {
       setList(arrayMove(list, oldIndex, newIndex));
     }
@@ -372,7 +425,6 @@ export function ContentHierarchyList() {
 
   const handleEdit = (type: ItemType, id: string) => {
     console.log(`Edit ${type}: ${id}`);
-    // Logic for opening edit modal would go here
   };
 
   const handleDelete = (type: ItemType, id: string) => {
@@ -396,10 +448,7 @@ export function ContentHierarchyList() {
   };
 
   const handleReset = () => {
-    setPrograms(initialPrograms);
-    setCourses(initialCourses);
-    setModules(initialModules);
-    setLessons(initialLessons);
+    fetchHierarchy();
   };
 
   return (
@@ -418,7 +467,7 @@ export function ContentHierarchyList() {
           className="text-[13px] font-bold text-brand-300 hover:text-brand-400 transition-colors flex items-center gap-2 group"
         >
           <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-45deg]" />
-          Reset All
+          Sync with API
         </button>
       </div>
 
@@ -430,15 +479,21 @@ export function ContentHierarchyList() {
           isOpen={openSections.program}
           onToggle={() => toggleSection("program")}
         >
-          <DraggableList
-            items={programs}
-            onReorder={(active, over) =>
-              reorder(programs, setPrograms, active, over)
-            }
-            icon={<LayoutGrid className="h-4 w-4" />}
-            onEdit={(id) => handleEdit("program", id)}
-            onDelete={(id) => handleDelete("program", id)}
-          />
+          {loading.program ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            </div>
+          ) : (
+            <DraggableList
+              items={programs}
+              onReorder={(active, over) =>
+                reorder(programs, setPrograms, active, over)
+              }
+              icon={<LayoutGrid className="h-4 w-4" />}
+              onEdit={(id) => handleEdit("program", id)}
+              onDelete={(id) => handleDelete("program", id)}
+            />
+          )}
         </HierarchySection>
 
         {/* Course Section */}
@@ -448,28 +503,34 @@ export function ContentHierarchyList() {
           isOpen={openSections.course}
           onToggle={() => toggleSection("course")}
         >
-          {programs.map((program) => {
-            const programCourses = courses.filter(
-              (c) => c.programId === program.id,
-            );
-            if (programCourses.length === 0) return null;
-            return (
-              <div key={program.id} className="mb-4 last:mb-0">
-                <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
-                  {program.name}
-                </h4>
-                <DraggableList
-                  items={programCourses}
-                  onReorder={(active, over) =>
-                    reorder(courses, setCourses, active, over)
-                  }
-                  icon={<BookOpen className="h-4 w-4" />}
-                  onEdit={(id) => handleEdit("course", id)}
-                  onDelete={(id) => handleDelete("course", id)}
-                />
-              </div>
-            );
-          })}
+          {loading.course ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            </div>
+          ) : (
+            programs.map((program) => {
+              const programCourses = courses.filter(
+                (c) => c.programId === program.id,
+              );
+              if (programCourses.length === 0) return null;
+              return (
+                <div key={program.id} className="mb-4 last:mb-0">
+                  <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
+                    {program.name}
+                  </h4>
+                  <DraggableList
+                    items={programCourses}
+                    onReorder={(active, over) =>
+                      reorder(courses, setCourses, active, over)
+                    }
+                    icon={<BookOpen className="h-4 w-4" />}
+                    onEdit={(id) => handleEdit("course", id)}
+                    onDelete={(id) => handleDelete("course", id)}
+                  />
+                </div>
+              );
+            })
+          )}
         </HierarchySection>
 
         {/* Module Section */}
@@ -479,28 +540,34 @@ export function ContentHierarchyList() {
           isOpen={openSections.module}
           onToggle={() => toggleSection("module")}
         >
-          {courses.map((course) => {
-            const courseModules = modules.filter(
-              (m) => m.courseId === course.id,
-            );
-            if (courseModules.length === 0) return null;
-            return (
-              <div key={course.id} className="mb-4 last:mb-0">
-                <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
-                  {course.name}
-                </h4>
-                <DraggableList
-                  items={courseModules}
-                  onReorder={(active, over) =>
-                    reorder(modules, setModules, active, over)
-                  }
-                  icon={<Layers className="h-4 w-4" />}
-                  onEdit={(id) => handleEdit("module", id)}
-                  onDelete={(id) => handleDelete("module", id)}
-                />
-              </div>
-            );
-          })}
+          {loading.module ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            </div>
+          ) : (
+            courses.map((course) => {
+              const courseModules = modules.filter(
+                (m) => m.courseId === course.id,
+              );
+              if (courseModules.length === 0) return null;
+              return (
+                <div key={course.id} className="mb-4 last:mb-0">
+                  <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
+                    {course.name}
+                  </h4>
+                  <DraggableList
+                    items={courseModules}
+                    onReorder={(active, over) =>
+                      reorder(modules, setModules, active, over)
+                    }
+                    icon={<Layers className="h-4 w-4" />}
+                    onEdit={(id) => handleEdit("module", id)}
+                    onDelete={(id) => handleDelete("module", id)}
+                  />
+                </div>
+              );
+            })
+          )}
         </HierarchySection>
 
         {/* Lesson Section */}
@@ -510,28 +577,34 @@ export function ContentHierarchyList() {
           isOpen={openSections.lesson}
           onToggle={() => toggleSection("lesson")}
         >
-          {modules.map((module) => {
-            const moduleLessons = lessons.filter(
-              (l) => l.moduleId === module.id,
-            );
-            if (moduleLessons.length === 0) return null;
-            return (
-              <div key={module.id} className="mb-4 last:mb-0">
-                <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
-                  {module.name}
-                </h4>
-                <DraggableList
-                  items={moduleLessons}
-                  onReorder={(active, over) =>
-                    reorder(lessons, setLessons, active, over)
-                  }
-                  icon={<PlayCircle className="h-4 w-4" />}
-                  onEdit={(id) => handleEdit("lesson", id)}
-                  onDelete={(id) => handleDelete("lesson", id)}
-                />
-              </div>
-            );
-          })}
+          {loading.lesson ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            </div>
+          ) : (
+            modules.map((module) => {
+              const moduleLessons = lessons.filter(
+                (l) => l.moduleId === module.id,
+              );
+              if (moduleLessons.length === 0) return null;
+              return (
+                <div key={module.id} className="mb-4 last:mb-0">
+                  <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
+                    {module.name}
+                  </h4>
+                  <DraggableList
+                    items={moduleLessons}
+                    onReorder={(active, over) =>
+                      reorder(lessons, setLessons, active, over)
+                    }
+                    icon={<PlayCircle className="h-4 w-4" />}
+                    onEdit={(id) => handleEdit("lesson", id)}
+                    onDelete={(id) => handleDelete("lesson", id)}
+                  />
+                </div>
+              );
+            })
+          )}
         </HierarchySection>
       </div>
     </div>

@@ -12,6 +12,7 @@ import {
   UserCircle2,
   Users,
   Users2,
+  Settings,
   X,
 } from "lucide-react";
 import { type ComponentType, useEffect, useState } from "react";
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
   { label: "Team Management", to: "/team", icon: Users2 },
   { label: "Profile", to: "/profile", icon: UserCircle2 },
+  { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 type SidebarProps = {

@@ -8,10 +8,17 @@ import { Input } from "../../components/ui/input"
 import { Textarea } from "../../components/ui/textarea"
 import { Select } from "../../components/ui/select"
 import { createQuestion, getQuestionById, updateQuestion } from "../../api/courses.api"
+import { getQuestionTypeDefinitions } from "../../api/questionTypeDefinitions.api"
+import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.types"
 
-type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO"
+type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO" | "DYNAMIC"
 type Difficulty = "EASY" | "MEDIUM" | "HARD"
 type QuestionStatus = "DRAFT" | "PUBLISHED" | "INACTIVE"
+
+const defaultDynamicPayloadJson = `{
+  "stimulus": [],
+  "response": []
+}`
 
 interface Question {
   id?: number
@@ -27,6 +34,9 @@ interface Question {
   voicePrompt: string
   sampleAnswerVoicePrompt: string
   audioCorrectAnswerText: string
+  /** Definition id as string for select value */
+  questionTypeDefinitionId: string
+  dynamicPayloadJson: string
 }
 
 const initialForm: Question = {
@@ -42,6 +52,8 @@ const initialForm: Question = {
   voicePrompt: "",
   sampleAnswerVoicePrompt: "",
   audioCorrectAnswerText: "",
+  questionTypeDefinitionId: "",
+  dynamicPayloadJson: defaultDynamicPayloadJson,
 }
 
 export function AddQuestionPage() {
@@ -52,6 +64,7 @@ export function AddQuestionPage() {
   const [formData, setFormData] = useState<Question>(initialForm)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [typeDefinitions, setTypeDefinitions] = useState<QuestionTypeDefinition[]>([])
 
   useEffect(() => {
     const loadQuestion = async () => {
@@ -64,7 +77,8 @@ export function AddQuestionPage() {
           q.question_type === "MCQ" ||
           q.question_type === "TRUE_FALSE" ||
           q.question_type === "SHORT_ANSWER" ||
-          q.question_type === "AUDIO"
+          q.question_type === "AUDIO" ||
+          q.question_type === "DYNAMIC"
             ? q.question_type
             : "MCQ"
         const shortAnswer = Array.isArray(q.short_answers) && q.short_answers.length > 0
@@ -100,6 +114,14 @@ export function AddQuestionPage() {
           voicePrompt: q.voice_prompt || "",
           sampleAnswerVoicePrompt: q.sample_answer_voice_prompt || "",
           audioCorrectAnswerText: q.audio_correct_answer_text || "",
+          questionTypeDefinitionId:
+            mappedType === "DYNAMIC" && q.question_type_definition_id != null
+              ? String(q.question_type_definition_id)
+              : "",
+          dynamicPayloadJson:
+            mappedType === "DYNAMIC" && q.dynamic_payload
+              ? JSON.stringify(q.dynamic_payload, null, 2)
+              : defaultDynamicPayloadJson,
         })
       } catch (error) {
         console.error("Failed to load question:", error)
@@ -111,6 +133,22 @@ export function AddQuestionPage() {
     loadQuestion()
   }, [isEditing, id])
 
+  useEffect(() => {
+    if (formData.type !== "DYNAMIC") return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const rows = await getQuestionTypeDefinitions({ include_system: true })
+        if (!cancelled) setTypeDefinitions(Array.isArray(rows) ? rows : [])
+      } catch {
+        if (!cancelled) setTypeDefinitions([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [formData.type])
+
   const handleTypeChange = (type: QuestionType) => {
     setFormData((prev) => {
       if (type === "TRUE_FALSE") {
@@ -119,6 +157,15 @@ export function AddQuestionPage() {
           type,
           options: ["True", "False"],
           correctAnswer: prev.correctAnswer === "True" || prev.correctAnswer === "False" ? prev.correctAnswer : "",
+        }
+      } else if (type === "DYNAMIC") {
+        return {
+          ...prev,
+          type,
+          options: [],
+          correctAnswer: "",
+          questionTypeDefinitionId: "",
+          dynamicPayloadJson: defaultDynamicPayloadJson,
         }
       } else if (type === "SHORT_ANSWER" || type === "AUDIO") {
         return {
@@ -200,6 +247,27 @@ export function AddQuestionPage() {
         })
         return
       }
+    } else if (formData.type === "DYNAMIC") {
+      const defId = Number(formData.questionTypeDefinitionId)
+      if (!Number.isFinite(defId) || defId < 1) {
+        toast.error("Definition required", { description: "Select a question type definition." })
+        return
+      }
+      try {
+        const parsed = JSON.parse(formData.dynamicPayloadJson || "{}") as {
+          stimulus?: unknown
+          response?: unknown
+        }
+        if (!Array.isArray(parsed.stimulus) || !Array.isArray(parsed.response)) {
+          toast.error("Invalid dynamic payload", {
+            description: 'JSON must include "stimulus" and "response" arrays.',
+          })
+          return
+        }
+      } catch {
+        toast.error("Invalid JSON", { description: "Fix dynamic_payload JSON before saving." })
+        return
+      }
     }
 
     setSubmitting(true)
@@ -221,6 +289,18 @@ export function AddQuestionPage() {
               { acceptable_answer: formData.correctAnswer.trim(), match_type: "CASE_INSENSITIVE" as const },
             ]
           : undefined
+      let dynamicPayload: { stimulus: unknown[]; response: unknown[] } | undefined
+      if (formData.type === "DYNAMIC") {
+        try {
+          dynamicPayload = JSON.parse(formData.dynamicPayloadJson) as {
+            stimulus: unknown[]
+            response: unknown[]
+          }
+        } catch {
+          dynamicPayload = { stimulus: [], response: [] }
+        }
+      }
+
       const payload = {
         question_text: formData.question,
         question_type: formData.type,
@@ -236,6 +316,12 @@ export function AddQuestionPage() {
           formData.type === "AUDIO" ? formData.sampleAnswerVoicePrompt : formData.sampleAnswerVoicePrompt || undefined,
         audio_correct_answer_text:
           formData.type === "AUDIO" ? formData.audioCorrectAnswerText : undefined,
+        ...(formData.type === "DYNAMIC" && dynamicPayload
+          ? {
+              question_type_definition_id: Number(formData.questionTypeDefinitionId),
+              dynamic_payload: dynamicPayload,
+            }
+          : {}),
       }
       if (isEditing && id) {
         await updateQuestion(Number(id), payload)
@@ -303,15 +389,58 @@ export function AddQuestionPage() {
                   <option value="TRUE_FALSE">True/False</option>
                   <option value="SHORT_ANSWER">Short Answer</option>
                   <option value="AUDIO">Audio</option>
+                  <option value="DYNAMIC">Dynamic (schema-driven)</option>
                 </Select>
               </div>
+
+              {formData.type === "DYNAMIC" && (
+                <>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                      Question type definition <span className="text-red-500">*</span>
+                    </label>
+                    <Select
+                      value={formData.questionTypeDefinitionId}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, questionTypeDefinitionId: e.target.value }))
+                      }
+                      required
+                    >
+                      <option value="">Select definition…</option>
+                      {typeDefinitions.map((d) => (
+                        <option key={d.id} value={String(d.id)}>
+                          {d.display_name} ({d.key})
+                        </option>
+                      ))}
+                    </Select>
+                    <p className="mt-1 text-xs text-grayScale-400">
+                      Loaded from GET /questions/type-definitions?include_system=true&amp;status=ACTIVE
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                      dynamic_payload (JSON) <span className="text-red-500">*</span>
+                    </label>
+                    <Textarea
+                      value={formData.dynamicPayloadJson}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, dynamicPayloadJson: e.target.value }))}
+                      rows={12}
+                      className="font-mono text-xs"
+                      spellCheck={false}
+                    />
+                    <p className="mt-1 text-xs text-grayScale-400">
+                      Must match the selected definition&apos;s stimulus/response schema (see integration guide).
+                    </p>
+                  </div>
+                </>
+              )}
 
               <hr className="border-grayScale-100" />
 
               {/* Question Text */}
               <div>
                 <label htmlFor="question" className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                  Question
+                  {formData.type === "DYNAMIC" ? "Question title / stem" : "Question"}
                 </label>
                 <Textarea
                   id="question"
@@ -368,6 +497,7 @@ export function AddQuestionPage() {
               <hr className="border-grayScale-100" />
 
               {/* Correct Answer */}
+              {formData.type !== "DYNAMIC" && (
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
                   {formData.type === "AUDIO" ? "Audio Correct Answer Text" : "Correct Answer"}
@@ -403,6 +533,7 @@ export function AddQuestionPage() {
                   />
                 )}
               </div>
+              )}
 
               <hr className="border-grayScale-100" />
 

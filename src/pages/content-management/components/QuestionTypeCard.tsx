@@ -1,83 +1,90 @@
-import { Edit2, Trash2, Mic2, Keyboard, Layers, MicIcon } from "lucide-react";
-import { Badge } from "../../../components/ui/badge";
-import { Card } from "../../../components/ui/card";
-import { cn } from "../../../lib/utils";
+import { Edit2, Trash2, Layers, Shield } from "lucide-react"
+import { Badge } from "../../../components/ui/badge"
+import { Card } from "../../../components/ui/card"
+import { Button } from "../../../components/ui/button"
+import { cn } from "../../../lib/utils"
 
-interface QuestionTypeCardProps {
-  title: string;
-  exam: "DUOLINGO" | "IELTS" | "TOEFL";
-  skill: "Speaking" | "Writing" | "Listening" | "Reading";
-  variations: number;
-  status: "Published" | "Draft" | "Archived";
+export interface QuestionTypeDefinitionCardModel {
+  id: number
+  definitionKey: string
+  display_name: string
+  status?: string
+  is_system?: boolean
+  stimulusKindsCount: number
+  responseKindsCount: number
+  onEdit?: () => void
+  onDelete?: () => void
+  deleteDisabled?: boolean
 }
 
 export function QuestionTypeCard({
-  title,
-  exam,
-  skill,
-  variations,
+  id,
+  definitionKey,
+  display_name,
   status,
-}: QuestionTypeCardProps) {
-  const SkillIcon = skill === "Speaking" ? MicIcon : Keyboard;
-
-  const examColors = {
-    DUOLINGO: "bg-[#22C55EE5] text-[#fff] border-transparent",
-    IELTS: "bg-[#EF4444E5] text-[#fff] border-transparent",
-    TOEFL: "bg-[#DBEAFE] text-[#fff] border-transparent",
-  };
-
-  const statusColors = {
-    Published: "bg-[#F0FDF4] text-[#16A34A]",
-    Draft: "bg-grayScale-50 text-grayScale-500",
-    Archived: "bg-red-50 text-red-500",
-  };
+  is_system,
+  stimulusKindsCount,
+  responseKindsCount,
+  onEdit,
+  onDelete,
+  deleteDisabled,
+}: QuestionTypeDefinitionCardModel) {
+  const statusLabel = (status || "—").toString()
+  const isActive = statusLabel.toUpperCase() === "ACTIVE"
 
   return (
-    <Card className="group overflow-hidden border-grayScale-200 rounded-[12px] bg-white  transition-all duration-300">
-      <div className="px-4 py-6 space-y-8">
-        <h3 className="text-[20px] font-bold text-grayScale-900 leading-[1.2]">
-          {title}
-        </h3>
-
-        <div className="flex items-center justify-between">
-          <Badge
-            className={cn(
-              "px-3 py-1 rounded-[4px] text-[11px] font-bold tracking-wider shadow-none border-none",
-              examColors[exam],
-            )}
-          >
-            {exam}
-          </Badge>
-          <div className="flex items-center gap-1 text-grayScale-900 font-bold text-[13px]">
-            <SkillIcon className="h-4 w-4" />
-            {skill}
-          </div>
+    <Card className="group overflow-hidden border-grayScale-200 rounded-[12px] bg-white transition-all duration-300">
+      <div className="px-4 py-6 space-y-4">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-[18px] font-bold text-grayScale-900 leading-[1.2]">{display_name}</h3>
+          {is_system ? (
+            <Badge className="shrink-0 border-none bg-violet-100 text-violet-800 flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              System
+            </Badge>
+          ) : null}
         </div>
 
-        <div className="flex items-center gap-2.5 text-[#9E2891] font-medium text-[15px]">
-          <Layers className="h-[16px] w-[16px]" />
-          {variations} Variations
+        <p className="text-[12px] font-mono text-grayScale-500 break-all">#{id} · {definitionKey}</p>
+
+        <div className="flex flex-wrap items-center gap-2 text-grayScale-700 font-medium text-[14px]">
+          <Layers className="h-4 w-4 text-[#9E2891]" />
+          <span>
+            {stimulusKindsCount} stimulus kinds · {responseKindsCount} response kinds
+          </span>
         </div>
 
-        <div className="pt-4 flex items-center justify-between border-t border-grayScale-200">
+        <div className="pt-4 flex items-center justify-between border-t border-grayScale-200 gap-2">
           <Badge
             className={cn(
               "px-3 py-1 rounded-[4px] text-[12px] font-bold shadow-none border-none",
-              statusColors[status],
+              isActive ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-grayScale-50 text-grayScale-600",
             )}
           >
-            {status}
+            {statusLabel}
           </Badge>
-          <div className="flex items-center gap-5 transition-opacity">
-            <button className="text-grayScale-500/70 transition-all">
-              <Edit2 className="h-5 w-5" />
-            </button>
-            <button className="text-grayScale-500/70 transition-all">
-              <Trash2 className="h-5 w-5" />
-            </button>
+          <div className="flex items-center gap-1">
+            {onEdit ? (
+              <Button type="button" variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={onEdit} aria-label="Edit">
+                <Edit2 className="h-4 w-4 text-grayScale-500" />
+              </Button>
+            ) : null}
+            {onDelete ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                disabled={deleteDisabled}
+                onClick={onDelete}
+                aria-label="Delete"
+              >
+                <Trash2 className="h-4 w-4 text-grayScale-500 disabled:opacity-30" />
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
     </Card>
-  );
+  )
 }

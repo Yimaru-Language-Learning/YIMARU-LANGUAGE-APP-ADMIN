@@ -171,6 +171,10 @@ export function AppRoutes() {
           element={<QuestionTypeLibraryPage />}
         />
         <Route
+          path="/new-content/question-types/:definitionId/edit"
+          element={<CreateQuestionTypeFlow />}
+        />
+        <Route
           path="/new-content/question-types/create"
           element={<CreateQuestionTypeFlow />}
         />

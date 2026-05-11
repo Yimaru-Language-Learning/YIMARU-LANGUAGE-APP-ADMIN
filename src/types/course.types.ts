@@ -1,3 +1,5 @@
+import type { DynamicQuestionPayload } from "./questionTypeDefinition.types"
+
 export interface CourseCategory {
   id: number
   name: string
@@ -1043,6 +1045,10 @@ export interface CreateQuestionRequest {
   sample_answer_voice_prompt?: string
   audio_correct_answer_text?: string
   short_answers?: string[] | { acceptable_answer: string; match_type: "EXACT" | "CASE_INSENSITIVE" }[]
+  /** Required for `DYNAMIC` questions — links to `/questions/type-definitions/:id` */
+  question_type_definition_id?: number
+  /** Required for `DYNAMIC` — stimulus/response element instances per definition schema */
+  dynamic_payload?: DynamicQuestionPayload
 }
 
 export interface CreateQuestionResponse {
@@ -1076,6 +1082,8 @@ export interface QuestionDetail {
   voice_prompt?: string | null
   sample_answer_voice_prompt?: string | null
   audio_correct_answer_text?: string | null
+  question_type_definition_id?: number | null
+  dynamic_payload?: DynamicQuestionPayload | null
 }
 
 export interface GetQuestionDetailResponse {

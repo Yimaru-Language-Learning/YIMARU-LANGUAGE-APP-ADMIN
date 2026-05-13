@@ -41,6 +41,8 @@ interface VideoCardProps {
   /** When set (e.g. on module lesson cards), shows an "Add practice" control scoped to this lesson. */
   onAddPractice?: () => void;
   onPublish?: () => void;
+  /** Shown under title on module lesson cards; reserved height keeps grid rows even. */
+  description?: string | null;
 }
 
 export function VideoCard({
@@ -55,6 +57,7 @@ export function VideoCard({
   onPublish,
   onAddPractice,
   hoverModuleActions = false,
+  description,
 }: VideoCardProps) {
   const [thumbFailed, setThumbFailed] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -113,13 +116,13 @@ export function VideoCard({
   return (
     <div
       className={cn(
-        "group relative bg-white rounded-[24px] border border-grayScale-50 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col",
+        "group relative flex h-full min-h-0 flex-col overflow-hidden rounded-[24px] border border-grayScale-50 bg-white shadow-sm transition-all duration-300 hover:shadow-lg",
       )}
     >
       {/* Thumbnail */}
       <div
         className={cn(
-          "relative h-44 w-full overflow-hidden",
+          "relative h-44 w-full shrink-0 overflow-hidden",
           useGradient && "bg-gradient-to-br",
           useGradient && thumbnailGradient,
           !useGradient && "bg-grayScale-100",
@@ -299,11 +302,11 @@ export function VideoCard({
         </DialogContent>
       </Dialog>
 
-      {/* Content */}
-      <div className="p-5 space-y-4 flex-1 flex flex-col">
+      {/* Content — flex-1 + min-h-0 so grid rows equalize; title min-height stabilizes card body */}
+      <div className="flex min-h-0 flex-1 flex-col p-5">
         <div
           className={cn(
-            "flex items-center gap-2",
+            "mb-4 flex shrink-0 items-center gap-2",
             hoverModuleActions ? "justify-start" : "justify-between",
           )}
         >
@@ -341,28 +344,36 @@ export function VideoCard({
           ) : null}
         </div>
 
-        <h3 className="text-[16px] font-medium text-grayScale-900 line-clamp-2 leading-snug">
+        <h3 className="line-clamp-2 min-h-[3rem] shrink-0 text-[16px] font-medium leading-snug text-grayScale-900">
           {title}
         </h3>
 
+        {hoverModuleActions ? (
+          <p className="mt-1 line-clamp-2 min-h-[2.5rem] shrink-0 text-[13px] leading-snug text-grayScale-500">
+            {description?.trim() ? description.trim() : "\u00a0"}
+          </p>
+        ) : null}
+
         {hoverModuleActions && onAddPractice ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="h-9 w-full shrink-0 rounded-lg border-brand-200 text-[12px] font-bold text-brand-600 hover:bg-brand-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddPractice();
-            }}
-          >
-            <Calendar className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-            Add practice
-          </Button>
+          <div className="mt-auto shrink-0 pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 w-full rounded-lg border-brand-200 text-[12px] font-bold text-brand-600 hover:bg-brand-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddPractice();
+              }}
+            >
+              <Calendar className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              Add practice
+            </Button>
+          </div>
         ) : null}
 
         {/* Actions (footer) — not used for API lesson cards with hover tools */}
         {!hoverModuleActions ? (
-          <div className="pt-2 space-y-3 mt-auto">
+          <div className="mt-auto shrink-0 space-y-3 pt-2">
             <Button
               variant="outline"
               onClick={onEdit}

@@ -719,6 +719,7 @@ export function CourseModuleDetailPage() {
                 hoverModuleActions
                 onEdit={() => openEditLesson(lesson)}
                 onDelete={() => setDeletingLessonId(lesson.id)}
+                description={lesson.description}
               />
             ))
           )

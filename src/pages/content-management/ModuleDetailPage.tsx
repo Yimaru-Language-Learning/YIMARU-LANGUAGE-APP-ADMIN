@@ -398,6 +398,7 @@ export function ModuleDetailPage() {
                   thumbnailGradient={LESSON_THUMB_GRADIENTS[i % LESSON_THUMB_GRADIENTS.length]}
                   onEdit={() => openEditLesson(lesson)}
                   onDelete={() => setDeletingLesson(lesson)}
+                  description={lesson.description}
                   onAddPractice={() =>
                     navigate(
                       `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}`,

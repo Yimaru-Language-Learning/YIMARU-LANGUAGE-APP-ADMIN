@@ -116,29 +116,47 @@ export function validateDefinitionBasic(payload: {
   return errors
 }
 
+/** Unique kinds used in schema rows (API expects deduplicated lists; schema may repeat the same kind). */
+function uniqueKindsFromSchemaRows(rows: DynamicElementDefinition[]): string[] {
+  const set = new Set<string>()
+  for (const r of rows) {
+    const k = r.kind?.trim()
+    if (k) set.add(k)
+  }
+  return [...set].sort((a, b) => a.localeCompare(b))
+}
+
 export function buildCreatePayload(
   draft: QuestionTypeDefinitionCreatePayload,
 ): QuestionTypeDefinitionCreatePayload {
+  const stimulus_schema = draft.stimulus_schema.map((r) => ({
+    ...r,
+    id: r.id.trim(),
+    kind: r.kind.trim(),
+    label: r.label?.trim() || undefined,
+    config: r.config && Object.keys(r.config).length ? r.config : undefined,
+  }))
+  const response_schema = draft.response_schema.map((r) => ({
+    ...r,
+    id: r.id.trim(),
+    kind: r.kind.trim(),
+    label: r.label?.trim() || undefined,
+    config: r.config && Object.keys(r.config).length ? r.config : undefined,
+  }))
+
+  const stimulusKindsFromSchema = uniqueKindsFromSchemaRows(stimulus_schema)
+  const responseKindsFromSchema = uniqueKindsFromSchemaRows(response_schema)
+
   return {
     ...draft,
     key: draft.key.trim(),
     display_name: draft.display_name.trim(),
     description: draft.description?.trim() || null,
-    stimulus_component_kinds: [...draft.stimulus_component_kinds],
-    response_component_kinds: [...draft.response_component_kinds],
-    stimulus_schema: draft.stimulus_schema.map((r) => ({
-      ...r,
-      id: r.id.trim(),
-      kind: r.kind.trim(),
-      label: r.label?.trim() || undefined,
-      config: r.config && Object.keys(r.config).length ? r.config : undefined,
-    })),
-    response_schema: draft.response_schema.map((r) => ({
-      ...r,
-      id: r.id.trim(),
-      kind: r.kind.trim(),
-      label: r.label?.trim() || undefined,
-      config: r.config && Object.keys(r.config).length ? r.config : undefined,
-    })),
+    stimulus_component_kinds:
+      stimulusKindsFromSchema.length > 0 ? stimulusKindsFromSchema : [...draft.stimulus_component_kinds],
+    response_component_kinds:
+      responseKindsFromSchema.length > 0 ? responseKindsFromSchema : [...draft.response_component_kinds],
+    stimulus_schema,
+    response_schema,
   }
 }

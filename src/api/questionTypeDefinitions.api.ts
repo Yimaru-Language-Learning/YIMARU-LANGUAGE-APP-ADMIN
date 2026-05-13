@@ -285,10 +285,20 @@ export async function getQuestionTypeDefinitions(params?: {
   return parseDefinitionsList(raw)
 }
 
-export async function getQuestionTypeDefinitionById(id: number) {
+/**
+ * GET /questions/type-definitions/:id
+ *
+ * Typical success body (axios `res.data`): envelope with nested `data` or `Data` holding the definition.
+ * Definition fields are often PascalCase (`ID`, `Key`, `DisplayName`, `StimulusComponentKinds`, `StimulusSchema`,
+ * `ResponseSchema`, `IsSystem`, `Status`, `CreatedAt`, `UpdatedAt`). Envelope `success` may be false; parsing
+ * does not rely on it.
+ */
+export async function getQuestionTypeDefinitionById(id: number): Promise<QuestionTypeDefinition | undefined> {
   const res = await http.get<ApiEnvelope<unknown>>(`/questions/type-definitions/${id}`)
-  const def = unwrapApiPayload(res)
-  return normalizeTypeDefinitionFromApi(def) ?? undefined
+  const fromEnvelope = unwrapApiPayload(res)
+  return (
+    normalizeTypeDefinitionFromApi(fromEnvelope) ?? normalizeTypeDefinitionFromApi(res.data) ?? undefined
+  )
 }
 
 export async function updateQuestionTypeDefinition(

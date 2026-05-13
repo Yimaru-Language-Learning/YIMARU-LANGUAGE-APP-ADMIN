@@ -5,11 +5,15 @@ import {
   ChevronDown,
   ChevronUp,
   Hourglass,
+  Plus,
 } from "lucide-react"
 import { Button } from "../../../../components/ui/button"
 import { Card } from "../../../../components/ui/card"
 import { Input } from "../../../../components/ui/input"
-import type { QuestionTypeDefinitionCreatePayload } from "../../../../types/questionTypeDefinition.types"
+import type {
+  DynamicElementDefinition,
+  QuestionTypeDefinitionCreatePayload,
+} from "../../../../types/questionTypeDefinition.types"
 import type { FieldErrorMap } from "../../lib/questionTypeDefinitionValidation"
 import { SchemaBuilderSection } from "./SchemaBuilderSection"
 import { ComponentKindCard } from "./ComponentKindCard"
@@ -31,6 +35,27 @@ interface QuestionTypeConfigStepProps {
 
 function toggleKind(list: string[], kind: string): string[] {
   return list.includes(kind) ? list.filter((k) => k !== kind) : [...list, kind]
+}
+
+function slugFragmentFromKind(kind: string): string {
+  const s = (kind || "field").toLowerCase().replace(/[^a-z0-9]+/g, "_")
+  return s.replace(/^_|_$/g, "") || "field"
+}
+
+function defaultSchemaLabel(kind: string): string {
+  return kind.replace(/_/g, " ")
+}
+
+function nextUniqueSchemaElementId(rows: DynamicElementDefinition[], kind: string): string {
+  const base = slugFragmentFromKind(kind)
+  const existing = new Set(rows.map((r) => r.id.trim()).filter(Boolean))
+  let n = 1
+  let id = `${base}_${n}`
+  while (existing.has(id)) {
+    n++
+    id = `${base}_${n}`
+  }
+  return id
 }
 
 function rowErrorMap(side: "stimulus" | "response", errors: FieldErrorMap): Record<number, string> {
@@ -62,6 +87,82 @@ export function QuestionTypeConfigStep({
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const title = draft.display_name?.trim() || "Untitled definition"
+
+  const handleStimulusKindClick = (kind: string) => {
+    setDraft((d) => {
+      const wasSelected = d.stimulus_component_kinds.includes(kind)
+      const stimulus_component_kinds = toggleKind(d.stimulus_component_kinds, kind)
+      if (!wasSelected) {
+        const stimulus_schema = [...d.stimulus_schema]
+        if (!stimulus_schema.some((r) => r.kind === kind)) {
+          stimulus_schema.push({
+            id: nextUniqueSchemaElementId(stimulus_schema, kind),
+            kind,
+            label: defaultSchemaLabel(kind),
+            required: true,
+          })
+        }
+        return { ...d, stimulus_component_kinds, stimulus_schema }
+      }
+      return {
+        ...d,
+        stimulus_component_kinds,
+        stimulus_schema: d.stimulus_schema.filter((r) => r.kind !== kind),
+      }
+    })
+  }
+
+  const handleResponseKindClick = (kind: string) => {
+    setDraft((d) => {
+      const wasSelected = d.response_component_kinds.includes(kind)
+      const response_component_kinds = toggleKind(d.response_component_kinds, kind)
+      if (!wasSelected) {
+        const response_schema = [...d.response_schema]
+        if (!response_schema.some((r) => r.kind === kind)) {
+          response_schema.push({
+            id: nextUniqueSchemaElementId(response_schema, kind),
+            kind,
+            label: defaultSchemaLabel(kind),
+            required: true,
+          })
+        }
+        return { ...d, response_component_kinds, response_schema }
+      }
+      return {
+        ...d,
+        response_component_kinds,
+        response_schema: d.response_schema.filter((r) => r.kind !== kind),
+      }
+    })
+  }
+
+  const addStimulusSlot = (kind: string) => {
+    setDraft((d) => {
+      if (!d.stimulus_component_kinds.includes(kind)) return d
+      const stimulus_schema = [...d.stimulus_schema]
+      stimulus_schema.push({
+        id: nextUniqueSchemaElementId(stimulus_schema, kind),
+        kind,
+        label: defaultSchemaLabel(kind),
+        required: true,
+      })
+      return { ...d, stimulus_schema }
+    })
+  }
+
+  const addResponseSlot = (kind: string) => {
+    setDraft((d) => {
+      if (!d.response_component_kinds.includes(kind)) return d
+      const response_schema = [...d.response_schema]
+      response_schema.push({
+        id: nextUniqueSchemaElementId(response_schema, kind),
+        kind,
+        label: defaultSchemaLabel(kind),
+        required: true,
+      })
+      return { ...d, response_schema }
+    })
+  }
 
   return (
     <div className="space-y-8 pb-32">
@@ -116,26 +217,43 @@ export function QuestionTypeConfigStep({
                       Section A: Question input types
                     </h3>
                     <p className="text-[14px] text-grayScale-500 mt-1 font-medium">
-                      Choose how the question is presented to the learner.
+                      Choose how the question is presented to the learner. The API lists each kind once in{" "}
+                      <code className="text-[11px] bg-grayScale-100 px-1 rounded">stimulus_component_kinds</code>{" "}
+                      while <code className="text-[11px] bg-grayScale-100 px-1 rounded">stimulus_schema</code> can
+                      include the same kind multiple times (different ids).
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {stimulusCatalogKinds.map((kind) => {
                       const { label, Icon } = getStimulusKindPresentation(kind)
                       const selected = draft.stimulus_component_kinds.includes(kind)
+                      const slotCount = draft.stimulus_schema.filter((r) => r.kind === kind).length
                       return (
-                        <ComponentKindCard
-                          key={kind}
-                          label={label}
-                          Icon={Icon}
-                          selected={selected}
-                          onClick={() =>
-                            setDraft((d) => ({
-                              ...d,
-                              stimulus_component_kinds: toggleKind(d.stimulus_component_kinds, kind),
-                            }))
-                          }
-                        />
+                        <div key={kind} className="space-y-2">
+                          <ComponentKindCard
+                            label={label}
+                            Icon={Icon}
+                            selected={selected}
+                            onClick={() => handleStimulusKindClick(kind)}
+                          />
+                          {selected ? (
+                            <div className="flex items-center justify-between gap-2 px-0.5 min-h-[32px]">
+                              <span className="text-[12px] text-grayScale-500 font-medium">
+                                {slotCount} slot{slotCount === 1 ? "" : "s"}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
+                                onClick={() => addStimulusSlot(kind)}
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                Add slot
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
                       )
                     })}
                   </div>
@@ -150,26 +268,43 @@ export function QuestionTypeConfigStep({
                       Section B: Answer types
                     </h3>
                     <p className="text-[14px] text-grayScale-500 mt-1 font-medium">
-                      How should the student answer this question?
+                      How should the student answer?{" "}
+                      <code className="text-[11px] bg-grayScale-100 px-1 rounded">response_component_kinds</code> is
+                      deduplicated; use <span className="font-medium text-grayScale-600">Add slot</span> for multiple
+                      fields of the same kind.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {responseCatalogKinds.map((kind) => {
                       const { label, Icon } = getResponseKindPresentation(kind)
                       const selected = draft.response_component_kinds.includes(kind)
+                      const slotCount = draft.response_schema.filter((r) => r.kind === kind).length
                       return (
-                        <ComponentKindCard
-                          key={kind}
-                          label={label}
-                          Icon={Icon}
-                          selected={selected}
-                          onClick={() =>
-                            setDraft((d) => ({
-                              ...d,
-                              response_component_kinds: toggleKind(d.response_component_kinds, kind),
-                            }))
-                          }
-                        />
+                        <div key={kind} className="space-y-2">
+                          <ComponentKindCard
+                            label={label}
+                            Icon={Icon}
+                            selected={selected}
+                            onClick={() => handleResponseKindClick(kind)}
+                          />
+                          {selected ? (
+                            <div className="flex items-center justify-between gap-2 px-0.5 min-h-[32px]">
+                              <span className="text-[12px] text-grayScale-500 font-medium">
+                                {slotCount} slot{slotCount === 1 ? "" : "s"}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
+                                onClick={() => addResponseSlot(kind)}
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                Add slot
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
                       )
                     })}
                   </div>

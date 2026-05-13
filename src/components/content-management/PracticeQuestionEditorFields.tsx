@@ -9,7 +9,13 @@ import { Check, Image as ImageIcon, Mic, Plus, Upload, X } from "lucide-react"
 import { toast } from "sonner"
 import { resolveMediaPreviewUrl } from "../../lib/practiceMedia"
 import { uploadAudioFile, uploadImageFile } from "../../api/files.api"
+import {
+  getQuestionTypeDefinitionById,
+  getQuestionTypeDefinitions,
+} from "../../api/questionTypeDefinitions.api"
+import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.types"
 import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
 import { Select } from "../ui/select"
 import { Button } from "../ui/button"
 import { SpinnerIcon } from "../ui/spinner-icon"
@@ -17,7 +23,7 @@ import { cn } from "../../lib/utils"
 import { ResolvedAudio } from "../media/ResolvedAudio"
 import { ResolvedImage } from "../media/ResolvedImage"
 
-export type PracticeQuestionEditorType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
+export type PracticeQuestionEditorType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO" | "DYNAMIC"
 export type PracticeQuestionEditorDifficulty = "EASY" | "MEDIUM" | "HARD"
 
 export interface PracticeQuestionOptionDraft {
@@ -31,6 +37,13 @@ const MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024
 const ALLOWED_AUDIO_EXTENSIONS = new Set(["mp3", "wav", "ogg", "m4a", "aac", "webm", "flac"])
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
 const ALLOWED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"])
+
+export interface PracticeQuestionDynamicRow {
+  id: string
+  kind: string
+  label?: string
+  required?: boolean
+}
 
 export interface PracticeQuestionEditorValue {
   questionText: string
@@ -46,6 +59,12 @@ export interface PracticeQuestionEditorValue {
   shortAnswer: string
   /** Stored URL or object key; same semantics as Speaking practice editor */
   imageUrl: string
+  /** When `questionType` is DYNAMIC — definition used to shape `dynamic_payload` */
+  questionTypeDefinitionId: number | null
+  dynamicStimulusRows: PracticeQuestionDynamicRow[]
+  dynamicResponseRows: PracticeQuestionDynamicRow[]
+  /** Keys `stimulus:${elementId}` and `response:${elementId}` (ids from the type definition schema) */
+  dynamicFieldValues: Record<string, string>
 }
 
 export function createEmptyPracticeQuestionDraft(): PracticeQuestionEditorValue {
@@ -67,6 +86,10 @@ export function createEmptyPracticeQuestionDraft(): PracticeQuestionEditorValue 
     audioCorrectAnswerText: "",
     shortAnswer: "",
     imageUrl: "",
+    questionTypeDefinitionId: null,
+    dynamicStimulusRows: [],
+    dynamicResponseRows: [],
+    dynamicFieldValues: {},
   }
 }
 
@@ -84,6 +107,9 @@ function defaultOptionsForType(
   previousType: PracticeQuestionEditorType,
   current: PracticeQuestionOptionDraft[],
 ): PracticeQuestionOptionDraft[] {
+  if (type === "DYNAMIC") {
+    return current
+  }
   if (type === "TRUE_FALSE") {
     if (previousType === "TRUE_FALSE" && current.length >= 2) {
       return current.map((o, i) => ({
@@ -146,6 +172,18 @@ export function PracticeQuestionEditorFields({
 
   const setType = (questionType: PracticeQuestionEditorType) => {
     const options = defaultOptionsForType(questionType, value.questionType, value.options)
+    if (questionType === "DYNAMIC" || value.questionType === "DYNAMIC") {
+      onChange({
+        ...value,
+        questionType,
+        options,
+        questionTypeDefinitionId: null,
+        dynamicStimulusRows: [],
+        dynamicResponseRows: [],
+        dynamicFieldValues: {},
+      })
+      return
+    }
     onChange({ ...value, questionType, options })
   }
 
@@ -586,6 +624,92 @@ export function PracticeQuestionEditorFields({
 
   const controlsDisabled = mediaBusy
 
+  const [typeDefinitions, setTypeDefinitions] = useState<QuestionTypeDefinition[]>([])
+  const [definitionsLoading, setDefinitionsLoading] = useState(false)
+  const [definitionDetailLoading, setDefinitionDetailLoading] = useState(false)
+
+  useEffect(() => {
+    if (value.questionType !== "DYNAMIC") return
+    let cancelled = false
+    setDefinitionsLoading(true)
+    ;(async () => {
+      try {
+        const rows = await getQuestionTypeDefinitions({ include_system: true })
+        if (!cancelled) setTypeDefinitions(Array.isArray(rows) ? rows : [])
+      } catch {
+        if (!cancelled) setTypeDefinitions([])
+      } finally {
+        if (!cancelled) setDefinitionsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [value.questionType])
+
+  const handleDynamicDefinitionChange = async (rawId: string) => {
+    if (!rawId) {
+      onChange({
+        ...value,
+        questionTypeDefinitionId: null,
+        dynamicStimulusRows: [],
+        dynamicResponseRows: [],
+        dynamicFieldValues: {},
+      })
+      return
+    }
+    const id = Number(rawId)
+    if (!Number.isFinite(id) || id <= 0) return
+    setDefinitionDetailLoading(true)
+    try {
+      const def = await getQuestionTypeDefinitionById(id)
+      if (!def) {
+        toast.error("Definition not found")
+        return
+      }
+      const fieldValues: Record<string, string> = { ...value.dynamicFieldValues }
+      const dynamicStimulusRows: PracticeQuestionDynamicRow[] = def.stimulus_schema.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        label: r.label,
+        required: r.required,
+      }))
+      const dynamicResponseRows: PracticeQuestionDynamicRow[] = def.response_schema.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        label: r.label,
+        required: r.required,
+      }))
+      for (const r of dynamicStimulusRows) {
+        const k = `stimulus:${r.id}`
+        if (fieldValues[k] === undefined) fieldValues[k] = ""
+      }
+      for (const r of dynamicResponseRows) {
+        const k = `response:${r.id}`
+        if (fieldValues[k] === undefined) fieldValues[k] = ""
+      }
+      onChange({
+        ...value,
+        questionTypeDefinitionId: id,
+        dynamicStimulusRows,
+        dynamicResponseRows,
+        dynamicFieldValues: fieldValues,
+      })
+    } catch (e) {
+      console.error(e)
+      toast.error("Failed to load definition details")
+    } finally {
+      setDefinitionDetailLoading(false)
+    }
+  }
+
+  const setDynamicField = (key: string, next: string) => {
+    onChange({
+      ...value,
+      dynamicFieldValues: { ...value.dynamicFieldValues, [key]: next },
+    })
+  }
+
   return (
     <>
       <div className="mt-5 space-y-5">
@@ -615,6 +739,7 @@ export function PracticeQuestionEditorFields({
               <option value="TRUE_FALSE">True/False</option>
               <option value="SHORT">Short Answer</option>
               <option value="AUDIO">Audio</option>
+              <option value="DYNAMIC">Dynamic (schema-driven)</option>
             </Select>
           </div>
           <div className="space-y-2">
@@ -643,6 +768,89 @@ export function PracticeQuestionEditorFields({
             ) : null}
           </div>
         </div>
+
+        {value.questionType === "DYNAMIC" && (
+          <div className="space-y-5 rounded-xl border border-violet-200 bg-violet-50/50 p-4 sm:p-5">
+            <p className="text-sm leading-relaxed text-grayScale-600">
+              Pick a question type definition, then fill each stimulus/response slot. Element{" "}
+              <code className="rounded bg-white px-1 text-xs">id</code> and{" "}
+              <code className="rounded bg-white px-1 text-xs">kind</code> must match the definition schema. Use JSON
+              for object values (e.g. <code className="text-xs">{"{\"placeholder\":\"Type here\"}"}</code>).
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
+                Question type definition <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={value.questionTypeDefinitionId != null ? String(value.questionTypeDefinitionId) : ""}
+                onChange={(e) => void handleDynamicDefinitionChange(e.target.value)}
+                disabled={definitionsLoading || definitionDetailLoading}
+              >
+                <option value="">{definitionsLoading ? "Loading definitions…" : "Select definition…"}</option>
+                {typeDefinitions.map((d) => (
+                  <option key={d.id} value={String(d.id)}>
+                    #{d.id} — {d.display_name} ({d.key})
+                  </option>
+                ))}
+              </Select>
+            </div>
+            {definitionDetailLoading ? (
+              <p className="text-sm font-medium text-grayScale-500">Loading schema…</p>
+            ) : null}
+            {value.dynamicStimulusRows.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-violet-800">Stimulus</p>
+                {value.dynamicStimulusRows.map((row) => (
+                  <div
+                    key={`stimulus-${row.id}`}
+                    className="space-y-2 rounded-lg border border-grayScale-200 bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-grayScale-900">{row.label || row.id}</span>
+                      <span className="text-[11px] font-mono text-grayScale-500">
+                        {row.id} · {row.kind}
+                        {row.required ? <span className="text-red-500"> *</span> : null}
+                      </span>
+                    </div>
+                    <Textarea
+                      rows={3}
+                      value={value.dynamicFieldValues[`stimulus:${row.id}`] ?? ""}
+                      onChange={(e) => setDynamicField(`stimulus:${row.id}`, e.target.value)}
+                      placeholder="URL, plain text, or JSON object"
+                      className="min-h-[72px] resize-y font-mono text-[13px]"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {value.dynamicResponseRows.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-violet-800">Response</p>
+                {value.dynamicResponseRows.map((row) => (
+                  <div
+                    key={`response-${row.id}`}
+                    className="space-y-2 rounded-lg border border-grayScale-200 bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-grayScale-900">{row.label || row.id}</span>
+                      <span className="text-[11px] font-mono text-grayScale-500">
+                        {row.id} · {row.kind}
+                        {row.required ? <span className="text-red-500"> *</span> : null}
+                      </span>
+                    </div>
+                    <Textarea
+                      rows={3}
+                      value={value.dynamicFieldValues[`response:${row.id}`] ?? ""}
+                      onChange={(e) => setDynamicField(`response:${row.id}`, e.target.value)}
+                      placeholder="URL, plain text, or JSON object"
+                      className="min-h-[72px] resize-y font-mono text-[13px]"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {value.questionType === "MCQ" && (
           <div className="space-y-3 rounded-lg bg-grayScale-50/50 p-4">
@@ -777,6 +985,8 @@ export function PracticeQuestionEditorFields({
           </div>
         </div>
 
+        {value.questionType !== "DYNAMIC" ? (
+          <>
         <div className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Voice Prompt (Optional)</label>
           <div className="flex flex-col gap-2">
@@ -908,6 +1118,8 @@ export function PracticeQuestionEditorFields({
             ) : null}
           </div>
         </div>
+          </>
+        ) : null}
       </div>
 
       {recordingModal ? (

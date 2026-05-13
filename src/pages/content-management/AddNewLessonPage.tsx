@@ -5,6 +5,8 @@ import { toast } from "sonner"
 import { addQuestionToSet, createLesson, createQuestion } from "../../api/courses.api"
 import { uploadVideoFile } from "../../api/files.api"
 import { PracticeQuestionEditorFields } from "../../components/content-management/PracticeQuestionEditorFields"
+import type { PracticeQuestionDynamicRow } from "../../components/content-management/PracticeQuestionEditorFields"
+import { buildDynamicQuestionPayload } from "../../lib/practiceDynamicQuestionPayload"
 import { Button } from "../../components/ui/button"
 import { Card } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
@@ -12,7 +14,7 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import type { QuestionOption } from "../../types/course.types"
 
 type Step = 1 | 2 | 3 | 4
-type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
+type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO" | "DYNAMIC"
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD"
 type ResultStatus = "success" | "error"
 
@@ -35,6 +37,10 @@ interface Question {
   audioCorrectAnswerText: string
   shortAnswers: string[]
   imageUrl: string
+  questionTypeDefinitionId: number | null
+  dynamicStimulusRows: PracticeQuestionDynamicRow[]
+  dynamicResponseRows: PracticeQuestionDynamicRow[]
+  dynamicFieldValues: Record<string, string>
 }
 
 const STEPS = [
@@ -63,6 +69,10 @@ function createEmptyQuestion(id: string): Question {
     audioCorrectAnswerText: "",
     shortAnswers: [],
     imageUrl: "",
+    questionTypeDefinitionId: null,
+    dynamicStimulusRows: [],
+    dynamicResponseRows: [],
+    dynamicFieldValues: {},
   }
 }
 
@@ -104,6 +114,7 @@ function questionTypeLabel(type: QuestionType): string {
   if (type === "TRUE_FALSE") return "True/False"
   if (type === "SHORT") return "Short Answer"
   if (type === "AUDIO") return "Audio"
+  if (type === "DYNAMIC") return "Dynamic"
   return "Multiple Choice"
 }
 
@@ -224,6 +235,39 @@ export function AddNewLessonPage() {
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i]
           if (!q.questionText.trim()) continue
+
+          if (q.questionType === "DYNAMIC") {
+            if (q.questionTypeDefinitionId == null || q.questionTypeDefinitionId <= 0) {
+              toast.error(`Question ${i + 1}: select a question type definition for dynamic questions.`)
+              setSaving(false)
+              return
+            }
+            const missingStimulus = q.dynamicStimulusRows.find(
+              (row) =>
+                row.required &&
+                !(q.dynamicFieldValues[`stimulus:${row.id}`]?.trim()),
+            )
+            if (missingStimulus) {
+              toast.error(
+                `Question ${i + 1}: fill required stimulus "${missingStimulus.label || missingStimulus.id}".`,
+              )
+              setSaving(false)
+              return
+            }
+            const missingResponse = q.dynamicResponseRows.find(
+              (row) =>
+                row.required &&
+                !(q.dynamicFieldValues[`response:${row.id}`]?.trim()),
+            )
+            if (missingResponse) {
+              toast.error(
+                `Question ${i + 1}: fill required response "${missingResponse.label || missingResponse.id}".`,
+              )
+              setSaving(false)
+              return
+            }
+          }
+
           const options: QuestionOption[] =
             q.questionType === "MCQ"
               ? q.options.map((opt, idx) => ({
@@ -233,6 +277,15 @@ export function AddNewLessonPage() {
                 }))
               : []
 
+          const dynamicPayload =
+            q.questionType === "DYNAMIC" && q.questionTypeDefinitionId != null
+              ? buildDynamicQuestionPayload({
+                  stimulusRows: q.dynamicStimulusRows,
+                  responseRows: q.dynamicResponseRows,
+                  fieldValues: q.dynamicFieldValues,
+                })
+              : undefined
+
           const qRes = await createQuestion({
             question_text: q.questionText,
             question_type: q.questionType,
@@ -240,13 +293,22 @@ export function AddNewLessonPage() {
             points: q.points,
             tips: q.tips || undefined,
             explanation: q.explanation || undefined,
-            status: "PUBLISHED",
+            status,
             options: options.length > 0 ? options : undefined,
-            voice_prompt: q.voicePrompt || undefined,
-            sample_answer_voice_prompt: q.sampleAnswerVoicePrompt || undefined,
-            audio_correct_answer_text: q.audioCorrectAnswerText || undefined,
-            image_url: q.imageUrl.trim() || undefined,
-            short_answers: q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
+            voice_prompt: q.questionType === "DYNAMIC" ? undefined : q.voicePrompt || undefined,
+            sample_answer_voice_prompt:
+              q.questionType === "DYNAMIC" ? undefined : q.sampleAnswerVoicePrompt || undefined,
+            audio_correct_answer_text:
+              q.questionType === "DYNAMIC" ? undefined : q.audioCorrectAnswerText || undefined,
+            image_url: q.questionType === "DYNAMIC" ? undefined : q.imageUrl.trim() || undefined,
+            short_answers:
+              q.questionType !== "DYNAMIC" && q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
+            ...(q.questionType === "DYNAMIC" && q.questionTypeDefinitionId != null && dynamicPayload
+              ? {
+                  question_type_definition_id: q.questionTypeDefinitionId,
+                  dynamic_payload: dynamicPayload,
+                }
+              : {}),
           })
           const questionId = qRes.data?.data?.id
           if (questionId) {
@@ -457,6 +519,10 @@ export function AddNewLessonPage() {
                     audioCorrectAnswerText: question.audioCorrectAnswerText,
                     shortAnswer: question.shortAnswers[0] ?? "",
                     imageUrl: question.imageUrl,
+                    questionTypeDefinitionId: question.questionTypeDefinitionId,
+                    dynamicStimulusRows: question.dynamicStimulusRows,
+                    dynamicResponseRows: question.dynamicResponseRows,
+                    dynamicFieldValues: question.dynamicFieldValues,
                   }}
                   onChange={(next) =>
                     updateQuestion(question.id, {
@@ -472,6 +538,10 @@ export function AddNewLessonPage() {
                       audioCorrectAnswerText: next.audioCorrectAnswerText,
                       shortAnswers: next.shortAnswer.trim() ? [next.shortAnswer.trim()] : [],
                       imageUrl: next.imageUrl,
+                      questionTypeDefinitionId: next.questionTypeDefinitionId,
+                      dynamicStimulusRows: next.dynamicStimulusRows,
+                      dynamicResponseRows: next.dynamicResponseRows,
+                      dynamicFieldValues: next.dynamicFieldValues,
                     })
                   }
                   mediaBusy={saving}

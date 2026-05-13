@@ -25,12 +25,13 @@ import {
   addQuestionToSet,
 } from "../../api/courses.api";
 import { uploadVideoFile } from "../../api/files.api";
-import { Select } from "../../components/ui/select";
 import type { QuestionOption } from "../../types/course.types";
+import type { PracticeQuestionDynamicRow } from "../../components/content-management/PracticeQuestionEditorFields";
+import { buildDynamicQuestionPayload } from "../../lib/practiceDynamicQuestionPayload";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 type ResultStatus = "success" | "error";
-type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO";
+type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO" | "DYNAMIC";
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD";
 
 interface Persona {
@@ -58,6 +59,10 @@ interface Question {
   audioCorrectAnswerText: string;
   shortAnswers: string[];
   imageUrl: string;
+  questionTypeDefinitionId: number | null;
+  dynamicStimulusRows: PracticeQuestionDynamicRow[];
+  dynamicResponseRows: PracticeQuestionDynamicRow[];
+  dynamicFieldValues: Record<string, string>;
 }
 
 const PERSONAS: Persona[] = [
@@ -231,6 +236,10 @@ function createEmptyQuestion(id: string): Question {
     audioCorrectAnswerText: "",
     shortAnswers: [],
     imageUrl: "",
+    questionTypeDefinitionId: null,
+    dynamicStimulusRows: [],
+    dynamicResponseRows: [],
+    dynamicFieldValues: {},
   };
 }
 
@@ -414,6 +423,38 @@ export function AddNewPracticePage() {
           const q = questions[i];
           if (!q.questionText.trim()) continue;
 
+          if (q.questionType === "DYNAMIC") {
+            if (q.questionTypeDefinitionId == null || q.questionTypeDefinitionId <= 0) {
+              toast.error(`Question ${i + 1}: select a question type definition for dynamic questions.`);
+              setSaving(false);
+              return;
+            }
+            const missingStimulus = q.dynamicStimulusRows.find(
+              (row) =>
+                row.required &&
+                !(q.dynamicFieldValues[`stimulus:${row.id}`]?.trim()),
+            );
+            if (missingStimulus) {
+              toast.error(
+                `Question ${i + 1}: fill required stimulus "${missingStimulus.label || missingStimulus.id}".`,
+              );
+              setSaving(false);
+              return;
+            }
+            const missingResponse = q.dynamicResponseRows.find(
+              (row) =>
+                row.required &&
+                !(q.dynamicFieldValues[`response:${row.id}`]?.trim()),
+            );
+            if (missingResponse) {
+              toast.error(
+                `Question ${i + 1}: fill required response "${missingResponse.label || missingResponse.id}".`,
+              );
+              setSaving(false);
+              return;
+            }
+          }
+
           const options: QuestionOption[] =
             q.questionType === "MCQ"
               ? q.options.map((opt, idx) => ({
@@ -423,6 +464,15 @@ export function AddNewPracticePage() {
                 }))
               : [];
 
+          const dynamicPayload =
+            q.questionType === "DYNAMIC" && q.questionTypeDefinitionId != null
+              ? buildDynamicQuestionPayload({
+                  stimulusRows: q.dynamicStimulusRows,
+                  responseRows: q.dynamicResponseRows,
+                  fieldValues: q.dynamicFieldValues,
+                })
+              : undefined;
+
           const qRes = await createQuestion({
             question_text: q.questionText,
             question_type: q.questionType,
@@ -430,14 +480,22 @@ export function AddNewPracticePage() {
             points: q.points,
             tips: q.tips || undefined,
             explanation: q.explanation || undefined,
-            status: "PUBLISHED",
+            status,
             options: options.length > 0 ? options : undefined,
-            voice_prompt: q.voicePrompt || undefined,
-            sample_answer_voice_prompt: q.sampleAnswerVoicePrompt || undefined,
-            audio_correct_answer_text: q.audioCorrectAnswerText || undefined,
-            image_url: q.imageUrl.trim() || undefined,
+            voice_prompt: q.questionType === "DYNAMIC" ? undefined : q.voicePrompt || undefined,
+            sample_answer_voice_prompt:
+              q.questionType === "DYNAMIC" ? undefined : q.sampleAnswerVoicePrompt || undefined,
+            audio_correct_answer_text:
+              q.questionType === "DYNAMIC" ? undefined : q.audioCorrectAnswerText || undefined,
+            image_url: q.questionType === "DYNAMIC" ? undefined : q.imageUrl.trim() || undefined,
             short_answers:
-              q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
+              q.questionType !== "DYNAMIC" && q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
+            ...(q.questionType === "DYNAMIC" && q.questionTypeDefinitionId != null && dynamicPayload
+              ? {
+                  question_type_definition_id: q.questionTypeDefinitionId,
+                  dynamic_payload: dynamicPayload,
+                }
+              : {}),
           });
 
           const questionId = qRes.data?.data?.id;
@@ -912,7 +970,7 @@ export function AddNewPracticePage() {
                 Step 3: Questions
               </h2>
               <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
-                Add MCQ, True/False, Short Answer, or Audio items. Use the full
+                Add MCQ, True/False, Short Answer, Audio, or Dynamic (schema-driven) items. Use the full
                 width for stems and options.
               </p>
             </div>
@@ -952,6 +1010,10 @@ export function AddNewPracticePage() {
                       audioCorrectAnswerText: question.audioCorrectAnswerText,
                       shortAnswer: question.shortAnswers[0] ?? "",
                       imageUrl: question.imageUrl,
+                      questionTypeDefinitionId: question.questionTypeDefinitionId,
+                      dynamicStimulusRows: question.dynamicStimulusRows,
+                      dynamicResponseRows: question.dynamicResponseRows,
+                      dynamicFieldValues: question.dynamicFieldValues,
                     }}
                     onChange={(next) => {
                       updateQuestion(question.id, {
@@ -970,6 +1032,10 @@ export function AddNewPracticePage() {
                           ? [next.shortAnswer.trim()]
                           : [],
                         imageUrl: next.imageUrl,
+                        questionTypeDefinitionId: next.questionTypeDefinitionId,
+                        dynamicStimulusRows: next.dynamicStimulusRows,
+                        dynamicResponseRows: next.dynamicResponseRows,
+                        dynamicFieldValues: next.dynamicFieldValues,
                       });
                     }}
                     mediaBusy={saving}
@@ -1180,7 +1246,9 @@ export function AddNewPracticePage() {
                                   ? "True/False"
                                   : question.questionType === "AUDIO"
                                     ? "Audio"
-                                    : "Short Answer"}
+                                    : question.questionType === "DYNAMIC"
+                                      ? "Dynamic"
+                                      : "Short Answer"}
                             </span>
                             <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-600">
                               {question.difficultyLevel}

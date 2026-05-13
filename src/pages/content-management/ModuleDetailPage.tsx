@@ -404,6 +404,11 @@ export function ModuleDetailPage() {
                       `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}`,
                     )
                   }
+                  onViewPractices={() =>
+                    navigate(
+                      `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/lessons/${lesson.id}/practices?lessonTitle=${encodeURIComponent(lesson.title ?? "")}`,
+                    )
+                  }
                 />
               ))}
             </div>

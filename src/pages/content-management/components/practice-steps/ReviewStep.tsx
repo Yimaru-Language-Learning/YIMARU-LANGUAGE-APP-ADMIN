@@ -1,56 +1,58 @@
-import { Edit2, GripVertical, Trash2, Rocket, Info } from "lucide-react";
+import { Rocket, Info, Loader2 } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { Input } from "../../../../components/ui/input";
+import type { QuestionTypeDefinition } from "../../../../types/questionTypeDefinition.types";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "../../../../components/ui/avatar";
-import { PERSONAS } from "./constants";
-import { VoicePrompt } from "./VoicePrompt";
+  definitionUsesDynamicPayload,
+  legacyQuestionTypeFromDefinition,
+} from "../../../../lib/learnEnglishDefinitionQuestion";
 
 interface ReviewStepProps {
   formData: any;
-  selectedPersona: string | null;
   prevStep: () => void;
-  setIsPublished: (val: boolean) => void;
-  isModuleContext?: boolean;
+  parentSummary: string | null;
+  typeDefinitions: QuestionTypeDefinition[];
+  canPublish: boolean;
+  submitting: boolean;
+  onSaveDraft: () => void;
+  onPublish: () => void;
 }
 
 export function ReviewStep({
   formData,
-  selectedPersona,
   prevStep,
-  setIsPublished,
-  isModuleContext,
+  parentSummary,
+  typeDefinitions,
+  canPublish,
+  submitting,
+  onSaveDraft,
+  onPublish,
 }: ReviewStepProps) {
-  const persona = PERSONAS.find((p) => p.id === selectedPersona);
-
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex items-center justify-between px-2">
         <h2 className="text-2xl font-bold text-grayScale-900 tracking-tight">
-          Review Practice Questions
+          Review
         </h2>
       </div>
 
-      {/* 1. Basic Info Card (Image 1436.1) */}
-      <Card className="overflow-hidden border border-grayScale-200 rounded-2xl bg-white ">
-        <div className="border-b border-grayScale-50 p-4 px-5 flex justify-between items-center bg-white">
-          <h3 className="text-[17px] font-extrabold text-grayScale-900">
-            Basic Information
-          </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-brand-500 font-bold hover:bg-brand-50 gap-2 h-9"
-          >
-            <Edit2 className="h-4 w-4" />
-            Edit
-          </Button>
+      {!canPublish && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">Missing parent for the API</p>
+          <p className="mt-1 text-amber-900/90">
+            Open Add Practice from a course, module, or lesson so parent IDs are
+            in the URL.
+          </p>
         </div>
-        {/* Gradient Divider */}
+      )}
+
+      <Card className="overflow-hidden border border-grayScale-200 rounded-2xl bg-white">
+        <div className="border-b border-grayScale-50 px-5 py-4">
+          <h3 className="text-[17px] font-extrabold text-grayScale-900">
+            Practice
+          </h3>
+        </div>
         <div className="relative">
           <div
             className="absolute inset-0 flex items-center"
@@ -58,186 +60,99 @@ export function ReviewStep({
           >
             <div className="w-full border-t border-grayScale-100" />
           </div>
-          <div className="relative flex justify-center">
-            <div
-              className="h-[0.5px] w-full opacity-20 rounded-full"
-              style={{
-                background: "gray",
-              }}
-            />
-          </div>
         </div>
-        <div className="p-8 px-5 flex items-center justify-between ">
-          <div className="flex items-center gap-6">
-            <div className="h-[70px] w-[85px] rounded-xl bg-grayScale-100 overflow-hidden shadow-inner flex-shrink-0">
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            <div className="h-[70px] w-[85px] shrink-0 overflow-hidden rounded-xl bg-grayScale-100 shadow-inner">
               <img
-                src="https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=200"
-                alt="Banner"
-                className="w-full h-full object-cover opacity-80"
+                src={
+                  formData.storyImageUrl?.trim() ||
+                  "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=200"
+                }
+                alt="Story"
+                className="h-full w-full object-cover opacity-80"
               />
             </div>
-            <div className="space-y-2">
-              <h4 className="text-[22px] font-bold text-grayScale-900 leading-tight">
-                {formData.title || "Business English 101: Communication"}
+            <div className="min-w-0 flex-1 space-y-2">
+              <h4 className="text-xl font-bold leading-tight text-grayScale-900">
+                {formData.title || "Untitled"}
               </h4>
-              <div className="flex items-center gap-6 text-[14px]">
-                <span className="text-grayScale-900 ">
-                  Program:{" "}
-                  <span className="text-brand-500 ">{formData.program}</span>
-                </span>
-                <span className="text-grayScale-900 ">
-                  Course:{" "}
-                  <span className="text-brand-500 ">{formData.course}</span>
-                </span>
-                <span className="text-grayScale-900 font-bold">
-                  Module:{" "}
-                  <span className="text-brand-500 font-extrabold">
-                    Module 101
+              <p className="text-sm text-grayScale-600">
+                {parentSummary ? (
+                  <span>
+                    <span className="font-medium text-grayScale-800">Link:</span>{" "}
+                    {parentSummary}
                   </span>
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <span className="text-[11px] text-left font-medium text-grayScale-900 ">
-              Persona
-            </span>
-            <div className="flex items-center gap-2 bg-[#FAF5FF] py-1 pl-2.5 pr-4 rounded-full border border-brand-100/30">
-              <Avatar className="h-8 w-8 border-2 border-white shadow-sm font-bold">
-                <AvatarImage src={persona?.avatar} />
-                <AvatarFallback>P</AvatarFallback>
-              </Avatar>
-              <span className="text-[14px]  text-brand-500 capitalize">
-                {persona?.name || "Alex Johnson"}
-              </span>
+                ) : (
+                  "—"
+                )}
+              </p>
+              {formData.shuffleQuestions ? (
+                <p className="text-xs text-grayScale-500">Shuffle questions: on</p>
+              ) : null}
             </div>
           </div>
         </div>
       </Card>
 
-      {/* 2. Tips Section (Image 1436.1) */}
       <div className="space-y-4 px-2">
         <div className="flex items-center gap-2">
-          <label className="text-[12px] font-bold text-grayScale-900 uppercase tracking-widest leading-none">
-            TIPS / GUIDANCE
+          <label className="text-[12px] font-bold uppercase tracking-widest text-grayScale-900">
+            Quick tips
           </label>
           <Info className="h-4 w-4 text-brand-500" />
         </div>
-        <div className="px-5 pt-2 pb-8 bg-white border border-[#E2E8F0] shadow-sm rounded-xl">
-          <p className="text-[14px] text-grayScale-500 font-medium leading-relaxed">
-            {formData.tips ||
-              "Focus on using the present perfect continuous tense to describe an action that started in the past and continues now."}
+        <div className="rounded-xl border border-[#E2E8F0] bg-white px-5 py-4 shadow-sm">
+          <p className="text-[14px] font-medium leading-relaxed text-grayScale-600">
+            {formData.tips?.trim() || "—"}
           </p>
         </div>
       </div>
 
-      {isModuleContext ? (
-        /* 3. Split Questions & Answers Layout (Image 1413.1) */
-        <div className="grid grid-cols-1 md:grid-cols-2 bg-white rounded-[12px] border border-grayScale-50 shadow-sm overflow-hidden min-h-[600px]">
-          {/* Left Column: Questions */}
-          <div className="border-r border-grayScale-200 flex flex-col">
-            <div className="p-4  border-b border-grayScale-50 flex items-center gap-3 bg-white">
-              <h3 className="text-[16px] font-extrabold text-[#0F172A]">
-                Questions
-              </h3>
-              <span className="h-6 w-6 rounded-full bg-grayScale-100 flex items-center justify-center text-[12px] font-extrabold text-grayScale-500">
-                {formData.questions.length}
-              </span>
-            </div>
-            <div className="p-4 space-y-14">
-              {formData.questions.map((q: any, i: number) => (
-                <div key={q.id} className="relative pl-12">
-                  <span className="absolute left-0 top-0 text-[18px] font-bold text-grayScale-400 tracking-tighter opacity-70">
-                    {(i + 1).toString().padStart(2, "0")}
-                  </span>
-                  <div className="space-y-8">
-                    <div className="space-y-4">
-                      <span className="text-[11px] font-extrabold text-grayScale-600 uppercase tracking-[0.1em] block">
-                        TEXT PROMPT
-                      </span>
-                      <p className="text-[16px] font-medium text-grayScale-600 leading-relaxed max-w-[90%]">
-                        {q.text}
-                      </p>
-                    </div>
-                    <div className="space-y-4">
-                      <span className="text-[11px] font-extrabold text-grayScale-300 uppercase tracking-[0.1em] block">
-                        VOICE PROMPT
-                      </span>
-                      <VoicePrompt
-                        filename={q.voicePrompt}
-                        className="bg-[#FAF5FF]/60 border-[#F3E8FF] h-[72px]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right Column: Answers */}
-          <div className="flex flex-col">
-            <div className="p-4 border-b border-grayScale-50 flex items-center justify-between bg-white">
-              <div className="flex items-center gap-3">
-                <h3 className="text-[16px] font-extrabold ">Answers</h3>
-                <span className="h-6 w-6 rounded-full bg-grayScale-100  flex items-center justify-center text-[12px] font-extrabold text-grayScale-500">
-                  {formData.questions.length}
-                </span>
-              </div>
-              <button className="flex items-center gap-2 text-brand-500 font-bold text-[15px] hover:opacity-80 transition-opacity">
-                <Edit2 className="h-3 w-3" />
-                Edit
-              </button>
-            </div>
-            <div className="p-4 space-y-14">
-              {formData.questions.map((q: any, i: number) => (
-                <div key={q.id + "_ans"} className="relative pl-12">
-                  <span className="absolute left-0 top-0 text-[18px] font-bold text-grayScale-400 tracking-tighter opacity-70">
-                    {(i + 1).toString().padStart(2, "0")}
-                  </span>
-                  <div className="space-y-4">
-                    <span className="text-[11px] font-extrabold text-grayScale-600 uppercase tracking-[0.1em] block">
-                      VOICE PROMPT
-                    </span>
-                    <VoicePrompt
-                      filename={q.sampleAnswer}
-                      className="bg-[#FAF5FF]/60 border-[#F3E8FF] h-[60px]"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Original Non-Module View */
-        <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="px-2 text-lg font-bold text-grayScale-900">Questions</h3>
+        <div className="space-y-4">
           {formData.questions.map((q: any, i: number) => (
-            <ReviewItem key={q.id} q={q} index={i} />
+            <QuestionReviewBlock
+              key={q.id}
+              q={q}
+              index={i}
+              typeDefinitions={typeDefinitions}
+            />
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Action Footer */}
       <div className="flex items-center justify-between pt-12">
         <Button
           onClick={prevStep}
           variant="outline"
-          className="h-10 px-10 rounded-[6px] border-grayScale-200 font-bold text-grayScale-600 bg-white shadow-sm hover:bg-grayScale-50 transition-all text-sm"
+          className="h-10 rounded-[6px] border-grayScale-200 bg-white px-10 text-sm font-bold text-grayScale-600 shadow-sm transition-all hover:bg-grayScale-50"
         >
           Back
         </Button>
         <div className="flex gap-4">
           <Button
             variant="outline"
-            className="h-10 px-8 rounded-[6px] border-grayScale-100 font-bold text-grayScale-600 bg-white shadow-sm hover:bg-grayScale-50 transition-all text-sm"
+            disabled={submitting || !canPublish}
+            onClick={onSaveDraft}
+            className="h-10 rounded-[6px] border-grayScale-100 bg-white px-8 text-sm font-bold text-grayScale-600 shadow-sm hover:bg-grayScale-50"
           >
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : null}
             Save as Draft
           </Button>
           <Button
-            onClick={() => setIsPublished(true)}
-            className="h-10 px-10 rounded-[6px] bg-brand-500 font-bold hover:bg-brand-600 shadow-xl shadow-brand-500/20 gap-3 active:scale-95 transition-all text-white text-sm"
+            disabled={submitting || !canPublish}
+            onClick={onPublish}
+            className="h-10 gap-3 rounded-[6px] bg-brand-500 px-10 text-sm font-bold text-white shadow-xl shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
           >
-            <Rocket className="h-4 w-4" />
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Rocket className="h-4 w-4" />
+            )}
             Publish Now
           </Button>
         </div>
@@ -246,59 +161,146 @@ export function ReviewStep({
   );
 }
 
-function ReviewItem({ q, index }: { q: any; index: number }) {
+function QuestionReviewBlock({
+  q,
+  index,
+  typeDefinitions,
+}: {
+  q: any;
+  index: number;
+  typeDefinitions: QuestionTypeDefinition[];
+}) {
+  const def = typeDefinitions.find((d) => d.id === q.questionTypeDefinitionId);
+  const badge =
+    def != null
+      ? `${def.display_name}${def.is_system ? "" : ` · ${def.key}`}`
+      : q.questionTypeDefinitionId != null
+        ? `Type #${q.questionTypeDefinitionId}`
+        : "No type selected";
+
+  const isDynamic = def != null && definitionUsesDynamicPayload(def);
+  const legacy = def != null ? legacyQuestionTypeFromDefinition(def) : null;
+
+  const schemaRows: { key: string; label: string; value: string }[] = [];
+  if (isDynamic && def) {
+    const vals = (q.dynamicFieldValues ?? {}) as Record<string, string>;
+    for (const r of def.stimulus_schema) {
+      const k = `stimulus:${r.id}`;
+      schemaRows.push({
+        key: k,
+        label: r.label?.trim() || r.kind,
+        value: vals[k] ?? "",
+      });
+    }
+    for (const r of def.response_schema) {
+      const k = `response:${r.id}`;
+      schemaRows.push({
+        key: k,
+        label: r.label?.trim() || r.kind,
+        value: vals[k] ?? "",
+      });
+    }
+  }
+
   return (
-    <Card className="overflow-hidden border-grayScale-50 shadow-soft rounded-2xl bg-white relative">
-      <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-brand-500" />
-      <div className="px-5 pb-7 pt-2 space-y-6">
-        <div className="flex items-center justify-between border-b border-grayScale-50 pb-4 mb-4">
-          <div className="flex items-center gap-3">
-            <GripVertical className="h-5 w-5 text-brand-500 cursor-grab" />
-            <span className="font-bold text-grayScale-500 text-base">
-              Question {index + 1}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-brand-500 hover:bg-brand-50 rounded-lg"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+    <Card className="relative overflow-hidden rounded-2xl border-grayScale-50 bg-white shadow-soft">
+      <div className="absolute bottom-0 left-0 top-0 w-[5px] bg-brand-500" />
+      <div className="space-y-4 px-5 pb-6 pt-4 pl-7">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-grayScale-50 pb-3">
+          <span className="text-base font-bold text-grayScale-500">
+            Question {index + 1}
+          </span>
+          <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            {badge}
+          </span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          <div className="md:col-span-8 space-y-3">
-            <label className="text-[10px] font-bold text-grayScale-700 uppercase tracking-widest">
-              QUESTION PROMPT
-            </label>
-            <Input
-              value={q.text}
-              readOnly
-              className="h-16 rounded-xl border-grayScale-200 font-medium px-6 text-base placeholder:text-grayScale-400 bg-white text-grayScale-700"
-              placeholder="e.g. How long have you been studying English?"
-            />
-          </div>
-          <div className="md:col-span-4 space-y-3">
-            <label className="text-[10px] font-bold text-grayScale-700 uppercase tracking-widest">
-              VOICE PROMPT
-            </label>
-            <VoicePrompt
-              src={q.voicePrompt}
-              filename={q.voicePrompt}
-              onRemove={() => {}}
-            />
-          </div>
-        </div>
-        <div className="md:w-1/3 space-y-3">
-          <label className="text-[10px] font-bold text-grayScale-700 uppercase tracking-widest">
-            SAMPLE ANSWER PROMPT
-          </label>
-          <VoicePrompt
-            src={q.sampleAnswer}
-            filename={q.sampleAnswer}
-            onRemove={() => {}}
+
+        <div className="space-y-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-grayScale-600">
+            Question text
+          </span>
+          <Input
+            value={q.text}
+            readOnly
+            className="min-h-[52px] rounded-xl border-grayScale-200 bg-white px-4 py-3 text-base font-medium text-grayScale-700"
           />
         </div>
+
+        {isDynamic && schemaRows.length > 0 ? (
+          <div className="space-y-3">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-grayScale-600">
+              Stimulus and response fields
+            </span>
+            <ul className="space-y-2 text-sm">
+              {schemaRows.map((row) => (
+                <li key={row.key} className="rounded-lg border border-grayScale-100 bg-grayScale-50/50 px-3 py-2">
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-grayScale-500">
+                    {row.label}
+                  </span>
+                  <span className="mt-1 block break-all font-mono text-xs text-grayScale-800">
+                    {row.value?.trim() ? row.value : "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {legacy === "MCQ" && (
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-grayScale-600">
+              Choices
+            </span>
+            <ul className="space-y-1.5 text-sm">
+              {(q.mcqOptions ?? []).map(
+                (opt: { text?: string; isCorrect?: boolean }, j: number) =>
+                  opt.text?.trim() ? (
+                    <li
+                      key={j}
+                      className={
+                        opt.isCorrect
+                          ? "font-medium text-green-700"
+                          : "text-grayScale-600"
+                      }
+                    >
+                      {opt.isCorrect ? "✓ " : ""}
+                      {opt.text}
+                    </li>
+                  ) : null,
+              )}
+            </ul>
+          </div>
+        )}
+
+        {legacy === "TRUE_FALSE" && (
+          <p className="text-sm text-grayScale-700">
+            <span className="font-semibold">Correct:</span>{" "}
+            {q.trueFalseCorrect !== false ? "True" : "False"}
+          </p>
+        )}
+
+        {legacy === "SHORT_ANSWER" && (
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-grayScale-600">
+              Acceptable answers
+            </span>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-grayScale-700">
+              {(q.shortAnswers ?? [])
+                .filter((s: string) => s?.trim())
+                .map((s: string, j: number) => (
+                  <li key={j}>{s}</li>
+                ))}
+            </ul>
+          </div>
+        )}
+
+        {def != null && legacy == null && !isDynamic ? (
+          <p className="text-xs text-amber-800">
+            This type has no schema and is not mapped to a classic MCQ / true–false /
+            short-answer form. Publish still sends the best-effort payload from the
+            builder.
+          </p>
+        ) : null}
       </div>
     </Card>
   );

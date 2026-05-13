@@ -8,7 +8,10 @@ import { Input } from "../../components/ui/input"
 import { Textarea } from "../../components/ui/textarea"
 import { Select } from "../../components/ui/select"
 import { createQuestion, getQuestionById, updateQuestion } from "../../api/courses.api"
-import { getQuestionTypeDefinitions } from "../../api/questionTypeDefinitions.api"
+import {
+  getQuestionTypeDefinitions,
+  questionTypeDefinitionListLabel,
+} from "../../api/questionTypeDefinitions.api"
 import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.types"
 
 type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO" | "DYNAMIC"
@@ -343,47 +346,46 @@ export function AddQuestionPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <div className="space-y-4 pb-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate("/content/questions")}
-          className="rounded-lg bg-grayScale-50 hover:bg-brand-500/10 hover:text-brand-500 transition-colors"
+          className="h-9 w-9 shrink-0 rounded-lg bg-grayScale-50 hover:bg-brand-500/10 hover:text-brand-500"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold tracking-tight text-grayScale-800 sm:text-xl">
             {isEditing ? "Edit Question" : "Add New Question"}
           </h1>
-          <p className="mt-1 text-sm text-grayScale-400">
-            {isEditing ? "Update the question details below" : "Fill in the details to create a new question"}
+          <p className="mt-0.5 text-xs text-grayScale-500 sm:text-sm">
+            {isEditing ? "Update fields below" : "Create a bank question"}
           </p>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto">
+      <div className="mx-auto max-w-2xl">
         {loading && (
-          <Card className="mb-4 border border-grayScale-200">
-            <CardContent className="py-4 text-sm text-grayScale-500">Loading question details...</CardContent>
+          <Card className="mb-2 border border-grayScale-200">
+            <CardContent className="py-2.5 text-xs text-grayScale-500">Loading…</CardContent>
           </Card>
         )}
         <form onSubmit={handleSubmit}>
-          <Card className="shadow-sm border border-grayScale-100 rounded-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-semibold text-grayScale-600">Question Details</CardTitle>
+          <Card className="rounded-lg border border-grayScale-100 shadow-sm">
+            <CardHeader className="space-y-0 px-4 py-3 sm:px-5">
+              <CardTitle className="text-base font-semibold text-grayScale-700">Question details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-7">
-              {/* Question Type */}
+            <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                <label className="mb-1 block text-xs font-medium text-grayScale-600">
                   Question Type
                 </label>
                 <Select
                   value={formData.type}
                   onChange={(e) => handleTypeChange(e.target.value as QuestionType)}
+                  className="h-9 text-sm"
                 >
                   <option value="MCQ">Multiple Choice</option>
                   <option value="TRUE_FALSE">True/False</option>
@@ -396,7 +398,7 @@ export function AddQuestionPage() {
               {formData.type === "DYNAMIC" && (
                 <>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                    <label className="mb-1 block text-xs font-medium text-grayScale-600">
                       Question type definition <span className="text-red-500">*</span>
                     </label>
                     <Select
@@ -405,49 +407,44 @@ export function AddQuestionPage() {
                         setFormData((prev) => ({ ...prev, questionTypeDefinitionId: e.target.value }))
                       }
                       required
+                      className="h-9 text-sm"
                     >
                       <option value="">Select definition…</option>
                       {typeDefinitions.map((d) => (
                         <option key={d.id} value={String(d.id)}>
-                          {d.display_name} ({d.key})
+                          {questionTypeDefinitionListLabel(d)}
                         </option>
                       ))}
                     </Select>
-                    <p className="mt-1 text-xs text-grayScale-400">
-                      Loaded from GET /questions/type-definitions?include_system=true&amp;status=ACTIVE
-                    </p>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                    <label className="mb-1 block text-xs font-medium text-grayScale-600">
                       dynamic_payload (JSON) <span className="text-red-500">*</span>
                     </label>
                     <Textarea
                       value={formData.dynamicPayloadJson}
                       onChange={(e) => setFormData((prev) => ({ ...prev, dynamicPayloadJson: e.target.value }))}
-                      rows={12}
-                      className="font-mono text-xs"
+                      rows={7}
+                      className="min-h-0 font-mono text-[11px] leading-snug"
                       spellCheck={false}
                     />
-                    <p className="mt-1 text-xs text-grayScale-400">
-                      Must match the selected definition&apos;s stimulus/response schema (see integration guide).
-                    </p>
                   </div>
                 </>
               )}
 
               <hr className="border-grayScale-100" />
 
-              {/* Question Text */}
               <div>
-                <label htmlFor="question" className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                  {formData.type === "DYNAMIC" ? "Question title / stem" : "Question"}
+                <label htmlFor="question" className="mb-1 block text-xs font-medium text-grayScale-600">
+                  {formData.type === "DYNAMIC" ? "Title / stem" : "Question"}
                 </label>
                 <Textarea
                   id="question"
                   placeholder="Enter your question here..."
                   value={formData.question}
                   onChange={(e) => setFormData((prev) => ({ ...prev, question: e.target.value }))}
-                  rows={3}
+                  rows={2}
+                  className="min-h-[72px] text-sm"
                   required
                 />
               </div>
@@ -455,13 +452,11 @@ export function AddQuestionPage() {
               {/* Options for Multiple Choice */}
               {(formData.type === "MCQ" || formData.type === "TRUE_FALSE") && (
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                    Options
-                  </label>
-                  <div className="space-y-3">
+                  <label className="mb-1 block text-xs font-medium text-grayScale-600">Options</label>
+                  <div className="space-y-1.5">
                     {formData.options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2 group">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-grayScale-50 text-grayScale-400 text-xs font-medium flex items-center justify-center">
+                      <div key={index} className="group flex items-center gap-1.5">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-grayScale-100 text-[10px] font-medium text-grayScale-500">
                           {index + 1}
                         </span>
                         <Input
@@ -469,6 +464,7 @@ export function AddQuestionPage() {
                           onChange={(e) => handleOptionChange(index, e.target.value)}
                           placeholder={`Option ${index + 1}`}
                           disabled={formData.type === "TRUE_FALSE"}
+                          className="h-9 text-sm"
                           required
                         />
                         {formData.type === "MCQ" && formData.options.length > 2 && (
@@ -477,17 +473,22 @@ export function AddQuestionPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => removeOption(index)}
-                            className="opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                            className="h-8 w-8 shrink-0 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
                           </Button>
                         )}
                       </div>
                     ))}
                     {formData.type === "MCQ" && (
-                      <Button type="button" variant="outline" onClick={addOption} className="w-full mt-1 border-dashed border-grayScale-200 text-grayScale-400 hover:text-brand-500 hover:border-brand-500/30">
-                        <Plus className="h-4 w-4" />
-                        Add Option
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addOption}
+                        className="mt-0.5 h-9 w-full border-dashed border-grayScale-200 text-xs text-grayScale-500 hover:border-brand-500/30 hover:text-brand-500"
+                      >
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Add option
                       </Button>
                     )}
                   </div>
@@ -499,8 +500,8 @@ export function AddQuestionPage() {
               {/* Correct Answer */}
               {formData.type !== "DYNAMIC" && (
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                  {formData.type === "AUDIO" ? "Audio Correct Answer Text" : "Correct Answer"}
+                <label className="mb-1 block text-xs font-medium text-grayScale-600">
+                  {formData.type === "AUDIO" ? "Audio correct answer" : "Correct answer"}
                 </label>
                 {formData.type === "MCQ" || formData.type === "TRUE_FALSE" ? (
                   <Select
@@ -508,6 +509,7 @@ export function AddQuestionPage() {
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, correctAnswer: e.target.value }))
                     }
+                    className="h-9 text-sm"
                     required
                   >
                     <option value="">Select correct answer</option>
@@ -519,7 +521,7 @@ export function AddQuestionPage() {
                   </Select>
                 ) : (
                   <Textarea
-                    placeholder={formData.type === "AUDIO" ? "Enter audio correct answer text..." : "Enter the correct answer..."}
+                    placeholder={formData.type === "AUDIO" ? "Expected spoken answer…" : "Correct answer…"}
                     value={formData.type === "AUDIO" ? formData.audioCorrectAnswerText : formData.correctAnswer}
                     onChange={(e) =>
                       setFormData((prev) =>
@@ -529,6 +531,7 @@ export function AddQuestionPage() {
                       )
                     }
                     rows={2}
+                    className="min-h-[60px] text-sm"
                     required
                   />
                 )}
@@ -538,16 +541,16 @@ export function AddQuestionPage() {
               <hr className="border-grayScale-100" />
 
               {/* Points and Difficulty side by side */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Points */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div>
-                  <label htmlFor="points" className="mb-1.5 block text-sm font-medium text-grayScale-500">
+                  <label htmlFor="points" className="mb-1 block text-xs font-medium text-grayScale-600">
                     Points
                   </label>
                   <Input
                     id="points"
                     type="number"
                     min="1"
+                    className="h-9 text-sm"
                     value={formData.points}
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, points: parseInt(e.target.value) || 1 }))
@@ -556,14 +559,12 @@ export function AddQuestionPage() {
                   />
                 </div>
 
-                {/* Difficulty */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                    Difficulty (Optional)
-                  </label>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-600">Difficulty</label>
                   <Select
                     value={formData.difficulty}
                     onChange={(e) => setFormData((prev) => ({ ...prev, difficulty: e.target.value as Difficulty }))}
+                    className="h-9 text-sm"
                   >
                     <option value="EASY">Easy</option>
                     <option value="MEDIUM">Medium</option>
@@ -574,12 +575,11 @@ export function AddQuestionPage() {
 
               {/* Status */}
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                  Status
-                </label>
+                <label className="mb-1 block text-xs font-medium text-grayScale-600">Status</label>
                 <Select
                   value={formData.status}
                   onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value as QuestionStatus }))}
+                  className="h-9 text-sm"
                 >
                   <option value="DRAFT">Draft</option>
                   <option value="PUBLISHED">Published</option>
@@ -588,58 +588,71 @@ export function AddQuestionPage() {
               </div>
 
               {(formData.type === "AUDIO" || formData.type === "SHORT_ANSWER") && (
-                <>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                      Voice Prompt{formData.type === "AUDIO" ? "" : " (Optional)"}
+                    <label className="mb-1 block text-xs font-medium text-grayScale-600">
+                      Voice prompt{formData.type === "AUDIO" ? "" : " (opt.)"}
                     </label>
                     <Textarea
                       value={formData.voicePrompt}
                       onChange={(e) => setFormData((prev) => ({ ...prev, voicePrompt: e.target.value }))}
                       rows={2}
-                      placeholder="Please say your answer..."
+                      placeholder="URL or key…"
+                      className="min-h-[60px] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-grayScale-500">
-                      Sample Answer Voice Prompt{formData.type === "AUDIO" ? "" : " (Optional)"}
+                    <label className="mb-1 block text-xs font-medium text-grayScale-600">
+                      Sample answer (voice){formData.type === "AUDIO" ? "" : " (opt.)"}
                     </label>
                     <Textarea
                       value={formData.sampleAnswerVoicePrompt}
                       onChange={(e) => setFormData((prev) => ({ ...prev, sampleAnswerVoicePrompt: e.target.value }))}
                       rows={2}
-                      placeholder="Sample spoken answer..."
+                      placeholder="URL or key…"
+                      className="min-h-[60px] text-sm"
                     />
                   </div>
-                </>
+                </div>
               )}
 
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">Tips (Optional)</label>
-                <Input
-                  value={formData.tips}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, tips: e.target.value }))}
-                  placeholder="Helpful tip for learners"
-                />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-600">Tips (opt.)</label>
+                  <Input
+                    value={formData.tips}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, tips: e.target.value }))}
+                    placeholder="Short tip"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-grayScale-600">Explanation (opt.)</label>
+                  <Textarea
+                    value={formData.explanation}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, explanation: e.target.value }))}
+                    rows={2}
+                    placeholder="Why this answer"
+                    className="min-h-[60px] text-sm"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-grayScale-500">Explanation (Optional)</label>
-                <Textarea
-                  value={formData.explanation}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, explanation: e.target.value }))}
-                  rows={2}
-                  placeholder="Explain why the answer is correct"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-grayScale-100">
-                <Button type="button" variant="outline" onClick={() => navigate("/content/questions")} className="w-full sm:w-auto hover:bg-grayScale-50">
+              <div className="flex flex-col-reverse gap-2 border-t border-grayScale-100 pt-3 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/content/questions")}
+                  className="h-9 w-full text-sm sm:w-auto"
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submitting || loading} className="bg-brand-500 hover:bg-brand-600 text-white w-full sm:w-auto shadow-sm hover:shadow-md transition-all">
-                  {isEditing ? "Update Question" : "Create Question"}
+                <Button
+                  type="submit"
+                  disabled={submitting || loading}
+                  className="h-9 w-full bg-brand-500 text-sm text-white hover:bg-brand-600 sm:w-auto"
+                >
+                  {isEditing ? "Update" : "Create"}
                 </Button>
               </div>
             </CardContent>

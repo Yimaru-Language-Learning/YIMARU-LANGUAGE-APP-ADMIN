@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { MoreVertical, Edit2, Play, Pencil, Trash2, Calendar } from "lucide-react";
+import {
+  BookOpen,
+  Calendar,
+  Edit2,
+  MoreVertical,
+  Pencil,
+  Play,
+  Trash2,
+} from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -32,14 +40,16 @@ interface VideoCardProps {
    */
   videoUrl?: string;
   /**
-   * When true, shows edit/delete in the top-right of the thumbnail (same
-   * hover pattern as module cards) and removes the footer + overflow menu.
+   * When true, shows edit/delete (and optional view practices) in the top-right
+   * of the thumbnail on hover, and removes the footer + overflow menu.
    */
   hoverModuleActions?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
   /** When set (e.g. on module lesson cards), shows an "Add practice" control scoped to this lesson. */
   onAddPractice?: () => void;
+  /** When set with hoverModuleActions, shows a book icon next to edit/delete on thumbnail hover. */
+  onViewPractices?: () => void;
   onPublish?: () => void;
   /** Shown under title on module lesson cards; reserved height keeps grid rows even. */
   description?: string | null;
@@ -56,6 +66,7 @@ export function VideoCard({
   onDelete,
   onPublish,
   onAddPractice,
+  onViewPractices,
   hoverModuleActions = false,
   description,
 }: VideoCardProps) {
@@ -128,10 +139,25 @@ export function VideoCard({
           !useGradient && "bg-grayScale-100",
         )}
       >
-        {hoverModuleActions && (onEdit || onDelete) ? (
+        {hoverModuleActions && (onEdit || onDelete || onViewPractices) ? (
           <div
             className="absolute right-2 top-2 z-20 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto"
           >
+            {onViewPractices ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 rounded-md bg-white/95 text-brand-600 shadow-sm transition-colors hover:bg-brand-50"
+                aria-label={`View practices for ${title}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewPractices();
+                }}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
             {onEdit ? (
               <Button
                 type="button"

@@ -18,6 +18,7 @@ import { NewContentPage } from "../pages/content-management/NewContentPage";
 import { LearnEnglishPage } from "../pages/content-management/LearnEnglishPage";
 import { ProgramCoursesPage } from "../pages/content-management/ProgramCoursesPage";
 import { CourseDetailPage } from "../pages/content-management/CourseDetailPage";
+import { LessonPracticesPage } from "../pages/content-management/LessonPracticesPage";
 import { ModuleDetailPage } from "../pages/content-management/ModuleDetailPage";
 import { AddVideoFlow } from "../pages/content-management/AddVideoFlow";
 import { AddPracticeFlow } from "../pages/content-management/AddPracticeFlow";
@@ -221,6 +222,10 @@ export function AppRoutes() {
         <Route
           path="/new-content/learn-english/:level/courses/:courseId/modules/:moduleId/add-video"
           element={<AddVideoFlow />}
+        />
+        <Route
+          path="/new-content/learn-english/:level/courses/:courseId/modules/:moduleId/lessons/:lessonId/practices"
+          element={<LessonPracticesPage />}
         />
         <Route
           path="/new-content/learn-english/:level/courses/add-practice"

@@ -12,6 +12,7 @@ import { uploadAudioFile, uploadImageFile } from "../../api/files.api"
 import {
   getQuestionTypeDefinitionById,
   getQuestionTypeDefinitions,
+  questionTypeDefinitionListLabel,
 } from "../../api/questionTypeDefinitions.api"
 import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.types"
 import { Input } from "../ui/input"
@@ -22,6 +23,7 @@ import { SpinnerIcon } from "../ui/spinner-icon"
 import { cn } from "../../lib/utils"
 import { ResolvedAudio } from "../media/ResolvedAudio"
 import { ResolvedImage } from "../media/ResolvedImage"
+import { DynamicSchemaSlotField } from "./DynamicSchemaSlotField"
 
 export type PracticeQuestionEditorType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO" | "DYNAMIC"
 export type PracticeQuestionEditorDifficulty = "EASY" | "MEDIUM" | "HARD"
@@ -712,9 +714,9 @@ export function PracticeQuestionEditorFields({
 
   return (
     <>
-      <div className="mt-5 space-y-5">
-        <div className="space-y-2">
-          <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Question Text</label>
+      <div className="mt-3 space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium uppercase tracking-wide text-grayScale-500">Question Text</label>
           <textarea
             value={value.questionText}
             onChange={(e) => patch({ questionText: e.target.value })}
@@ -731,10 +733,10 @@ export function PracticeQuestionEditorFields({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-          <div className="space-y-2">
-            <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Type</label>
-            <Select value={value.questionType} onChange={(e) => setType(e.target.value as PracticeQuestionEditorType)}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-medium uppercase tracking-wide text-grayScale-500">Type</label>
+            <Select value={value.questionType} onChange={(e) => setType(e.target.value as PracticeQuestionEditorType)} className="h-9 text-sm">
               <option value="MCQ">Multiple Choice</option>
               <option value="TRUE_FALSE">True/False</option>
               <option value="SHORT">Short Answer</option>
@@ -742,25 +744,29 @@ export function PracticeQuestionEditorFields({
               <option value="DYNAMIC">Dynamic (schema-driven)</option>
             </Select>
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Difficulty</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-medium uppercase tracking-wide text-grayScale-500">Difficulty</label>
             <Select
               value={value.difficultyLevel}
               onChange={(e) => patch({ difficultyLevel: e.target.value as PracticeQuestionEditorDifficulty })}
+              className="h-9 text-sm"
             >
               <option value="EASY">Easy</option>
               <option value="MEDIUM">Medium</option>
               <option value="HARD">Hard</option>
             </Select>
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Points</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-medium uppercase tracking-wide text-grayScale-500">Points</label>
             <Input
               type="number"
               value={value.points}
               onChange={(e) => patch({ points: Number(e.target.value) || 1 })}
               min={1}
-              className={cn(showFieldErrors && fieldErrors.points ? "border-red-300 ring-1 ring-red-200" : undefined)}
+              className={cn(
+                "h-9 text-sm",
+                showFieldErrors && fieldErrors.points ? "border-red-300 ring-1 ring-red-200" : undefined,
+              )}
               aria-invalid={Boolean(showFieldErrors && fieldErrors.points)}
             />
             {showFieldErrors && fieldErrors.points ? (
@@ -770,12 +776,11 @@ export function PracticeQuestionEditorFields({
         </div>
 
         {value.questionType === "DYNAMIC" && (
-          <div className="space-y-5 rounded-xl border border-violet-200 bg-violet-50/50 p-4 sm:p-5">
-            <p className="text-sm leading-relaxed text-grayScale-600">
-              Pick a question type definition, then fill each stimulus/response slot. Element{" "}
-              <code className="rounded bg-white px-1 text-xs">id</code> and{" "}
-              <code className="rounded bg-white px-1 text-xs">kind</code> must match the definition schema. Use JSON
-              for object values (e.g. <code className="text-xs">{"{\"placeholder\":\"Type here\"}"}</code>).
+          <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/50 p-2.5 sm:p-3">
+            <p className="text-xs leading-snug text-grayScale-600 sm:text-sm">
+              <span className="font-medium text-grayScale-800">Image / Audio</span> slots: drop file or paste URL
+              (imports via <code className="rounded bg-white px-0.5 text-[11px]">POST /files/upload</code>). Other
+              slots: text or JSON.
             </p>
             <div className="space-y-2">
               <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">
@@ -785,11 +790,12 @@ export function PracticeQuestionEditorFields({
                 value={value.questionTypeDefinitionId != null ? String(value.questionTypeDefinitionId) : ""}
                 onChange={(e) => void handleDynamicDefinitionChange(e.target.value)}
                 disabled={definitionsLoading || definitionDetailLoading}
+                className="h-9 text-sm"
               >
                 <option value="">{definitionsLoading ? "Loading definitions…" : "Select definition…"}</option>
                 {typeDefinitions.map((d) => (
                   <option key={d.id} value={String(d.id)}>
-                    #{d.id} — {d.display_name} ({d.key})
+                    {questionTypeDefinitionListLabel(d)}
                   </option>
                 ))}
               </Select>
@@ -798,52 +804,36 @@ export function PracticeQuestionEditorFields({
               <p className="text-sm font-medium text-grayScale-500">Loading schema…</p>
             ) : null}
             {value.dynamicStimulusRows.length > 0 ? (
-              <div className="space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-800">Stimulus</p>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">Stimulus</p>
                 {value.dynamicStimulusRows.map((row) => (
                   <div
                     key={`stimulus-${row.id}`}
-                    className="space-y-2 rounded-lg border border-grayScale-200 bg-white p-3 shadow-sm"
+                    className="rounded-lg border border-grayScale-200 bg-white p-2.5 shadow-sm sm:p-3"
                   >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="text-sm font-semibold text-grayScale-900">{row.label || row.id}</span>
-                      <span className="text-[11px] font-mono text-grayScale-500">
-                        {row.id} · {row.kind}
-                        {row.required ? <span className="text-red-500"> *</span> : null}
-                      </span>
-                    </div>
-                    <Textarea
-                      rows={3}
+                    <DynamicSchemaSlotField
+                      row={row}
                       value={value.dynamicFieldValues[`stimulus:${row.id}`] ?? ""}
-                      onChange={(e) => setDynamicField(`stimulus:${row.id}`, e.target.value)}
-                      placeholder="URL, plain text, or JSON object"
-                      className="min-h-[72px] resize-y font-mono text-[13px]"
+                      onChange={(next) => setDynamicField(`stimulus:${row.id}`, next)}
+                      disabled={controlsDisabled}
                     />
                   </div>
                 ))}
               </div>
             ) : null}
             {value.dynamicResponseRows.length > 0 ? (
-              <div className="space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-800">Response</p>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">Response</p>
                 {value.dynamicResponseRows.map((row) => (
                   <div
                     key={`response-${row.id}`}
-                    className="space-y-2 rounded-lg border border-grayScale-200 bg-white p-3 shadow-sm"
+                    className="rounded-lg border border-grayScale-200 bg-white p-2.5 shadow-sm sm:p-3"
                   >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="text-sm font-semibold text-grayScale-900">{row.label || row.id}</span>
-                      <span className="text-[11px] font-mono text-grayScale-500">
-                        {row.id} · {row.kind}
-                        {row.required ? <span className="text-red-500"> *</span> : null}
-                      </span>
-                    </div>
-                    <Textarea
-                      rows={3}
+                    <DynamicSchemaSlotField
+                      row={row}
                       value={value.dynamicFieldValues[`response:${row.id}`] ?? ""}
-                      onChange={(e) => setDynamicField(`response:${row.id}`, e.target.value)}
-                      placeholder="URL, plain text, or JSON object"
-                      className="min-h-[72px] resize-y font-mono text-[13px]"
+                      onChange={(next) => setDynamicField(`response:${row.id}`, next)}
+                      disabled={controlsDisabled}
                     />
                   </div>
                 ))}
@@ -853,7 +843,7 @@ export function PracticeQuestionEditorFields({
         )}
 
         {value.questionType === "MCQ" && (
-          <div className="space-y-3 rounded-lg bg-grayScale-50/50 p-4">
+          <div className="space-y-2 rounded-lg bg-grayScale-50/50 p-3">
             <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Options</label>
             <div className="space-y-2.5">
               {value.options.map((option, optIdx) => (
@@ -966,7 +956,7 @@ export function PracticeQuestionEditorFields({
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-4">
           <div className="space-y-2">
             <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">Tips (Optional)</label>
             <Input

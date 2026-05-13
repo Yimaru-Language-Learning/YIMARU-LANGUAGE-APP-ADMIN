@@ -1,69 +1,121 @@
-import { Upload, ArrowRight } from "lucide-react";
+import { useRef, useState, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
+import { Upload, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { Input } from "../../../../components/ui/input";
 import { Textarea } from "../../../../components/ui/textarea";
+import { toast } from "sonner";
+import { uploadImageFile } from "../../../../api/files.api";
 
 interface ScenarioStepProps {
   formData: any;
   setFormData: (data: any) => void;
   nextStep: () => void;
-  prevStep: () => void;
+  cancelHref: string;
 }
 
 export function ScenarioStep({
   formData,
   setFormData,
   nextStep,
-  prevStep,
+  cancelHref,
 }: ScenarioStepProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  const onBannerFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploadingBanner(true);
+    try {
+      const res = await uploadImageFile(file);
+      const url = res.data?.data?.url?.trim();
+      if (!url) throw new Error("Missing URL");
+      setFormData({ ...formData, storyImageUrl: url });
+      toast.success("Story image uploaded");
+    } catch {
+      toast.error("Could not upload image");
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  const canContinue =
+    Boolean(formData.title?.trim()) && Boolean(formData.description?.trim());
+
   return (
     <div className="space-y-6">
       <div className="space-y-1 px-2">
         <h2 className="text-2xl font-extrabold text-grayScale-700">
-          Define Scenario Details
+          Practice details
         </h2>
         <p className="text-grayScale-400 text-lg">
-          Set the scene and context for this English practice session.
+          Story fields and question set options used when saving the practice.
         </p>
       </div>
-      <Card className="p-8 space-y-6 border-grayScale-200 rounded-2xl bg-white">
-        <div className="space-y-1">
-          <label className="text-sm text-grayScale-700">
-            Practice Banner Image
-          </label>
-          <p className="text-xs pb-2 text-grayScale-400">
-            This image will appear as the background for the scenario.
-          </p>
-          <div className="mt-4 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-grayScale-200 bg-[#F8F9FA] p-12 hover:bg-grayScale-50 transition-all">
-            <div className="mb-4 rounded-xl border border-grayScale-100 bg-white p-3 text-brand-500 shadow-sm">
-              <Upload className="h-6 w-6" />
-            </div>
-            <p className="text-sm">
-              <span className="text-grayScale-700">
-                Click to upload or drag and drop
-              </span>
-            </p>
-            <p className="mt-1 text-xs text-grayScale-400 uppercase tracking-wide ">
-              SVG, PNG, JPG (MAX 5MB)
-            </p>
-            <Button
-              variant="outline"
-              className="mt-6 h-10 rounded-[6px] border-grayScale-200 bg-white px-8 font-bold text-brand-500 shadow-sm hover:bg-grayScale-50"
-            >
-              Browse Files
-            </Button>
-          </div>
-        </div>
-      </Card>
+
       <Card className="p-8 space-y-6 border-grayScale-200 rounded-2xl bg-white">
         <div className="space-y-2">
           <label className="text-sm font-medium text-grayScale-700">
-            Practice Title <span className="text-red-500">*</span>
+            Story image <span className="text-grayScale-400">(optional)</span>
           </label>
           <Input
-            placeholder="e.g., Ordering Coffee at a Cafe"
-            className="h-12 rounded-xl border-grayScale-200 focus:border-brand-500  placeholder:text-grayScale-500 bg-white"
+            value={formData.storyImageUrl ?? ""}
+            onChange={(e) =>
+              setFormData({ ...formData, storyImageUrl: e.target.value })
+            }
+            placeholder="Image URL"
+            className="h-10 rounded-lg border-grayScale-200 font-mono text-xs"
+          />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onBannerFile}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={uploadingBanner}
+            onClick={() => fileRef.current?.click()}
+            className="gap-2"
+          >
+            {uploadingBanner ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            Upload image
+          </Button>
+        </div>
+
+        <label className="flex cursor-pointer items-center gap-3 text-sm text-grayScale-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-grayScale-300 text-brand-600 focus:ring-brand-500"
+            checked={Boolean(formData.shuffleQuestions)}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                shuffleQuestions: e.target.checked,
+              })
+            }
+          />
+          <span>Shuffle questions in the set</span>
+        </label>
+      </Card>
+
+      <Card className="p-8 space-y-6 border-grayScale-200 rounded-2xl bg-white">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-grayScale-700">
+            Practice title <span className="text-red-500">*</span>
+          </label>
+          <Input
+            placeholder="e.g. Ordering coffee at a cafe"
+            className="h-12 rounded-xl border-grayScale-200 focus:border-brand-500 placeholder:text-grayScale-500 bg-white"
             value={formData.title}
             onChange={(e) =>
               setFormData({ ...formData, title: e.target.value })
@@ -72,11 +124,11 @@ export function ScenarioStep({
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-grayScale-700">
-            Scenario Description <span className="text-red-500">*</span>
+            Story description <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <Textarea
-              placeholder="Describe the setting..."
+              placeholder="Describe the scenario…"
               className="min-h-[160px] rounded-xl resize-none p-4 border-grayScale-200 focus:border-brand-500 leading-relaxed placeholder:text-grayScale-500 bg-white"
               maxLength={1000}
               value={formData.description}
@@ -91,26 +143,34 @@ export function ScenarioStep({
               {formData.description.length} / 1000
             </div>
           </div>
-          <span className="text-xs  text-grayScale-500">
-            Provide context for the AI and the student. Be specific about the
-            location and the goal.
-          </span>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-grayScale-700">
+            Quick tips <span className="text-grayScale-400">(optional)</span>
+          </label>
+          <Textarea
+            value={formData.tips ?? ""}
+            onChange={(e) =>
+              setFormData({ ...formData, tips: e.target.value })
+            }
+            placeholder="Learner-facing tips (quick_tips)"
+            className="min-h-[80px] rounded-xl border-grayScale-200"
+            maxLength={1000}
+          />
         </div>
       </Card>
+
       <div className="flex items-center justify-between pt-4">
-        <Button
-          onClick={prevStep}
-          variant="outline"
-          className="h-10 w-20 rounded-[6px] border-grayScale-200 text-grayScale-600 shadow-sm"
-        >
-          Back
+        <Button variant="outline" className="h-10 px-6" asChild>
+          <Link to={cancelHref}>Cancel</Link>
         </Button>
         <Button
+          type="button"
           onClick={nextStep}
-          disabled={!formData.title || !formData.description}
-          className="h-10 rounded-[6px] bg-brand-500 px-8 "
+          disabled={!canContinue}
+          className="h-10 rounded-[6px] bg-brand-500 px-8 disabled:opacity-50"
         >
-          Next: Persona <ArrowRight className="ml-2 h-4 w-4" />
+          Next: Questions <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>

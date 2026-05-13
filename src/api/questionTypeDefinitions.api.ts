@@ -217,7 +217,9 @@ export function normalizeTypeDefinitionFromApi(raw: unknown): QuestionTypeDefini
   return {
     id,
     key: asStr(o.Key ?? o.key),
-    display_name: asStr(o.DisplayName ?? o.display_name),
+    display_name: asStr(
+      o.DisplayName ?? o.display_name ?? o.displayName ?? o.Display_Name,
+    ),
     description: (() => {
       const d = o.Description ?? o.description
       if (d == null) return null
@@ -233,6 +235,15 @@ export function normalizeTypeDefinitionFromApi(raw: unknown): QuestionTypeDefini
     created_at: o.CreatedAt != null ? asStr(o.CreatedAt) : o.created_at != null ? asStr(o.created_at) : undefined,
     updated_at: o.UpdatedAt != null ? asStr(o.UpdatedAt) : o.updated_at != null ? asStr(o.updated_at) : undefined,
   }
+}
+
+/** Label for selects: API `DisplayName` (stored as `display_name`), then key, then id. */
+export function questionTypeDefinitionListLabel(def: QuestionTypeDefinition): string {
+  const name = def.display_name?.trim()
+  if (name) return name
+  const k = def.key?.trim()
+  if (k) return k
+  return `Type #${def.id}`
 }
 
 /**

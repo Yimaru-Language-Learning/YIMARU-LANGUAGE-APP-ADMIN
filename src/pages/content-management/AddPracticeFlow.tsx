@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -6,15 +6,26 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Stepper } from "../../components/ui/stepper";
 import successIcon from "../../assets/success.svg";
+import type { PracticeParentKind } from "../../types/course.types";
+import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.types";
+import { getQuestionTypeDefinitions } from "../../api/questionTypeDefinitions.api";
+import { emptyDynamicFieldValuesForDefinition } from "../../lib/learnEnglishDefinitionQuestion";
+import {
+  executeLearnEnglishPracticeCreation,
+  learnEnglishPracticeApiErrorMessage,
+  validateLearnEnglishQuestionsWithDefinitions,
+} from "../../lib/learnEnglishPracticePublish";
 
 import { ContextStep } from "./components/practice-steps/ContextStep";
 import { ScenarioStep } from "./components/practice-steps/ScenarioStep";
-import { PersonaStep } from "./components/practice-steps/PersonaStep";
 import { QuestionsStep } from "./components/practice-steps/QuestionsStep";
 import { ReviewStep } from "./components/practice-steps/ReviewStep";
+
+const STEP_LABELS = ["Practice", "Questions", "Review"] as const;
 
 export function AddPracticeFlow() {
   const navigate = useNavigate();
@@ -38,6 +49,36 @@ export function AddPracticeFlow() {
   const isModuleContext = backTo === "module";
   const isCourseContext = backTo === "modules";
 
+  const parentContext = useMemo((): {
+    kind: PracticeParentKind;
+    id: number;
+  } | null => {
+    const lid = lessonId ? Number(lessonId) : NaN;
+    if (Number.isFinite(lid) && lid > 0) return { kind: "LESSON", id: lid };
+    const mid = moduleId ? Number(moduleId) : NaN;
+    if (isModuleContext && Number.isFinite(mid) && mid > 0)
+      return { kind: "MODULE", id: mid };
+    const cid = courseId ? Number(courseId) : NaN;
+    if (isCourseContext && Number.isFinite(cid) && cid > 0)
+      return { kind: "COURSE", id: cid };
+    return null;
+  }, [lessonId, moduleId, courseId, isModuleContext, isCourseContext]);
+
+  const parentSummary = useMemo(() => {
+    if (lessonId)
+      return `Lesson #${lessonId}${lessonTitleDisplay ? ` — ${lessonTitleDisplay}` : ""}`;
+    if (isModuleContext && moduleId) return `Module #${moduleId}`;
+    if (isCourseContext && courseId) return `Course #${courseId}`;
+    return null;
+  }, [
+    lessonId,
+    lessonTitleDisplay,
+    isModuleContext,
+    isCourseContext,
+    moduleId,
+    courseId,
+  ]);
+
   const backLabel =
     backTo === "module"
       ? "Back to Module"
@@ -51,36 +92,155 @@ export function AddPracticeFlow() {
         ? `/new-content/learn-english/${level}/courses/${courseId}`
         : `/new-content/learn-english/${level}/courses`;
 
-  const flowSteps = isModuleContext
-    ? ["Context", "Persona", "Questions", "Review"]
-    : ["Context", "Scenario", "Persona", "Questions", "Review"];
-
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedPersona, setSelectedPersona] = useState<string | null>(
-    "dawit",
-  );
   const [isPublished, setIsPublished] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    program: "Intermediate",
-    course: "A2",
     title: "",
     description: "",
-    selectedVideo: "",
-    tips: "Focus on using the present perfect continuous tense to describe an action that started in the past and continues now.",
+    storyImageUrl: "",
+    shuffleQuestions: false,
+    tips: "",
     questions: [
       {
         id: "q1",
-        text: "How long have you been studying English?",
-        type: "Speaking",
-        voicePrompt: "prompt_q1_en.mp3",
-        sampleAnswer: "prompt_q1_en.mp3",
+        questionTypeDefinitionId: null as number | null,
+        text: "",
+        dynamicFieldValues: {} as Record<string, string>,
+        mcqOptions: [
+          { text: "", isCorrect: true },
+          { text: "", isCorrect: false },
+          { text: "", isCorrect: false },
+          { text: "", isCorrect: false },
+        ],
+        trueFalseCorrect: true,
+        shortAnswers: [""],
       },
     ],
   });
 
+  const [typeDefinitions, setTypeDefinitions] = useState<QuestionTypeDefinition[]>(
+    [],
+  );
+  const [definitionsLoading, setDefinitionsLoading] = useState(true);
+  const [definitionsError, setDefinitionsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setDefinitionsLoading(true);
+      setDefinitionsError(null);
+      try {
+        const list = await getQuestionTypeDefinitions({
+          include_system: true,
+          status: "ACTIVE",
+        });
+        if (!cancelled) setTypeDefinitions(list);
+      } catch (e) {
+        if (!cancelled) {
+          setDefinitionsError(learnEnglishPracticeApiErrorMessage(e));
+          setTypeDefinitions([]);
+        }
+      } finally {
+        if (!cancelled) setDefinitionsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeDefinitions.length === 0) return;
+    setFormData((fd) => ({
+      ...fd,
+      questions: fd.questions.map((q) => {
+        if (q.questionTypeDefinitionId != null) return q;
+        const def = typeDefinitions[0];
+        return {
+          ...q,
+          questionTypeDefinitionId: def.id,
+          dynamicFieldValues: emptyDynamicFieldValuesForDefinition(def),
+        };
+      }),
+    }));
+  }, [typeDefinitions]);
+
+  const submitPractice = async (status: "DRAFT" | "PUBLISHED") => {
+    if (!parentContext) {
+      toast.error("Missing practice parent", {
+        description:
+          "Open this screen from a course, module, or lesson so the API receives parent_kind and parent_id.",
+      });
+      return;
+    }
+    if (!formData.title.trim() || !formData.description.trim()) {
+      toast.error("Title and story description are required", {
+        description: "Complete the first step before publishing.",
+      });
+      return;
+    }
+    const mappedQuestions = formData.questions
+      .filter((q) => String(q.text ?? "").trim())
+      .map((q) => ({
+        questionText: String(q.text ?? "").trim(),
+        questionTypeDefinitionId: Number(q.questionTypeDefinitionId),
+        dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
+        mcqOptions: (q.mcqOptions ?? []).map(
+          (o: { text?: string; isCorrect?: boolean }) => ({
+            option_text: String(o.text ?? "").trim(),
+            is_correct: Boolean(o.isCorrect),
+          }),
+        ),
+        trueFalseAnswerIsTrue: q.trueFalseCorrect !== false,
+        shortAnswers: (q.shortAnswers ?? []).map((s: string) => String(s)),
+      }));
+
+    const validationMsg = validateLearnEnglishQuestionsWithDefinitions(
+      mappedQuestions,
+      typeDefinitions,
+    );
+    if (validationMsg) {
+      toast.error("Check your questions", { description: validationMsg });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await executeLearnEnglishPracticeCreation({
+        parentKind: parentContext.kind,
+        parentId: parentContext.id,
+        status,
+        questionSetTitle: formData.title.trim() || "Practice set",
+        questionSetDescription: formData.description.trim() || null,
+        shuffleQuestions: formData.shuffleQuestions,
+        practiceTitle: formData.title.trim() || "Untitled practice",
+        storyDescription: formData.description.trim(),
+        storyImage: formData.storyImageUrl.trim(),
+        quickTips: formData.tips.trim(),
+        questions: mappedQuestions,
+        definitions: typeDefinitions,
+      });
+      toast.success(
+        status === "PUBLISHED" ? "Practice published" : "Draft saved",
+        {
+          description:
+            "Question set, questions, and parent-linked practice were created.",
+        },
+      );
+      setIsPublished(true);
+    } catch (e) {
+      toast.error("Could not save practice", {
+        description: learnEnglishPracticeApiErrorMessage(e),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const nextStep = () =>
-    setCurrentStep((prev) => Math.min(prev + 1, flowSteps.length));
+    setCurrentStep((prev) => Math.min(prev + 1, STEP_LABELS.length));
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
   if (isPublished) {
@@ -98,23 +258,46 @@ export function AddPracticeFlow() {
           Practice Published Successfully!
         </h1>
         <p className="text-grayScale-600 text-md mb-14 max-w-lg font-medium leading-relaxed">
-          Your speaking practice is now active and available inside the module.
+          {lessonId
+            ? "Your speaking practice is saved and linked to this lesson’s question set."
+            : "Your speaking practice is saved for the linked course or module."}
         </p>
         <div className="flex flex-col gap-4 w-full max-w-[400px]">
           <Button
             onClick={() => navigate(backPath)}
             className="h-14 rounded-[6px] bg-[#9E2891] font-bold shadow-xl shadow-brand-500/20 text-[16px] text-white "
           >
-            Go back to Module
+            {backLabel}
           </Button>
           <Button
             onClick={() => {
               setIsPublished(false);
               setCurrentStep(1);
               setFormData({
-                ...formData,
                 title: "",
                 description: "",
+                storyImageUrl: "",
+                shuffleQuestions: false,
+                tips: "",
+                questions: [
+                  {
+                    id: "q1",
+                    questionTypeDefinitionId:
+                      typeDefinitions[0]?.id ?? (null as number | null),
+                    text: "",
+                    dynamicFieldValues: typeDefinitions[0]
+                      ? emptyDynamicFieldValuesForDefinition(typeDefinitions[0])
+                      : {},
+                    mcqOptions: [
+                      { text: "", isCorrect: true },
+                      { text: "", isCorrect: false },
+                      { text: "", isCorrect: false },
+                      { text: "", isCorrect: false },
+                    ],
+                    trueFalseCorrect: true,
+                    shortAnswers: [""],
+                  },
+                ],
               });
             }}
             variant="outline"
@@ -127,9 +310,8 @@ export function AddPracticeFlow() {
     );
   }
 
-  // Helper to map currentStep to the actual component for the module flow
   const renderStep = () => {
-    if (!isModuleContext) {
+    if (isModuleContext) {
       switch (currentStep) {
         case 1:
           return (
@@ -139,102 +321,80 @@ export function AddPracticeFlow() {
               nextStep={nextStep}
               navigate={navigate}
               level={level!}
-              isModuleContext={isModuleContext}
-              isCourseContext={isCourseContext}
             />
           );
         case 2:
-          return (
-            <ScenarioStep
-              formData={formData}
-              setFormData={setFormData}
-              nextStep={nextStep}
-              prevStep={prevStep}
-            />
-          );
-        case 3:
-          return (
-            <PersonaStep
-              selectedPersona={selectedPersona}
-              setSelectedPersona={setSelectedPersona}
-              nextStep={nextStep}
-              prevStep={prevStep}
-            />
-          );
-        case 4:
           return (
             <QuestionsStep
               formData={formData}
               setFormData={setFormData}
               nextStep={nextStep}
               prevStep={prevStep}
-            />
-          );
-        case 5:
-          return (
-            <ReviewStep
-              formData={formData}
-              selectedPersona={selectedPersona}
-              prevStep={prevStep}
-              setIsPublished={setIsPublished}
-              isModuleContext={isModuleContext}
-            />
-          );
-        default:
-          return null;
-      }
-    } else {
-      // Module Context Flow (Skips Scenario)
-      switch (currentStep) {
-        case 1:
-          return (
-            <ContextStep
-              formData={formData}
-              setFormData={setFormData}
-              nextStep={nextStep}
-              navigate={navigate}
-              level={level!}
-              isModuleContext={isModuleContext}
-              isCourseContext={isCourseContext}
-            />
-          );
-        case 2:
-          return (
-            <PersonaStep
-              selectedPersona={selectedPersona}
-              setSelectedPersona={setSelectedPersona}
-              nextStep={nextStep}
-              prevStep={prevStep}
+              typeDefinitions={typeDefinitions}
+              definitionsLoading={definitionsLoading}
+              definitionsError={definitionsError}
             />
           );
         case 3:
           return (
-            <QuestionsStep
-              formData={formData}
-              setFormData={setFormData}
-              nextStep={nextStep}
-              prevStep={prevStep}
-            />
-          );
-        case 4:
-          return (
             <ReviewStep
               formData={formData}
-              selectedPersona={selectedPersona}
               prevStep={prevStep}
-              setIsPublished={setIsPublished}
-              isModuleContext={isModuleContext}
+              parentSummary={parentSummary}
+              typeDefinitions={typeDefinitions}
+              canPublish={parentContext !== null}
+              submitting={submitting}
+              onSaveDraft={() => void submitPractice("DRAFT")}
+              onPublish={() => void submitPractice("PUBLISHED")}
             />
           );
         default:
           return null;
       }
     }
+
+    switch (currentStep) {
+      case 1:
+        return (
+          <ScenarioStep
+            formData={formData}
+            setFormData={setFormData}
+            nextStep={nextStep}
+            cancelHref={backPath}
+          />
+        );
+      case 2:
+        return (
+          <QuestionsStep
+            formData={formData}
+            setFormData={setFormData}
+            nextStep={nextStep}
+            prevStep={prevStep}
+            typeDefinitions={typeDefinitions}
+            definitionsLoading={definitionsLoading}
+            definitionsError={definitionsError}
+          />
+        );
+      case 3:
+        return (
+          <ReviewStep
+            formData={formData}
+            prevStep={prevStep}
+            parentSummary={parentSummary}
+            typeDefinitions={typeDefinitions}
+            canPublish={parentContext !== null}
+            submitting={submitting}
+            onSaveDraft={() => void submitPractice("DRAFT")}
+            onPublish={() => void submitPractice("PUBLISHED")}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
     <div className="space-y-8 pb-32 px-6 pt-6 min-h-screen ">
-      {/* Header */}
       <div className="mx-auto max-w-7xl w-full">
         <div className="flex items-center justify-between mb-8">
           <Link
@@ -260,33 +420,36 @@ export function AddPracticeFlow() {
             </Button>
           </div>
           <p className="text-grayScale-400 text-base">
-            Create a new immersive practice session for students.
+            Create a practice: question types from{" "}
+            <code className="text-xs">GET /questions/type-definitions</code>, then
+            question set and POST /practices.
           </p>
           {lessonId ? (
             <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950">
-              <p className="font-semibold text-violet-900">Practice for this lesson</p>
+              <p className="font-semibold text-violet-900">Lesson practice</p>
               <p className="mt-1 text-violet-800/90">
-                This session will be associated with lesson{" "}
-                <span className="font-mono font-bold text-violet-950">#{lessonId}</span>
+                Linked to lesson{" "}
+                <span className="font-mono font-bold text-violet-950">
+                  #{lessonId}
+                </span>
                 {lessonTitleDisplay ? (
                   <>
                     {" "}
                     — <span className="font-medium">{lessonTitleDisplay}</span>
                   </>
                 ) : null}
-                . The module-level flow still uses the same steps; use this context when naming and
-                configuring the practice.
+                .
               </p>
             </div>
           ) : null}
         </div>
 
         <div className="mx-auto w-[70%] mb-12">
-          <Stepper steps={flowSteps} currentStep={currentStep} />
+          <Stepper steps={[...STEP_LABELS]} currentStep={currentStep} />
         </div>
 
         <div
-          className={`mx-auto ${(!isModuleContext && currentStep === 3) || (isModuleContext && currentStep === 2) || currentStep === 5 ? "max-w-6xl" : "max-w-4xl"}`}
+          className={`mx-auto ${currentStep === 2 ? "max-w-6xl" : "max-w-4xl"}`}
         >
           {renderStep()}
         </div>

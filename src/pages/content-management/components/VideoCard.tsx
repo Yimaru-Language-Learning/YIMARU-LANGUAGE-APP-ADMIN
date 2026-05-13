@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MoreVertical, Edit2, Play, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Edit2, Play, Pencil, Trash2, Calendar } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Dialog,
@@ -38,6 +38,8 @@ interface VideoCardProps {
   hoverModuleActions?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  /** When set (e.g. on module lesson cards), shows an "Add practice" control scoped to this lesson. */
+  onAddPractice?: () => void;
   onPublish?: () => void;
 }
 
@@ -51,6 +53,7 @@ export function VideoCard({
   onEdit,
   onDelete,
   onPublish,
+  onAddPractice,
   hoverModuleActions = false,
 }: VideoCardProps) {
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -341,6 +344,21 @@ export function VideoCard({
         <h3 className="text-[16px] font-medium text-grayScale-900 line-clamp-2 leading-snug">
           {title}
         </h3>
+
+        {hoverModuleActions && onAddPractice ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 w-full shrink-0 rounded-lg border-brand-200 text-[12px] font-bold text-brand-600 hover:bg-brand-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddPractice();
+            }}
+          >
+            <Calendar className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+            Add practice
+          </Button>
+        ) : null}
 
         {/* Actions (footer) — not used for API lesson cards with hover tools */}
         {!hoverModuleActions ? (

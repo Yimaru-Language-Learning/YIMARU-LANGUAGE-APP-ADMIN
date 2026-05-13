@@ -23,6 +23,17 @@ export function AddPracticeFlow() {
   const backTo = searchParams.get("backTo");
   const courseId = searchParams.get("courseId");
   const moduleId = searchParams.get("moduleId");
+  const lessonId = searchParams.get("lessonId");
+  const lessonTitleRaw = searchParams.get("lessonTitle");
+  const lessonTitleDisplay = (() => {
+    const raw = lessonTitleRaw?.trim();
+    if (!raw) return null;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  })();
 
   const isModuleContext = backTo === "module";
   const isCourseContext = backTo === "modules";
@@ -251,6 +262,23 @@ export function AddPracticeFlow() {
           <p className="text-grayScale-400 text-base">
             Create a new immersive practice session for students.
           </p>
+          {lessonId ? (
+            <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950">
+              <p className="font-semibold text-violet-900">Practice for this lesson</p>
+              <p className="mt-1 text-violet-800/90">
+                This session will be associated with lesson{" "}
+                <span className="font-mono font-bold text-violet-950">#{lessonId}</span>
+                {lessonTitleDisplay ? (
+                  <>
+                    {" "}
+                    — <span className="font-medium">{lessonTitleDisplay}</span>
+                  </>
+                ) : null}
+                . The module-level flow still uses the same steps; use this context when naming and
+                configuring the practice.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="mx-auto w-[70%] mb-12">

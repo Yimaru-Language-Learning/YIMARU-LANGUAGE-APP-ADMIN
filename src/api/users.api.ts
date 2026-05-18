@@ -6,23 +6,46 @@ import {
   type UserSummaryResponse,
   type GetDeletionRequestsParams,
   type GetDeletionRequestsResponse,
+  type UserRecentActivityResponse,
 } from "../types/user.types";
 
-export const getUsers = (
-  page?: number,
-  pageSize?: number,
-  role?: string,
-  status?: string,
-  query?: string,
-) =>
+/** Query params for GET /users (RFC3339 for created_*; subscription_status: ACTIVE | PENDING | Unsubscribed). */
+export interface GetUsersParams {
+  page?: number
+  page_size?: number
+  role?: string
+  status?: string
+  query?: string
+  created_before?: string
+  created_after?: string
+  country?: string
+  region?: string
+  subscription_status?: string
+}
+
+function buildGetUsersQuery(params: GetUsersParams): Record<string, string | number> {
+  const q: Record<string, string | number> = {}
+  const addString = (key: string, value: string | undefined) => {
+    const v = value?.trim()
+    if (!v) return
+    q[key] = v
+  }
+  if (params.page !== undefined) q.page = params.page
+  if (params.page_size !== undefined) q.page_size = params.page_size
+  addString("role", params.role)
+  addString("status", params.status)
+  addString("query", params.query)
+  addString("created_before", params.created_before)
+  addString("created_after", params.created_after)
+  addString("country", params.country)
+  addString("region", params.region)
+  addString("subscription_status", params.subscription_status)
+  return q
+}
+
+export const getUsers = (params: GetUsersParams = {}) =>
   http.get<GetUsersResponse>("/users", {
-    params: {
-      role,
-      status,
-      query,
-      page,
-      page_size: pageSize,
-    },
+    params: buildGetUsersQuery(params),
   });
 
 export type UserStatus = "ACTIVE" | "DEACTIVATED" | "SUSPENDED" | "PENDING";
@@ -37,6 +60,9 @@ export const updateUserStatus = (payload: UpdateUserStatusRequest) =>
 
 export const getUserById = (id: number) =>
   http.get<UserProfileResponse>(`/user/single/${id}`);
+
+export const getUserRecentActivity = (userId: number) =>
+  http.get<UserRecentActivityResponse>(`/admin/users/${userId}/recent-activity`);
 
 export const getMyProfile = () =>
   http.get<UserProfileResponse>("/team/me");

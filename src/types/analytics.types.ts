@@ -52,11 +52,34 @@ export interface DashboardPayments {
   revenue_last_30_days: DateRevenue[]
 }
 
+export interface DashboardCoursesLms {
+  programs: number
+  courses: number
+  modules: number
+  lessons: number
+  lessons_with_video: number
+  practices: number
+  practices_at_course: number
+  practices_at_module: number
+  practices_at_lesson: number
+}
+
+export interface DashboardCoursesExamPrep {
+  catalog_courses: number
+  units: number
+  unit_modules: number
+  lessons: number
+  lessons_with_video: number
+  lesson_practices: number
+}
+
 export interface DashboardCourses {
   total_categories: number
   total_courses: number
   total_sub_courses: number
   total_videos: number
+  lms?: DashboardCoursesLms
+  exam_prep?: DashboardCoursesExamPrep
 }
 
 export interface DashboardContent {
@@ -88,8 +111,34 @@ export interface DashboardTeam {
   by_status: LabelCount[]
 }
 
+export type DashboardDateFilterMode = "all_time" | "year" | "year_month" | "custom"
+
+export interface DashboardDateFilter {
+  mode: DashboardDateFilterMode
+  year?: number
+  month?: number
+  from?: string
+  to?: string
+  range_start?: string
+  range_end?: string
+  series_start?: string
+  series_end?: string
+  ref_date?: string
+}
+
+export type DashboardFilterMode = DashboardDateFilterMode
+
+export interface DashboardFilters {
+  mode: DashboardFilterMode
+  year?: number
+  month?: number
+  from?: string
+  to?: string
+}
+
 export interface DashboardData {
   generated_at: string
+  date_filter?: DashboardDateFilter
   users: DashboardUsers
   subscriptions: DashboardSubscriptions
   payments: DashboardPayments

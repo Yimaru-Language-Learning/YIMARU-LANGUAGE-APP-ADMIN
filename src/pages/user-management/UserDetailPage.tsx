@@ -24,7 +24,7 @@ import { Separator } from "../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { cn } from "../../lib/utils";
 import { useUsersStore } from "../../zustand/userStore";
-import { getUserById } from "../../api/users.api";
+import { getUserById, getUserRecentActivity } from "../../api/users.api";
 import { getCourseCategories, getCoursesByCategory } from "../../api/courses.api";
 import {
   getAdminLearnerCourseProgress,
@@ -42,12 +42,48 @@ import { Select } from "../../components/ui/select";
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import type { LearnerCourseProgressItem, LearnerCourseProgressSummary } from "../../types/progress.types";
 import type { Course } from "../../types/course.types";
+import type { UserRecentActivityItem } from "../../types/user.types";
 
-const activityIcons: Record<string, typeof CheckCircle2> = {
+const activityIcons = {
   completed: CheckCircle2,
   started: PlayCircle,
   joined: UserPlus,
-};
+  default: BookOpen,
+} as const;
+
+function visualActivityKind(kind: string): keyof typeof activityIcons {
+  const k = kind.toLowerCase();
+  if (k === "completed" || k === "complete") return "completed";
+  if (k === "started" || k === "start") return "started";
+  if (k === "joined" || k === "join") return "joined";
+  return "default";
+}
+
+/** Matches Recent Activity mock: "Today, 10:27 AM" / "Yesterday, 3:45 PM" / "Jan 10, 2025". */
+function formatActivityOccurredAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startToday - startThat) / 86_400_000);
+
+  const timePart = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  if (dayDiff === 0) return `Today, ${timePart}`;
+  if (dayDiff === 1) return `Yesterday, ${timePart}`;
+
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 type CourseOption = Course & { category_name: string };
 
@@ -62,6 +98,8 @@ export function UserDetailPage() {
   const [progressSummary, setProgressSummary] = useState<LearnerCourseProgressSummary | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [progressError, setProgressError] = useState<string | null>(null);
+  const [recentActivityItems, setRecentActivityItems] = useState<UserRecentActivityItem[]>([]);
+  const [recentActivityLoading, setRecentActivityLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -149,6 +187,28 @@ export function UserDetailPage() {
     loadProgress();
   }, [id, selectedProgressCourseId]);
 
+  useEffect(() => {
+    if (!id) return;
+    const userId = Number(id);
+    if (Number.isNaN(userId)) return;
+
+    const loadRecent = async () => {
+      setRecentActivityLoading(true);
+      try {
+        const res = await getUserRecentActivity(userId);
+        const items = res.data?.data?.items ?? [];
+        setRecentActivityItems(items);
+      } catch (err) {
+        console.error("Failed to load recent activity", err);
+        setRecentActivityItems([]);
+      } finally {
+        setRecentActivityLoading(false);
+      }
+    };
+
+    loadRecent();
+  }, [id]);
+
   const progressMetrics = useMemo(() => {
     if (progressSummary) {
       return {
@@ -197,13 +257,6 @@ export function UserDetailPage() {
   const user = userProfile;
   const fullName = `${user.first_name} ${user.last_name}`;
   const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase();
-
-  const recentActivities = [
-    { type: "completed", text: "Completed Unit 4: Business Emails", time: "Today, 10:27 AM" },
-    { type: "completed", text: "Completed Unit 3: Formal Writing", time: "Yesterday, 3:45 PM" },
-    { type: "started", text: "Started Learning Path: Business English", time: "Jan 15, 2025" },
-    { type: "joined", text: "Joined Yimaru", time: "Jan 10, 2025" },
-  ];
 
   const infoFields = [
     { icon: Phone, label: "Phone", value: user.phone_number },
@@ -566,37 +619,49 @@ export function UserDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="relative space-y-0">
-                {recentActivities.map((activity, index) => {
-                  const Icon = activityIcons[activity.type] ?? CheckCircle2;
-                  const isLast = index === recentActivities.length - 1;
-                  return (
-                    <div key={index} className="relative flex gap-4 pb-5 last:pb-0">
-                      {!isLast && (
-                        <div className="absolute left-[15px] top-8 bottom-0 w-px bg-grayScale-200" />
-                      )}
-                      <div
-                        className={cn(
-                          "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                          activity.type === "completed"
-                            ? "bg-mint-100 text-mint-500"
-                            : activity.type === "started"
-                              ? "bg-brand-100/50 text-brand-500"
-                              : "bg-grayScale-100 text-grayScale-400"
+              {recentActivityLoading ? (
+                <div className="flex items-center justify-center gap-2 py-10 text-sm text-grayScale-400">
+                  <SpinnerIcon className="h-5 w-5" />
+                  Loading activity…
+                </div>
+              ) : recentActivityItems.length === 0 ? (
+                <p className="py-8 text-center text-sm text-grayScale-400">No recent activity yet.</p>
+              ) : (
+                <div className="relative space-y-0">
+                  {recentActivityItems.map((item, index) => {
+                    const vk = visualActivityKind(item.kind);
+                    const Icon = activityIcons[vk];
+                    const isLast = index === recentActivityItems.length - 1;
+                    return (
+                      <div key={item.id} className="relative flex gap-4 pb-5 last:pb-0">
+                        {!isLast && (
+                          <div className="absolute bottom-0 left-[15px] top-8 w-px bg-grayScale-200" />
                         )}
-                      >
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1 pt-1">
-                        <div className="text-sm font-medium text-grayScale-600">
-                          {activity.text}
+                        <div
+                          className={cn(
+                            "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                            vk === "completed"
+                              ? "bg-mint-100 text-mint-500"
+                              : vk === "started"
+                                ? "bg-brand-100/50 text-brand-500"
+                                : vk === "joined"
+                                  ? "bg-grayScale-100 text-grayScale-400"
+                                  : "bg-grayScale-100 text-grayScale-500",
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
                         </div>
-                        <div className="mt-0.5 text-xs text-grayScale-400">{activity.time}</div>
+                        <div className="min-w-0 flex-1 pt-1">
+                          <div className="text-sm font-medium text-grayScale-600">{item.headline}</div>
+                          <div className="mt-0.5 text-xs text-grayScale-400">
+                            {formatActivityOccurredAt(item.occurred_at)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

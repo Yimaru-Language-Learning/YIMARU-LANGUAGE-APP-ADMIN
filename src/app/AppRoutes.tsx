@@ -37,7 +37,6 @@ import { CreateNotificationPage } from "../pages/notifications/CreateNotificatio
 import { UserDetailPage } from "../pages/user-management/UserDetailPage";
 import { UserManagementLayout } from "../pages/user-management/UserManagementLayout";
 import { UsersListPage } from "../pages/user-management/UsersListPage";
-import { UserManagementDashboard } from "../pages/user-management/UserManagementDashboard";
 import { UserGroupsPage } from "../pages/user-management/UserGroupsPage";
 import { DeletionRequestsPage } from "../pages/user-management/DeletionRequestsPage";
 import { RoleManagementLayout } from "../pages/role-management/RoleManagementLayout";
@@ -78,7 +77,7 @@ export function AppRoutes() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/users" element={<UserManagementLayout />}>
-          <Route index element={<UserManagementDashboard />} />
+          <Route index element={<Navigate to="list" replace />} />
           <Route path="list" element={<UsersListPage />} />
           <Route path="deletion-requests" element={<DeletionRequestsPage />} />
           <Route path="groups" element={<UserGroupsPage />} />

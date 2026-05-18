@@ -1,15 +1,110 @@
-import { ChevronDown, ChevronLeft, ChevronRight, Search, UserCheck, Users, X } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Search, TrendingUp, UserCheck, Users, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import { Input } from "../../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 import { Button } from "../../components/ui/button"
+import { Card, CardContent } from "../../components/ui/card"
+import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { cn } from "../../lib/utils"
+import { getDashboard } from "../../api/analytics.api"
 import { getUsers, updateUserStatus, type UserStatus } from "../../api/users.api"
+import type { DashboardUsers } from "../../types/analytics.types"
 import { mapUserApiToUser } from "../../types/user.types"
 import { useUsersStore } from "../../zustand/userStore"
 import { toast } from "sonner"
+import axios from "axios"
+import { USER_FILTER_COUNTRIES, USER_FILTER_ETHIOPIA_REGIONS } from "../../data/userFilterLocations"
+
+function formatJoinedAt(iso: string): string {
+  if (!iso?.trim()) return "—"
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return "—"
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+}
+
+/** Convert `<input type="datetime-local" />` value to RFC3339 for GET /users. */
+function toRfc3339FromDatetimeLocal(value: string): string | undefined {
+  const t = value?.trim()
+  if (!t) return undefined
+  const d = new Date(t)
+  if (Number.isNaN(d.getTime())) return undefined
+  return d.toISOString()
+}
+
+/** Portaled menu — native `<select>` lists break inside `overflow-y-auto` shells (e.g. app main). */
+function UserListFilterDropdown({
+  id,
+  label,
+  value,
+  allLabel,
+  options,
+  onSelect,
+}: {
+  id: string
+  label: string
+  value: string
+  allLabel: string
+  options: readonly string[]
+  onSelect: (next: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="text-xs font-medium text-grayScale-500">
+        {label}
+      </label>
+      <DropdownMenu.Root modal={false}>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            id={id}
+            className={cn(
+              "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600",
+              "outline-none focus-visible:ring-1 focus-visible:ring-brand-500",
+            )}
+          >
+            <span className="min-w-0 truncate">{value || allLabel}</span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-400" />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            collisionPadding={12}
+            className="z-[200] max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto rounded-md border border-grayScale-200 bg-white p-1 shadow-lg"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            <DropdownMenu.Item
+              className={cn(
+                "cursor-pointer rounded px-2 py-2 text-sm text-grayScale-700 outline-none data-[highlighted]:bg-grayScale-100",
+                !value && "bg-grayScale-50 font-medium",
+              )}
+              onSelect={() => onSelect("")}
+            >
+              {allLabel}
+            </DropdownMenu.Item>
+            {options.map((opt) => (
+              <DropdownMenu.Item
+                key={opt}
+                className={cn(
+                  "cursor-pointer rounded px-2 py-2 text-sm text-grayScale-700 outline-none data-[highlighted]:bg-grayScale-100",
+                  value === opt && "bg-brand-50 font-medium text-brand-700",
+                )}
+                onSelect={() => onSelect(opt)}
+              >
+                {opt}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    </div>
+  )
+}
 
 export function UsersListPage() {
   const navigate = useNavigate()
@@ -36,19 +131,45 @@ export function UsersListPage() {
   } | null>(null)
   const [roleFilter, setRoleFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
+  const [createdAfterLocal, setCreatedAfterLocal] = useState("")
+  const [createdBeforeLocal, setCreatedBeforeLocal] = useState("")
+  const [countryFilter, setCountryFilter] = useState("")
+  const [regionFilter, setRegionFilter] = useState("")
+  const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState("")
   const [loading, setLoading] = useState(false)
+  const [userSummary, setUserSummary] = useState<DashboardUsers | null>(null)
+  const [userSummaryLoading, setUserSummaryLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await getDashboard()
+        setUserSummary(res.data.users ?? null)
+      } catch {
+        setUserSummary(null)
+      } finally {
+        setUserSummaryLoading(false)
+      }
+    }
+    fetchSummary()
+  }, [])
 
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true)
       try {
-        const res = await getUsers(
+        const res = await getUsers({
           page,
-          pageSize,
-          roleFilter || undefined,
-          statusFilter || undefined,
-          search || undefined,
-        )
+          page_size: pageSize,
+          role: roleFilter || undefined,
+          status: statusFilter || undefined,
+          query: search || undefined,
+          created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
+          created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
+          country: countryFilter.trim() || undefined,
+          region: regionFilter.trim() || undefined,
+          subscription_status: subscriptionStatusFilter || undefined,
+        })
         const apiUsers = res.data.data.users
 
         const mapped = apiUsers.map(mapUserApiToUser)
@@ -64,13 +185,30 @@ export function UsersListPage() {
         console.error("Failed to fetch users:", error)
         setUsers([])
         setTotal(0)
+        const msg = axios.isAxiosError(error)
+          ? (error.response?.data as { message?: string } | undefined)?.message
+          : undefined
+        toast.error(typeof msg === "string" && msg.trim() ? msg : "Failed to fetch users")
       } finally {
         setLoading(false)
       }
     }
 
     fetchUsers()
-  }, [page, pageSize, roleFilter, statusFilter, search, setUsers, setTotal])
+  }, [
+    page,
+    pageSize,
+    roleFilter,
+    statusFilter,
+    search,
+    createdAfterLocal,
+    createdBeforeLocal,
+    countryFilter,
+    regionFilter,
+    subscriptionStatusFilter,
+    setUsers,
+    setTotal,
+  ])
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const safePage = Math.min(page, pageCount)
@@ -99,7 +237,10 @@ export function UsersListPage() {
   const allSelected = users.length > 0 && selectedIds.size === users.length
   const startEntry = total === 0 ? 0 : (safePage - 1) * pageSize + 1
   const endEntry = Math.min(safePage * pageSize, total)
-  const activeUsersOnPage = users.filter((u) => (u.status || "").toUpperCase() === "ACTIVE").length
+
+  const formatSummaryNum = (n: number) => n.toLocaleString()
+  const activeUsersTotal =
+    userSummary?.by_status?.find((item) => item.label?.toUpperCase() === "ACTIVE")?.count ?? null
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
@@ -168,6 +309,29 @@ export function UsersListPage() {
     navigate(`/users/${userId}`)
   }
 
+  const clearExtraFilters = () => {
+    setCreatedAfterLocal("")
+    setCreatedBeforeLocal("")
+    setCountryFilter("")
+    setRegionFilter("")
+    setSubscriptionStatusFilter("")
+    setPage(1)
+  }
+
+  const renderContactDetails = (phone: string | undefined, email: string | undefined) => {
+    const hasPhone = Boolean(phone?.trim())
+    const hasEmail = Boolean(email?.trim())
+    if (!hasPhone && !hasEmail) {
+      return <span className="text-grayScale-400">—</span>
+    }
+    return (
+      <div className="space-y-1 text-sm text-grayScale-600">
+        {hasPhone ? <div className="tabular-nums">{phone!.trim()}</div> : null}
+        {hasEmail ? <div className="break-all text-grayScale-500">{email!.trim()}</div> : null}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -176,35 +340,67 @@ export function UsersListPage() {
         <p className="text-sm text-grayScale-400">View and manage all registered users.</p>
       </div>
 
-      {/* Stats cards (match UserLogPage approach) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-brand-100 text-brand-600">
-            <Users className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-grayScale-600">{total}</p>
-            <p className="text-xs text-grayScale-400">Total Users</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-100 text-emerald-600">
-            <UserCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-grayScale-600">{activeUsersOnPage}</p>
-            <p className="text-xs text-grayScale-400">Active In Current Page</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-100 text-amber-600">
-            <Search className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-grayScale-600">{users.length}</p>
-            <p className="text-xs text-grayScale-400">Showing Results</p>
-          </div>
-        </div>
+      {/* Platform-wide user summary (same metrics as former User Management dashboard) */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="border-none bg-brand-50 shadow-sm">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
+              <Users className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white/80">Total Users</p>
+              <p className="text-2xl font-bold text-white">
+                {userSummaryLoading ? (
+                  <SpinnerIcon className="h-5 w-5" />
+                ) : userSummary ? (
+                  formatSummaryNum(userSummary.total_users)
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none bg-brand-50 shadow-sm">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
+              <UserCheck className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white/80">Active Users</p>
+              <p className="text-2xl font-bold text-white">
+                {userSummaryLoading ? (
+                  <SpinnerIcon className="h-5 w-5" />
+                ) : activeUsersTotal !== null ? (
+                  formatSummaryNum(activeUsersTotal)
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none bg-brand-50 shadow-sm sm:col-span-2 lg:col-span-1">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white/80">New This Month</p>
+              <p className="text-2xl font-bold text-white">
+                {userSummaryLoading ? (
+                  <SpinnerIcon className="h-5 w-5" />
+                ) : userSummary ? (
+                  formatSummaryNum(userSummary.new_month)
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="bg-white rounded-xl border">
@@ -225,7 +421,10 @@ export function UsersListPage() {
               <div className="relative w-full sm:w-auto">
                 <select
                   value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value)
+                    setPage(1)
+                  }}
                   className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 >
                   <option value="">All roles</option>
@@ -239,7 +438,10 @@ export function UsersListPage() {
               <div className="relative w-full sm:w-auto">
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value)
+                    setPage(1)
+                  }}
                   className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 >
                   <option value="">All statuses</option>
@@ -251,6 +453,96 @@ export function UsersListPage() {
                 <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
               </div>
             </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 border-t border-grayScale-100 pt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-created-after" className="text-xs font-medium text-grayScale-500">
+                Created on or after
+              </label>
+              <input
+                id="filter-created-after"
+                type="datetime-local"
+                value={createdAfterLocal}
+                onChange={(e) => {
+                  setCreatedAfterLocal(e.target.value)
+                  setPage(1)
+                }}
+                className="h-9 w-full rounded-md border border-grayScale-200 bg-white px-2 text-sm text-grayScale-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-created-before" className="text-xs font-medium text-grayScale-500">
+                Created on or before
+              </label>
+              <input
+                id="filter-created-before"
+                type="datetime-local"
+                value={createdBeforeLocal}
+                onChange={(e) => {
+                  setCreatedBeforeLocal(e.target.value)
+                  setPage(1)
+                }}
+                className="h-9 w-full rounded-md border border-grayScale-200 bg-white px-2 text-sm text-grayScale-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
+            <UserListFilterDropdown
+              id="filter-country"
+              label="Country"
+              value={countryFilter}
+              allLabel="All countries"
+              options={USER_FILTER_COUNTRIES}
+              onSelect={(next) => {
+                setCountryFilter(next)
+                setPage(1)
+              }}
+            />
+            <UserListFilterDropdown
+              id="filter-region"
+              label="Region (Ethiopia)"
+              value={regionFilter}
+              allLabel="All regions"
+              options={USER_FILTER_ETHIOPIA_REGIONS}
+              onSelect={(next) => {
+                setRegionFilter(next)
+                setPage(1)
+              }}
+            />
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-subscription-status" className="text-xs font-medium text-grayScale-500">
+                Subscription status
+              </label>
+              <div className="relative w-full">
+                <select
+                  id="filter-subscription-status"
+                  value={subscriptionStatusFilter}
+                  onChange={(e) => {
+                    setSubscriptionStatusFilter(e.target.value)
+                    setPage(1)
+                  }}
+                  className="h-9 w-full appearance-none rounded-md border border-grayScale-200 bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  <option value="">All</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="Unsubscribed">Unsubscribed</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-grayScale-400">
+              Dates are sent as RFC3339 (UTC). Country and region filters use the lists above; the API matches
+              case-insensitively.
+            </p>
+            <button
+              type="button"
+              onClick={clearExtraFilters}
+              className="shrink-0 text-sm font-medium text-brand-600 hover:text-brand-700"
+            >
+              Clear date, location & subscription filters
+            </button>
           </div>
         </div>
 
@@ -267,10 +559,11 @@ export function UsersListPage() {
                 />
               </TableHead>
               <TableHead>USER</TableHead>
-              <TableHead className="hidden md:table-cell">Role</TableHead>
-              <TableHead className="hidden md:table-cell">Phone</TableHead>
+              <TableHead className="hidden md:table-cell min-w-[10rem]">Contact details</TableHead>
               <TableHead className="hidden md:table-cell">Country</TableHead>
               <TableHead className="hidden md:table-cell">Region</TableHead>
+              <TableHead className="hidden md:table-cell whitespace-nowrap">Joined at</TableHead>
+              <TableHead className="hidden lg:table-cell max-w-[12rem]">Subscription status</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -278,13 +571,13 @@ export function UsersListPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center">
+                <TableCell colSpan={8} className="py-12 text-center">
                   <p className="text-sm text-grayScale-400">Loading users...</p>
                 </TableCell>
               </TableRow>
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
+                <TableCell colSpan={8} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-grayScale-100">
                       <Users className="h-7 w-7 text-grayScale-400" />
@@ -322,16 +615,31 @@ export function UsersListPage() {
                             {`${u.firstName?.[0] ?? ""}${u.lastName?.[0] ?? ""}`.toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <div className="font-medium text-grayScale-600">{u.firstName} {u.lastName}</div>
-                          <div className="text-xs text-grayScale-400">{u.email || u.phoneNumber || "-"}</div>
+                        <div className="font-medium text-grayScale-600">
+                          {u.firstName} {u.lastName}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.role || "-"}</TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.phoneNumber || "-"}</TableCell>
+                    <TableCell className="hidden md:table-cell align-top">
+                      {renderContactDetails(u.phoneNumber, u.email)}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-grayScale-500">{u.country || "-"}</TableCell>
                     <TableCell className="hidden md:table-cell text-grayScale-500">{u.region || "-"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-grayScale-500 whitespace-nowrap">
+                      {formatJoinedAt(u.createdAt)}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell align-top text-sm text-grayScale-600">
+                      <span
+                        className={cn(
+                          u.subscriptionStatus === "—" ||
+                            u.subscriptionStatus.toLowerCase() === "unsubscribed"
+                            ? "text-grayScale-400"
+                            : undefined,
+                        )}
+                      >
+                        {u.subscriptionStatus}
+                      </span>
+                    </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"

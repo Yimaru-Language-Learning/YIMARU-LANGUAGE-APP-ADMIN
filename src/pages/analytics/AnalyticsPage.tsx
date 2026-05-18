@@ -39,7 +39,13 @@ import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { cn } from "../../lib/utils"
 import { getDashboard } from "../../api/analytics.api"
-import type { DashboardData, LabelCount } from "../../types/analytics.types"
+import { AnalyticsTimeRangeFilter, getDashboardFilterLabel } from "../../components/analytics/AnalyticsTimeRangeFilter"
+import {
+  getPrimaryQuestionTypeSummary,
+  getSeriesPeriodLabel,
+  getVideoLessonsSummary,
+} from "../../lib/analytics"
+import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
 
 const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16"]
 
@@ -285,18 +291,21 @@ function Section({
   )
 }
 
+const DEFAULT_FILTERS: DashboardFilters = { mode: "all_time" }
+
 export function AnalyticsPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [activeSummaryTab, setActiveSummaryTab] = useState<"key" | "content" | "operations">("key")
+  const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS)
 
-  const fetchData = async () => {
+  const fetchData = async (nextFilters: DashboardFilters = filters) => {
     setLoading(true)
     setError(false)
     try {
-      const res = await getDashboard()
-      setDashboard(res.data as unknown as DashboardData)
+      const res = await getDashboard(nextFilters)
+      setDashboard(res.data)
     } catch {
       setError(true)
     } finally {
@@ -305,10 +314,11 @@ export function AnalyticsPage() {
   }
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData(filters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters])
 
-  if (loading) {
+  if (!dashboard && loading) {
     return (
       <div className="mx-auto w-full max-w-[1280px] px-2 sm:px-4">
         <div className="mb-6 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Analytics</div>
@@ -323,11 +333,14 @@ export function AnalyticsPage() {
   if (error || !dashboard) {
     return (
       <div className="mx-auto w-full max-w-[1280px] px-2 sm:px-4">
-        <div className="mb-6 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Analytics</div>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-grayScale-400">Analytics</div>
+          <AnalyticsTimeRangeFilter value={filters} onChange={setFilters} />
+        </div>
         <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-red-100 bg-red-50/30 py-24">
           <img src={alertSrc} alt="" className="h-12 w-12" />
           <span className="text-sm text-destructive">Failed to load analytics data.</span>
-          <Button variant="outline" size="sm" onClick={fetchData}>
+          <Button variant="outline" size="sm" onClick={() => fetchData(filters)}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Retry
           </Button>
@@ -337,6 +350,9 @@ export function AnalyticsPage() {
   }
 
   const { users, subscriptions, payments, courses, content, notifications, issues, team } = dashboard
+  const seriesPeriodLabel = getSeriesPeriodLabel(dashboard.date_filter)
+  const lms = courses.lms
+  const examPrep = courses.exam_prep
 
   const registrationData = users.registrations_last_30_days.map((d) => ({
     date: formatDate(d.date),
@@ -387,14 +403,24 @@ export function AnalyticsPage() {
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Analytics</div>
           <h1 className="text-3xl font-semibold tracking-tight text-grayScale-900">Platform Overview</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-grayScale-400">Generated {generatedAt}</span>
-          <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="mr-2 h-3.5 w-3.5" />
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-grayScale-400">
+            {getDashboardFilterLabel(filters)} · Generated {generatedAt}
+          </span>
+          <AnalyticsTimeRangeFilter value={filters} onChange={setFilters} />
+          <Button variant="outline" size="sm" onClick={() => fetchData(filters)} disabled={loading}>
+            <RefreshCw className={cn("mr-2 h-3.5 w-3.5", loading && "animate-spin")} />
             Refresh
           </Button>
         </div>
       </div>
+
+      {loading && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-grayScale-100 bg-grayScale-50 px-3 py-2 text-xs text-grayScale-500">
+          <img src={spinnerSrc} alt="" className="h-4 w-4 animate-spin" />
+          Updating analytics for {getDashboardFilterLabel(filters)}…
+        </div>
+      )}
 
       {/* Summary Tabs */}
       <div className="mb-6 rounded-2xl border border-grayScale-100 bg-white px-5 pt-4 shadow-sm">
@@ -483,7 +509,7 @@ export function AnalyticsPage() {
             <Section
               title="Content & Platform"
               icon={BookOpen}
-              count={courses.total_courses + content.total_questions}
+              count={courses.total_videos + content.total_questions}
               defaultOpen
             >
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -491,28 +517,29 @@ export function AnalyticsPage() {
                   icon={FolderOpen}
                   label="Categories"
                   value={courses.total_categories.toLocaleString()}
-                  sub={`${courses.total_courses} courses`}
+                  sub={`${courses.total_courses} courses · ${courses.total_sub_courses} modules`}
                   trend="neutral"
                 />
                 <KpiCard
                   icon={BookOpen}
-                  label="Sub-Courses"
-                  value={courses.total_sub_courses.toLocaleString()}
-                  sub={`across ${courses.total_courses} courses`}
+                  label="LMS Programs"
+                  value={(lms?.programs ?? 0).toLocaleString()}
+                  sub={`${lms?.courses ?? 0} courses · ${lms?.practices ?? 0} practices`}
                   trend="neutral"
                 />
                 <KpiCard
                   icon={Video}
                   label="Videos"
                   value={courses.total_videos.toLocaleString()}
-                  trend="neutral"
+                  sub={getVideoLessonsSummary(lms?.lessons_with_video, examPrep?.lessons_with_video)}
+                  trend={courses.total_videos > 0 ? "up" : "neutral"}
                 />
                 <KpiCard
                   icon={HelpCircle}
                   label="Questions"
                   value={content.total_questions.toLocaleString()}
-                  sub={`${content.total_question_sets} question sets`}
-                  trend="neutral"
+                  sub={getPrimaryQuestionTypeSummary(content.questions_by_type)}
+                  trend={content.total_questions > 0 ? "up" : "neutral"}
                 />
               </div>
             </Section>
@@ -573,7 +600,7 @@ export function AnalyticsPage() {
                     </Badge>
                   </div>
                 </div>
-                <Badge variant="secondary">Last 30 Days</Badge>
+                <Badge variant="secondary">{seriesPeriodLabel}</Badge>
               </div>
             </CardHeader>
             <CardContent className="h-[280px] p-6 pt-2">
@@ -603,10 +630,10 @@ export function AnalyticsPage() {
           </Card>
           <div className="mt-4 grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <BreakdownList title="Users by Role" data={users.by_role} total={users.total_users} />
+            <BreakdownList title="Users by Region" data={users.by_region} total={users.total_users} />
+            <BreakdownList title="Users by Knowledge Level" data={users.by_knowledge_level} total={users.total_users} />
             <BreakdownList title="Users by Status" data={users.by_status} total={users.total_users} />
             <BreakdownList title="Users by Age Group" data={users.by_age_group} total={users.total_users} />
-            <BreakdownList title="Users by Knowledge Level" data={users.by_knowledge_level} total={users.total_users} />
-            <BreakdownList title="Users by Region" data={users.by_region} total={users.total_users} />
           </div>
         </Section>
 
@@ -625,7 +652,7 @@ export function AnalyticsPage() {
                       +{subscriptions.new_today} today · +{subscriptions.new_week} this week
                     </div>
                   </div>
-                  <Badge variant="secondary">Last 30 Days</Badge>
+                  <Badge variant="secondary">{seriesPeriodLabel}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="h-[240px] p-6 pt-2">
@@ -664,7 +691,7 @@ export function AnalyticsPage() {
                     </div>
                     <div className="text-xs text-grayScale-400">Daily revenue over last 30 days</div>
                   </div>
-                  <Badge variant="secondary">Last 30 Days</Badge>
+                  <Badge variant="secondary">{seriesPeriodLabel}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="h-[240px] p-6 pt-2">
@@ -727,6 +754,43 @@ export function AnalyticsPage() {
             <BreakdownList title="Notifications by Type" data={notifications.by_type} total={notifications.total_sent} />
           </div>
         </Section>
+
+        {/* ─── Course Management ─── */}
+        {(lms || examPrep) && (
+          <Section title="Course Management" icon={BookOpen} count={courses.total_videos} defaultOpen={false}>
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+              {lms && (
+                <BreakdownList
+                  title="LMS"
+                  data={[
+                    { label: "Programs", count: lms.programs },
+                    { label: "Courses", count: lms.courses },
+                    { label: "Modules", count: lms.modules },
+                    { label: "Lessons", count: lms.lessons },
+                    { label: "Lessons with video", count: lms.lessons_with_video },
+                    { label: "Practices", count: lms.practices },
+                    { label: "Practices at course", count: lms.practices_at_course },
+                    { label: "Practices at module", count: lms.practices_at_module },
+                    { label: "Practices at lesson", count: lms.practices_at_lesson },
+                  ]}
+                />
+              )}
+              {examPrep && (
+                <BreakdownList
+                  title="Exam prep"
+                  data={[
+                    { label: "Catalog courses", count: examPrep.catalog_courses },
+                    { label: "Units", count: examPrep.units },
+                    { label: "Unit modules", count: examPrep.unit_modules },
+                    { label: "Lessons", count: examPrep.lessons },
+                    { label: "Lessons with video", count: examPrep.lessons_with_video },
+                    { label: "Lesson practices", count: examPrep.lesson_practices },
+                  ]}
+                />
+              )}
+            </div>
+          </Section>
+        )}
 
         {/* ─── Content Breakdown ─── */}
         <Section title="Content Breakdown" icon={HelpCircle} count={content.total_questions} defaultOpen={false}>

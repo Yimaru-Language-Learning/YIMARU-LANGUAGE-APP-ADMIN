@@ -1,7 +1,7 @@
 import {
   // Activity,
   BadgeCheck,
-  BookOpen,
+  Video,
   // Coins,
   DollarSign,
   HelpCircle,
@@ -11,14 +11,13 @@ import {
   // TrendingUp,
   Users,
   Bell,
+  CreditCard,
   UsersRound,
 } from "lucide-react"
 import spinnerSrc from "../assets/Circular-indeterminate progress indicator.svg"
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   Pie,
@@ -28,15 +27,21 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { RevenueTrendCard } from "../components/dashboard/RevenueTrendCard"
 import { StatCard } from "../components/dashboard/StatCard"
 import alertSrc from "../assets/Alert.svg"
+import { Badge } from "../components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
 import { getDashboard } from "../api/analytics.api"
+import { getSubscriptionPlans } from "../api/subscription-plans.api"
 import { getRatings } from "../api/courses.api"
 import { useEffect, useState } from "react"
-import type { DashboardData } from "../types/analytics.types"
+import { AnalyticsTimeRangeFilter } from "../components/analytics/AnalyticsTimeRangeFilter"
+import { getPrimaryQuestionTypeSummary, getSeriesPeriodLabel, getVideoLessonsSummary } from "../lib/analytics"
+import type { DashboardData, DashboardFilters } from "../types/analytics.types"
+import type { SubscriptionPlan } from "../types/subscription.types"
 import type { Rating } from "../types/course.types"
 
 const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444"]
@@ -46,6 +51,19 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
+const DEFAULT_FILTERS: DashboardFilters = { mode: "all_time" }
+
+function formatPlanDuration(plan: SubscriptionPlan): string {
+  const v = plan.duration_value
+  const u = plan.duration_unit.toUpperCase()
+  const word =
+    u === "MONTH" ? "month" : u === "YEAR" ? "year" : u === "WEEK" ? "week" : u === "DAY" ? "day" : plan.duration_unit
+  if (u === "MONTH" || u === "YEAR" || u === "WEEK" || u === "DAY") {
+    return `${v} ${v === 1 ? word : `${word}s`}`
+  }
+  return `${v} ${word}`
+}
+
 export function DashboardPage() {
   const [userFirstName, setUserFirstName] = useState<string>("")
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
@@ -53,6 +71,9 @@ export function DashboardPage() {
   const [activeStatTab, setActiveStatTab] = useState<"primary" | "secondary">("primary")
   const [appRatings, setAppRatings] = useState<Rating[]>([])
   const [appRatingsLoading, setAppRatingsLoading] = useState(true)
+  const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS)
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([])
+  const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(true)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -70,17 +91,10 @@ export function DashboardPage() {
       }
     }
 
-    const fetchDashboard = async () => {
-      try {
-        const res = await getDashboard()
-        setDashboard(res.data as unknown as DashboardData)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
+    fetchUser()
+  }, [])
 
+  useEffect(() => {
     const fetchAppRatings = async () => {
       try {
         const res = await getRatings({ target_type: "app", target_id: 1, limit: 5 })
@@ -92,21 +106,47 @@ export function DashboardPage() {
       }
     }
 
-    fetchUser()
-    fetchDashboard()
     fetchAppRatings()
   }, [])
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      setSubscriptionPlansLoading(true)
+      try {
+        const res = await getSubscriptionPlans()
+        setSubscriptionPlans(res.data.data)
+      } catch (err) {
+        console.error(err)
+        setSubscriptionPlans([])
+      } finally {
+        setSubscriptionPlansLoading(false)
+      }
+    }
+
+    fetchPlans()
+  }, [])
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      setLoading(true)
+      try {
+        const res = await getDashboard(filters)
+        setDashboard(res.data)
+      } catch (err) {
+        console.error(err)
+        setDashboard(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboard()
+  }, [filters])
 
   const registrationData =
     dashboard?.users.registrations_last_30_days.map((d) => ({
       date: formatDate(d.date),
       count: d.count,
-    })) ?? []
-
-  const revenueData =
-    dashboard?.payments.revenue_last_30_days.map((d) => ({
-      date: formatDate(d.date),
-      revenue: d.revenue,
     })) ?? []
 
   const subscriptionStatusData =
@@ -123,9 +163,14 @@ export function DashboardPage() {
       color: PIE_COLORS[i % PIE_COLORS.length],
     })) ?? []
 
+  const seriesPeriodLabel = dashboard ? getSeriesPeriodLabel(dashboard.date_filter) : "Last 30 Days"
+
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <div className="mb-2 text-sm font-semibold text-grayScale-500">Dashboard</div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm font-semibold text-grayScale-500">Dashboard</div>
+        <AnalyticsTimeRangeFilter value={filters} onChange={setFilters} />
+      </div>
       <div className="mb-5 text-2xl font-semibold tracking-tight">
         Welcome, {userFirstName || localStorage.getItem("user_first_name")}
       </div>
@@ -216,18 +261,21 @@ export function DashboardPage() {
           {activeStatTab === "secondary" && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <StatCard
-                icon={BookOpen}
-                label="Courses"
-                value={dashboard.courses.total_courses.toLocaleString()}
-                deltaLabel={`${dashboard.courses.total_sub_courses} sub-modules, ${dashboard.courses.total_videos} videos`}
-                deltaPositive
+                icon={Video}
+                label="Videos"
+                value={dashboard.courses.total_videos.toLocaleString()}
+                deltaLabel={getVideoLessonsSummary(
+                  dashboard.courses.lms?.lessons_with_video,
+                  dashboard.courses.exam_prep?.lessons_with_video,
+                )}
+                deltaPositive={dashboard.courses.total_videos > 0}
               />
               <StatCard
                 icon={HelpCircle}
                 label="Questions"
                 value={dashboard.content.total_questions.toLocaleString()}
-                deltaLabel={`${dashboard.content.total_question_sets} question sets`}
-                deltaPositive
+                deltaLabel={getPrimaryQuestionTypeSummary(dashboard.content.questions_by_type)}
+                deltaPositive={dashboard.content.total_questions > 0}
               />
               <StatCard
                 icon={Bell}
@@ -261,7 +309,7 @@ export function DashboardPage() {
                     </div>
                   </div>
                   <div className="rounded-full bg-grayScale-100 px-3 py-1 text-xs font-semibold text-grayScale-500">
-                    Last 30 Days
+                    {seriesPeriodLabel}
                   </div>
                 </div>
               </CardHeader>
@@ -357,76 +405,69 @@ export function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Revenue Chart */}
-              <Card className="shadow-none">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Revenue Trend</CardTitle>
-                      <div className="mt-2 text-2xl font-semibold tracking-tight">
-                        ETB {dashboard.payments.total_revenue.toLocaleString()}
-                      </div>
-                      <div className="text-xs font-medium text-grayScale-500">Last 30 Days (ETB)</div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="h-[220px] p-6 pt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueData} margin={{ left: 8, right: 8, top: 8 }}>
-                      <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-                      <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
-                      <YAxis tickLine={false} axisLine={false} fontSize={12} width={42} />
-                      <Tooltip
-                        formatter={(v) => [`${Number(v).toLocaleString()}`, "ETB"]}
-                        contentStyle={{
-                          borderRadius: 12,
-                          border: "1px solid #E0E0E0",
-                          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                        }}
-                      />
-                      <Bar dataKey="revenue" radius={[10, 10, 0, 0]} fill="#9E2891" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              <RevenueTrendCard />
             </div>
 
-            {/* Users by Role / Region / Knowledge Level */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              {[
-                { title: "Users by Role", data: dashboard.users.by_role },
-                { title: "Users by Region", data: dashboard.users.by_region },
-                { title: "Users by Knowledge Level", data: dashboard.users.by_knowledge_level },
-              ].map(({ title, data }) => (
-                <Card key={title} className="shadow-none">
-                  <CardHeader className="pb-2">
-                    <CardTitle>{title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 pt-2">
-                    {data.length > 0 ? (
-                      <div className="space-y-3">
-                        {data.map((item, i) => (
-                          <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="h-2.5 w-2.5 rounded-full"
-                                style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
-                              />
-                              <span className="text-grayScale-600">{item.label}</span>
+            {/* Subscription plans (from catalog API) */}
+            <Card className="shadow-none">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-brand-500" />
+                  <CardTitle>Subscription plans</CardTitle>
+                </div>
+                <p className="text-sm text-grayScale-500">Available billing plans for learners.</p>
+              </CardHeader>
+              <CardContent className="p-6 pt-2">
+                {subscriptionPlansLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : subscriptionPlans.length === 0 ? (
+                  <div className="flex items-center justify-center py-10 text-sm text-grayScale-400">
+                    No subscription plans found
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {subscriptionPlans.map((plan) => (
+                      <div
+                        key={plan.id}
+                        className="flex flex-col rounded-xl border border-grayScale-200 bg-grayScale-50/50 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-semibold text-grayScale-700">{plan.name}</h3>
+                          <Badge variant={plan.is_active ? "success" : "secondary"}>
+                            {plan.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        {plan.description ? (
+                          <p className="mt-2 line-clamp-2 text-sm text-grayScale-500">{plan.description}</p>
+                        ) : null}
+                        <div className="mt-4 flex flex-wrap items-end justify-between gap-2 border-t border-grayScale-200 pt-4">
+                          <div>
+                            <div className="text-xs font-medium uppercase tracking-wide text-grayScale-400">Price</div>
+                            <div className="text-lg font-semibold text-brand-600">
+                              {plan.currency}{" "}
+                              {Number.isInteger(plan.price)
+                                ? plan.price.toLocaleString()
+                                : plan.price.toLocaleString(undefined, {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 2,
+                                  })}
                             </div>
-                            <span className="font-semibold text-grayScale-600">{item.count.toLocaleString()}</span>
                           </div>
-                        ))}
+                          <div className="text-right">
+                            <div className="text-xs font-medium uppercase tracking-wide text-grayScale-400">
+                              Billing
+                            </div>
+                            <div className="text-sm font-semibold text-grayScale-600">{formatPlanDuration(plan)}</div>
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-center py-6 text-sm text-grayScale-400">
-                        No data available
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* App Ratings */}
             <Card className="shadow-none">

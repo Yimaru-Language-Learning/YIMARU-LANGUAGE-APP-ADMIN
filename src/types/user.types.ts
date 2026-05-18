@@ -1,36 +1,40 @@
-// This matches the API response 1:1
+// This matches the API response 1:1 (GET /users); many fields are optional on partial profiles.
 export interface UserApiDTO {
   id: number
-  first_name: string
-  last_name: string
-  gender: string
-  birth_day: string | null
+  first_name?: string
+  last_name?: string
+  gender?: string
+  birth_day?: string | null
 
-  email: string
+  email?: string
   phone_number?: string
   role: string
 
-  age_group: string
-  education_level: string
-  country: string
-  region: string
+  age_group?: string
+  education_level?: string
+  country?: string
+  region?: string
 
-  nick_name: string
-  occupation: string
-  learning_goal: string
-  language_goal: string
-  language_challange: string
-  favoutite_topic: string
+  nick_name?: string
+  occupation?: string
+  learning_goal?: string
+  language_goal?: string
+  language_challange?: string
+  favoutite_topic?: string
 
-  email_verified: boolean
-  phone_verified: boolean
+  email_verified?: boolean
+  phone_verified?: boolean
   status: string
 
-  profile_completed: boolean
-  profile_picture_url: string
-  preferred_language: string
+  profile_completed?: boolean
+  profile_picture_url?: string
+  preferred_language?: string
+  profile_completion_percentage?: number
 
   created_at: string
+  updated_at?: string
+  /** Billing / plan state for list UI (e.g. "Unsubscribed", "Active"). */
+  subscription_status?: string
 }
 
 export interface GetUsersResponse {
@@ -55,20 +59,26 @@ export interface User {
   country: string
   lastLogin: string | null
   status: string
+  /** From API `subscription_status` (e.g. "Unsubscribed"). */
+  subscriptionStatus: string
+  /** ISO 8601 from API `created_at`. */
+  createdAt: string
 }
 
 export const mapUserApiToUser = (u: UserApiDTO): User => ({
   id: u.id,
-  firstName: u.first_name,
-  lastName: u.last_name,
-  nickName: u.nick_name,
-  email: u.email,
+  firstName: u.first_name ?? "",
+  lastName: u.last_name ?? "",
+  nickName: u.nick_name ?? "",
+  email: u.email ?? "",
   phoneNumber: u.phone_number ?? "",
   role: u.role,
-  region: u.region,
-  country: u.country,
+  region: u.region ?? "",
+  country: u.country ?? "",
   lastLogin: null,
   status: u.status,
+  subscriptionStatus: u.subscription_status?.trim() ? u.subscription_status.trim() : "—",
+  createdAt: u.created_at ?? "",
 })
 
 export interface UserProfileData {
@@ -113,6 +123,27 @@ export interface UserProfileResponse {
   message: string
   data: UserProfileData
   timestamp: string
+}
+
+/** GET /admin/users/:user_id/recent-activity */
+export interface UserRecentActivityItem {
+  id: string
+  kind: string
+  occurred_at: string
+  headline: string
+}
+
+export interface UserRecentActivityData {
+  user_id: number
+  items: UserRecentActivityItem[]
+}
+
+export interface UserRecentActivityResponse {
+  message?: string
+  data?: UserRecentActivityData
+  success?: boolean
+  status_code?: number
+  metadata?: unknown
 }
 
 export interface UserSummary {

@@ -363,7 +363,7 @@ export function NotificationsPage() {
 
       if (needsUsers) {
         tasks.push(
-          getUsers(1, 20)
+          getUsers({ page: 1, page_size: 20 })
             .then(async (res) => {
               const firstBatch = res.data?.data?.users ?? []
               const total = res.data?.data?.total ?? firstBatch.length
@@ -376,7 +376,7 @@ export function NotificationsPage() {
 
               const remainingRequests: Array<ReturnType<typeof getUsers>> = []
               for (let page = 2; page <= totalPages; page += 1) {
-                remainingRequests.push(getUsers(page, pageSize))
+                remainingRequests.push(getUsers({ page, page_size: pageSize }))
               }
 
               try {

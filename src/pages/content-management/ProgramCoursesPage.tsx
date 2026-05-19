@@ -30,6 +30,7 @@ import type {
   LearningProgramListItem,
   ProgramCourseListItem,
 } from "../../types/course.types";
+import { PublishPracticeButton } from "./components/PublishPracticeButton";
 
 export function ProgramCoursesPage() {
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ export function ProgramCoursesPage() {
   );
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editSortOrder, setEditSortOrder] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingEditThumbnail, setUploadingEditThumbnail] = useState(false);
@@ -60,6 +62,7 @@ export function ProgramCoursesPage() {
   const [createCourseOpen, setCreateCourseOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
+  const [createSortOrder, setCreateSortOrder] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
   const [createUploadingThumbnail, setCreateUploadingThumbnail] = useState(false);
@@ -137,12 +140,14 @@ export function ProgramCoursesPage() {
     setEditThumbnail(
       course.thumbnail?.trim() || course.thumbnail_url?.trim() || "",
     );
+    setEditSortOrder(String(course.sort_order ?? 0));
   };
 
   const closeEditCourse = () => {
     setEditingCourse(null);
     setEditName("");
     setEditDescription("");
+    setEditSortOrder("");
     setEditThumbnail("");
     setUploadingEditThumbnail(false);
     if (editThumbnailFileInputRef.current) {
@@ -192,12 +197,23 @@ export function ProgramCoursesPage() {
       toast.error("Course name is required");
       return;
     }
+    const sortOrderRaw = editSortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setSavingEdit(true);
     try {
       await updateTopLevelCourse(editingCourse.id, {
         name,
         description: editDescription.trim(),
         thumbnail: editThumbnail.trim(),
+        sort_order,
       });
       toast.success("Course updated");
       closeEditCourse();
@@ -216,6 +232,7 @@ export function ProgramCoursesPage() {
   const clearCreateCourseForm = () => {
     setCreateName("");
     setCreateDescription("");
+    setCreateSortOrder("");
     setCreateThumbnail("");
     setCreateUploadingThumbnail(false);
     if (createThumbnailFileInputRef.current) {
@@ -271,12 +288,23 @@ export function ProgramCoursesPage() {
       toast.error("Course name is required");
       return;
     }
+    const sortOrderRaw = createSortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setCreateSaving(true);
     try {
       await createProgramCourse(programId, {
         name,
         description: createDescription.trim(),
         thumbnail: createThumbnail.trim(),
+        sort_order,
       });
       toast.success("Course created");
       clearCreateCourseForm();
@@ -433,6 +461,30 @@ export function ProgramCoursesPage() {
                           className="min-h-[88px] resize-y rounded-xl"
                           disabled={createSaving || createUploadingThumbnail}
                         />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="create-course-sort-order"
+                          className="text-[15px] font-medium text-grayScale-700"
+                        >
+                          Sort Order
+                        </label>
+                        <Input
+                          id="create-course-sort-order"
+                          type="number"
+                          min={0}
+                          step={1}
+                          inputMode="numeric"
+                          value={createSortOrder}
+                          onChange={(e) => setCreateSortOrder(e.target.value)}
+                          placeholder="e.g. 5"
+                          className="h-12 rounded-xl"
+                          disabled={createSaving || createUploadingThumbnail}
+                        />
+                        <p className="text-xs text-grayScale-500">
+                          Lower numbers appear first when courses are listed.
+                        </p>
                       </div>
 
                       <div className="space-y-2">
@@ -664,9 +716,11 @@ export function ProgramCoursesPage() {
                     >
                       View Detail
                     </Button>
-                    <Button className="h-10 flex-1 rounded-[6px] bg-brand-500 text-[13px] font-semibold ">
-                      Publish Practice
-                    </Button>
+                    <PublishPracticeButton
+                      parentKind="COURSE"
+                      parentId={course.id}
+                      className="h-10 flex-1 rounded-[6px] bg-brand-500 text-[13px] font-semibold hover:bg-brand-600 disabled:opacity-60"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -682,18 +736,19 @@ export function ProgramCoursesPage() {
           if (!open) closeEditCourse();
         }}
       >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-lg flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
             <DialogTitle>Edit course</DialogTitle>
             <DialogDescription>
-              Update name, description, and thumbnail. Saved with{" "}
+              Update name, description, sort order, and thumbnail. Saved with{" "}
               <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
                 PUT /courses/:id
               </code>
               .
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+          <div className="grid gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-grayScale-700">
                 Name
@@ -718,6 +773,29 @@ export function ProgramCoursesPage() {
                 placeholder="Short summary"
                 disabled={savingEdit || uploadingEditThumbnail}
               />
+            </div>
+            <div className="space-y-2">
+              <label
+                htmlFor="edit-course-sort-order"
+                className="text-sm font-medium text-grayScale-700"
+              >
+                Sort Order
+              </label>
+              <Input
+                id="edit-course-sort-order"
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={editSortOrder}
+                onChange={(e) => setEditSortOrder(e.target.value)}
+                className="rounded-xl"
+                placeholder="e.g. 5"
+                disabled={savingEdit || uploadingEditThumbnail}
+              />
+              <p className="text-xs text-grayScale-500">
+                Lower numbers appear first when courses are listed.
+              </p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-grayScale-700">
@@ -760,7 +838,8 @@ export function ProgramCoursesPage() {
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          </div>
+          <DialogFooter className="shrink-0 gap-2 border-t border-grayScale-100 bg-white px-6 py-4 sm:gap-0">
             <Button
               type="button"
               variant="outline"

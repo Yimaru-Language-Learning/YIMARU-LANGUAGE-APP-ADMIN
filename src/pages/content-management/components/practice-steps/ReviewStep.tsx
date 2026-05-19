@@ -7,9 +7,12 @@ import {
   definitionUsesDynamicPayload,
   legacyQuestionTypeFromDefinition,
 } from "../../../../lib/learnEnglishDefinitionQuestion";
+import { PublishStatusField } from "./PublishStatusField";
+import type { PracticePublishStatus } from "../../../../types/course.types";
 
 interface ReviewStepProps {
   formData: any;
+  setFormData: (data: any) => void;
   prevStep: () => void;
   parentSummary: string | null;
   typeDefinitions: QuestionTypeDefinition[];
@@ -21,6 +24,7 @@ interface ReviewStepProps {
 
 export function ReviewStep({
   formData,
+  setFormData,
   prevStep,
   parentSummary,
   typeDefinitions,
@@ -123,6 +127,13 @@ export function ReviewStep({
         </div>
       </div>
 
+      <PublishStatusField
+        className="px-2"
+        value={(formData.publishStatus ?? "DRAFT") as PracticePublishStatus}
+        onChange={(publishStatus) => setFormData({ ...formData, publishStatus })}
+        disabled={submitting}
+      />
+
       <div className="flex items-center justify-between pt-12">
         <Button
           onClick={prevStep}
@@ -135,7 +146,10 @@ export function ReviewStep({
           <Button
             variant="outline"
             disabled={submitting || !canPublish}
-            onClick={onSaveDraft}
+            onClick={() => {
+              setFormData({ ...formData, publishStatus: "DRAFT" });
+              onSaveDraft();
+            }}
             className="h-10 rounded-[6px] border-grayScale-100 bg-white px-8 text-sm font-bold text-grayScale-600 shadow-sm hover:bg-grayScale-50"
           >
             {submitting ? (
@@ -145,7 +159,10 @@ export function ReviewStep({
           </Button>
           <Button
             disabled={submitting || !canPublish}
-            onClick={onPublish}
+            onClick={() => {
+              setFormData({ ...formData, publishStatus: "PUBLISHED" });
+              onPublish();
+            }}
             className="h-10 gap-3 rounded-[6px] bg-brand-500 px-10 text-sm font-bold text-white shadow-xl shadow-brand-500/20 transition-all hover:bg-brand-600 active:scale-95 disabled:opacity-50"
           >
             {submitting ? (

@@ -29,6 +29,7 @@ export function AddModuleModal({
 }: AddModuleModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [sortOrder, setSortOrder] = useState("");
   const [icon, setIcon] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [iconUploadBusy, setIconUploadBusy] = useState(false);
@@ -37,6 +38,7 @@ export function AddModuleModal({
     if (isOpen) {
       setName("");
       setDescription("");
+      setSortOrder("");
       setIcon("");
       setSubmitting(false);
       setIconUploadBusy(false);
@@ -46,6 +48,7 @@ export function AddModuleModal({
   const resetAndClose = () => {
     setName("");
     setDescription("");
+    setSortOrder("");
     setIcon("");
     setIconUploadBusy(false);
     onClose();
@@ -69,12 +72,23 @@ export function AddModuleModal({
       toast.error("Invalid course");
       return;
     }
+    const sortOrderRaw = sortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setSubmitting(true);
     try {
       await createTopLevelCourseModule(courseId, {
         name: trimmedName,
         description: description.trim(),
         icon: icon.trim(),
+        sort_order,
       });
       toast.success("Module created");
       if (onCreated) {
@@ -155,6 +169,30 @@ export function AddModuleModal({
               disabled={submitting}
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="create-module-sort-order"
+              className="text-[15px] font-medium text-grayScale-700"
+            >
+              Sort Order
+            </label>
+            <Input
+              id="create-module-sort-order"
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              placeholder="e.g. 5"
+              className="h-12 rounded-xl"
+              disabled={submitting || iconUploadBusy}
+            />
+            <p className="text-xs text-grayScale-500">
+              Lower numbers appear first when modules are listed.
+            </p>
           </div>
 
           <ModuleIconUploadField

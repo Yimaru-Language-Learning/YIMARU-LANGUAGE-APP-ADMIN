@@ -11,7 +11,12 @@ import {
   createQuestion,
   createQuestionSet,
 } from "../../../api/courses.api"
-import type { CreateQuestionRequest, PracticeParentKind } from "../../../types/course.types"
+import type {
+  CreateQuestionRequest,
+  PracticeParentKind,
+  PracticePublishStatus,
+} from "../../../types/course.types"
+import { PublishStatusField } from "./practice-steps/PublishStatusField"
 import { cn } from "../../../lib/utils"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 
@@ -60,6 +65,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
   const [storyDescription, setStoryDescription] = useState("")
   const [storyImage, setStoryImage] = useState("")
   const [quickTips, setQuickTips] = useState("")
+  const [publishStatus, setPublishStatus] = useState<PracticePublishStatus>("DRAFT")
 
   const canUseWizard = parent != null
 
@@ -79,6 +85,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
     setStoryDescription("")
     setStoryImage("")
     setQuickTips("")
+    setPublishStatus("DRAFT")
   }, [])
 
   const handleStep1 = async () => {
@@ -173,7 +180,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
     }
   }
 
-  const handleStep4 = async () => {
+  const handleStep4 = async (status: PracticePublishStatus) => {
     if (!parent || questionSetId == null) return
     if (!practiceTitle.trim() || !storyDescription.trim() || !storyImage.trim()) {
       toast.error("Title, story description, and story image are required")
@@ -189,8 +196,11 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
         story_image: storyImage.trim(),
         question_set_id: questionSetId,
         quick_tips: quickTips.trim(),
+        publish_status: status,
       })
-      toast.success("Practice created successfully")
+      toast.success(
+        status === "PUBLISHED" ? "Practice published" : "Practice saved as draft",
+      )
       resetAll()
       onCreated?.()
     } catch (e: unknown) {
@@ -463,14 +473,42 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
                 disabled={saving}
               />
             </div>
+            <PublishStatusField
+              value={publishStatus}
+              onChange={setPublishStatus}
+              disabled={saving}
+            />
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={() => setStep(3)} disabled={saving}>
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Back
               </Button>
-              <Button type="button" onClick={handleStep4} disabled={saving}>
-                {saving ? <SpinnerIcon className="h-4 w-4" /> : <ChevronRight className="mr-1.5 h-4 w-4" />}
-                Create practice
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={() => {
+                  setPublishStatus("DRAFT")
+                  void handleStep4("DRAFT")
+                }}
+              >
+                {saving && publishStatus === "DRAFT" ? (
+                  <SpinnerIcon className="h-4 w-4" />
+                ) : null}
+                Save as draft
+              </Button>
+              <Button
+                type="button"
+                disabled={saving}
+                onClick={() => {
+                  setPublishStatus("PUBLISHED")
+                  void handleStep4("PUBLISHED")
+                }}
+              >
+                {saving && publishStatus === "PUBLISHED" ? (
+                  <SpinnerIcon className="h-4 w-4" />
+                ) : null}
+                Publish practice
               </Button>
             </div>
           </div>

@@ -8,6 +8,8 @@ import type {
   DeleteRoleResponse,
   SetRolePermissionsRequest,
   GetPermissionsResponse,
+  BulkRoleDeactivateResponse,
+  BulkRoleReactivateResponse,
 } from "../types/rbac.types"
 
 export const getRoles = (params?: GetRolesParams) =>
@@ -30,3 +32,11 @@ export const getAllPermissions = () =>
 
 export const deleteRole = (roleId: number) =>
   http.delete<DeleteRoleResponse>(`/rbac/roles/${roleId}`)
+
+/** Deactivate all users and team members tied to this role (admin). */
+export const bulkDeactivateRole = (roleId: number) =>
+  http.post<BulkRoleDeactivateResponse>(`/admin/roles/${roleId}/bulk-deactivate`, {})
+
+/** Reactivate users and team members tied to this role (admin). */
+export const bulkReactivateRole = (roleId: number) =>
+  http.post<BulkRoleReactivateResponse>(`/admin/roles/${roleId}/bulk-reactivate`, {})

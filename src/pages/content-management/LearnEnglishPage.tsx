@@ -24,8 +24,25 @@ import {
   updateLearningProgram,
   deleteLearningProgram,
 } from "../../api/courses.api";
-import { uploadImageFile } from "../../api/files.api";
+import { refreshFileUrl, uploadImageFile } from "../../api/files.api";
 import type { LearningProgramListItem } from "../../types/course.types";
+
+/** Presigned MinIO/S3 URLs and our storage hosts — safe to send to POST /files/refresh-url. */
+function looksLikeRefreshableFileUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return false;
+  try {
+    const u = new URL(trimmed);
+    const q = u.search.toLowerCase();
+    if (q.includes("x-amz-")) return true;
+    const h = u.hostname.toLowerCase();
+    if (h.includes("yimaruacademy.com")) return true;
+    if (h.includes("minio")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 export function LearnEnglishPage() {
   const [programs, setPrograms] = useState<LearningProgramListItem[]>([]);
@@ -36,6 +53,7 @@ export function LearnEnglishPage() {
     useState<LearningProgramListItem | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editSortOrder, setEditSortOrder] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingEditThumbnail, setUploadingEditThumbnail] = useState(false);
@@ -44,6 +62,7 @@ export function LearnEnglishPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
+  const [createSortOrder, setCreateSortOrder] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
   const [createUploadingThumbnail, setCreateUploadingThumbnail] = useState(false);
@@ -57,6 +76,7 @@ export function LearnEnglishPage() {
     setEditingProgram(program);
     setEditName(program.name ?? "");
     setEditDescription(program.description?.trim() ?? "");
+    setEditSortOrder(String(program.sort_order ?? 0));
     setEditThumbnail(program.thumbnail?.trim() ?? "");
   };
 
@@ -64,6 +84,7 @@ export function LearnEnglishPage() {
     setEditingProgram(null);
     setEditName("");
     setEditDescription("");
+    setEditSortOrder("");
     setEditThumbnail("");
     setUploadingEditThumbnail(false);
     if (editThumbnailFileInputRef.current) editThumbnailFileInputRef.current.value = "";
@@ -107,6 +128,7 @@ export function LearnEnglishPage() {
   const clearCreateFormFields = () => {
     setCreateName("");
     setCreateDescription("");
+    setCreateSortOrder("");
     setCreateThumbnail("");
     if (createThumbnailFileInputRef.current) {
       createThumbnailFileInputRef.current.value = "";
@@ -160,12 +182,23 @@ export function LearnEnglishPage() {
       toast.error("Program name is required");
       return;
     }
+    const sortOrderRaw = createSortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setCreateSaving(true);
     try {
       await createLearningProgram({
         name,
         description: createDescription.trim(),
         thumbnail: createThumbnail.trim(),
+        sort_order,
       });
       toast.success("Program created");
       clearCreateFormFields();
@@ -189,12 +222,23 @@ export function LearnEnglishPage() {
       toast.error("Program name is required");
       return;
     }
+    const sortOrderRaw = editSortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setSavingEdit(true);
     try {
       await updateLearningProgram(editingProgram.id, {
         name,
         description: editDescription.trim(),
         thumbnail: editThumbnail.trim(),
+        sort_order,
       });
       toast.success("Program updated");
       closeEdit();
@@ -240,6 +284,35 @@ export function LearnEnglishPage() {
         (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
       );
       setPrograms(sorted);
+
+      void (async () => {
+        const results = await Promise.all(
+          sorted.map(async (p) => {
+            const ref = p.thumbnail?.trim();
+            if (!ref || !looksLikeRefreshableFileUrl(ref)) return null;
+            try {
+              const res = await refreshFileUrl(ref);
+              const url = res.data?.data?.url?.trim();
+              if (!url) return null;
+              return { id: p.id, url };
+            } catch {
+              return null;
+            }
+          }),
+        );
+        const map = new Map(
+          results
+            .filter((r): r is { id: number; url: string } => r != null)
+            .map((r) => [r.id, r.url] as const),
+        );
+        if (map.size === 0) return;
+        setPrograms((prev) =>
+          prev.map((prog) => {
+            const next = map.get(prog.id);
+            return next ? { ...prog, thumbnail: next } : prog;
+          }),
+        );
+      })();
     } catch (e) {
       console.error(e);
       setError("Failed to load programs");
@@ -346,6 +419,27 @@ export function LearnEnglishPage() {
                     className="min-h-[88px] resize-y rounded-xl"
                     disabled={createSaving || createUploadingThumbnail}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="create-program-sort-order" className="text-[15px] text-grayScale-700">
+                    Sort Order
+                  </label>
+                  <Input
+                    id="create-program-sort-order"
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={createSortOrder}
+                    onChange={(e) => setCreateSortOrder(e.target.value)}
+                    placeholder="e.g. 5"
+                    className="h-12 rounded-xl ring-0"
+                    disabled={createSaving || createUploadingThumbnail}
+                  />
+                  <p className="text-xs text-grayScale-500">
+                    Lower numbers appear first when programs are listed.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -549,16 +643,17 @@ export function LearnEnglishPage() {
           if (!open) closeEdit();
         }}
       >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-lg flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
             <DialogTitle>Edit program</DialogTitle>
             <DialogDescription>
-              Update name, description, and thumbnail. Upload an image from your
-              computer (via file storage) or paste a URL. Changes are saved to the
-              server.
+              Update name, description, sort order, and thumbnail. Upload an image
+              from your computer (via file storage) or paste a URL. Changes are
+              saved to the server.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+          <div className="grid gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-grayScale-700">
                 Name
@@ -583,6 +678,26 @@ export function LearnEnglishPage() {
                 placeholder="Short summary of the program"
                 disabled={savingEdit || uploadingEditThumbnail}
               />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="edit-program-sort-order" className="text-sm font-medium text-grayScale-700">
+                Sort Order
+              </label>
+              <Input
+                id="edit-program-sort-order"
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={editSortOrder}
+                onChange={(e) => setEditSortOrder(e.target.value)}
+                className="rounded-xl"
+                placeholder="e.g. 5"
+                disabled={savingEdit || uploadingEditThumbnail}
+              />
+              <p className="text-xs text-grayScale-500">
+                Lower numbers appear first when programs are listed.
+              </p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-grayScale-700">
@@ -632,7 +747,8 @@ export function LearnEnglishPage() {
               </p>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          </div>
+          <DialogFooter className="shrink-0 gap-2 border-t border-grayScale-100 bg-white px-6 py-4 sm:gap-0">
             <Button
               type="button"
               variant="outline"

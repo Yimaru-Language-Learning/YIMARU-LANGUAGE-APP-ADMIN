@@ -38,6 +38,7 @@ import type {
 } from "../../types/course.types";
 import { AddModuleModal } from "./components/AddModuleModal";
 import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
+import { PublishPracticeButton } from "./components/PublishPracticeButton";
 
 const MODULE_CARD_GRADIENT = "from-[#8E44AD] to-[#C39BD3]" as const;
 
@@ -146,6 +147,7 @@ export function CourseDetailPage() {
     useState<TopLevelCourseModuleItem | null>(null);
   const [editModuleName, setEditModuleName] = useState("");
   const [editModuleDescription, setEditModuleDescription] = useState("");
+  const [editModuleSortOrder, setEditModuleSortOrder] = useState("");
   const [editModuleIcon, setEditModuleIcon] = useState("");
   const [editModuleIconUploadBusy, setEditModuleIconUploadBusy] =
     useState(false);
@@ -159,6 +161,7 @@ export function CourseDetailPage() {
     setEditingModule(module);
     setEditModuleName(module.name ?? "");
     setEditModuleDescription(module.description ?? "");
+    setEditModuleSortOrder(String(module.sort_order ?? 0));
     setEditModuleIcon(module.icon?.trim() ?? "");
     setEditModuleIconUploadBusy(false);
   };
@@ -267,12 +270,23 @@ export function CourseDetailPage() {
       toast.error("Module name is required");
       return;
     }
+    const sortOrderRaw = editModuleSortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setSavingModuleEdit(true);
     try {
       await updateTopLevelCourseModule(editingModule.id, {
         name,
         description: editModuleDescription.trim(),
         icon: editModuleIcon.trim(),
+        sort_order,
       });
       toast.success("Module updated");
       setEditModuleIconUploadBusy(false);
@@ -412,18 +426,20 @@ export function CourseDetailPage() {
               if (!open) closeEditModule();
             }}
           >
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
+            <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-lg flex-col gap-0 overflow-hidden p-0">
+              <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
                 <DialogTitle>Edit module</DialogTitle>
                 <DialogDescription>
-                  Update name, description, and icon (upload or URL). Saved with{" "}
+                  Update name, description, sort order, and icon (upload or URL).
+                  Saved with{" "}
                   <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
                     PUT /modules/:id
                   </code>
                   .
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-2">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+              <div className="grid gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-grayScale-700">
                     Name
@@ -446,8 +462,31 @@ export function CourseDetailPage() {
                     rows={4}
                     className="min-h-[100px] resize-y rounded-xl"
                     placeholder="Optional short description."
-                    disabled={savingModuleEdit}
+                    disabled={savingModuleEdit || editModuleIconUploadBusy}
                   />
+                </div>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="edit-module-sort-order"
+                    className="text-sm font-medium text-grayScale-700"
+                  >
+                    Sort Order
+                  </label>
+                  <Input
+                    id="edit-module-sort-order"
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={editModuleSortOrder}
+                    onChange={(e) => setEditModuleSortOrder(e.target.value)}
+                    className="rounded-xl"
+                    placeholder="e.g. 5"
+                    disabled={savingModuleEdit || editModuleIconUploadBusy}
+                  />
+                  <p className="text-xs text-grayScale-500">
+                    Lower numbers appear first when modules are listed.
+                  </p>
                 </div>
                 <ModuleIconUploadField
                   value={editModuleIcon}
@@ -456,7 +495,8 @@ export function CourseDetailPage() {
                   onUploadBusyChange={setEditModuleIconUploadBusy}
                 />
               </div>
-              <DialogFooter className="gap-2 sm:gap-0">
+              </div>
+              <DialogFooter className="shrink-0 gap-2 border-t border-grayScale-100 bg-white px-6 py-4 sm:gap-0">
                 <Button
                   type="button"
                   variant="outline"
@@ -560,9 +600,11 @@ export function CourseDetailPage() {
                         >
                           View Detail
                         </Button>
-                        <Button className="h-10 flex-1 rounded-[6px] bg-brand-500 text-sm text-white shadow-md shadow-brand-500/10">
-                          Publish Practice
-                        </Button>
+                        <PublishPracticeButton
+                          parentKind="MODULE"
+                          parentId={module.id}
+                          className="h-10 flex-1 rounded-[6px] bg-brand-500 text-sm text-white shadow-md shadow-brand-500/10 hover:bg-brand-600 disabled:opacity-60"
+                        />
                       </div>
                     </div>
                   </Card>

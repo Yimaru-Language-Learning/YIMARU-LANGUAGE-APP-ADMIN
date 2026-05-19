@@ -79,3 +79,31 @@ export interface GetPermissionsResponse {
   status_code: number
   metadata: unknown
 }
+
+export interface BulkRoleDeactivateData {
+  role: string
+  users_deactivated: number
+  team_members_deactivated: number
+}
+
+export interface BulkRoleReactivateData {
+  role: string
+  users_reactivated: number
+  team_members_reactivated: number
+}
+
+export interface BulkRoleDeactivateResponse {
+  message: string
+  data: BulkRoleDeactivateData
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface BulkRoleReactivateResponse {
+  message: string
+  data: BulkRoleReactivateData
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}

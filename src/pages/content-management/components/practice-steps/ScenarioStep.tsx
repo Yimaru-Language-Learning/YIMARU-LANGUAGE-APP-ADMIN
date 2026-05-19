@@ -7,6 +7,8 @@ import { Input } from "../../../../components/ui/input";
 import { Textarea } from "../../../../components/ui/textarea";
 import { toast } from "sonner";
 import { uploadImageFile } from "../../../../api/files.api";
+import { PublishStatusField } from "./PublishStatusField";
+import type { PracticePublishStatus } from "../../../../types/course.types";
 
 interface ScenarioStepProps {
   formData: any;
@@ -158,6 +160,13 @@ export function ScenarioStep({
             maxLength={1000}
           />
         </div>
+        <PublishStatusField
+          value={(formData.publishStatus ?? "DRAFT") as PracticePublishStatus}
+          onChange={(publishStatus) =>
+            setFormData({ ...formData, publishStatus })
+          }
+          disabled={uploadingBanner}
+        />
       </Card>
 
       <div className="flex items-center justify-between pt-4">

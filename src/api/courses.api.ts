@@ -104,6 +104,7 @@ import type {
   CreateParentLinkedPracticeResponse,
   UpdateParentLinkedPracticeRequest,
   UpdateParentLinkedPracticeResponse,
+  PublishParentLinkedPracticeRequest,
   UpdateTopLevelModuleLessonRequest,
   CreateTopLevelModuleLessonRequest,
   CreateTopLevelModuleLessonResponse,
@@ -680,6 +681,12 @@ export const updateParentLinkedPractice = (
   practiceId: number,
   data: UpdateParentLinkedPracticeRequest,
 ) => http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
+
+/** PUT /practices/:id — set publish_status (e.g. publish a draft). */
+export const publishParentLinkedPractice = (practiceId: number) =>
+  http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, {
+    publish_status: "PUBLISHED",
+  } satisfies PublishParentLinkedPracticeRequest)
 
 /** DELETE /practices/:id */
 export const deleteParentLinkedPractice = (practiceId: number) =>

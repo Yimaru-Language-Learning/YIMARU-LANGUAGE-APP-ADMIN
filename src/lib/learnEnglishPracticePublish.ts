@@ -121,6 +121,7 @@ export async function executeLearnEnglishPracticeCreation(opts: {
     story_image: opts.storyImage.trim(),
     question_set_id: setId,
     quick_tips: opts.quickTips.trim(),
+    publish_status: opts.status,
   })
 
   const practiceId = practiceRes.data?.data?.id

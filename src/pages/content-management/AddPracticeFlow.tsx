@@ -101,6 +101,7 @@ export function AddPracticeFlow() {
     description: "",
     storyImageUrl: "",
     shuffleQuestions: false,
+    publishStatus: "DRAFT" as const,
     tips: "",
     questions: [
       {
@@ -278,6 +279,7 @@ export function AddPracticeFlow() {
                 description: "",
                 storyImageUrl: "",
                 shuffleQuestions: false,
+                publishStatus: "DRAFT" as const,
                 tips: "",
                 questions: [
                   {
@@ -339,6 +341,7 @@ export function AddPracticeFlow() {
           return (
             <ReviewStep
               formData={formData}
+              setFormData={setFormData}
               prevStep={prevStep}
               parentSummary={parentSummary}
               typeDefinitions={typeDefinitions}
@@ -379,6 +382,7 @@ export function AddPracticeFlow() {
         return (
           <ReviewStep
             formData={formData}
+            setFormData={setFormData}
             prevStep={prevStep}
             parentSummary={parentSummary}
             typeDefinitions={typeDefinitions}

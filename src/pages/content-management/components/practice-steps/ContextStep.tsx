@@ -6,6 +6,8 @@ import { Input } from "../../../../components/ui/input";
 import { Textarea } from "../../../../components/ui/textarea";
 import { toast } from "sonner";
 import { uploadImageFile } from "../../../../api/files.api";
+import { PublishStatusField } from "./PublishStatusField";
+import type { PracticePublishStatus } from "../../../../types/course.types";
 
 interface ContextStepProps {
   formData: any;
@@ -168,6 +170,14 @@ export function ContextStep({
           />
           <span>Shuffle questions in the set</span>
         </label>
+
+        <PublishStatusField
+          value={(formData.publishStatus ?? "DRAFT") as PracticePublishStatus}
+          onChange={(publishStatus) =>
+            setFormData({ ...formData, publishStatus })
+          }
+          disabled={uploadingStory}
+        />
       </div>
 
       <div className="flex items-center justify-between border-t border-grayScale-100 bg-[#F8FAFC] p-4 px-12">

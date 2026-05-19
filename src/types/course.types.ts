@@ -73,12 +73,14 @@ export interface UpdateLearningProgramRequest {
   name: string
   description: string
   thumbnail: string
+  sort_order: number
 }
 
 export interface CreateLearningProgramRequest {
   name: string
   description: string
   thumbnail: string
+  sort_order: number
 }
 
 export interface CreateLearningProgramResponse {
@@ -128,6 +130,7 @@ export interface UpdateTopLevelCourseRequest {
   name: string
   description: string
   thumbnail: string
+  sort_order: number
 }
 
 /** Body for POST /programs/:program_id/courses */
@@ -135,6 +138,7 @@ export interface CreateProgramCourseRequest {
   name: string
   description: string
   thumbnail: string
+  sort_order: number
 }
 
 export interface CreateProgramCourseResponse {
@@ -416,6 +420,7 @@ export interface UpdateTopLevelCourseModuleRequest {
   name: string
   description: string
   icon: string
+  sort_order: number
 }
 
 /** Body for POST /courses/:courseId/modules */
@@ -423,6 +428,7 @@ export interface CreateTopLevelCourseModuleRequest {
   name: string
   description: string
   icon: string
+  sort_order: number
 }
 
 export interface CreateTopLevelCourseModuleResponse {
@@ -468,6 +474,7 @@ export interface ParentContextPractice {
   story_image: string
   question_set_id: number
   quick_tips: string
+  publish_status?: PracticePublishStatus | string | null
   persona_id?: number | null
   created_at: string
 }
@@ -487,6 +494,8 @@ export interface GetPracticesByParentContextResponse {
 
 export type PracticeParentKind = "COURSE" | "MODULE" | "LESSON"
 
+export type PracticePublishStatus = "DRAFT" | "PUBLISHED"
+
 /** POST /practices — create practice linked to a course, module, or lesson (Learn English). */
 export interface CreateParentLinkedPracticeRequest {
   parent_kind: PracticeParentKind
@@ -496,6 +505,7 @@ export interface CreateParentLinkedPracticeRequest {
   story_image: string
   question_set_id: number
   quick_tips: string
+  publish_status: PracticePublishStatus
   persona_id?: number
 }
 
@@ -509,12 +519,18 @@ export interface CreateParentLinkedPracticeResponse {
 
 /** Body for PUT /practices/:id (Learn English parent-linked practice). */
 export interface UpdateParentLinkedPracticeRequest {
-  title: string
-  story_description: string
-  story_image: string
-  question_set_id: number
-  quick_tips: string
+  title?: string
+  story_description?: string
+  story_image?: string
+  question_set_id?: number
+  quick_tips?: string
+  publish_status?: PracticePublishStatus
   persona_id?: number | null
+}
+
+/** Publish-only patch: PUT /practices/:id with { publish_status: "PUBLISHED" }. */
+export interface PublishParentLinkedPracticeRequest {
+  publish_status: PracticePublishStatus
 }
 
 export interface UpdateParentLinkedPracticeResponse {

@@ -13,6 +13,8 @@ import {
   Pencil,
   Check,
   Trash2,
+  UserX,
+  UserCheck,
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
@@ -29,6 +31,8 @@ import {
   setRolePermissions,
   updateRole,
   deleteRole,
+  bulkDeactivateRole,
+  bulkReactivateRole,
 } from "../../api/rbac.api"
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
@@ -57,6 +61,13 @@ export function RolesListPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  /** Bulk deactivate / reactivate (users + team members for this role). */
+  const [bulkDialog, setBulkDialog] = useState<{
+    type: "deactivate" | "reactivate"
+    role: Role
+  } | null>(null)
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
 
   // Role info editing state
   const [editingRole, setEditingRole] = useState(false)
@@ -128,6 +139,39 @@ export function RolesListPage() {
   const handleCancelDeleteRole = () => {
     setDeleteDialogOpen(false)
     setRoleToDelete(null)
+  }
+
+  const handleCancelBulkDialog = () => {
+    setBulkDialog(null)
+  }
+
+  const handleConfirmBulkAction = async () => {
+    if (!bulkDialog) return
+    const { type, role } = bulkDialog
+    setBulkActionLoading(true)
+    try {
+      if (type === "deactivate") {
+        const res = await bulkDeactivateRole(role.id)
+        const d = res.data.data
+        toast.success(res.data.message ?? "Bulk deactivation completed", {
+          description: `${d.role}: ${d.users_deactivated} user(s), ${d.team_members_deactivated} team member(s) deactivated.`,
+        })
+      } else {
+        const res = await bulkReactivateRole(role.id)
+        const d = res.data.data
+        toast.success(res.data.message ?? "Bulk reactivation completed", {
+          description: `${d.role}: ${d.users_reactivated} user(s), ${d.team_members_reactivated} team member(s) reactivated.`,
+        })
+      }
+      setBulkDialog(null)
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        (type === "deactivate" ? "Bulk deactivation failed." : "Bulk reactivation failed.")
+      toast.error(message)
+    } finally {
+      setBulkActionLoading(false)
+    }
   }
 
   const handleConfirmDeleteRole = async () => {
@@ -419,6 +463,31 @@ export function RolesListPage() {
                           {new Date(role.created_at).toLocaleDateString()}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs text-grayScale-700"
+                        onClick={() => setBulkDialog({ type: "deactivate", role })}
+                        disabled={deleteLoading || bulkActionLoading}
+                      >
+                        <UserX className="h-3.5 w-3.5 shrink-0" />
+                        Deactivate all
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs text-grayScale-700"
+                        onClick={() => setBulkDialog({ type: "reactivate", role })}
+                        disabled={deleteLoading || bulkActionLoading}
+                      >
+                        <UserCheck className="h-3.5 w-3.5 shrink-0" />
+                        Reactivate all
+                      </Button>
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -780,6 +849,72 @@ export function RolesListPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk deactivate / reactivate confirmation */}
+      <Dialog
+        open={bulkDialog != null}
+        onOpenChange={(open) => {
+          if (!open) handleCancelBulkDialog()
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {bulkDialog?.type === "deactivate" ? (
+                <>
+                  <UserX className="h-5 w-5 text-amber-600" />
+                  Deactivate all for this role?
+                </>
+              ) : (
+                <>
+                  <UserCheck className="h-5 w-5 text-brand-600" />
+                  Reactivate all for this role?
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {bulkDialog?.type === "deactivate"
+                ? "This deactivates every user and team member currently assigned to this role. They can be reactivated later with Reactivate all."
+                : "This reactivates users and team members tied to this role who were deactivated in bulk for this role."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {bulkDialog && (
+            <div className="rounded-lg border border-grayScale-100 bg-grayScale-50/80 p-3">
+              <p className="text-sm font-semibold text-grayScale-700">{bulkDialog.role.name}</p>
+              <p className="text-xs text-grayScale-500">Role #{bulkDialog.role.id}</p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelBulkDialog}
+              disabled={bulkActionLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className={
+                bulkDialog?.type === "deactivate"
+                  ? "gap-1.5 bg-amber-600 hover:bg-amber-700"
+                  : "gap-1.5 bg-brand-500 hover:bg-brand-600"
+              }
+              disabled={bulkActionLoading || !bulkDialog}
+              onClick={handleConfirmBulkAction}
+            >
+              {bulkActionLoading && <SpinnerIcon className="h-3.5 w-3.5" />}
+              {bulkActionLoading
+                ? "Working…"
+                : bulkDialog?.type === "deactivate"
+                  ? "Deactivate all"
+                  : "Reactivate all"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

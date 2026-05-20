@@ -106,6 +106,7 @@ import type {
   UpdateParentLinkedPracticeResponse,
   PublishParentLinkedPracticeRequest,
   UpdateTopLevelModuleLessonRequest,
+  PublishTopLevelModuleLessonRequest,
   CreateTopLevelModuleLessonRequest,
   CreateTopLevelModuleLessonResponse,
 } from "../types/course.types"
@@ -645,6 +646,12 @@ export const createModuleLesson = (
 export const updateTopLevelModuleLesson = (
   lessonId: number,
   data: UpdateTopLevelModuleLessonRequest,
+) => http.put(`/lessons/${lessonId}`, data)
+
+/** PUT /lessons/:id — set publish_status only (draft or published). */
+export const publishTopLevelModuleLesson = (
+  lessonId: number,
+  data: PublishTopLevelModuleLessonRequest,
 ) => http.put(`/lessons/${lessonId}`, data)
 
 /** Learn English top-level module lesson — DELETE /lessons/:id */

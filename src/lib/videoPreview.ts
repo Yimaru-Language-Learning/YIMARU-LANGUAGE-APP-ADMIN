@@ -88,6 +88,19 @@ export function formatPreviewLength(totalSeconds: number): string {
   return `${totalSeconds} seconds`;
 }
 
+/** Compact label for thumbnails (e.g. `3:02`, `1:05:07`). */
+export function formatVideoDurationLabel(totalSeconds: number): string {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return "";
+  const s = Math.round(totalSeconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
+
 /**
  * YouTube: `end` = stop after this many seconds from the start of the video.
  * Vimeo: time range in URL fragment (supported on many vimeo.com player links).

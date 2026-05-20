@@ -63,6 +63,9 @@ export async function executeLearnEnglishPracticeCreation(opts: {
   storyDescription: string
   storyImage: string
   quickTips: string
+  personaName?: string | null
+  /** Selected persona from step 2 — sent as `persona_id` on POST /practices. */
+  personaId: number
   questions: LearnEnglishDefinitionQuestionInput[]
   definitions: QuestionTypeDefinition[]
 }): Promise<{ questionSetId: number; practiceId: number }> {
@@ -71,6 +74,10 @@ export async function executeLearnEnglishPracticeCreation(opts: {
     opts.definitions,
   )
   if (err) throw new Error(err)
+
+  if (!Number.isFinite(opts.personaId) || opts.personaId < 1) {
+    throw new Error("persona_id is required. Select a persona before saving.")
+  }
 
   const byId = new Map(opts.definitions.map((d) => [d.id, d]))
 
@@ -82,6 +89,7 @@ export async function executeLearnEnglishPracticeCreation(opts: {
     owner_id: opts.parentId,
     shuffle_questions: opts.shuffleQuestions,
     status: opts.status,
+    ...(opts.personaName?.trim() ? { persona: opts.personaName.trim() } : {}),
   })
 
   const setId = setRes.data?.data?.id
@@ -122,6 +130,7 @@ export async function executeLearnEnglishPracticeCreation(opts: {
     question_set_id: setId,
     quick_tips: opts.quickTips.trim(),
     publish_status: opts.status,
+    persona_id: opts.personaId,
   })
 
   const practiceId = practiceRes.data?.data?.id

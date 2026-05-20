@@ -7,14 +7,31 @@ export function NewContentPage() {
   return (
     <div className="space-y-8">
       {/* Header section */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">
-          Content Management
-        </h1>
-        <p className="mt-1 text-sm text-grayScale-500">
-          Upload, organize, and manage learning content across programs and
-          courses
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">
+            Content Management
+          </h1>
+          <p className="mt-1 text-sm text-grayScale-500">
+            Upload, organize, and manage learning content across programs and
+            courses
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+          <Link to="/new-content/question-types">
+            <Button className="h-10 px-6 rounded-[6px] bg-brand-500 font-bold text-white shadow-sm hover:bg-brand-600 transition-all">
+              Manage Question Types
+            </Button>
+          </Link>
+          <Link to="/new-content/reorder">
+            <Button
+              variant="outline"
+              className="h-10 px-6 rounded-[6px] border-brand-500 font-bold text-brand-500 hover:bg-brand-50 transition-all"
+            >
+              Reorder Content
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Gradient Divider */}

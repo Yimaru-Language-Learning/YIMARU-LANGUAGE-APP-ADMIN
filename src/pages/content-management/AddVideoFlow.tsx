@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Stepper } from "../../components/ui/stepper";
 import { createModuleLesson } from "../../api/courses.api";
+import type { PracticePublishStatus } from "../../types/course.types";
 
 import { VideoDetailStep } from "./components/video-steps/VideoDetailStep";
 import { ReviewPublishStep } from "./components/video-steps/ReviewPublishStep";
@@ -17,7 +18,7 @@ const STEPS = [
 
 export type AddLessonFormData = {
   title: string;
-  order: string;
+  sortOrder: string;
   description: string;
   videoUrl: string;
   thumbnailUrl: string;
@@ -25,7 +26,7 @@ export type AddLessonFormData = {
 
 const emptyForm = (): AddLessonFormData => ({
   title: "",
-  order: "1",
+  sortOrder: "0",
   description: "",
   videoUrl: "",
   thumbnailUrl: "",
@@ -51,6 +52,8 @@ export function AddVideoFlow() {
   }>();
   const [currentStep, setCurrentStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
+  const [lastCreatedPublishStatus, setLastCreatedPublishStatus] =
+    useState<PracticePublishStatus>("PUBLISHED");
   const [formData, setFormData] = useState<AddLessonFormData>(emptyForm);
   const [publishing, setPublishing] = useState(false);
   const [formResetKey, setFormResetKey] = useState(0);
@@ -60,7 +63,7 @@ export function AddVideoFlow() {
 
   const backPath = `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`;
 
-  const handlePublish = async () => {
+  const handleCreateLesson = async (publishStatus: PracticePublishStatus) => {
     const mid = Number(moduleId);
     if (!Number.isFinite(mid) || mid < 1) {
       toast.error("Invalid module");
@@ -86,6 +89,16 @@ export function AddVideoFlow() {
       toast.error("Description is required");
       return;
     }
+    const sortOrderRaw = formData.sortOrder.trim();
+    if (sortOrderRaw === "") {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setPublishing(true);
     try {
       await createModuleLesson(mid, {
@@ -93,8 +106,15 @@ export function AddVideoFlow() {
         video_url: videoUrl,
         thumbnail,
         description,
+        sort_order,
+        publish_status: publishStatus,
       });
-      toast.success("Lesson created");
+      setLastCreatedPublishStatus(publishStatus);
+      toast.success(
+        publishStatus === "DRAFT"
+          ? "Lesson saved as draft"
+          : "Lesson published",
+      );
       setIsPublished(true);
     } catch (e: unknown) {
       console.error(e);
@@ -123,10 +143,14 @@ export function AddVideoFlow() {
         </div>
 
         <h1 className="text-[26px] font-bold text-grayScale-900 mb-4">
-          Lesson created successfully
+          {lastCreatedPublishStatus === "DRAFT"
+            ? "Lesson saved as draft"
+            : "Lesson published successfully"}
         </h1>
         <p className="text-grayScale-600 text-base mb-14 max-w-lg font-medium leading-relaxed">
-          Your lesson is now available in this module.
+          {lastCreatedPublishStatus === "DRAFT"
+            ? "You can finish editing and publish it later from the module."
+            : "Your lesson is now available in this module."}
         </p>
 
         <div className="flex flex-col gap-4 w-full max-w-[400px]">
@@ -140,6 +164,7 @@ export function AddVideoFlow() {
             onClick={() => {
               setFormData(emptyForm());
               setFormResetKey((k) => k + 1);
+              setLastCreatedPublishStatus("PUBLISHED");
               setIsPublished(false);
               setCurrentStep(1);
             }}
@@ -205,7 +230,7 @@ export function AddVideoFlow() {
             <ReviewPublishStep
               formData={formData}
               prevStep={prevStep}
-              onPublish={() => void handlePublish()}
+              onCreateLesson={(status) => void handleCreateLesson(status)}
               publishing={publishing}
             />
           )}

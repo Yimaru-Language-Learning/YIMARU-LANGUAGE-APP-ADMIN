@@ -9,8 +9,6 @@ import {
   Plus,
   Trash2,
   GripVertical,
-  Edit,
-  Rocket,
   Loader2,
   Upload,
 } from "lucide-react";
@@ -19,6 +17,9 @@ import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { PracticeQuestionEditorFields } from "../../components/content-management/PracticeQuestionEditorFields";
+import { AddNewPracticeReviewStep } from "./components/AddNewPracticeReviewStep";
+import { PersonaStep } from "./components/practice-steps/PersonaStep";
+import { useActivePersonas } from "../../hooks/useActivePersonas";
 import {
   createQuestionSet,
   createQuestion,
@@ -33,12 +34,6 @@ type Step = 1 | 2 | 3 | 4 | 5;
 type ResultStatus = "success" | "error";
 type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO" | "DYNAMIC";
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD";
-
-interface Persona {
-  id: string;
-  name: string;
-  avatar: string;
-}
 
 interface MCQOption {
   text: string;
@@ -64,49 +59,6 @@ interface Question {
   dynamicResponseRows: PracticeQuestionDynamicRow[];
   dynamicFieldValues: Record<string, string>;
 }
-
-const PERSONAS: Persona[] = [
-  {
-    id: "1",
-    name: "Dawit",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dawit",
-  },
-  {
-    id: "2",
-    name: "Mahlet",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mahlet",
-  },
-  {
-    id: "3",
-    name: "Amanuel",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Amanuel",
-  },
-  {
-    id: "4",
-    name: "Bethel",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bethel",
-  },
-  {
-    id: "5",
-    name: "Liya",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Liya",
-  },
-  {
-    id: "6",
-    name: "Aseffa",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aseffa",
-  },
-  {
-    id: "7",
-    name: "Hana",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hana",
-  },
-  {
-    id: "8",
-    name: "Nahom",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Nahom",
-  },
-];
 
 const STEPS = [
   { number: 1, label: "Context" },
@@ -156,64 +108,6 @@ function toVimeoEmbedUrl(rawUrl: string): string | null {
 function isDirectVideoFile(url: string): boolean {
   const clean = url.split("?")[0].toLowerCase();
   return /\.(mp4|webm|ogg|mov|m4v)$/.test(clean);
-}
-
-function escapeHtml(raw: string): string {
-  return raw
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function sanitizeAdminRichTextHtml(input: string): string {
-  if (!input.trim()) return "";
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(input, "text/html");
-    const blockedTags = new Set([
-      "script",
-      "style",
-      "iframe",
-      "object",
-      "embed",
-      "link",
-      "meta",
-    ]);
-    doc.body.querySelectorAll("*").forEach((el) => {
-      const tagName = el.tagName.toLowerCase();
-      if (blockedTags.has(tagName)) {
-        el.remove();
-        return;
-      }
-      const attrs = [...el.attributes];
-      attrs.forEach((attr) => {
-        const name = attr.name.toLowerCase();
-        const value = attr.value.trim().toLowerCase();
-        if (name.startsWith("on")) {
-          el.removeAttribute(attr.name);
-          return;
-        }
-        if (
-          (name === "href" || name === "src") &&
-          value.startsWith("javascript:")
-        ) {
-          el.removeAttribute(attr.name);
-        }
-      });
-    });
-    return doc.body.innerHTML;
-  } catch {
-    return escapeHtml(input).replace(/\r?\n/g, "<br />");
-  }
-}
-
-function formatDescriptionForPreview(raw: string): string {
-  if (!raw.trim()) return "";
-  const hasHtml = /<\/?[a-z][\s\S]*>/i.test(raw);
-  if (hasHtml) return sanitizeAdminRichTextHtml(raw);
-  return escapeHtml(raw).replace(/\r?\n/g, "<br />");
 }
 
 function createEmptyQuestion(id: string): Question {
@@ -281,6 +175,12 @@ export function AddNewPracticePage() {
 
   // Step 2: Persona
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
+  const {
+    personas,
+    loading: personasLoading,
+    error: personasError,
+    reload: reloadPersonas,
+  } = useActivePersonas();
 
   // Step 3: Questions
   const [questions, setQuestions] = useState<Question[]>([
@@ -373,11 +273,6 @@ export function AddNewPracticePage() {
     return null;
   }, [introVideoUrl]);
 
-  const descriptionPreviewHtml = useMemo(
-    () => formatDescriptionForPreview(practiceDescription),
-    [practiceDescription],
-  );
-
   const addQuestion = () => {
     setQuestions([...questions, createEmptyQuestion(String(Date.now()))]);
   };
@@ -398,7 +293,12 @@ export function AddNewPracticePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const persona = PERSONAS.find((p) => p.id === selectedPersona);
+      if (!selectedPersona) {
+        toast.error("Select a persona before saving.");
+        setSaving(false);
+        return;
+      }
+      const persona = personas.find((p) => p.id === selectedPersona);
       const setRes = await createQuestionSet({
         title: practiceTitle || "Untitled Practice",
         set_type: "PRACTICE",
@@ -899,66 +799,17 @@ export function AddNewPracticePage() {
                 practice.
               </p>
             </div>
-
             <div className="p-5 sm:p-8 lg:p-10">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
-                {PERSONAS.map((persona) => (
-                  <button
-                    key={persona.id}
-                    onClick={() => setSelectedPersona(persona.id)}
-                    className={`group relative flex flex-col items-center rounded-xl border-2 p-6 transition-all duration-200 ${
-                      selectedPersona === persona.id
-                        ? "border-brand-500 bg-brand-50 shadow-md shadow-brand-100"
-                        : "border-grayScale-200 bg-white hover:border-brand-300 hover:shadow-sm"
-                    }`}
-                  >
-                    {selectedPersona === persona.id && (
-                      <div className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-white shadow-sm">
-                        <Check className="h-3.5 w-3.5" />
-                      </div>
-                    )}
-                    <div
-                      className={`mb-3 h-20 w-20 overflow-hidden rounded-full bg-grayScale-100 ring-2 transition-all duration-200 ${
-                        selectedPersona === persona.id
-                          ? "ring-brand-300 ring-offset-2"
-                          : "ring-transparent group-hover:ring-grayScale-200"
-                      }`}
-                    >
-                      <img
-                        src={persona.avatar}
-                        alt={persona.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <span
-                      className={`text-sm font-semibold transition-colors ${
-                        selectedPersona === persona.id
-                          ? "text-brand-600"
-                          : "text-grayScale-900"
-                      }`}
-                    >
-                      {persona.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-grayScale-100 bg-grayScale-50/30 px-5 py-4 sm:flex-row sm:items-center sm:px-8 sm:py-5">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                className="sm:w-auto"
-              >
-                Back
-              </Button>
-              <Button
-                className="w-full bg-brand-500 hover:bg-brand-600 sm:w-auto sm:min-w-[180px]"
-                onClick={handleNext}
-              >
-                {getNextButtonLabel()}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <PersonaStep
+                personas={personas}
+                loading={personasLoading}
+                error={personasError}
+                onRetry={() => void reloadPersonas()}
+                selectedPersona={selectedPersona}
+                setSelectedPersona={setSelectedPersona}
+                nextStep={handleNext}
+                prevStep={handleBack}
+              />
             </div>
           </Card>
         )}
@@ -1075,261 +926,26 @@ export function AddNewPracticePage() {
         )}
 
         {currentStep === 4 && (
-          <div className="w-full space-y-6">
-            <div className="rounded-2xl border border-grayScale-200/80 bg-gradient-to-r from-grayScale-50/80 to-white px-5 py-5 shadow-sm sm:px-8 sm:py-6">
-              <h2 className="text-lg font-semibold tracking-tight text-grayScale-900 sm:text-xl">
-                Step 4: Review & publish
-              </h2>
-              <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-grayScale-500">
-                Confirm context, persona, and questions before saving or
-                publishing.
-              </p>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
-              {/* Basic Information Card */}
-              <Card className="overflow-hidden border-grayScale-200/80 p-0 shadow-sm">
-                <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
-                  <h3 className="font-semibold text-grayScale-900">
-                    Basic Information
-                  </h3>
-                  <button
-                    onClick={() => setCurrentStep(1)}
-                    className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                    Edit
-                  </button>
-                </div>
-                <div className="divide-y divide-grayScale-100">
-                  <div className="flex justify-between px-6 py-3.5 odd:bg-grayScale-50/50">
-                    <span className="text-sm text-grayScale-500">Title</span>
-                    <span className="text-sm font-medium text-grayScale-900">
-                      {practiceTitle || "Untitled Practice"}
-                    </span>
-                  </div>
-                  <div className="bg-grayScale-50/50 px-6 py-4">
-                    <span className="text-sm text-grayScale-500">
-                      Description
-                    </span>
-                    {descriptionPreviewHtml ? (
-                      <div
-                        className="mt-2 rounded-lg border border-grayScale-200 bg-white px-4 py-3 text-sm leading-relaxed text-grayScale-800 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:text-lg [&_h2]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-2 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6"
-                        dangerouslySetInnerHTML={{
-                          __html: descriptionPreviewHtml,
-                        }}
-                      />
-                    ) : (
-                      <p className="mt-2 text-sm text-grayScale-400">—</p>
-                    )}
-                  </div>
-                  <div className="flex justify-between px-6 py-3.5">
-                    <span className="text-sm text-grayScale-500">
-                      Intro video URL
-                    </span>
-                    <span className="max-w-[min(28rem,55%)] break-all text-right text-sm text-grayScale-700">
-                      {introVideoUrl.trim() || "—"}
-                    </span>
-                  </div>
-                  {introVideoPreview ? (
-                    <div className="bg-grayScale-50/50 px-6 py-4">
-                      <span className="text-sm text-grayScale-500">
-                        Intro video preview
-                      </span>
-                      <div className="mt-2 rounded-lg border border-grayScale-200 bg-white p-3">
-                        {introVideoPreview.kind === "vimeo" ? (
-                          <div className="overflow-hidden rounded-lg border border-grayScale-200 bg-black">
-                            <iframe
-                              src={introVideoPreview.url}
-                              title="Intro video preview"
-                              className="aspect-video w-full"
-                              allow="autoplay; fullscreen; picture-in-picture"
-                              allowFullScreen
-                            />
-                          </div>
-                        ) : (
-                          <video
-                            controls
-                            src={introVideoPreview.url}
-                            className="aspect-video w-full rounded-lg border border-grayScale-200 bg-black"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
-                    <span className="text-sm text-grayScale-500">
-                      Passing Score
-                    </span>
-                    <span className="text-sm font-medium text-grayScale-900">
-                      {passingScore}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between px-6 py-3.5">
-                    <span className="text-sm text-grayScale-500">
-                      Time Limit
-                    </span>
-                    <span className="text-sm font-medium text-grayScale-900">
-                      {timeLimitMinutes} minutes
-                    </span>
-                  </div>
-                  <div className="flex justify-between bg-grayScale-50/50 px-6 py-3.5">
-                    <span className="text-sm text-grayScale-500">
-                      Shuffle Questions
-                    </span>
-                    <span className="text-sm font-medium text-grayScale-900">
-                      {shuffleQuestions ? "Yes" : "No"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between px-6 py-3.5">
-                    <span className="text-sm text-grayScale-500">Persona</span>
-                    <div className="flex items-center gap-2">
-                      {selectedPersona && (
-                        <div className="h-6 w-6 overflow-hidden rounded-full bg-grayScale-100 ring-2 ring-brand-100">
-                          <img
-                            src={
-                              PERSONAS.find((p) => p.id === selectedPersona)
-                                ?.avatar
-                            }
-                            alt="Persona"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-brand-600">
-                        {PERSONAS.find((p) => p.id === selectedPersona)?.name ||
-                          "None selected"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Questions Review */}
-              <Card className="overflow-hidden border-grayScale-200/80 p-0 shadow-sm lg:min-h-0">
-                <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="font-semibold text-grayScale-900">
-                      Questions
-                    </h3>
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-600">
-                      {questions.length}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                    Edit
-                  </button>
-                </div>
-                <div className="max-h-[min(70vh,52rem)] space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
-                  {questions.map((question, index) => (
-                    <div
-                      key={question.id}
-                      className="rounded-xl border border-grayScale-200 bg-grayScale-50/20 p-4 transition-colors hover:border-grayScale-300 sm:p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-600">
-                          {index + 1}
-                        </span>
-                        <div className="flex-1 space-y-2.5">
-                          <p className="text-sm font-medium leading-relaxed text-grayScale-900">
-                            {question.questionText}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">
-                              {question.questionType === "MCQ"
-                                ? "Multiple Choice"
-                                : question.questionType === "TRUE_FALSE"
-                                  ? "True/False"
-                                  : question.questionType === "AUDIO"
-                                    ? "Audio"
-                                    : question.questionType === "DYNAMIC"
-                                      ? "Dynamic"
-                                      : "Short Answer"}
-                            </span>
-                            <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-600">
-                              {question.difficultyLevel}
-                            </span>
-                            <span className="rounded-md bg-grayScale-100 px-2 py-0.5 text-xs font-medium text-grayScale-600">
-                              {question.points} pt
-                              {question.points !== 1 ? "s" : ""}
-                            </span>
-                          </div>
-                          {question.questionType === "MCQ" &&
-                            question.options.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {question.options.map((opt, i) => (
-                                  <div
-                                    key={i}
-                                    className={`flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm ${
-                                      opt.isCorrect
-                                        ? "bg-green-50 font-medium text-green-700"
-                                        : "text-grayScale-600"
-                                    }`}
-                                  >
-                                    {opt.isCorrect && (
-                                      <Check className="h-3.5 w-3.5" />
-                                    )}
-                                    {opt.text || `Option ${i + 1}`}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          {question.tips && (
-                            <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-600">
-                              💡 Tip: {question.tips}
-                            </p>
-                          )}
-                          {question.explanation && (
-                            <p className="rounded-md bg-grayScale-50 px-2.5 py-1.5 text-xs text-grayScale-500">
-                              Explanation: {question.explanation}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-
-            {saveError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                <p className="text-sm font-medium text-red-600">{saveError}</p>
-              </div>
-            )}
-
-            <div className="flex flex-col-reverse items-stretch justify-between gap-3 rounded-2xl border border-grayScale-200/80 bg-grayScale-50/30 px-4 py-4 sm:flex-row sm:items-center sm:px-6 sm:py-5">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                className="sm:w-auto"
-              >
-                Back
-              </Button>
-              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-end">
-                <Button
-                  variant="outline"
-                  onClick={handleSaveAsDraft}
-                  disabled={saving}
-                  className="sm:min-w-[140px]"
-                >
-                  {saving ? "Saving..." : "Save as Draft"}
-                </Button>
-                <Button
-                  className="bg-brand-500 hover:bg-brand-600 sm:min-w-[160px]"
-                  onClick={handlePublish}
-                  disabled={saving}
-                >
-                  <Rocket className="mr-2 h-4 w-4" />
-                  {saving ? "Publishing..." : "Publish Now"}
-                </Button>
-              </div>
-            </div>
-          </div>
+          <AddNewPracticeReviewStep
+            practiceTitle={practiceTitle}
+            practiceDescription={practiceDescription}
+            selectedProgram={selectedProgram}
+            selectedCourse={selectedCourse}
+            moduleLabel={
+              subModuleId ? `Module ${subModuleId}` : "Current module"
+            }
+            selectedPersona={selectedPersona}
+            personas={personas}
+            introVideoPreview={introVideoPreview}
+            questions={questions}
+            saving={saving}
+            saveError={saveError}
+            onEditContext={() => setCurrentStep(1)}
+            onEditQuestions={() => setCurrentStep(3)}
+            onBack={handleBack}
+            onSaveDraft={handleSaveAsDraft}
+            onPublish={handlePublish}
+          />
         )}
 
         {/* Step 5: Result */}

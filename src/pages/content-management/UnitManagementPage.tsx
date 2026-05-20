@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
-import { Textarea } from "../../components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +54,6 @@ export function UnitManagementPage() {
   const parsedUnitId = Number(unitId);
   const [addModuleOpen, setAddModuleOpen] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [createDescription, setCreateDescription] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createIcon, setCreateIcon] = useState("");
   const [creating, setCreating] = useState(false);
@@ -79,7 +77,6 @@ export function UnitManagementPage() {
   >([]);
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [editIcon, setEditIcon] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("1");
@@ -159,7 +156,6 @@ export function UnitManagementPage() {
 
   const clearCreateModuleForm = () => {
     setCreateName("");
-    setCreateDescription("");
     setCreateThumbnail("");
     setCreateIcon("");
     if (createThumbnailFileInputRef.current) {
@@ -264,7 +260,7 @@ export function UnitManagementPage() {
       const minioIcon = await resolveToMinioUrl(createIcon);
       await createExamPrepUnitModule(parsedUnitId, {
         name,
-        description: createDescription.trim() || null,
+        description: null,
         thumbnail: minioThumbnail || null,
         icon: minioIcon || null,
       });
@@ -286,7 +282,6 @@ export function UnitManagementPage() {
   const openEditModule = (module: (typeof modules)[number]) => {
     setEditingModuleId(module.id);
     setEditName(module.name ?? "");
-    setEditDescription(module.description ?? "");
     setEditThumbnail(module.thumbnail ?? "");
     setEditIcon(module.icon ?? "");
     setEditSortOrder(String(module.sortOrder ?? 1));
@@ -296,7 +291,6 @@ export function UnitManagementPage() {
     if (savingEdit || uploadingEditThumbnail || uploadingEditIcon) return;
     setEditingModuleId(null);
     setEditName("");
-    setEditDescription("");
     setEditThumbnail("");
     setEditIcon("");
     setEditSortOrder("1");
@@ -391,11 +385,16 @@ export function UnitManagementPage() {
 
     setSavingEdit(true);
     try {
+      const existing = modules.find((m) => m.id === editingModuleId);
+      const preservedDescription =
+        existing?.description && existing.description !== "—"
+          ? existing.description
+          : null;
       const minioThumbnail = await resolveToMinioUrl(editThumbnail);
       const minioIcon = await resolveToMinioUrl(editIcon);
       await updateExamPrepUnitModule(editingModuleId, {
         name,
-        description: editDescription.trim() || null,
+        description: preservedDescription,
         thumbnail: minioThumbnail || null,
         icon: minioIcon || null,
         sort_order: sortOrderNum,
@@ -485,20 +484,6 @@ export function UnitManagementPage() {
                     onChange={(e) => setCreateName(e.target.value)}
                     placeholder="e.g. Present tense"
                     className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
-                    disabled={creating || uploadingThumbnail || uploadingIcon}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[15px] text-grayScale-800">
-                    Description
-                  </label>
-                  <Textarea
-                    value={createDescription}
-                    onChange={(e) => setCreateDescription(e.target.value)}
-                    placeholder="Optional module description"
-                    rows={4}
-                    className="min-h-[96px] rounded-[8px] border-grayScale-400"
                     disabled={creating || uploadingThumbnail || uploadingIcon}
                   />
                 </div>
@@ -809,16 +794,6 @@ export function UnitManagementPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="h-12 border-grayScale-400 rounded-[8px] px-4"
-                  disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[15px] text-grayScale-800">Description</label>
-                <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  rows={4}
-                  className="min-h-[96px] rounded-[8px] border-grayScale-400"
                   disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
                 />
               </div>

@@ -70,6 +70,16 @@ export function VideoDetailStep({
       toast.error("Title is required");
       return;
     }
+    const sortOrderRaw = formData.sortOrder.trim();
+    if (sortOrderRaw === "") {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sortOrderNum = Number(sortOrderRaw);
+    if (!Number.isInteger(sortOrderNum) || sortOrderNum < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     if (!formData.videoUrl.trim()) {
       toast.error("Add a video URL or upload a video");
       return;
@@ -139,6 +149,35 @@ export function VideoDetailStep({
                   setFormData((prev) => ({ ...prev, title: e.target.value }))
                 }
               />
+            </div>
+
+            <div className="space-y-3">
+              <label
+                className="text-[14px] font-medium text-grayScale-900 ml-1"
+                htmlFor="lesson-sort-order"
+              >
+                Sort order
+              </label>
+              <Input
+                id="lesson-sort-order"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                placeholder="0"
+                className="h-12 max-w-[200px] rounded-xl border-grayScale-200 bg-white px-6 text-[15px] text-grayScale-800 placeholder:text-grayScale-500 focus:border-brand-500 font-medium transition-all shadow-sm"
+                value={formData.sortOrder}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sortOrder: e.target.value,
+                  }))
+                }
+              />
+              <p className="text-xs text-grayScale-500 ml-1">
+                Whole number, 0 or greater. Lower numbers appear first in the
+                module.
+              </p>
             </div>
 
             <div className="space-y-3">

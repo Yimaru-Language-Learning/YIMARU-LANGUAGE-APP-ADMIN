@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Rocket, Edit2, Link2, Video } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
-import { toast } from "sonner";
+import type { PracticePublishStatus } from "../../../../types/course.types";
 import type { AddLessonFormData } from "../../AddVideoFlow";
 import {
   applyShortPreviewToEmbedUrl,
@@ -15,7 +15,7 @@ import { PreviewLimitedFileVideo } from "../PreviewLimitedFileVideo";
 interface ReviewPublishStepProps {
   formData: AddLessonFormData;
   prevStep: () => void;
-  onPublish: () => void;
+  onCreateLesson: (publishStatus: PracticePublishStatus) => void;
   publishing: boolean;
 }
 
@@ -27,7 +27,7 @@ function truncate(s: string, max: number): string {
 export function ReviewPublishStep({
   formData,
   prevStep,
-  onPublish,
+  onCreateLesson,
   publishing,
 }: ReviewPublishStepProps) {
   const [thumbBroken, setThumbBroken] = useState(false);
@@ -180,6 +180,17 @@ export function ReviewPublishStep({
             </p>
           </div>
 
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-grayScale-500 uppercase tracking-widest block">
+              Sort order
+            </span>
+            <p className="text-[15px] font-medium text-grayScale-900">
+              {formData.sortOrder.trim() !== ""
+                ? formData.sortOrder.trim()
+                : "—"}
+            </p>
+          </div>
+
           <div className="space-y-3">
             <span className="text-[11px] font-bold text-grayScale-500 uppercase tracking-widest block">
               Description
@@ -226,20 +237,18 @@ export function ReviewPublishStep({
               variant="outline"
               className="h-12 px-8 rounded-[6px] border-grayScale-100 font-bold text-grayScale-600 hover:bg-grayScale-50 transition-all shadow-sm"
               disabled={publishing}
-              onClick={() =>
-                toast.info("Drafts are not supported yet. Use Create lesson.")
-              }
+              onClick={() => onCreateLesson("DRAFT")}
             >
               Save as draft
             </Button>
             <Button
               type="button"
-              onClick={onPublish}
+              onClick={() => onCreateLesson("PUBLISHED")}
               disabled={publishing}
               className="h-10 px-10 rounded-[6px] bg-brand-500 font-bold text-white  shadow-brand-500/20 transition-all flex items-center gap-2.5 disabled:opacity-60"
             >
               <Rocket className="h-4 w-4" />
-              {publishing ? "Creating…" : "Create lesson"}
+              {publishing ? "Creating…" : "Publish lesson"}
             </Button>
           </div>
         </div>

@@ -3,12 +3,19 @@ import {
   BookOpen,
   Calendar,
   Edit2,
+  Loader2,
   MoreVertical,
   Pencil,
   Play,
   Trash2,
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -21,17 +28,46 @@ import {
   applyShortPreviewToEmbedUrl,
   DEFAULT_PREVIEW_MAX_SECONDS,
   formatPreviewLength,
+  formatVideoDurationLabel,
   getVideoPreview,
+  isDirectVideoFileUrl,
 } from "../../../lib/videoPreview";
 import { PreviewLimitedFileVideo } from "./PreviewLimitedFileVideo";
+import type { PracticePublishStatus } from "../../../types/course.types";
+
+function resolvePublishBadge(
+  publishStatus?: PracticePublishStatus | string | null,
+  status?: "Draft" | "Published",
+  hoverModuleActions?: boolean,
+): { label: string; isPublished: boolean } | null {
+  const raw =
+    publishStatus ??
+    (status === "Published"
+      ? "PUBLISHED"
+      : status === "Draft"
+        ? "DRAFT"
+        : null);
+  if (raw) {
+    const label = String(raw).toUpperCase();
+    return { label, isPublished: label === "PUBLISHED" };
+  }
+  if (hoverModuleActions) {
+    return { label: "DRAFT", isPublished: false };
+  }
+  return null;
+}
 
 interface VideoCardProps {
   id?: string | number;
   title: string;
   /** Omits the duration chip when not provided (e.g. API has no length yet). */
   duration?: string;
+  /** Total seconds; shown when `duration` string is omitted. Direct file URLs may still be probed in-browser. */
+  durationSeconds?: number | null;
   /** When omitted, shows a neutral "Lesson" chip and no Publish button. */
   status?: "Draft" | "Published";
+  /** From GET lesson list — preferred for module lesson cards (`PUBLISHED` / `DRAFT`). */
+  publishStatus?: PracticePublishStatus | string | null;
   thumbnailGradient?: string;
   thumbnailUrl?: string | null;
   /**
@@ -51,6 +87,9 @@ interface VideoCardProps {
   /** When set with hoverModuleActions, shows a book icon next to edit/delete on thumbnail hover. */
   onViewPractices?: () => void;
   onPublish?: () => void;
+  /** Toggle draft ↔ published via PUT /lessons/:id (module lesson cards). */
+  onTogglePublishStatus?: (nextStatus: PracticePublishStatus) => void;
+  publishStatusUpdating?: boolean;
   /** Shown under title on module lesson cards; reserved height keeps grid rows even. */
   description?: string | null;
 }
@@ -58,7 +97,9 @@ interface VideoCardProps {
 export function VideoCard({
   title,
   duration,
+  durationSeconds,
   status,
+  publishStatus,
   thumbnailGradient = "from-[#CBD5E1] to-[#94A3B8]",
   thumbnailUrl,
   videoUrl,
@@ -67,10 +108,15 @@ export function VideoCard({
   onPublish,
   onAddPractice,
   onViewPractices,
+  onTogglePublishStatus,
+  publishStatusUpdating = false,
   hoverModuleActions = false,
   description,
 }: VideoCardProps) {
   const [thumbFailed, setThumbFailed] = useState(false);
+  const [probedDurationSeconds, setProbedDurationSeconds] = useState<
+    number | null
+  >(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   /** Iframe players ignore URL limits in many cases — unmount after real time. */
   const [iframeSessionDone, setIframeSessionDone] = useState(false);
@@ -92,6 +138,77 @@ export function VideoCard({
   const previewLengthLabel = formatPreviewLength(
     DEFAULT_PREVIEW_MAX_SECONDS,
   );
+  const publishBadge = resolvePublishBadge(
+    publishStatus,
+    status,
+    hoverModuleActions,
+  );
+
+  useEffect(() => {
+    if (duration?.trim()) {
+      setProbedDurationSeconds(null);
+      return;
+    }
+    if (
+      typeof durationSeconds === "number" &&
+      Number.isFinite(durationSeconds) &&
+      durationSeconds > 0
+    ) {
+      setProbedDurationSeconds(null);
+      return;
+    }
+    const url = videoUrl?.trim() ?? "";
+    if (!isDirectVideoFileUrl(url)) {
+      setProbedDurationSeconds(null);
+      return;
+    }
+    let cancelled = false;
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    const onLoaded = () => {
+      if (cancelled) return;
+      const d = video.duration;
+      if (Number.isFinite(d) && d > 0 && !Number.isNaN(d)) {
+        setProbedDurationSeconds(d);
+      } else {
+        setProbedDurationSeconds(null);
+      }
+    };
+    const onError = () => {
+      if (!cancelled) setProbedDurationSeconds(null);
+    };
+    video.addEventListener("loadedmetadata", onLoaded);
+    video.addEventListener("error", onError);
+    video.src = url;
+    return () => {
+      cancelled = true;
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("error", onError);
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [duration, durationSeconds, videoUrl]);
+
+  const durationLabel = (() => {
+    const trimmed = duration?.trim();
+    if (trimmed) return trimmed;
+    const fromApi =
+      typeof durationSeconds === "number" &&
+      Number.isFinite(durationSeconds) &&
+      durationSeconds > 0
+        ? durationSeconds
+        : null;
+    if (fromApi != null) return formatVideoDurationLabel(fromApi);
+    if (
+      probedDurationSeconds != null &&
+      Number.isFinite(probedDurationSeconds) &&
+      probedDurationSeconds > 0
+    ) {
+      return formatVideoDurationLabel(probedDurationSeconds);
+    }
+    return null;
+  })();
 
   useEffect(() => {
     if (!previewOpen) {
@@ -198,10 +315,10 @@ export function VideoCard({
             onError={() => setThumbFailed(true)}
           />
         ) : null}
-        {/* Duration Badge */}
-        {duration ? (
-          <div className="absolute bottom-3 right-3 z-10 bg-black/70 text-white text-[11px] font-bold px-2 py-1 rounded-md backdrop-blur-sm">
-            {duration}
+        {/* Duration — bottom-right on thumbnail */}
+        {durationLabel ? (
+          <div className="pointer-events-none absolute bottom-2 right-2 z-[12] rounded bg-black/75 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-sm backdrop-blur-sm">
+            {durationLabel}
           </div>
         ) : null}
         {/* Play: opens preview dialog when videoUrl is set */}
@@ -333,34 +450,69 @@ export function VideoCard({
         <div
           className={cn(
             "mb-4 flex shrink-0 items-center gap-2",
-            hoverModuleActions ? "justify-start" : "justify-between",
+            "justify-between",
           )}
         >
-          {/* Status Badge */}
-          {status ? (
+          {/* Publish status badge */}
+          {publishBadge ? (
             <div
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border min-w-0",
-                status === "Published"
-                  ? "bg-[#ECFDF5] text-[#059669] border-[#D1FAE5]"
-                  : "bg-[#F3F4F6] text-[#6B7280] border-[#E5E7EB]",
+                "flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider",
+                publishBadge.isPublished
+                  ? "border-[#D1FAE5] bg-[#ECFDF5] text-[#059669]"
+                  : "border-[#E5E7EB] bg-grayScale-50 text-grayScale-500",
               )}
             >
               <div
                 className={cn(
-                  "h-1.5 w-1.5 rounded-full flex-shrink-0",
-                  status === "Published" ? "bg-[#10B981]" : "bg-[#9CA3AF]",
+                  "h-1.5 w-1.5 flex-shrink-0 rounded-full",
+                  publishBadge.isPublished ? "bg-[#10B981]" : "bg-[#9CA3AF]",
                 )}
               />
-              {status}
+              {publishBadge.label}
             </div>
           ) : (
-            <div className="flex min-w-0 items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border border-[#E5E7EB] bg-grayScale-50 text-grayScale-500">
-              <div className="h-1.5 w-1.5 rounded-full flex-shrink-0 bg-[#9CA3AF]" />
+            <div className="flex min-w-0 items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-grayScale-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-grayScale-500">
+              <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#9CA3AF]" />
               Lesson
             </div>
           )}
-          {!hoverModuleActions ? (
+          {hoverModuleActions && onTogglePublishStatus ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0 rounded-full text-grayScale-400 hover:bg-grayScale-50 hover:text-grayScale-600"
+                  disabled={publishStatusUpdating}
+                  aria-label={`Lesson options: ${title}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {publishStatusUpdating ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <MoreVertical className="h-5 w-5" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  disabled={publishStatusUpdating}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePublishStatus(
+                      publishBadge?.isPublished ? "DRAFT" : "PUBLISHED",
+                    );
+                  }}
+                >
+                  {publishBadge?.isPublished
+                    ? "Save as draft"
+                    : "Publish lesson"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : !hoverModuleActions ? (
             <button
               type="button"
               className="h-8 w-8 flex flex-shrink-0 items-center justify-center rounded-full hover:bg-grayScale-50 transition-colors text-grayScale-400"

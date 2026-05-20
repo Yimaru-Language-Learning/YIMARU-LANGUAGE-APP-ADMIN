@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
-import { Textarea } from "../../components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +38,6 @@ export function ProgramDetailPage() {
   const { programType } = useParams<{ programType: string }>();
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [createDescription, setCreateDescription] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createThumbnailFromUpload, setCreateThumbnailFromUpload] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -60,7 +58,6 @@ export function ProgramDetailPage() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("1");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -216,7 +213,7 @@ export function ProgramDetailPage() {
 
       const response = await createExamPrepCatalogCourse({
         name,
-        description: createDescription.trim() || null,
+        description: null,
         thumbnail: thumbnailToSend,
       });
       const row = response.data?.data;
@@ -227,7 +224,7 @@ export function ProgramDetailPage() {
         {
           id: row.id,
           name: row.name ?? name,
-          description: row.description?.trim() || createDescription.trim() || "—",
+          description: row.description?.trim() || "—",
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
           unitsCount: Number(row.units_count ?? 0),
@@ -239,7 +236,6 @@ export function ProgramDetailPage() {
       await loadCatalogCourses();
       toast.success("Course created");
       setCreateName("");
-      setCreateDescription("");
       setCreateThumbnail("");
       setCreateThumbnailFromUpload(false);
       setCreateOpen(false);
@@ -259,7 +255,6 @@ export function ProgramDetailPage() {
     if (!Number.isFinite(idNum)) return;
     setEditingCourseId(idNum);
     setEditName(String(course.name ?? ""));
-    setEditDescription(String(course.description ?? ""));
     setEditThumbnail(String(course.thumbnail ?? ""));
     setEditSortOrder(String(course.sort_order ?? 1));
   };
@@ -268,7 +263,6 @@ export function ProgramDetailPage() {
     if (savingEdit || uploadingEditThumbnail) return;
     setEditingCourseId(null);
     setEditName("");
-    setEditDescription("");
     setEditThumbnail("");
     setEditSortOrder("1");
   };
@@ -317,9 +311,14 @@ export function ProgramDetailPage() {
     setSavingEdit(true);
     try {
       const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
+      const existing = createdCourses.find((c) => c.id === editingCourseId);
+      const preservedDescription =
+        existing?.description && existing.description !== "—"
+          ? existing.description
+          : null;
       const response = await updateExamPrepCatalogCourse(editingCourseId, {
         name,
-        description: editDescription.trim() || null,
+        description: preservedDescription,
         thumbnail: minioThumbnail || null,
         sort_order: sortOrderNum,
       });
@@ -330,7 +329,7 @@ export function ProgramDetailPage() {
             ? {
                 ...course,
                 name: row?.name ?? name,
-                description: row?.description?.trim() || editDescription.trim() || "—",
+                description: row?.description?.trim() || preservedDescription || "—",
                 thumbnail: row?.thumbnail?.trim() || null,
                 sortOrder: Number(row?.sort_order ?? sortOrderNum),
                 unitsCount: Number(row?.units_count ?? course.unitsCount ?? 0),
@@ -463,20 +462,6 @@ export function ProgramDetailPage() {
                       onChange={(e) => setCreateName(e.target.value)}
                       placeholder="e.g. TOEFL, IELTS"
                       className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
-                      disabled={creating}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[15px] text-grayScale-800">
-                      Description
-                    </label>
-                    <Textarea
-                      value={createDescription}
-                      onChange={(e) => setCreateDescription(e.target.value)}
-                      placeholder="Optional description"
-                      rows={4}
-                      className="min-h-[96px] rounded-[8px] border-grayScale-400"
                       disabled={creating}
                     />
                   </div>
@@ -731,17 +716,6 @@ export function ProgramDetailPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
-                  disabled={savingEdit || uploadingEditThumbnail}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[15px] text-grayScale-800">Description</label>
-                <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  rows={4}
-                  className="min-h-[96px] rounded-[8px] border-grayScale-400"
                   disabled={savingEdit || uploadingEditThumbnail}
                 />
               </div>

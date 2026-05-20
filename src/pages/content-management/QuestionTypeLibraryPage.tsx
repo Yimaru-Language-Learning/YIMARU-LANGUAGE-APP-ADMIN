@@ -113,11 +113,11 @@ export function QuestionTypeLibraryPage() {
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="space-y-6">
         <Link
-          to="/new-content/courses"
+          to="/new-content"
           className="flex items-center gap-2 text-[15px] font-bold text-grayScale-600 transition-colors hover:text-brand-500 group w-fit"
         >
           <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
-          Back to Courses
+          Back to Content Management
         </Link>
 
         <div className="flex items-start justify-between gap-4 flex-wrap">

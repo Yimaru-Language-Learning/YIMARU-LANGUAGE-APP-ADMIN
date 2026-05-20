@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
-import { Textarea } from "../../components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +44,7 @@ export function CourseManagementPage() {
   const catalogCourseId = Number(courseId);
   const [addUnitOpen, setAddUnitOpen] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [createDescription, setCreateDescription] = useState("");
+  const [createSortOrder, setCreateSortOrder] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [creating, setCreating] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
@@ -66,7 +65,6 @@ export function CourseManagementPage() {
   const [unitsLoading, setUnitsLoading] = useState(false);
   const [editingUnitId, setEditingUnitId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("1");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -152,7 +150,7 @@ export function CourseManagementPage() {
 
   const clearCreateUnitForm = () => {
     setCreateName("");
-    setCreateDescription("");
+    setCreateSortOrder("");
     setCreateThumbnail("");
     if (createThumbnailFileInputRef.current) {
       createThumbnailFileInputRef.current.value = "";
@@ -202,13 +200,24 @@ export function CourseManagementPage() {
       toast.error("Unit name is required");
       return;
     }
+    const sortOrderRaw = createSortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
+      return;
+    }
     setCreating(true);
     try {
       const minioThumbnail = await resolveThumbnailToMinioUrl(createThumbnail);
       const response = await createExamPrepCatalogUnit(catalogCourseId, {
         name,
-        description: createDescription.trim() || null,
+        description: null,
         thumbnail: minioThumbnail || null,
+        sort_order,
       });
       void response;
       await loadUnits();
@@ -271,18 +280,16 @@ export function CourseManagementPage() {
   const openEditUnit = (unit: (typeof units)[number]) => {
     setEditingUnitId(unit.id);
     setEditName(unit.name ?? "");
-    setEditDescription(unit.description ?? "");
     setEditThumbnail(unit.thumbnail ?? "");
-    setEditSortOrder(String(unit.sortOrder ?? 1));
+    setEditSortOrder(String(unit.sortOrder ?? 0));
   };
 
   const closeEditUnit = () => {
     if (savingEdit || uploadingEditThumbnail) return;
     setEditingUnitId(null);
     setEditName("");
-    setEditDescription("");
     setEditThumbnail("");
-    setEditSortOrder("1");
+    setEditSortOrder("");
   };
 
   const handleEditUnitThumbnailFile = async (
@@ -320,20 +327,30 @@ export function CourseManagementPage() {
       toast.error("Unit name is required");
       return;
     }
-    const sortOrderNum = Number(editSortOrder);
-    if (!Number.isFinite(sortOrderNum) || sortOrderNum < 0) {
-      toast.error("Sort order must be a valid number");
+    const sortOrderRaw = editSortOrder.trim();
+    if (!sortOrderRaw) {
+      toast.error("Sort order is required");
+      return;
+    }
+    const sort_order = Number(sortOrderRaw);
+    if (!Number.isInteger(sort_order) || sort_order < 0) {
+      toast.error("Sort order must be a whole number of 0 or greater");
       return;
     }
 
     setSavingEdit(true);
     try {
+      const existing = units.find((u) => u.id === editingUnitId);
+      const preservedDescription =
+        existing?.description && existing.description !== "—"
+          ? existing.description
+          : null;
       const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
       await updateExamPrepCatalogUnit(editingUnitId, {
         name,
-        description: editDescription.trim() || null,
+        description: preservedDescription,
         thumbnail: minioThumbnail || null,
-        sort_order: sortOrderNum,
+        sort_order,
       });
       await loadUnits();
       toast.success("Unit updated");
@@ -425,18 +442,29 @@ export function CourseManagementPage() {
                       disabled={creating || uploadingThumbnail}
                     />
                   </div>
+
                   <div className="space-y-3">
-                    <label className="text-[15px] text-grayScale-800">
-                      Description
+                    <label
+                      htmlFor="create-unit-sort-order"
+                      className="text-[15px] text-grayScale-800"
+                    >
+                      Sort Order
                     </label>
-                    <Textarea
-                      value={createDescription}
-                      onChange={(e) => setCreateDescription(e.target.value)}
-                      placeholder="Short unit description"
-                      rows={4}
-                      className="min-h-[96px] rounded-[8px] border-grayScale-400"
+                    <Input
+                      id="create-unit-sort-order"
+                      type="number"
+                      min={0}
+                      step={1}
+                      inputMode="numeric"
+                      value={createSortOrder}
+                      onChange={(e) => setCreateSortOrder(e.target.value)}
+                      placeholder="e.g. 0"
+                      className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
                       disabled={creating || uploadingThumbnail}
                     />
+                    <p className="text-xs text-grayScale-500">
+                      Lower numbers appear first when units are listed.
+                    </p>
                   </div>
 
                   <div className="space-y-3">
@@ -690,25 +718,27 @@ export function CourseManagementPage() {
                 />
               </div>
               <div className="space-y-3">
-                <label className="text-[15px] text-grayScale-800">Description</label>
-                <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  rows={4}
-                  className="min-h-[96px] rounded-[8px] border-grayScale-400"
-                  disabled={savingEdit || uploadingEditThumbnail}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[15px] text-grayScale-800">Sort Order</label>
+                <label
+                  htmlFor="edit-unit-sort-order"
+                  className="text-[15px] text-grayScale-800"
+                >
+                  Sort Order
+                </label>
                 <Input
+                  id="edit-unit-sort-order"
                   type="number"
                   min={0}
+                  step={1}
+                  inputMode="numeric"
                   value={editSortOrder}
                   onChange={(e) => setEditSortOrder(e.target.value)}
-                  className="h-12 border-grayScale-400 rounded-[8px] px-4"
+                  placeholder="e.g. 0"
+                  className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
                   disabled={savingEdit || uploadingEditThumbnail}
                 />
+                <p className="text-xs text-grayScale-500">
+                  Lower numbers appear first when units are listed.
+                </p>
               </div>
               <div className="space-y-3">
                 <label className="text-[15px] text-grayScale-800">Thumbnail</label>

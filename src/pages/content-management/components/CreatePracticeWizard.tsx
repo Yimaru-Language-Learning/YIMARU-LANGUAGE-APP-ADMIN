@@ -16,7 +16,6 @@ import type {
   PracticeParentKind,
   PracticePublishStatus,
 } from "../../../types/course.types"
-import { PublishStatusField } from "./practice-steps/PublishStatusField"
 import { cn } from "../../../lib/utils"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 
@@ -65,7 +64,8 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
   const [storyDescription, setStoryDescription] = useState("")
   const [storyImage, setStoryImage] = useState("")
   const [quickTips, setQuickTips] = useState("")
-  const [publishStatus, setPublishStatus] = useState<PracticePublishStatus>("DRAFT")
+  const [pendingSaveStatus, setPendingSaveStatus] =
+    useState<PracticePublishStatus | null>(null)
 
   const canUseWizard = parent != null
 
@@ -85,7 +85,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
     setStoryDescription("")
     setStoryImage("")
     setQuickTips("")
-    setPublishStatus("DRAFT")
+    setPendingSaveStatus(null)
   }, [])
 
   const handleStep1 = async () => {
@@ -186,6 +186,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
       toast.error("Title, story description, and story image are required")
       return
     }
+    setPendingSaveStatus(status)
     setSaving(true)
     try {
       await createParentLinkedPractice({
@@ -208,6 +209,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
       toast.error(err.response?.data?.message || err.message || "Failed to create practice")
     } finally {
       setSaving(false)
+      setPendingSaveStatus(null)
     }
   }
 
@@ -473,11 +475,6 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
                 disabled={saving}
               />
             </div>
-            <PublishStatusField
-              value={publishStatus}
-              onChange={setPublishStatus}
-              disabled={saving}
-            />
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={() => setStep(3)} disabled={saving}>
                 <ChevronLeft className="mr-1 h-4 w-4" />
@@ -487,12 +484,9 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
                 type="button"
                 variant="outline"
                 disabled={saving}
-                onClick={() => {
-                  setPublishStatus("DRAFT")
-                  void handleStep4("DRAFT")
-                }}
+                onClick={() => void handleStep4("DRAFT")}
               >
-                {saving && publishStatus === "DRAFT" ? (
+                {saving && pendingSaveStatus === "DRAFT" ? (
                   <SpinnerIcon className="h-4 w-4" />
                 ) : null}
                 Save as draft
@@ -500,12 +494,9 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
               <Button
                 type="button"
                 disabled={saving}
-                onClick={() => {
-                  setPublishStatus("PUBLISHED")
-                  void handleStep4("PUBLISHED")
-                }}
+                onClick={() => void handleStep4("PUBLISHED")}
               >
-                {saving && publishStatus === "PUBLISHED" ? (
+                {saving && pendingSaveStatus === "PUBLISHED" ? (
                   <SpinnerIcon className="h-4 w-4" />
                 ) : null}
                 Publish practice

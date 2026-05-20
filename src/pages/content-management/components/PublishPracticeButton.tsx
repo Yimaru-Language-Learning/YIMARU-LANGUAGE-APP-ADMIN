@@ -5,6 +5,7 @@ import {
   getPracticesByParentCourse,
   getPracticesByParentModule,
   publishParentLinkedPractice,
+  updateParentLinkedPractice,
 } from "../../../api/courses.api"
 import type { PracticeParentKind } from "../../../types/course.types"
 import { Button } from "../../../components/ui/button"
@@ -29,7 +30,7 @@ export function PublishPracticeButton({
   onPublished,
 }: Props) {
   const [loading, setLoading] = useState(true)
-  const [publishing, setPublishing] = useState(false)
+  const [acting, setActing] = useState(false)
   const [hasDraft, setHasDraft] = useState(false)
   const [allPublished, setAllPublished] = useState(false)
   const [hasPractice, setHasPractice] = useState(false)
@@ -68,9 +69,11 @@ export function PublishPracticeButton({
     void loadPractices()
   }, [loadPractices])
 
+  const isDraftMode = allPublished
+
   const handlePublish = async () => {
     if (!Number.isFinite(parentId) || parentId < 1) return
-    setPublishing(true)
+    setActing(true)
     try {
       const res =
         parentKind === "COURSE"
@@ -98,34 +101,82 @@ export function PublishPracticeButton({
           ?.message ?? "Failed to publish practice"
       toast.error(msg)
     } finally {
-      setPublishing(false)
+      setActing(false)
+    }
+  }
+
+  const handleSaveAsDraft = async () => {
+    if (!Number.isFinite(parentId) || parentId < 1) return
+    setActing(true)
+    try {
+      const res =
+        parentKind === "COURSE"
+          ? await getPracticesByParentCourse(parentId, { limit: 50, offset: 0 })
+          : await getPracticesByParentModule(parentId, { limit: 50, offset: 0 })
+      const toDraft = unwrapPracticesList(res).filter(isPracticePublished)
+      if (toDraft.length === 0) {
+        toast.info("No published practice to save as draft")
+        await loadPractices()
+        return
+      }
+      for (const practice of toDraft) {
+        await updateParentLinkedPractice(practice.id, {
+          publish_status: "DRAFT",
+        })
+      }
+      toast.success(
+        toDraft.length === 1
+          ? "Practice saved as draft"
+          : `${toDraft.length} practices saved as draft`,
+      )
+      await loadPractices()
+      onPublished?.()
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to save practice as draft"
+      toast.error(msg)
+    } finally {
+      setActing(false)
     }
   }
 
   const disabled =
-    loading || publishing || !hasPractice || !hasDraft || allPublished
+    loading ||
+    acting ||
+    !hasPractice ||
+    (!hasDraft && !allPublished)
 
   let label = "Publish Practice"
   if (loading) label = "Loading…"
-  else if (publishing) label = "Publishing…"
-  else if (!hasPractice) label = "No practice"
-  else if (allPublished) label = "Published"
+  else if (acting) label = isDraftMode ? "Saving…" : "Publishing…"
+  else if (allPublished) label = "Save as Draft"
+
+  const handleClick = () => {
+    if (isDraftMode) {
+      void handleSaveAsDraft()
+      return
+    }
+    void handlePublish()
+  }
 
   return (
     <Button
       type="button"
       className={cn(className)}
       disabled={disabled}
-      onClick={() => void handlePublish()}
+      onClick={handleClick}
       title={
-        allPublished
-          ? "Practice is already published"
-          : !hasPractice
-            ? "No practice linked to this item yet"
-            : undefined
+        !hasPractice
+          ? "No practice linked to this course yet"
+          : allPublished
+            ? "Move published practice back to draft"
+            : hasDraft
+              ? "Publish draft practice"
+              : undefined
       }
     >
-      {(loading || publishing) && (
+      {(loading || acting) && (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       )}
       {label}

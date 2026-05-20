@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "../../components/ui/input"
 import { Select } from "../../components/ui/select"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
-import { Textarea } from "../../components/ui/textarea"
 import {
   createModule,
   deleteModule,
@@ -241,7 +240,6 @@ export function HumanLanguageHierarchyPage() {
   const [createModuleTitle, setCreateModuleTitle] = useState("")
   const [createModuleUseDefaultNaming, setCreateModuleUseDefaultNaming] = useState(false)
   const [createModuleDefaultTitle, setCreateModuleDefaultTitle] = useState("")
-  const [createModuleDescription, setCreateModuleDescription] = useState("")
   const [createModuleIconSource, setCreateModuleIconSource] = useState<"url" | "file">("url")
   const [createModuleIconUrl, setCreateModuleIconUrl] = useState("")
   const [createModuleIconFile, setCreateModuleIconFile] = useState<File | null>(null)
@@ -253,7 +251,6 @@ export function HumanLanguageHierarchyPage() {
   const [editModuleSaving, setEditModuleSaving] = useState(false)
   const [editModuleTarget, setEditModuleTarget] = useState<EditModuleTarget | null>(null)
   const [editModuleTitle, setEditModuleTitle] = useState("")
-  const [editModuleDescription, setEditModuleDescription] = useState("")
   const [editModuleDisplayOrder, setEditModuleDisplayOrder] = useState(0)
   const [editModuleIconSource, setEditModuleIconSource] = useState<"url" | "file">("url")
   const [editModuleIconUrl, setEditModuleIconUrl] = useState("")
@@ -467,7 +464,6 @@ export function HumanLanguageHierarchyPage() {
     setCreateModuleUseDefaultNaming(false)
     setCreateModuleDefaultTitle(getNextDefaultModuleName(level))
     setCreateModuleTitle("")
-    setCreateModuleDescription("")
     setCreateModuleIconSource("url")
     setCreateModuleIconUrl("")
     setCreateModuleIconFile(null)
@@ -503,7 +499,6 @@ export function HumanLanguageHierarchyPage() {
       await createModule({
         level_id: createModuleLevelId,
         title,
-        description: createModuleDescription.trim() || undefined,
         icon_url: uploadedIconUrl,
         display_order: createModuleDisplayOrder,
         is_active: true,
@@ -553,7 +548,6 @@ export function HumanLanguageHierarchyPage() {
       levelKey,
     })
     setEditModuleTitle(module.title)
-    setEditModuleDescription("")
     setEditModuleDisplayOrder(moduleDisplayOrder)
     setEditModuleIconSource("url")
     setEditModuleIconUrl(existingIconUrl)
@@ -594,7 +588,6 @@ export function HumanLanguageHierarchyPage() {
 
       await updateModule(editModuleTarget.moduleId, {
         title,
-        description: editModuleDescription.trim() || undefined,
         icon_url: uploadedIconUrl,
         display_order: editModuleDisplayOrder,
         is_active: true,
@@ -1069,17 +1062,6 @@ export function HumanLanguageHierarchyPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">Description (optional)</label>
-              <Textarea
-                rows={3}
-                value={createModuleDescription}
-                onChange={(event) => setCreateModuleDescription(event.target.value)}
-                placeholder="Optional description"
-                disabled={createModuleSaving}
-              />
-            </div>
-
-            <div>
               <label className="mb-1.5 block text-sm font-medium text-grayScale-600">Icon URL (optional)</label>
               <div className="mb-2 grid grid-cols-2 gap-2">
                 <Button
@@ -1169,17 +1151,6 @@ export function HumanLanguageHierarchyPage() {
                 value={editModuleTitle}
                 onChange={(event) => setEditModuleTitle(event.target.value)}
                 placeholder="Updated title"
-                disabled={editModuleSaving}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-grayScale-600">Description</label>
-              <Textarea
-                rows={3}
-                value={editModuleDescription}
-                onChange={(event) => setEditModuleDescription(event.target.value)}
-                placeholder="New description"
                 disabled={editModuleSaving}
               />
             </div>

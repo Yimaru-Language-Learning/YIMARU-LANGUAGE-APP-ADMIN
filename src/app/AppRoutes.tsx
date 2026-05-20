@@ -15,6 +15,7 @@ import { SpeakingPage } from "../pages/content-management/SpeakingPage";
 import { AddVideoPage } from "../pages/content-management/AddVideoPage";
 import { AddPracticePage } from "../pages/content-management/AddPracticePage";
 import { NewContentPage } from "../pages/content-management/NewContentPage";
+import { ReorderContentPage } from "../pages/content-management/ReorderContentPage";
 import { LearnEnglishPage } from "../pages/content-management/LearnEnglishPage";
 import { ProgramCoursesPage } from "../pages/content-management/ProgramCoursesPage";
 import { CourseDetailPage } from "../pages/content-management/CourseDetailPage";
@@ -162,6 +163,7 @@ export function AppRoutes() {
         </Route>
 
         <Route path="/new-content" element={<NewContentPage />} />
+        <Route path="/new-content/reorder" element={<ReorderContentPage />} />
         <Route
           path="/new-content/courses"
           element={<ProgramTypeSelectionPage />}

@@ -21,7 +21,6 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { Textarea } from "../../components/ui/textarea";
 import { cn } from "../../lib/utils";
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg";
 import alertSrc from "../../assets/Alert.svg";
@@ -146,7 +145,6 @@ export function CourseDetailPage() {
   const [editingModule, setEditingModule] =
     useState<TopLevelCourseModuleItem | null>(null);
   const [editModuleName, setEditModuleName] = useState("");
-  const [editModuleDescription, setEditModuleDescription] = useState("");
   const [editModuleSortOrder, setEditModuleSortOrder] = useState("");
   const [editModuleIcon, setEditModuleIcon] = useState("");
   const [editModuleIconUploadBusy, setEditModuleIconUploadBusy] =
@@ -160,7 +158,6 @@ export function CourseDetailPage() {
   const openEditModule = (module: TopLevelCourseModuleItem) => {
     setEditingModule(module);
     setEditModuleName(module.name ?? "");
-    setEditModuleDescription(module.description ?? "");
     setEditModuleSortOrder(String(module.sort_order ?? 0));
     setEditModuleIcon(module.icon?.trim() ?? "");
     setEditModuleIconUploadBusy(false);
@@ -284,7 +281,7 @@ export function CourseDetailPage() {
     try {
       await updateTopLevelCourseModule(editingModule.id, {
         name,
-        description: editModuleDescription.trim(),
+        description: editingModule.description?.trim() ?? "",
         icon: editModuleIcon.trim(),
         sort_order,
       });
@@ -430,8 +427,7 @@ export function CourseDetailPage() {
               <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
                 <DialogTitle>Edit module</DialogTitle>
                 <DialogDescription>
-                  Update name, description, sort order, and icon (upload or URL).
-                  Saved with{" "}
+                  Update name, sort order, and icon (upload or URL). Saved with{" "}
                   <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
                     PUT /modules/:id
                   </code>
@@ -450,19 +446,6 @@ export function CourseDetailPage() {
                     className="rounded-xl"
                     placeholder="e.g. Grammar basics"
                     disabled={savingModuleEdit}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-grayScale-700">
-                    Description
-                  </label>
-                  <Textarea
-                    value={editModuleDescription}
-                    onChange={(e) => setEditModuleDescription(e.target.value)}
-                    rows={4}
-                    className="min-h-[100px] resize-y rounded-xl"
-                    placeholder="Optional short description."
-                    disabled={savingModuleEdit || editModuleIconUploadBusy}
                   />
                 </div>
                 <div className="space-y-2">

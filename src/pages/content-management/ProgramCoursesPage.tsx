@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Plus, FileText, Pencil, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Card, CardContent } from "../../components/ui/card";
@@ -14,7 +14,6 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { Textarea } from "../../components/ui/textarea";
 import uploadIcon from "../../assets/icons/upload.png";
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg";
 import alertSrc from "../../assets/Alert.svg";
@@ -52,7 +51,6 @@ export function ProgramCoursesPage() {
     null,
   );
   const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -61,7 +59,6 @@ export function ProgramCoursesPage() {
 
   const [createCourseOpen, setCreateCourseOpen] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [createDescription, setCreateDescription] = useState("");
   const [createSortOrder, setCreateSortOrder] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
@@ -136,7 +133,6 @@ export function ProgramCoursesPage() {
   const openEditCourse = (course: ProgramCourseListItem) => {
     setEditingCourse(course);
     setEditName(course.name ?? "");
-    setEditDescription(course.description?.trim() ?? "");
     setEditThumbnail(
       course.thumbnail?.trim() || course.thumbnail_url?.trim() || "",
     );
@@ -146,7 +142,6 @@ export function ProgramCoursesPage() {
   const closeEditCourse = () => {
     setEditingCourse(null);
     setEditName("");
-    setEditDescription("");
     setEditSortOrder("");
     setEditThumbnail("");
     setUploadingEditThumbnail(false);
@@ -211,7 +206,7 @@ export function ProgramCoursesPage() {
     try {
       await updateTopLevelCourse(editingCourse.id, {
         name,
-        description: editDescription.trim(),
+        description: editingCourse.description?.trim() ?? "",
         thumbnail: editThumbnail.trim(),
         sort_order,
       });
@@ -231,7 +226,6 @@ export function ProgramCoursesPage() {
 
   const clearCreateCourseForm = () => {
     setCreateName("");
-    setCreateDescription("");
     setCreateSortOrder("");
     setCreateThumbnail("");
     setCreateUploadingThumbnail(false);
@@ -302,7 +296,7 @@ export function ProgramCoursesPage() {
     try {
       await createProgramCourse(programId, {
         name,
-        description: createDescription.trim(),
+        description: "",
         thumbnail: createThumbnail.trim(),
         sort_order,
       });
@@ -365,18 +359,6 @@ export function ProgramCoursesPage() {
         <div className="flex gap-3">
           {programIdValid ? (
             <>
-              <Link
-                to={`/new-content/learn-english/${programIdParam}/courses/add-practice`}
-              >
-                <Button
-                  variant="outline"
-                  className="rounded-[6px] border-brand-500 text-brand-500 "
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Add Practice
-                </Button>
-              </Link>
-
               <Dialog
                 open={createCourseOpen}
                 onOpenChange={handleCreateCourseDialogOpenChange}
@@ -445,20 +427,6 @@ export function ProgramCoursesPage() {
                           onChange={(e) => setCreateName(e.target.value)}
                           placeholder="e.g. Introduction to German A1"
                           className="h-12 rounded-xl"
-                          disabled={createSaving || createUploadingThumbnail}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[15px] font-medium text-grayScale-700">
-                          Description
-                        </label>
-                        <Textarea
-                          value={createDescription}
-                          onChange={(e) => setCreateDescription(e.target.value)}
-                          placeholder="Short summary of the course"
-                          rows={3}
-                          className="min-h-[88px] resize-y rounded-xl"
                           disabled={createSaving || createUploadingThumbnail}
                         />
                       </div>
@@ -740,7 +708,7 @@ export function ProgramCoursesPage() {
           <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
             <DialogTitle>Edit course</DialogTitle>
             <DialogDescription>
-              Update name, description, sort order, and thumbnail. Saved with{" "}
+              Update name, sort order, and thumbnail. Saved with{" "}
               <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
                 PUT /courses/:id
               </code>
@@ -758,19 +726,6 @@ export function ProgramCoursesPage() {
                 onChange={(e) => setEditName(e.target.value)}
                 className="rounded-xl"
                 placeholder="Course name"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Description
-              </label>
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={4}
-                className="min-h-[100px] resize-y rounded-xl"
-                placeholder="Short summary"
                 disabled={savingEdit || uploadingEditThumbnail}
               />
             </div>

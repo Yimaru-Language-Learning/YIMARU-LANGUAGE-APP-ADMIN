@@ -224,6 +224,7 @@ export interface CreateExamPrepCatalogUnitRequest {
   name: string
   description?: string | null
   thumbnail?: string | null
+  sort_order: number
 }
 
 export interface CreateExamPrepCatalogUnitResponse {
@@ -329,6 +330,9 @@ export interface ExamPrepModuleLessonItem {
   thumbnail?: string | null
   description?: string | null
   sort_order?: number
+  /** Total length in seconds when the API provides it. */
+  duration?: number | null
+  duration_seconds?: number | null
   created_at?: string
   updated_at?: string
 }
@@ -338,6 +342,7 @@ export interface CreateExamPrepModuleLessonRequest {
   video_url: string
   thumbnail?: string | null
   description?: string | null
+  publish_status: PracticePublishStatus
 }
 
 export interface CreateExamPrepModuleLessonResponse {
@@ -448,6 +453,11 @@ export interface TopLevelModuleLessonItem {
   thumbnail: string
   description: string
   sort_order: number
+  publish_status?: PracticePublishStatus | string | null
+  has_practice?: boolean
+  /** Total length in seconds when the API provides it. */
+  duration?: number | null
+  duration_seconds?: number | null
   created_at: string
 }
 
@@ -547,6 +557,12 @@ export interface UpdateTopLevelModuleLessonRequest {
   video_url: string
   thumbnail: string
   description: string
+  sort_order: number
+}
+
+/** Publish-only patch: PUT /lessons/:id with { publish_status }. */
+export interface PublishTopLevelModuleLessonRequest {
+  publish_status: PracticePublishStatus
 }
 
 /** Body for POST /modules/:moduleId/lessons. */
@@ -555,6 +571,8 @@ export interface CreateTopLevelModuleLessonRequest {
   video_url: string
   thumbnail: string
   description: string
+  sort_order: number
+  publish_status: PracticePublishStatus
 }
 
 export interface CreateTopLevelModuleLessonResponse {

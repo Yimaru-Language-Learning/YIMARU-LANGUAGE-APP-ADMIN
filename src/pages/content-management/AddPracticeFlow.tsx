@@ -22,10 +22,16 @@ import {
 
 import { ContextStep } from "./components/practice-steps/ContextStep";
 import { ScenarioStep } from "./components/practice-steps/ScenarioStep";
+import { PersonaStep } from "./components/practice-steps/PersonaStep";
 import { QuestionsStep } from "./components/practice-steps/QuestionsStep";
 import { ReviewStep } from "./components/practice-steps/ReviewStep";
+import {
+  personaFromId,
+  personaIdNumber,
+} from "./components/practice-steps/constants";
+import { useActivePersonas } from "../../hooks/useActivePersonas";
 
-const STEP_LABELS = ["Practice", "Questions", "Review"] as const;
+const STEP_LABELS = ["Practice", "Persona", "Questions", "Review"] as const;
 
 export function AddPracticeFlow() {
   const navigate = useNavigate();
@@ -48,6 +54,10 @@ export function AddPracticeFlow() {
 
   const isModuleContext = backTo === "module";
   const isCourseContext = backTo === "modules";
+  const isLessonPractice = useMemo(() => {
+    const lid = lessonId ? Number(lessonId) : NaN;
+    return Number.isFinite(lid) && lid > 0;
+  }, [lessonId]);
 
   const parentContext = useMemo((): {
     kind: PracticeParentKind;
@@ -96,12 +106,19 @@ export function AddPracticeFlow() {
   const [isPublished, setIsPublished] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
+  const {
+    personas,
+    loading: personasLoading,
+    error: personasError,
+    reload: reloadPersonas,
+  } = useActivePersonas();
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     storyImageUrl: "",
     shuffleQuestions: false,
-    publishStatus: "DRAFT" as const,
     tips: "",
     questions: [
       {
@@ -176,12 +193,29 @@ export function AddPracticeFlow() {
       });
       return;
     }
-    if (!formData.title.trim() || !formData.description.trim()) {
+    if (
+      !isLessonPractice &&
+      (!formData.title.trim() || !formData.description.trim())
+    ) {
       toast.error("Title and story description are required", {
         description: "Complete the first step before publishing.",
       });
       return;
     }
+    if (!selectedPersona) {
+      toast.error("Select a persona", {
+        description: "Choose a character on the Persona step before publishing.",
+      });
+      return;
+    }
+    const personaId = personaIdNumber(selectedPersona);
+    if (!personaId) {
+      toast.error("Invalid persona", {
+        description: "Re-select a persona from the list and try again.",
+      });
+      return;
+    }
+    const persona = personaFromId(selectedPersona, personas);
     const mappedQuestions = formData.questions
       .filter((q) => String(q.text ?? "").trim())
       .map((q) => ({
@@ -207,19 +241,33 @@ export function AddPracticeFlow() {
       return;
     }
 
+    const lessonDefaultTitle =
+      lessonTitleDisplay?.trim() ||
+      (lessonId ? `Lesson ${lessonId} practice` : "Lesson practice");
+
     setSubmitting(true);
     try {
       await executeLearnEnglishPracticeCreation({
         parentKind: parentContext.kind,
         parentId: parentContext.id,
         status,
-        questionSetTitle: formData.title.trim() || "Practice set",
-        questionSetDescription: formData.description.trim() || null,
+        questionSetTitle: isLessonPractice
+          ? lessonDefaultTitle
+          : formData.title.trim() || "Practice set",
+        questionSetDescription: isLessonPractice
+          ? null
+          : formData.description.trim() || null,
         shuffleQuestions: formData.shuffleQuestions,
-        practiceTitle: formData.title.trim() || "Untitled practice",
-        storyDescription: formData.description.trim(),
-        storyImage: formData.storyImageUrl.trim(),
+        practiceTitle: isLessonPractice
+          ? lessonDefaultTitle
+          : formData.title.trim() || "Untitled practice",
+        storyDescription: isLessonPractice
+          ? ""
+          : formData.description.trim(),
+        storyImage: isLessonPractice ? "" : formData.storyImageUrl.trim(),
         quickTips: formData.tips.trim(),
+        personaName: persona?.name ?? null,
+        personaId,
         questions: mappedQuestions,
         definitions: typeDefinitions,
       });
@@ -274,12 +322,12 @@ export function AddPracticeFlow() {
             onClick={() => {
               setIsPublished(false);
               setCurrentStep(1);
+              setSelectedPersona(null);
               setFormData({
                 title: "",
                 description: "",
                 storyImageUrl: "",
                 shuffleQuestions: false,
-                publishStatus: "DRAFT" as const,
                 tips: "",
                 questions: [
                   {
@@ -321,11 +369,25 @@ export function AddPracticeFlow() {
               formData={formData}
               setFormData={setFormData}
               nextStep={nextStep}
-              navigate={navigate}
-              level={level!}
+              onCancel={() => navigate(backPath)}
+              isLessonPractice={isLessonPractice}
+              lessonTitle={lessonTitleDisplay}
             />
           );
         case 2:
+          return (
+            <PersonaStep
+              personas={personas}
+              loading={personasLoading}
+              error={personasError}
+              onRetry={() => void reloadPersonas()}
+              selectedPersona={selectedPersona}
+              setSelectedPersona={setSelectedPersona}
+              nextStep={nextStep}
+              prevStep={prevStep}
+            />
+          );
+        case 3:
           return (
             <QuestionsStep
               formData={formData}
@@ -337,12 +399,20 @@ export function AddPracticeFlow() {
               definitionsError={definitionsError}
             />
           );
-        case 3:
+        case 4:
           return (
             <ReviewStep
               formData={formData}
-              setFormData={setFormData}
+              selectedPersona={selectedPersona}
+              personas={personas}
+              isLessonPractice={isLessonPractice}
+              lessonTitle={lessonTitleDisplay}
+              programLabel={level ? `Program ${level}` : null}
+              courseLabel={courseId ? `Course ${courseId}` : null}
+              moduleLabel={moduleId ? `Module ${moduleId}` : null}
               prevStep={prevStep}
+              onEditContext={() => setCurrentStep(1)}
+              onEditQuestions={() => setCurrentStep(3)}
               parentSummary={parentSummary}
               typeDefinitions={typeDefinitions}
               canPublish={parentContext !== null}
@@ -368,6 +438,19 @@ export function AddPracticeFlow() {
         );
       case 2:
         return (
+          <PersonaStep
+            personas={personas}
+            loading={personasLoading}
+            error={personasError}
+            onRetry={() => void reloadPersonas()}
+            selectedPersona={selectedPersona}
+            setSelectedPersona={setSelectedPersona}
+            nextStep={nextStep}
+            prevStep={prevStep}
+          />
+        );
+      case 3:
+        return (
           <QuestionsStep
             formData={formData}
             setFormData={setFormData}
@@ -378,12 +461,20 @@ export function AddPracticeFlow() {
             definitionsError={definitionsError}
           />
         );
-      case 3:
+      case 4:
         return (
           <ReviewStep
             formData={formData}
-            setFormData={setFormData}
+            selectedPersona={selectedPersona}
+            personas={personas}
+            isLessonPractice={isLessonPractice}
+            lessonTitle={lessonTitleDisplay}
+            programLabel={level ? `Program ${level}` : null}
+            courseLabel={courseId ? `Course ${courseId}` : null}
+            moduleLabel={moduleId ? `Module ${moduleId}` : null}
             prevStep={prevStep}
+            onEditContext={() => setCurrentStep(1)}
+            onEditQuestions={() => setCurrentStep(3)}
             parentSummary={parentSummary}
             typeDefinitions={typeDefinitions}
             canPublish={parentContext !== null}
@@ -453,7 +544,7 @@ export function AddPracticeFlow() {
         </div>
 
         <div
-          className={`mx-auto ${currentStep === 2 ? "max-w-6xl" : "max-w-4xl"}`}
+          className={`mx-auto ${currentStep === 3 || currentStep === 4 ? "max-w-6xl" : "max-w-4xl"}`}
         >
           {renderStep()}
         </div>

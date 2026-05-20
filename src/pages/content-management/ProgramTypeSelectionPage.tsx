@@ -1,26 +1,18 @@
 import { Link } from "react-router-dom";
 import { GraduationCap, Brain } from "lucide-react";
-import { Button } from "../../components/ui/button";
 
 export function ProgramTypeSelectionPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header section */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1.5 pt-2">
-          <h1 className="text-[28px] font-bold tracking-tight text-grayScale-900">
-            Courses
-          </h1>
-          <p className="max-w-2xl text-[15px] font-medium  text-grayScale-500">
-            Organize courses under skill-based learning or English proficiency
-            exams. Select a program type to manage curriculum and modules.
-          </p>
-        </div>
-        <Link to="/new-content/question-types">
-          <Button className="h-10 px-6 rounded-[6px] bg-brand-500 font-bold text-white shadow-sm hover:bg-brand-600 transition-all flex items-center gap-2 mt-4">
-            Manage Question Types
-          </Button>
-        </Link>
+      <div className="space-y-1.5 pt-2">
+        <h1 className="text-[28px] font-bold tracking-tight text-grayScale-900">
+          Courses
+        </h1>
+        <p className="max-w-2xl text-[15px] font-medium  text-grayScale-500">
+          Organize courses under skill-based learning or English proficiency
+          exams. Select a program type to manage curriculum and modules.
+        </p>
       </div>
 
       {/* Gradient Divider */}

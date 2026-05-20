@@ -25,6 +25,7 @@ import {
   getExamPrepModuleLessons,
 } from "../../api/courses.api";
 import { uploadImageFile, uploadVideoFile } from "../../api/files.api";
+import type { PracticePublishStatus } from "../../types/course.types";
 
 const MOCK_PRACTICES = [
   {
@@ -64,6 +65,7 @@ export function CourseModuleDetailPage() {
       thumbnail: string;
       sortOrder: number;
       gradient: string;
+      durationSeconds: number | null;
     }>
   >([]);
   const [createLessonOpen, setCreateLessonOpen] = useState(false);
@@ -129,20 +131,28 @@ export function CourseModuleDetailPage() {
       const rows = response.data?.data?.lessons;
       const list = Array.isArray(rows) ? rows : [];
       setLessons(
-        list.map((row, index) => ({
+        list.map((row, index) => {
+          const raw = row.duration_seconds ?? row.duration ?? null;
+          const n =
+            raw == null ? NaN : typeof raw === "number" ? raw : Number(raw);
+          const durationSeconds =
+            Number.isFinite(n) && n > 0 ? n : null;
+          return {
           id: Number(row.id),
           title: row.title?.trim() || `Lesson ${row.id}`,
           videoUrl: row.video_url?.trim() || "",
           description: row.description?.trim() || "—",
           thumbnail: row.thumbnail?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
+          durationSeconds,
           gradient:
             index % 3 === 1
               ? "linear-gradient(135deg, rgba(79, 70, 229, 0.35) 0%, rgba(79, 70, 229, 0.6) 100%)"
               : index % 3 === 2
                 ? "linear-gradient(135deg, rgba(124, 58, 237, 0.35) 0%, rgba(124, 58, 237, 0.6) 100%)"
                 : "linear-gradient(135deg, rgba(158, 40, 145, 0.35) 0%, rgba(158, 40, 145, 0.6) 100%)",
-        })),
+        };
+        }),
       );
     } catch (error) {
       console.error(error);
@@ -252,7 +262,7 @@ export function CourseModuleDetailPage() {
     }
   };
 
-  const handleCreateLesson = async () => {
+  const handleCreateLesson = async (publishStatus: PracticePublishStatus) => {
     if (!Number.isFinite(parsedModuleId) || parsedModuleId < 1) {
       toast.error("Invalid module");
       return;
@@ -276,9 +286,14 @@ export function CourseModuleDetailPage() {
         video_url: videoUrl,
         thumbnail: minioThumbnail || null,
         description: createDescription.trim() || null,
+        publish_status: publishStatus,
       });
       await loadLessons();
-      toast.success("Lesson created");
+      toast.success(
+        publishStatus === "DRAFT"
+          ? "Lesson saved as draft"
+          : "Lesson created",
+      );
       clearCreateLessonForm();
       setCreateLessonOpen(false);
     } catch (error: unknown) {
@@ -641,7 +656,7 @@ export function CourseModuleDetailPage() {
                     />
                   </div>
                 </div>
-                <div className="shrink-0 px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex justify-end gap-3">
+                <div className="shrink-0 px-8 py-6 bg-grayScale-50/30 border-t border-grayScale-50 flex flex-wrap justify-end gap-3">
                   <DialogClose asChild>
                     <Button
                       type="button"
@@ -655,11 +670,20 @@ export function CourseModuleDetailPage() {
                   </DialogClose>
                   <Button
                     type="button"
+                    variant="outline"
+                    className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold hover:bg-grayScale-50"
+                    disabled={creatingLesson || uploadingThumbnail || uploadingVideo}
+                    onClick={() => void handleCreateLesson("DRAFT")}
+                  >
+                    {creatingLesson ? "Saving…" : "Save as draft"}
+                  </Button>
+                  <Button
+                    type="button"
                     className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                     disabled={creatingLesson || uploadingThumbnail || uploadingVideo}
-                    onClick={() => void handleCreateLesson()}
+                    onClick={() => void handleCreateLesson("PUBLISHED")}
                   >
-                    {creatingLesson ? "Creating..." : "Create Lesson"}
+                    {creatingLesson ? "Creating..." : "Publish lesson"}
                   </Button>
                 </div>
               </div>
@@ -716,6 +740,7 @@ export function CourseModuleDetailPage() {
                 thumbnailUrl={lesson.thumbnail}
                 videoUrl={lesson.videoUrl}
                 thumbnailGradient={lesson.gradient}
+                durationSeconds={lesson.durationSeconds}
                 hoverModuleActions
                 onEdit={() => openEditLesson(lesson)}
                 onDelete={() => setDeletingLessonId(lesson.id)}

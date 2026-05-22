@@ -10,6 +10,7 @@ import {
   TicketCheck,
   // TrendingUp,
   Users,
+  UserX,
   Bell,
   CreditCard,
   UsersRound,
@@ -39,7 +40,12 @@ import { getSubscriptionPlans } from "../api/subscription-plans.api"
 import { getRatings } from "../api/courses.api"
 import { useEffect, useState } from "react"
 import { AnalyticsTimeRangeFilter } from "../components/analytics/AnalyticsTimeRangeFilter"
-import { getPrimaryQuestionTypeSummary, getSeriesPeriodLabel, getVideoLessonsSummary } from "../lib/analytics"
+import {
+  getPrimaryQuestionTypeSummary,
+  getSeriesPeriodLabel,
+  getSubscriptionMetrics,
+  getVideoLessonsSummary,
+} from "../lib/analytics"
 import type { DashboardData, DashboardFilters } from "../types/analytics.types"
 import type { SubscriptionPlan } from "../types/subscription.types"
 import type { Rating } from "../types/course.types"
@@ -164,6 +170,9 @@ export function DashboardPage() {
     })) ?? []
 
   const seriesPeriodLabel = dashboard ? getSeriesPeriodLabel(dashboard.date_filter) : "Last 30 Days"
+  const subscriptionMetrics = dashboard
+    ? getSubscriptionMetrics(dashboard.subscriptions)
+    : null
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -234,11 +243,11 @@ export function DashboardPage() {
                 deltaPositive={dashboard.users.new_month > 0}
               />
               <StatCard
-                icon={BadgeCheck}
-                label="Active Subscribers"
-                value={dashboard.subscriptions.active_subscriptions.toLocaleString()}
-                deltaLabel={`+${dashboard.subscriptions.new_month} this month`}
-                deltaPositive={dashboard.subscriptions.new_month > 0}
+                icon={CreditCard}
+                label="Payments"
+                value={dashboard.payments.total_payments.toLocaleString()}
+                deltaLabel={`${dashboard.payments.successful_payments} successful`}
+                deltaPositive={dashboard.payments.successful_payments > 0}
               />
               <StatCard
                 icon={DollarSign}
@@ -258,8 +267,33 @@ export function DashboardPage() {
           )}
 
           {/* Secondary Stats */}
-          {activeStatTab === "secondary" && (
+          {activeStatTab === "secondary" && subscriptionMetrics && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                icon={CreditCard}
+                label="Total Subscriptions"
+                value={subscriptionMetrics.total.toLocaleString()}
+                deltaLabel={`+${dashboard.subscriptions.new_month} this month`}
+                deltaPositive={dashboard.subscriptions.new_month > 0}
+              />
+              <StatCard
+                icon={BadgeCheck}
+                label="Active Subscriptions"
+                value={subscriptionMetrics.active.toLocaleString()}
+                deltaLabel={`+${dashboard.subscriptions.new_today} today · +${dashboard.subscriptions.new_week} this week`}
+                deltaPositive={subscriptionMetrics.active > 0}
+              />
+              <StatCard
+                icon={UserX}
+                label="Inactive Subscriptions"
+                value={subscriptionMetrics.inactive.toLocaleString()}
+                deltaLabel={
+                  dashboard.subscriptions.by_status.length > 0
+                    ? "From subscription status breakdown"
+                    : "Total minus active"
+                }
+                deltaPositive={subscriptionMetrics.inactive === 0}
+              />
               <StatCard
                 icon={Video}
                 label="Videos"

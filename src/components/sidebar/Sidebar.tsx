@@ -20,27 +20,47 @@ import { NavLink } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { BrandLogo } from "../brand/BrandLogo";
 import { getUnreadCount } from "../../api/notifications.api";
+import { SidebarNavGroup } from "./SidebarNavGroup";
 
-type NavItem = {
+type NavLinkItem = {
+  kind: "link";
   label: string;
   to: string;
   icon: ComponentType<{ className?: string }>;
 };
 
-const navItems: NavItem[] = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "User Management", to: "/users", icon: Users },
-  { label: "Role Management", to: "/roles", icon: Shield },
-  { label: "Content Management", to: "/content", icon: BookOpen },
-  { label: "New Content", to: "/new-content", icon: BookOpen },
+type NavGroupItem = {
+  kind: "group";
+  label: string;
+  basePath: string;
+  icon: ComponentType<{ className?: string }>;
+  children: { label: string; to: string; end?: boolean }[];
+};
 
-  { label: "Notifications", to: "/notifications", icon: Bell },
-  { label: "User Log", to: "/user-log", icon: ClipboardList },
-  { label: "Issue Reports", to: "/issues", icon: CircleAlert },
-  { label: "Analytics", to: "/analytics", icon: BarChart3 },
-  { label: "Team Management", to: "/team", icon: Users2 },
-  { label: "Profile", to: "/profile", icon: UserCircle2 },
-  { label: "Settings", to: "/settings", icon: Settings },
+type NavEntry = NavLinkItem | NavGroupItem;
+
+const navEntries: NavEntry[] = [
+  { kind: "link", label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+  { kind: "link", label: "User Management", to: "/users", icon: Users },
+  { kind: "link", label: "Role Management", to: "/roles", icon: Shield },
+  { kind: "link", label: "Content Management", to: "/content", icon: BookOpen },
+  { kind: "link", label: "New Content", to: "/new-content", icon: BookOpen },
+  {
+    kind: "group",
+    label: "Notifications",
+    basePath: "/notifications",
+    icon: Bell,
+    children: [
+      { label: "My Notifications", to: "/notifications", end: true },
+      { label: "Email Templates", to: "/notifications/email-templates" },
+    ],
+  },
+  { kind: "link", label: "User Log", to: "/user-log", icon: ClipboardList },
+  { kind: "link", label: "Issue Reports", to: "/issues", icon: CircleAlert },
+  { kind: "link", label: "Analytics", to: "/analytics", icon: BarChart3 },
+  { kind: "link", label: "Team Management", to: "/team", icon: Users2 },
+  { kind: "link", label: "Profile", to: "/profile", icon: UserCircle2 },
+  { kind: "link", label: "Settings", to: "/settings", icon: Settings },
 ];
 
 type SidebarProps = {
@@ -75,9 +95,18 @@ export function Sidebar({
       window.removeEventListener("notifications-updated", fetchUnread);
   }, []);
 
+  const unreadBadge = unreadCount > 0 && (
+    <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
+      {unreadCount > 99 ? "99+" : unreadCount}
+    </span>
+  );
+
+  const collapsedUnreadDot = unreadCount > 0 && (
+    <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-destructive" />
+  );
+
   return (
     <>
-      {/* Mobile overlay */}
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/50 transition-opacity lg:hidden",
@@ -87,7 +116,6 @@ export function Sidebar({
         aria-hidden="true"
       />
 
-      {/* Sidebar panel */}
       <aside
         className={cn(
           "group fixed left-0 top-0 z-50 flex h-screen flex-col border-r bg-grayScale-50 py-5 transition-all duration-300",
@@ -135,12 +163,27 @@ export function Sidebar({
         </div>
 
         <nav className="mt-6 flex-1 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
+          {navEntries.map((entry) => {
+            if (entry.kind === "group") {
+              return (
+                <SidebarNavGroup
+                  key={entry.basePath}
+                  label={entry.label}
+                  icon={entry.icon}
+                  basePath={entry.basePath}
+                  children={entry.children}
+                  isCollapsed={isCollapsed}
+                  onNavigate={onClose}
+                  trailing={!isCollapsed ? unreadBadge : collapsedUnreadDot}
+                />
+              );
+            }
+
+            const Icon = entry.icon;
             return (
               <NavLink
-                key={item.to}
-                to={item.to}
+                key={entry.to}
+                to={entry.to}
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
@@ -151,41 +194,22 @@ export function Sidebar({
                       "bg-brand-100/40 text-brand-600 shadow-[0_1px_0_rgba(0,0,0,0.02)] ring-1 ring-brand-100",
                   )
                 }
-                title={isCollapsed ? item.label : undefined}
+                title={isCollapsed ? entry.label : undefined}
               >
                 {({ isActive }) => (
                   <>
                     <span
                       className={cn(
-                        "relative grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
+                        "grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
                         isActive && "bg-brand-500/90 text-white",
                       )}
                     >
                       <Icon className="h-4 w-4" />
-                      {isCollapsed &&
-                        item.to === "/notifications" &&
-                        unreadCount > 0 && (
-                          <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-destructive" />
-                        )}
                     </span>
                     {!isCollapsed && (
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate">{entry.label}</span>
                     )}
-                    {!isCollapsed &&
-                      item.to === "/notifications" &&
-                      unreadCount > 0 && (
-                        <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
-                          {unreadCount > 99 ? "99+" : unreadCount}
-                        </span>
-                      )}
-                    {!isCollapsed &&
-                    item.to !== "/notifications" &&
-                    isActive ? (
-                      <span className="ml-auto h-6 w-1 rounded-full bg-brand-500/80" />
-                    ) : !isCollapsed &&
-                      item.to === "/notifications" &&
-                      unreadCount === 0 &&
-                      isActive ? (
+                    {!isCollapsed && isActive ? (
                       <span className="ml-auto h-6 w-1 rounded-full bg-brand-500/80" />
                     ) : null}
                   </>

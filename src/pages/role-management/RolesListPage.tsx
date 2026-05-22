@@ -15,6 +15,7 @@ import {
   Trash2,
   UserX,
   UserCheck,
+  Mail,
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
@@ -38,6 +39,8 @@ import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { teamRoleFromRbacRole } from "../../lib/teamRoles"
+import { InviteTeamMemberDialog } from "./components/InviteTeamMemberDialog"
 
 export function RolesListPage() {
   const navigate = useNavigate()
@@ -82,6 +85,8 @@ export function RolesListPage() {
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<Set<number>>(new Set())
   const [permSearch, setPermSearch] = useState("")
   const [savingPermissions, setSavingPermissions] = useState(false)
+
+  const [inviteForRole, setInviteForRole] = useState<Role | null>(null)
 
   // Debounce search query
   useEffect(() => {
@@ -464,6 +469,18 @@ export function RolesListPage() {
                         </p>
                       </div>
                     </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full gap-1.5 border-brand-200 text-xs text-brand-600 hover:bg-brand-50"
+                      onClick={() => setInviteForRole(role)}
+                      disabled={deleteLoading || bulkActionLoading}
+                    >
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
+                      Invite team members
+                    </Button>
 
                     <div className="grid grid-cols-2 gap-2">
                       <Button
@@ -966,6 +983,17 @@ export function RolesListPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <InviteTeamMemberDialog
+        open={inviteForRole !== null}
+        onOpenChange={(open) => {
+          if (!open) setInviteForRole(null)
+        }}
+        presetTeamRole={
+          inviteForRole ? teamRoleFromRbacRole(inviteForRole) : undefined
+        }
+        presetRoleLabel={inviteForRole?.name}
+      />
     </div>
   )
 }

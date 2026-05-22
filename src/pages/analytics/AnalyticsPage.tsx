@@ -43,6 +43,8 @@ import { AnalyticsTimeRangeFilter, getDashboardFilterLabel } from "../../compone
 import {
   getPrimaryQuestionTypeSummary,
   getSeriesPeriodLabel,
+  formatAnalyticsLabel,
+  getSubscriptionMetrics,
   getVideoLessonsSummary,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
@@ -115,31 +117,43 @@ function BreakdownList({
   title,
   data,
   total,
+  scrollable,
 }: {
   title: string
   data: LabelCount[]
   total?: number
+  /** Enable vertical scroll for long breakdowns (e.g. occupation). */
+  scrollable?: boolean
 }) {
   const computedTotal = total ?? data.reduce((s, d) => s + d.count, 0)
+  const sorted = [...data].sort((a, b) => b.count - a.count)
   return (
     <Card className="shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        {data.length > 0 ? (
-          <div className="space-y-2.5">
-            {data.map((item, i) => {
+        {sorted.length > 0 ? (
+          <div
+            className={cn(
+              "space-y-2.5",
+              scrollable && "max-h-64 overflow-y-auto overscroll-contain pr-1",
+            )}
+          >
+            {sorted.map((item, i) => {
               const pct = computedTotal > 0 ? (item.count / computedTotal) * 100 : 0
+              const displayLabel = formatAnalyticsLabel(item.label)
               return (
-                <div key={item.label}>
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
+                <div key={`${item.label}-${i}`}>
+                  <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex min-w-0 items-center gap-2">
                       <span
-                        className="h-2 w-2 rounded-full"
+                        className="h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
                       />
-                      <span className="text-grayScale-600">{item.label}</span>
+                      <span className="truncate text-grayScale-600" title={displayLabel}>
+                        {displayLabel}
+                      </span>
                     </div>
                     <span className="font-semibold text-grayScale-700">
                       {item.count.toLocaleString()}
@@ -350,6 +364,7 @@ export function AnalyticsPage() {
   }
 
   const { users, subscriptions, payments, courses, content, notifications, issues, team } = dashboard
+  const subscriptionMetrics = getSubscriptionMetrics(subscriptions)
   const seriesPeriodLabel = getSeriesPeriodLabel(dashboard.date_filter)
   const lms = courses.lms
   const examPrep = courses.exam_prep
@@ -478,10 +493,10 @@ export function AnalyticsPage() {
                   trend={users.new_month > 0 ? "up" : "neutral"}
                 />
                 <KpiCard
-                  icon={BadgeCheck}
-                  label="Active Subscriptions"
-                  value={formatNumber(subscriptions.active_subscriptions)}
-                  sub={`${subscriptions.total_subscriptions} total · +${subscriptions.new_month} this month`}
+                  icon={CreditCard}
+                  label="Total Subscriptions"
+                  value={formatNumber(subscriptionMetrics.total)}
+                  sub={`${subscriptionMetrics.active} active · ${subscriptionMetrics.inactive} inactive`}
                   trend={subscriptions.new_month > 0 ? "up" : "neutral"}
                 />
                 <KpiCard
@@ -628,12 +643,72 @@ export function AnalyticsPage() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-          <div className="mt-4 grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <BreakdownList title="Users by Role" data={users.by_role} total={users.total_users} />
-            <BreakdownList title="Users by Region" data={users.by_region} total={users.total_users} />
-            <BreakdownList title="Users by Knowledge Level" data={users.by_knowledge_level} total={users.total_users} />
-            <BreakdownList title="Users by Status" data={users.by_status} total={users.total_users} />
-            <BreakdownList title="Users by Age Group" data={users.by_age_group} total={users.total_users} />
+          <div className="mt-4 space-y-6">
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-grayScale-400">
+                Profile & demographics
+              </p>
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <BreakdownList
+                  title="Education level"
+                  data={users.by_education_level ?? []}
+                  total={users.total_users}
+                />
+                <BreakdownList
+                  title="Occupation"
+                  data={users.by_occupation ?? []}
+                  total={users.total_users}
+                  scrollable
+                />
+                <BreakdownList
+                  title="Age group"
+                  data={users.by_age_group ?? []}
+                  total={users.total_users}
+                />
+                <BreakdownList
+                  title="Region"
+                  data={users.by_region ?? []}
+                  total={users.total_users}
+                  scrollable
+                />
+                <BreakdownList
+                  title="Account role"
+                  data={users.by_role ?? []}
+                  total={users.total_users}
+                />
+                <BreakdownList
+                  title="Account status"
+                  data={users.by_status ?? []}
+                  total={users.total_users}
+                />
+                {(users.by_knowledge_level?.length ?? 0) > 0 ? (
+                  <BreakdownList
+                    title="Knowledge level"
+                    data={users.by_knowledge_level ?? []}
+                    total={users.total_users}
+                  />
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-grayScale-400">
+                Learning goals & challenges
+              </p>
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <BreakdownList
+                  title="Learning goal"
+                  data={users.by_learning_goal ?? []}
+                  total={users.total_users}
+                  scrollable
+                />
+                <BreakdownList
+                  title="Language challenge"
+                  data={users.by_language_challange ?? []}
+                  total={users.total_users}
+                  scrollable
+                />
+              </div>
+            </div>
           </div>
         </Section>
 

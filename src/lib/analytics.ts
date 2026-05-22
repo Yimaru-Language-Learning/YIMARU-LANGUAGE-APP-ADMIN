@@ -1,4 +1,50 @@
-import type { DashboardDateFilter, DateRevenue, LabelCount } from "../types/analytics.types"
+import type {
+  DashboardDateFilter,
+  DashboardSubscriptions,
+  DateRevenue,
+  LabelCount,
+} from "../types/analytics.types"
+
+const INACTIVE_SUBSCRIPTION_STATUSES = new Set([
+  "INACTIVE",
+  "CANCELLED",
+  "CANCELED",
+  "EXPIRED",
+  "PAUSED",
+  "SUSPENDED",
+])
+
+export interface SubscriptionMetrics {
+  total: number
+  active: number
+  inactive: number
+}
+
+/** Derives inactive count from by_status when present, else total − active. */
+export function getSubscriptionMetrics(
+  subscriptions: DashboardSubscriptions,
+): SubscriptionMetrics {
+  const total = subscriptions.total_subscriptions ?? 0
+  const active = subscriptions.active_subscriptions ?? 0
+
+  let inactiveFromStatus = 0
+  if (subscriptions.by_status?.length) {
+    inactiveFromStatus = subscriptions.by_status
+      .filter((s) => INACTIVE_SUBSCRIPTION_STATUSES.has(s.label.toUpperCase()))
+      .reduce((sum, s) => sum + s.count, 0)
+
+    if (inactiveFromStatus === 0) {
+      inactiveFromStatus = subscriptions.by_status
+        .filter((s) => s.label.toUpperCase() !== "ACTIVE")
+        .reduce((sum, s) => sum + s.count, 0)
+    }
+  }
+
+  const inactive =
+    inactiveFromStatus > 0 ? inactiveFromStatus : Math.max(0, total - active)
+
+  return { total, active, inactive }
+}
 
 const MONTH_SHORT = [
   "Jan",
@@ -83,4 +129,12 @@ export function getSeriesPeriodLabel(dateFilter?: DashboardDateFilter): string {
     default:
       return "Selected period"
   }
+}
+
+/** Display label for dashboard breakdown rows (regions, enums, free text). */
+export function formatAnalyticsLabel(label: string): string {
+  const text = label?.trim() ?? ""
+  if (!text || text.toLowerCase() === "unknown") return "Unknown"
+  if (text.includes("_")) return text.replace(/_/g, " ")
+  return text
 }

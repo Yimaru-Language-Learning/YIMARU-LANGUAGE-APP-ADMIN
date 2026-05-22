@@ -26,7 +26,12 @@ export interface DashboardUsers {
   by_role: LabelCount[]
   by_status: LabelCount[]
   by_age_group: LabelCount[]
-  by_knowledge_level: LabelCount[]
+  by_education_level: LabelCount[]
+  by_occupation: LabelCount[]
+  by_learning_goal: LabelCount[]
+  /** API field name (typo preserved to match backend). */
+  by_language_challange: LabelCount[]
+  by_knowledge_level?: LabelCount[]
   by_region: LabelCount[]
   registrations_last_30_days: DateCount[]
 }

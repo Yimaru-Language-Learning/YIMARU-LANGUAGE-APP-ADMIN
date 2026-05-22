@@ -35,6 +35,9 @@ import { CreateQuestionTypeFlow } from "../pages/content-management/CreateQuesti
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { NotificationsPage } from "../pages/notifications/NotificationsPage";
 import { CreateNotificationPage } from "../pages/notifications/CreateNotificationPage";
+import { EmailTemplatesPage } from "../pages/notifications/EmailTemplatesPage";
+import { EmailTemplateDetailPage } from "../pages/notifications/EmailTemplateDetailPage";
+import { CreateEmailTemplatePage } from "../pages/notifications/CreateEmailTemplatePage";
 import { UserDetailPage } from "../pages/user-management/UserDetailPage";
 import { UserManagementLayout } from "../pages/user-management/UserManagementLayout";
 import { UsersListPage } from "../pages/user-management/UsersListPage";
@@ -59,6 +62,7 @@ import { TeamMemberDetailPage } from "../pages/team/TeamMemberDetailPage";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { VerificationPage } from "../pages/auth/VerificationPage";
+import { AcceptInvitePage } from "../pages/auth/AcceptInvitePage";
 import { AboutPage } from "../pages/AboutPage";
 import { TermsPage } from "../pages/TermsPage";
 import { PrivacyPage } from "../pages/PrivacyPage";
@@ -70,6 +74,7 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/verification" element={<VerificationPage />} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
@@ -234,6 +239,18 @@ export function AppRoutes() {
         />
 
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route
+          path="/notifications/email-templates"
+          element={<EmailTemplatesPage />}
+        />
+        <Route
+          path="/notifications/email-templates/new"
+          element={<CreateEmailTemplatePage />}
+        />
+        <Route
+          path="/notifications/email-templates/:slug"
+          element={<EmailTemplateDetailPage />}
+        />
         <Route
           path="/notifications/create"
           element={<CreateNotificationPage />}

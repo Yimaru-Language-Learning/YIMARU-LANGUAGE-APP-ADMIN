@@ -549,7 +549,7 @@ export function NotificationsPage() {
         <div className="mb-1 text-sm font-semibold text-grayScale-500">Notifications</div>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">My Notifications</h1>
             {totalCount > 0 && <Badge variant="secondary">{totalCount}</Badge>}
             {globalUnread > 0 && <Badge variant="default">{globalUnread} unread</Badge>}
           </div>

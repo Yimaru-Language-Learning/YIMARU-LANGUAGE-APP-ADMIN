@@ -6,12 +6,11 @@ import {
   ChevronRight,
   CircleAlert,
   ClipboardList,
+  CreditCard,
   LayoutDashboard,
   LogOut,
-  Shield,
   UserCircle2,
   Users,
-  Users2,
   Settings,
   X,
 } from "lucide-react";
@@ -33,32 +32,71 @@ type NavGroupItem = {
   kind: "group";
   label: string;
   basePath: string;
+  activePaths?: string[];
   icon: ComponentType<{ className?: string }>;
   children: { label: string; to: string; end?: boolean }[];
 };
 
-type NavEntry = NavLinkItem | NavGroupItem;
+type NavSectionItem = {
+  kind: "section";
+  label: string;
+};
+
+type NavEntry = NavLinkItem | NavGroupItem | NavSectionItem;
 
 const navEntries: NavEntry[] = [
+  { kind: "section", label: "Overview" },
   { kind: "link", label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { kind: "link", label: "User Management", to: "/users", icon: Users },
-  { kind: "link", label: "Role Management", to: "/roles", icon: Shield },
-  { kind: "link", label: "Content Management", to: "/content", icon: BookOpen },
-  { kind: "link", label: "New Content", to: "/new-content", icon: BookOpen },
+  { kind: "link", label: "Analytics", to: "/analytics", icon: BarChart3 },
+
+  { kind: "section", label: "People" },
+  {
+    kind: "group",
+    label: "Users & access",
+    basePath: "/users",
+    activePaths: ["/users", "/roles", "/team"],
+    icon: Users,
+    children: [
+      { label: "All users", to: "/users/list" },
+      { label: "Roles", to: "/roles" },
+      { label: "Team members", to: "/team" },
+    ],
+  },
+
+  { kind: "section", label: "Learning content" },
+  {
+    kind: "group",
+    label: "Content",
+    basePath: "/content",
+    activePaths: ["/content", "/new-content"],
+    icon: BookOpen,
+    children: [
+      { label: "Manage practices", to: "/content", end: true },
+      { label: "New content", to: "/new-content", end: true },
+      { label: "Reorder structure", to: "/new-content/reorder" },
+      { label: "Question types", to: "/new-content/question-types" },
+    ],
+  },
+
+  { kind: "section", label: "Communications" },
   {
     kind: "group",
     label: "Notifications",
     basePath: "/notifications",
     icon: Bell,
     children: [
-      { label: "My Notifications", to: "/notifications", end: true },
-      { label: "Email Templates", to: "/notifications/email-templates" },
+      { label: "Inbox", to: "/notifications", end: true },
+      { label: "Email templates", to: "/notifications/email-templates" },
+      { label: "Send notification", to: "/notifications/create" },
     ],
   },
-  { kind: "link", label: "User Log", to: "/user-log", icon: ClipboardList },
-  { kind: "link", label: "Issue Reports", to: "/issues", icon: CircleAlert },
-  { kind: "link", label: "Analytics", to: "/analytics", icon: BarChart3 },
-  { kind: "link", label: "Team Management", to: "/team", icon: Users2 },
+
+  { kind: "section", label: "Operations" },
+  { kind: "link", label: "Payments", to: "/payments", icon: CreditCard },
+  { kind: "link", label: "User activity log", to: "/user-log", icon: ClipboardList },
+  { kind: "link", label: "Issue reports", to: "/issues", icon: CircleAlert },
+
+  { kind: "section", label: "Account" },
   { kind: "link", label: "Profile", to: "/profile", icon: UserCircle2 },
   { kind: "link", label: "Settings", to: "/settings", icon: Settings },
 ];
@@ -162,19 +200,50 @@ export function Sidebar({
           </button>
         </div>
 
-        <nav className="mt-6 flex-1 space-y-1 overflow-y-auto">
-          {navEntries.map((entry) => {
+        <nav className="mt-6 flex-1 space-y-0.5 overflow-y-auto">
+          {navEntries.map((entry, index) => {
+            if (entry.kind === "section") {
+              if (isCollapsed) {
+                return index > 0 ? (
+                  <div
+                    key={`section-gap-${entry.label}`}
+                    className="mx-auto my-2 h-px w-6 bg-grayScale-200"
+                    aria-hidden
+                  />
+                ) : null;
+              }
+              return (
+                <p
+                  key={`section-${entry.label}`}
+                  className={cn(
+                    "mb-1 px-3 pt-3 text-[10px] font-bold uppercase tracking-wider text-grayScale-400",
+                    index === 0 && "pt-0",
+                  )}
+                >
+                  {entry.label}
+                </p>
+              );
+            }
+
             if (entry.kind === "group") {
+              const isNotifications = entry.basePath === "/notifications";
               return (
                 <SidebarNavGroup
                   key={entry.basePath}
                   label={entry.label}
                   icon={entry.icon}
                   basePath={entry.basePath}
+                  activePaths={entry.activePaths}
                   children={entry.children}
                   isCollapsed={isCollapsed}
                   onNavigate={onClose}
-                  trailing={!isCollapsed ? unreadBadge : collapsedUnreadDot}
+                  trailing={
+                    isNotifications
+                      ? !isCollapsed
+                        ? unreadBadge
+                        : collapsedUnreadDot
+                      : undefined
+                  }
                 />
               );
             }

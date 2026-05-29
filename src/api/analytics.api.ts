@@ -143,6 +143,7 @@ function normalizeDashboardUsers(raw: unknown, root?: Record<string, unknown>): 
     by_knowledge_level: asLabelCounts(
       pickField(u, "by_knowledge_level", "byKnowledgeLevel", "ByKnowledgeLevel"),
     ),
+    by_country: asLabelCounts(pickField(u, "by_country", "byCountry", "ByCountry")),
     by_region: asLabelCounts(pickField(u, "by_region", "byRegion", "ByRegion")),
     registrations_last_30_days: asDateCounts(
       pickField(

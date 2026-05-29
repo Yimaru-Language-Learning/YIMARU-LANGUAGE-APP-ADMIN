@@ -13,6 +13,8 @@ type SidebarNavGroupProps = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   basePath: string;
+  /** When set, any matching prefix marks the group active (e.g. `/content` and `/new-content`). */
+  activePaths?: string[];
   children: SidebarNavChild[];
   isCollapsed: boolean;
   onNavigate?: () => void;
@@ -23,6 +25,7 @@ export function SidebarNavGroup({
   label,
   icon: Icon,
   basePath,
+  activePaths,
   children,
   isCollapsed,
   onNavigate,
@@ -30,7 +33,8 @@ export function SidebarNavGroup({
 }: SidebarNavGroupProps) {
   const location = useLocation();
   const panelId = useId();
-  const isSectionActive = location.pathname.startsWith(basePath);
+  const paths = activePaths?.length ? activePaths : [basePath];
+  const isSectionActive = paths.some((path) => location.pathname.startsWith(path));
   const [expanded, setExpanded] = useState(isSectionActive);
 
   useEffect(() => {

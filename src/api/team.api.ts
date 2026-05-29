@@ -7,6 +7,8 @@ import type {
   VerifyInvitationResponse,
 } from "../types/teamInvitation.types"
 import type {
+  ChangeTeamMemberPasswordRequest,
+  ChangeTeamMemberPasswordResponse,
   GetTeamMembersResponse,
   GetTeamMemberResponse,
   CreateTeamMemberRequest,
@@ -32,6 +34,10 @@ export const updateTeamMemberStatus = (id: number, status: string) =>
 
 export const updateTeamMember = (id: number, data: UpdateTeamMemberRequest) =>
   http.put(`/team/members/${id}`, data)
+
+/** POST /team/members/:id/change-password — change the signed-in member's password. */
+export const changeTeamMemberPassword = (id: number, data: ChangeTeamMemberPasswordRequest) =>
+  http.post<ChangeTeamMemberPasswordResponse>(`/team/members/${id}/change-password`, data)
 
 /** POST /team/members/invite — send invitation email (permission: team.members.invite). */
 export const inviteTeamMember = (data: InviteTeamMemberRequest) =>

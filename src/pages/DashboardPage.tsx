@@ -47,6 +47,7 @@ import {
   getVideoLessonsSummary,
 } from "../lib/analytics"
 import type { DashboardData, DashboardFilters } from "../types/analytics.types"
+import { formatPlanDuration } from "../lib/subscriptionPlans"
 import type { SubscriptionPlan } from "../types/subscription.types"
 import type { Rating } from "../types/course.types"
 
@@ -58,17 +59,6 @@ function formatDate(dateStr: string) {
 }
 
 const DEFAULT_FILTERS: DashboardFilters = { mode: "all_time" }
-
-function formatPlanDuration(plan: SubscriptionPlan): string {
-  const v = plan.duration_value
-  const u = plan.duration_unit.toUpperCase()
-  const word =
-    u === "MONTH" ? "month" : u === "YEAR" ? "year" : u === "WEEK" ? "week" : u === "DAY" ? "day" : plan.duration_unit
-  if (u === "MONTH" || u === "YEAR" || u === "WEEK" || u === "DAY") {
-    return `${v} ${v === 1 ? word : `${word}s`}`
-  }
-  return `${v} ${word}`
-}
 
 export function DashboardPage() {
   const [userFirstName, setUserFirstName] = useState<string>("")
@@ -120,7 +110,7 @@ export function DashboardPage() {
       setSubscriptionPlansLoading(true)
       try {
         const res = await getSubscriptionPlans()
-        setSubscriptionPlans(res.data.data)
+        setSubscriptionPlans(res.data)
       } catch (err) {
         console.error(err)
         setSubscriptionPlans([])

@@ -39,6 +39,7 @@ import { cn } from "../../lib/utils";
 import { getActivityLogs, getActivityLogById } from "../../api/activity-logs.api";
 import type { ActivityLog, ActivityLogFilters } from "../../types/activity-log.types";
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
+import { ActorHoverCard } from "./components/ActorHoverCard";
 
 // ── Action type configuration ──────────────────────────────────────
 const ACTION_TYPES = [
@@ -425,21 +426,26 @@ export function UserLogPage() {
                       </p>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-grayScale-100 text-grayScale-500">
-                          <User className="h-3.5 w-3.5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-grayScale-600">
-                            ID: {log.actor_id ?? "System"}
-                          </p>
-                          {log.actor_role && (
-                            <p className="text-xs text-grayScale-400">
-                              {formatRoleLabel(log.actor_role)}
+                      <ActorHoverCard
+                        actorId={log.actor_id}
+                        actorRole={log.actor_role}
+                      >
+                        <div className="flex items-center gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-grayScale-50">
+                          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-grayScale-100 text-grayScale-500">
+                            <User className="h-3.5 w-3.5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-grayScale-600">
+                              ID: {log.actor_id ?? "System"}
                             </p>
-                          )}
+                            {log.actor_role && (
+                              <p className="text-xs text-grayScale-400">
+                                {formatRoleLabel(log.actor_role)}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      </ActorHoverCard>
                     </TableCell>
                     <TableCell>
                       <div>

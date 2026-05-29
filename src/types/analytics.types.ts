@@ -32,6 +32,7 @@ export interface DashboardUsers {
   /** API field name (typo preserved to match backend). */
   by_language_challange: LabelCount[]
   by_knowledge_level?: LabelCount[]
+  by_country: LabelCount[]
   by_region: LabelCount[]
   registrations_last_30_days: DateCount[]
 }

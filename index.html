@@ -5,6 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>yimaru-admin</title>
+    <script>
+      (function () {
+        var key = "yimaru-admin-theme";
+        var stored = localStorage.getItem(key);
+        var root = document.documentElement;
+        var systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var resolved =
+          stored === "dark"
+            ? "dark"
+            : stored === "system"
+              ? systemDark
+                ? "dark"
+                : "light"
+              : "light";
+        root.classList.remove("dark");
+        if (resolved === "dark") root.classList.add("dark");
+        root.dataset.theme = resolved;
+        root.dataset.themePreference = stored || "light";
+        root.style.colorScheme = resolved;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

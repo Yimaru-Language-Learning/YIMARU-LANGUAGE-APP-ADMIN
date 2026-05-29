@@ -5,7 +5,17 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  html {
+    color-scheme: light;
+    --gs-50: #ffffff;
+    --gs-100: #f5f5f5;
+    --gs-200: #e0e0e0;
+    --gs-300: #bdbdbd;
+    --gs-400: #9e9e9e;
+    --gs-500: #757575;
+    --gs-600: #616161;
+    --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.06);
+
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -38,6 +48,46 @@
     --radius: 14px;
   }
 
+  html.dark {
+    color-scheme: dark;
+    --gs-50: #1c1c24;
+    --gs-100: #12121a;
+    --gs-200: #2e2e3a;
+    --gs-300: #454552;
+    --gs-400: #9a9aaa;
+    --gs-500: #b8b8c6;
+    --gs-600: #ececf2;
+    --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+    --background: 240 10% 7%;
+    --foreground: 210 20% 96%;
+
+    --card: 240 8% 12%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 240 8% 12%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 312 59% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 6% 18%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 240 6% 18%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 240 6% 18%;
+    --accent-foreground: 210 20% 96%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 22%;
+    --input: 240 6% 22%;
+    --ring: 312 59% 50%;
+  }
+
   * {
     @apply border-border;
   }
@@ -49,6 +99,61 @@
   }
 
   body {
-    @apply bg-grayScale-100 text-foreground font-sans antialiased;
+    @apply bg-grayScale-100 text-foreground font-sans antialiased transition-colors duration-200;
+  }
+}
+
+@layer components {
+  /*
+   * Brand scale uses heavy purple for 50/500/600 — enforce high-contrast white
+   * foreground on solid brand fills (including opacity modifiers).
+   */
+  :is(
+      .bg-brand-50,
+      .bg-brand-500,
+      .bg-brand-600,
+      [class*="bg-brand-500/"],
+      [class*="bg-brand-600/"]
+    ) {
+    @apply text-white;
+  }
+
+  :is(
+      .bg-brand-50,
+      .bg-brand-500,
+      .bg-brand-600,
+      [class*="bg-brand-500/"],
+      [class*="bg-brand-600/"]
+    )
+    :is(.text-brand-500, .text-brand-600, .text-brand-700, .text-brand-800) {
+    @apply text-white;
+  }
+
+  :is(
+      .bg-brand-50,
+      .bg-brand-500,
+      .bg-brand-600,
+      [class*="bg-brand-500/"],
+      [class*="bg-brand-600/"]
+    )
+    svg:not([class*="text-"]) {
+    @apply text-white;
+  }
+
+  .hover\:bg-brand-50:hover,
+  .hover\:bg-brand-500:hover,
+  .hover\:bg-brand-600:hover {
+    @apply text-white;
+  }
+
+  .hover\:bg-brand-50:hover svg,
+  .hover\:bg-brand-500:hover svg,
+  .hover\:bg-brand-600:hover svg {
+    @apply text-white;
+  }
+
+  /* Map legacy light-only surfaces to theme tokens in dark mode */
+  html.dark .bg-white {
+    background-color: var(--gs-50);
   }
 }

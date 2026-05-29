@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 import { BrandLogo } from "../../components/brand/BrandLogo";
@@ -65,8 +65,17 @@ function GoogleIcon({ className }: { className?: string }) {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const token = localStorage.getItem("access_token");
+
+  useEffect(() => {
+    if (searchParams.get("password_changed") !== "1") return;
+    toast.success("Password updated", {
+      description: "Sign in with your new password.",
+    });
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");

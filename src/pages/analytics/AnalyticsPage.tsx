@@ -666,6 +666,11 @@ export function AnalyticsPage() {
                   total={users.total_users}
                 />
                 <BreakdownList
+                  title="Country"
+                  data={users.by_country ?? []}
+                  total={users.total_users}
+                />
+                <BreakdownList
                   title="Region"
                   data={users.by_region ?? []}
                   total={users.total_users}

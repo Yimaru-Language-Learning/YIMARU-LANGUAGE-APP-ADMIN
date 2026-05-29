@@ -68,3 +68,16 @@ export interface GetTeamMemberResponse {
   status_code: number
   metadata: null
 }
+
+/** POST /team/members/:id/change-password */
+export interface ChangeTeamMemberPasswordRequest {
+  current_password: string
+  new_password: string
+}
+
+export interface ChangeTeamMemberPasswordResponse {
+  message?: string
+  success?: boolean
+  status_code?: number
+  metadata?: unknown
+}

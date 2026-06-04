@@ -379,15 +379,8 @@ export function ProgramCoursesPage() {
                         Add New Course
                       </DialogTitle>
                       <DialogDescription className="text-sm text-grayScale-400">
-                        Create a course via{" "}
-                        <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px] text-grayScale-600">
-                          POST /programs/:program_id/courses
-                        </code>
-                        . Thumbnail can be a URL or a file from{" "}
-                        <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px] text-grayScale-600">
-                          POST /files/upload
-                        </code>
-                        .
+                        Add a new course to this program. Use an image URL or upload a file for the
+                        thumbnail.
                       </DialogDescription>
                     </DialogHeader>
 
@@ -708,11 +701,7 @@ export function ProgramCoursesPage() {
           <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
             <DialogTitle>Edit course</DialogTitle>
             <DialogDescription>
-              Update name, sort order, and thumbnail. Saved with{" "}
-              <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
-                PUT /courses/:id
-              </code>
-              .
+              Update name, sort order, and thumbnail.
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">

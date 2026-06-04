@@ -39,6 +39,7 @@ import {
 } from "../../api/courses.api"
 import type { CategorySubCategoryListItem, CourseCategory } from "../../types/course.types"
 import { cn } from "../../lib/utils"
+import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 export function CoursesPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
@@ -513,7 +514,7 @@ export function CoursesPage() {
                     }}
                     className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                   >
-                    {[10, 20, 50].map((size) => (
+                    {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                       <option key={size} value={size}>
                         {size}
                       </option>

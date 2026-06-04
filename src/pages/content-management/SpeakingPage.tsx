@@ -30,6 +30,7 @@ import {
 } from "../../components/ui/dropdown-menu"
 import type { Course, CourseCategory, QuestionDetail, QuestionSet, SubCourse } from "../../types/course.types"
 import { toast } from "sonner"
+import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 const MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024
 const ALLOWED_AUDIO_EXTENSIONS = new Set(["mp3", "wav", "ogg", "m4a", "aac", "webm", "flac"])
@@ -149,7 +150,7 @@ export function SpeakingPage() {
   const [audioQuestions, setAudioQuestions] = useState<AudioListQuestion[]>([])
   const [audioTotalCount, setAudioTotalCount] = useState(0)
   const [audioPage, setAudioPage] = useState(1)
-  const [audioPageSize] = useState(12)
+  const [audioPageSize, setAudioPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [practiceOptions, setPracticeOptions] = useState<PracticeFilterOption[]>([])
   const [selectedPracticeId, setSelectedPracticeId] = useState<string>("")
   const [practiceFilterOpen, setPracticeFilterOpen] = useState(false)
@@ -1510,31 +1511,58 @@ export function SpeakingPage() {
                     ))}
                   </div>
                 ))}
-                {audioTotalCount > audioPageSize ? (
-                  <div className="mt-4 flex items-center justify-between rounded-xl border border-grayScale-200 bg-white px-3 py-2">
-                    <p className="text-xs text-grayScale-500 sm:text-sm">
-                      Page {audioPage} of {Math.max(1, Math.ceil(audioTotalCount / audioPageSize))}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={audioPage <= 1 || loading}
-                        onClick={() => fetchAudioQuestions(audioPage - 1)}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={audioPage >= Math.ceil(audioTotalCount / audioPageSize) || loading}
-                        onClick={() => fetchAudioQuestions(audioPage + 1)}
-                      >
-                        Next
-                      </Button>
+                {audioTotalCount > 0 ? (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-grayScale-200 bg-white px-3 py-2 text-xs text-grayScale-500 sm:text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>
+                        Page {audioPage} of {Math.max(1, Math.ceil(audioTotalCount / audioPageSize))} (
+                        {audioTotalCount} total)
+                      </span>
+                      <span className="hidden h-4 w-px bg-grayScale-200 sm:inline" />
+                      <span className="flex items-center gap-2">
+                        Rows per page
+                        <div className="relative">
+                          <select
+                            value={audioPageSize}
+                            disabled={loading}
+                            onChange={(e) => {
+                              setAudioPageSize(Number(e.target.value))
+                              void fetchAudioQuestions(1)
+                            }}
+                            className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                          >
+                            {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
+                              <option key={size} value={size}>
+                                {size}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                        </div>
+                      </span>
                     </div>
+                    {audioTotalCount > audioPageSize ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={audioPage <= 1 || loading}
+                          onClick={() => fetchAudioQuestions(audioPage - 1)}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={audioPage >= Math.ceil(audioTotalCount / audioPageSize) || loading}
+                          onClick={() => fetchAudioQuestions(audioPage + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

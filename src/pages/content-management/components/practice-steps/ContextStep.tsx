@@ -15,6 +15,7 @@ interface ContextStepProps {
   /** Lesson-linked practice: no title, story description, or story image on step 1. */
   isLessonPractice?: boolean;
   lessonTitle?: string | null;
+  parentSummary?: string | null;
 }
 
 /**
@@ -27,6 +28,7 @@ export function ContextStep({
   onCancel,
   isLessonPractice = false,
   lessonTitle = null,
+  parentSummary = null,
 }: ContextStepProps) {
   const storyFileRef = useRef<HTMLInputElement>(null);
   const [uploadingStory, setUploadingStory] = useState(false);
@@ -62,16 +64,15 @@ export function ContextStep({
         <p className="text-grayScale-600 text-base mt-3">
           {isLessonPractice ? (
             <>
-              This practice is linked to{" "}
+              Story fields and question set options used when saving the practice. Linked to{" "}
               <span className="font-medium text-grayScale-800">
                 {lessonTitle?.trim() || "the selected lesson"}
               </span>
-              . Set optional quick tips and question order below.
+              .
             </>
           ) : (
             <>
-              Title, story, optional image, shuffle, and quick tips match the create
-              practice and question set APIs.
+              Story fields and question set options used when saving the practice.
             </>
           )}
         </p>
@@ -90,6 +91,16 @@ export function ContextStep({
       </div>
 
       <div className="space-y-8 p-10">
+        {parentSummary ? (
+          <div className="rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-3 text-sm text-grayScale-800">
+            <p className="font-semibold text-brand-700">LMS parent</p>
+            <p className="mt-1">{parentSummary}</p>
+            <p className="mt-1 text-xs text-grayScale-500">
+              The question set and practice will be linked to this course, module, or lesson.
+            </p>
+          </div>
+        ) : null}
+
         {!isLessonPractice ? (
           <>
             <div className="space-y-2">
@@ -132,7 +143,7 @@ export function ContextStep({
             onChange={(e) =>
               setFormData({ ...formData, tips: e.target.value })
             }
-            placeholder="Learner-facing tips (quick_tips on POST /practices)"
+            placeholder="Optional tips shown to learners before they start"
             className="min-h-[80px] rounded-xl border-grayScale-200"
             maxLength={1000}
           />

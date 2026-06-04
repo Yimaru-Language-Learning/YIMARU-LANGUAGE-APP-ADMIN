@@ -1,6 +1,14 @@
 import type { CreateQuestionRequest, QuestionOption } from "../types/course.types"
 import type { QuestionTypeDefinition } from "../types/questionTypeDefinition.types"
+import { createEmptyTable, serializeTableSlotValue } from "./dynamicTableValue"
 import { buildDynamicQuestionPayload } from "./practiceDynamicQuestionPayload"
+
+function defaultValueForSchemaSlot(kind: string): string {
+  if (kind.trim().toUpperCase() === "TABLE") {
+    return serializeTableSlotValue(createEmptyTable(2, 1))
+  }
+  return ""
+}
 
 export function definitionUsesDynamicPayload(def: QuestionTypeDefinition): boolean {
   return def.stimulus_schema.length > 0 || def.response_schema.length > 0
@@ -10,9 +18,53 @@ export function emptyDynamicFieldValuesForDefinition(
   def: QuestionTypeDefinition,
 ): Record<string, string> {
   const o: Record<string, string> = {}
-  for (const r of def.stimulus_schema) o[`stimulus:${r.id}`] = ""
-  for (const r of def.response_schema) o[`response:${r.id}`] = ""
+  for (const r of def.stimulus_schema) {
+    o[`stimulus:${r.id}`] = defaultValueForSchemaSlot(r.kind)
+  }
+  for (const r of def.response_schema) {
+    o[`response:${r.id}`] = defaultValueForSchemaSlot(r.kind)
+  }
   return o
+}
+
+const PROMPT_STIMULUS_KINDS = new Set(["QUESTION_TEXT", "INSTRUCTION", "TEXT_PASSAGE"])
+
+/** First stimulus slot used for a plain-text prompt shortcut in the practice UI. */
+export function primaryPromptStimulusRow(
+  def: QuestionTypeDefinition,
+): { id: string; kind: string } | null {
+  for (const kind of ["QUESTION_TEXT", "INSTRUCTION", "TEXT_PASSAGE"] as const) {
+    const row = def.stimulus_schema.find((r) => r.kind === kind)
+    if (row) return { id: row.id, kind: row.kind }
+  }
+  return def.stimulus_schema[0] ? { id: def.stimulus_schema[0].id, kind: def.stimulus_schema[0].kind } : null
+}
+
+export function mergePromptIntoDynamicFieldValues(
+  def: QuestionTypeDefinition,
+  questionText: string,
+  fieldValues: Record<string, string>,
+): Record<string, string> {
+  const merged = { ...fieldValues }
+  const prompt = questionText.trim()
+  if (!prompt) return merged
+  const slot = primaryPromptStimulusRow(def)
+  if (!slot) return merged
+  const key = `stimulus:${slot.id}`
+  if (!merged[key]?.trim()) merged[key] = prompt
+  return merged
+}
+
+export function dynamicPromptFromFieldValues(
+  def: QuestionTypeDefinition,
+  fieldValues: Record<string, string>,
+): string {
+  for (const row of def.stimulus_schema) {
+    if (!PROMPT_STIMULUS_KINDS.has(row.kind)) continue
+    const v = fieldValues[`stimulus:${row.id}`]?.trim()
+    if (v) return v
+  }
+  return ""
 }
 
 /**
@@ -41,6 +93,24 @@ export interface LearnEnglishDefinitionQuestionInput {
   sampleAnswerVoiceUrl?: string
 }
 
+export function questionRowHasContent(
+  q: LearnEnglishDefinitionQuestionInput,
+  def: QuestionTypeDefinition,
+): boolean {
+  if (!definitionUsesDynamicPayload(def)) {
+    return Boolean(q.questionText.trim())
+  }
+  if (q.questionText.trim()) return true
+  const fv = q.dynamicFieldValues ?? {}
+  for (const row of def.stimulus_schema) {
+    if (fv[`stimulus:${row.id}`]?.trim()) return true
+  }
+  for (const row of def.response_schema) {
+    if (fv[`response:${row.id}`]?.trim()) return true
+  }
+  return false
+}
+
 export function buildCreateQuestionFromDefinition(
   def: QuestionTypeDefinition,
   q: LearnEnglishDefinitionQuestionInput,
@@ -51,13 +121,17 @@ export function buildCreateQuestionFromDefinition(
   const question_text = q.questionText.trim()
 
   if (definitionUsesDynamicPayload(def)) {
+    const fieldValues = mergePromptIntoDynamicFieldValues(
+      def,
+      q.questionText,
+      q.dynamicFieldValues ?? {},
+    )
     const payload = buildDynamicQuestionPayload({
       stimulusRows: def.stimulus_schema.map((r) => ({ id: r.id, kind: r.kind })),
       responseRows: def.response_schema.map((r) => ({ id: r.id, kind: r.kind })),
-      fieldValues: q.dynamicFieldValues ?? {},
+      fieldValues,
     })
     return {
-      question_text,
       question_type: "DYNAMIC",
       question_type_definition_id: def.id,
       difficulty_level: difficulty,
@@ -118,9 +192,7 @@ export function buildCreateQuestionFromDefinition(
     }
   }
 
-  // No schema and no legacy key mapping: still create as DYNAMIC with empty payload + definition id
   return {
-    question_text,
     question_type: "DYNAMIC",
     question_type_definition_id: def.id,
     difficulty_level: difficulty,
@@ -136,23 +208,35 @@ export function validateDefinitionQuestion(
   index1Based: number,
 ): string | null {
   const n = index1Based
-  if (!q.questionText.trim()) return `Question ${n}: enter question text.`
 
   if (definitionUsesDynamicPayload(def)) {
+    const fieldValues = mergePromptIntoDynamicFieldValues(
+      def,
+      q.questionText,
+      q.dynamicFieldValues ?? {},
+    )
+    const hasPrompt =
+      Boolean(q.questionText.trim()) || Boolean(dynamicPromptFromFieldValues(def, fieldValues))
+    const promptRow = def.stimulus_schema.find((r) => PROMPT_STIMULUS_KINDS.has(r.kind) && r.required)
+    if (promptRow && !hasPrompt) {
+      return `Question ${n}: enter prompt text (${promptRow.label || promptRow.id}).`
+    }
     for (const row of def.stimulus_schema) {
       if (!row.required) continue
-      const v = (q.dynamicFieldValues ?? {})[`stimulus:${row.id}`]?.trim()
+      const v = fieldValues[`stimulus:${row.id}`]?.trim()
       if (!v)
         return `Question ${n}: fill required stimulus "${row.label || row.id}" (${row.kind}).`
     }
     for (const row of def.response_schema) {
       if (!row.required) continue
-      const v = (q.dynamicFieldValues ?? {})[`response:${row.id}`]?.trim()
+      const v = fieldValues[`response:${row.id}`]?.trim()
       if (!v)
         return `Question ${n}: fill required response "${row.label || row.id}" (${row.kind}).`
     }
     return null
   }
+
+  if (!q.questionText.trim()) return `Question ${n}: enter question text.`
 
   const legacy = legacyQuestionTypeFromDefinition(def)
   if (legacy === "MCQ") {

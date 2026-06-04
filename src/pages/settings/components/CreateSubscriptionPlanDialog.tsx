@@ -128,8 +128,7 @@ export function CreateSubscriptionPlanDialog({
               New subscription package
             </DialogTitle>
             <DialogDescription className="text-sm text-grayScale-500">
-              Creates a plan via{" "}
-              <code className="rounded bg-grayScale-100 px-1 text-xs">POST /subscription-plans</code>
+              Add a new subscription package for learners.
             </DialogDescription>
           </DialogHeader>
 

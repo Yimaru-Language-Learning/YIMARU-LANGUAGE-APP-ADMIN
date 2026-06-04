@@ -11,30 +11,53 @@ import {
   validateQuestionTypeDefinition,
 } from "../../../../api/questionTypeDefinitions.api"
 import type { QuestionTypeDefinitionCreatePayload } from "../../../../types/questionTypeDefinition.types"
-import { buildCreatePayload } from "../../lib/questionTypeDefinitionValidation"
+import {
+  buildCreatePayload,
+  buildValidateKindsPayload,
+  inferRuntimeQuestionType,
+} from "../../lib/questionTypeDefinitionValidation"
+import { DefinitionRuntimeHint } from "./DefinitionRuntimeHint"
 
 interface QuestionTypeReviewPublishStepProps {
   draft: QuestionTypeDefinitionCreatePayload
   onBack: () => void
   /** When set, saves via PUT /questions/type-definitions/:id */
   editDefinitionId?: number | null
+  isSystem?: boolean
 }
 
 export function QuestionTypeReviewPublishStep({
   draft,
   onBack,
   editDefinitionId,
+  isSystem,
 }: QuestionTypeReviewPublishStepProps) {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const isEdit = editDefinitionId != null && editDefinitionId > 0
 
   const payload = buildCreatePayload(draft)
+  const runtime = inferRuntimeQuestionType(payload.key, payload.response_component_kinds)
 
   const submit = async (status: "ACTIVE" | "INACTIVE") => {
+    if (runtime == null) {
+      toast.error("Definition cannot be saved", {
+        description: "Add at least one non-timer response kind so the server can map a runtime question type.",
+      })
+      return
+    }
+
     const body = { ...payload, status }
     setSubmitting(true)
     try {
+      const validation = await validateQuestionTypeDefinition(buildValidateKindsPayload(draft))
+      if (!validation.valid) {
+        toast.error(validation.message || "Invalid question type definition", {
+          description: validation.error ? String(validation.error) : undefined,
+        })
+        return
+      }
+
       if (isEdit) {
         const res = await updateQuestionTypeDefinition(editDefinitionId, body)
         const id = extractDefinitionMutationId(res) ?? editDefinitionId
@@ -42,14 +65,6 @@ export function QuestionTypeReviewPublishStep({
           description: `Definition id: ${id}`,
         })
         navigate(`/new-content/question-types?updated=${id}`)
-        return
-      }
-
-      const validation = await validateQuestionTypeDefinition(body)
-      if (!validation.valid) {
-        toast.error(validation.message || "Invalid question type definition", {
-          description: validation.error ? String(validation.error) : undefined,
-        })
         return
       }
 
@@ -81,30 +96,30 @@ export function QuestionTypeReviewPublishStep({
     <div className="space-y-8 pb-32">
       <Card className="max-w-4xl mx-auto overflow-hidden border-grayScale-100 shadow-sm rounded-2xl bg-white">
         <div className="p-10 border-b border-grayScale-200">
-          <h2 className="text-[20px] font-medium text-grayScale-900">STEP 4: Review & publish</h2>
+          <h2 className="text-[20px] font-medium text-grayScale-900">STEP 4: Review &amp; publish</h2>
           <p className="text-grayScale-500 font-medium mt-1">
-            {isEdit ? (
-              <>
-                Confirm changes, then update via{" "}
-                <code className="text-xs bg-grayScale-100 px-1 rounded">
-                  PUT /questions/type-definitions/{editDefinitionId}
-                </code>
-                .
-              </>
-            ) : (
-              <>
-                Confirm details, then create via{" "}
-                <code className="text-xs bg-grayScale-100 px-1 rounded">POST /questions/type-definitions</code>.
-              </>
-            )}
+            {isEdit
+              ? "Confirm your changes and save. The definition key cannot be changed."
+              : "Confirm your definition, then save it for use when authoring practice questions."}
           </p>
         </div>
 
         <div className="p-10 space-y-6">
+          {isSystem ? (
+            <p className="text-sm font-medium text-amber-800 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              This is a system definition. You can update it, but it cannot be deleted from the library.
+            </p>
+          ) : null}
+
+          <DefinitionRuntimeHint
+            definitionKey={payload.key}
+            responseKinds={payload.response_component_kinds}
+          />
+
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Key</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{payload.key}</dd>
+              <dd className="font-medium text-grayScale-900 mt-1 font-mono text-[13px]">{payload.key}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Display name</dt>
@@ -119,6 +134,10 @@ export function QuestionTypeReviewPublishStep({
               <dd className="font-medium text-grayScale-900 mt-1">{draft.status}</dd>
             </div>
             <div>
+              <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Runtime type</dt>
+              <dd className="font-medium text-grayScale-900 mt-1">{runtime ?? "Unmappable"}</dd>
+            </div>
+            <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Stimulus kinds</dt>
               <dd className="font-medium text-grayScale-900 mt-1">{payload.stimulus_component_kinds.join(", ") || "—"}</dd>
             </div>
@@ -126,33 +145,42 @@ export function QuestionTypeReviewPublishStep({
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Response kinds</dt>
               <dd className="font-medium text-grayScale-900 mt-1">{payload.response_component_kinds.join(", ") || "—"}</dd>
             </div>
-            <div>
-              <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Stimulus schema rows</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{payload.stimulus_schema.length}</dd>
-            </div>
-            <div>
-              <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Response schema rows</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{payload.response_schema.length}</dd>
-            </div>
           </dl>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SchemaSlotSummary title="Stimulus schema" rows={payload.stimulus_schema} />
+            <SchemaSlotSummary title="Response schema" rows={payload.response_schema} />
+          </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
               className="h-11"
-              disabled={submitting}
+              disabled={submitting || runtime == null}
               onClick={() => void submit("INACTIVE")}
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : isEdit ? "Save as inactive" : "Save as inactive (draft)"}
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isEdit ? (
+                "Save as inactive"
+              ) : (
+                "Save as inactive (draft)"
+              )}
             </Button>
             <Button
               type="button"
               className="h-11 bg-[#9E2891] hover:bg-[#8A237E] text-white"
-              disabled={submitting}
+              disabled={submitting || runtime == null}
               onClick={() => void submit("ACTIVE")}
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : isEdit ? "Save as active" : "Create as active"}
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isEdit ? (
+                "Save as active"
+              ) : (
+                "Create as active"
+              )}
             </Button>
           </div>
         </div>
@@ -170,6 +198,36 @@ export function QuestionTypeReviewPublishStep({
           </Button>
         </div>
       </Card>
+    </div>
+  )
+}
+
+function SchemaSlotSummary({
+  title,
+  rows,
+}: {
+  title: string
+  rows: { id: string; kind: string; label?: string; required: boolean }[]
+}) {
+  return (
+    <div className="rounded-xl border border-grayScale-100 bg-grayScale-50/50 p-4">
+      <h4 className="text-[12px] font-bold uppercase tracking-wide text-grayScale-500">{title}</h4>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-grayScale-500">No slots</p>
+      ) : (
+        <ul className="mt-2 space-y-1.5 text-sm">
+          {rows.map((r) => (
+            <li key={`${r.kind}-${r.id}`} className="flex flex-wrap gap-x-2 text-grayScale-800">
+              <span className="font-mono text-[12px] text-grayScale-600">{r.id}</span>
+              <span className="text-grayScale-400">·</span>
+              <span>{r.kind}</span>
+              {r.required ? (
+                <span className="text-[10px] font-bold uppercase text-brand-600">required</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

@@ -34,6 +34,7 @@ const STIMULUS_LABELS: Record<string, string> = {
   SELECT_MISSING_WORDS: "Select Missing Words",
   TABLE: "Table",
   FLOW_CHART: "Flow Chart",
+  PDF_ATTACHMENT: "PDF Attachment",
 }
 
 const RESPONSE_LABELS: Record<string, string> = {
@@ -64,6 +65,7 @@ const STIMULUS_ICONS: Record<string, LucideIcon> = {
   SELECT_MISSING_WORDS: ListTodo,
   TABLE: TableIcon,
   FLOW_CHART: GitBranch,
+  PDF_ATTACHMENT: FileUp,
 }
 
 const RESPONSE_ICONS: Record<string, LucideIcon> = {

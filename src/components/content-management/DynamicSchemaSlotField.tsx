@@ -6,15 +6,17 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react"
-import { CloudUpload, Image as ImageIcon, Mic, Pause, Play, X } from "lucide-react"
+import { CloudUpload, FileText, Image as ImageIcon, Mic, Pause, Play, X } from "lucide-react"
 import { toast } from "sonner"
-import { uploadAudioFile, uploadImageFile } from "../../api/files.api"
+import { uploadAudioFile, uploadImageFile, uploadPdfFile } from "../../api/files.api"
 import { resolveMediaPreviewUrl } from "../../lib/practiceMedia"
+import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Textarea } from "../ui/textarea"
 import { SpinnerIcon } from "../ui/spinner-icon"
 import { cn } from "../../lib/utils"
 import { ResolvedImage } from "../media/ResolvedImage"
+import { DynamicTableBuilder } from "./DynamicTableBuilder"
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024
@@ -28,9 +30,11 @@ export interface DynamicSchemaSlotRow {
   required?: boolean
 }
 
-function slotMediaMode(kind: string): "image" | "audio" | "text" {
+function slotMediaMode(kind: string): "image" | "audio" | "pdf" | "table" | "text" {
   const u = kind.trim().toUpperCase()
   if (u === "IMAGE") return "image"
+  if (u === "TABLE") return "table"
+  if (u === "PDF_ATTACHMENT" || u === "PDF_UPLOAD") return "pdf"
   if (u.startsWith("AUDIO")) return "audio"
   return "text"
 }
@@ -537,6 +541,103 @@ export interface DynamicSchemaSlotFieldProps {
   disabled?: boolean
 }
 
+function DynamicPdfSlot({
+  value,
+  onChange,
+  disabled,
+  slotLabel,
+  slotMeta,
+}: {
+  value: string
+  onChange: (next: string) => void
+  disabled: boolean
+  slotLabel: string
+  slotMeta: string
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const processFile = useCallback(
+    async (file: File) => {
+      if (disabled || uploading) return
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? ""
+      if (ext !== "pdf") {
+        toast.error("Only PDF files are allowed")
+        return
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        toast.error("PDF is too large", { description: "Maximum size is 25 MB." })
+        return
+      }
+      setUploading(true)
+      try {
+        const res = await uploadPdfFile(file)
+        const url = res.data?.data?.url?.trim()
+        if (!url) throw new Error("Upload did not return a URL")
+        onChange(url)
+        toast.success("PDF uploaded")
+      } catch (e) {
+        console.error(e)
+        toast.error("Failed to upload PDF")
+      } finally {
+        setUploading(false)
+      }
+    },
+    [disabled, onChange, uploading],
+  )
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <label className="text-sm font-medium text-grayScale-700">{slotLabel}</label>
+        <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ""
+          if (file) void processFile(file)
+        }}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled || uploading}
+          onClick={() => fileInputRef.current?.click()}
+          className="gap-2"
+        >
+          {uploading ? <SpinnerIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+          Upload PDF
+        </Button>
+        {value.trim() ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={disabled}
+            onClick={() => onChange("")}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </div>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="https://… or upload above"
+        className="h-11 rounded-lg border-grayScale-200 font-mono text-sm"
+        disabled={disabled || uploading}
+      />
+    </div>
+  )
+}
+
 export function DynamicSchemaSlotField({
   row,
   value,
@@ -546,9 +647,29 @@ export function DynamicSchemaSlotField({
   const mode = slotMediaMode(row.kind)
   const baseLabel =
     row.label?.trim() ||
-    (mode === "image" ? "Image" : mode === "audio" ? "Audio" : row.kind)
+    (mode === "image"
+      ? "Image"
+      : mode === "audio"
+        ? "Audio"
+        : mode === "pdf"
+          ? "PDF"
+          : mode === "table"
+            ? "Table"
+            : row.kind)
   const slotLabel = `${baseLabel}${row.required ? " *" : ""}`
   const slotMeta = `${row.id} · ${row.kind}`
+
+  if (mode === "table") {
+    return (
+      <DynamicTableBuilder
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={slotLabel}
+        slotMeta={slotMeta}
+      />
+    )
+  }
 
   if (mode === "text") {
     return (
@@ -561,7 +682,11 @@ export function DynamicSchemaSlotField({
           rows={3}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="URL, plain text, or JSON object"
+          placeholder={
+            row.kind === "OPTION"
+              ? '{"options":[{"id":"a","text":"…","is_correct":true}]}'
+              : "URL, plain text, or JSON object"
+          }
           className="min-h-[88px] resize-y rounded-lg border-grayScale-200 font-mono text-sm"
           disabled={disabled}
         />
@@ -572,6 +697,18 @@ export function DynamicSchemaSlotField({
   if (mode === "image") {
     return (
       <DynamicImageSlot
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={slotLabel}
+        slotMeta={slotMeta}
+      />
+    )
+  }
+
+  if (mode === "pdf") {
+    return (
+      <DynamicPdfSlot
         value={value}
         onChange={onChange}
         disabled={disabled}

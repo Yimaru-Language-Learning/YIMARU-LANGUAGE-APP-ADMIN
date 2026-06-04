@@ -778,9 +778,8 @@ export function PracticeQuestionEditorFields({
         {value.questionType === "DYNAMIC" && (
           <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/50 p-2.5 sm:p-3">
             <p className="text-xs leading-snug text-grayScale-600 sm:text-sm">
-              <span className="font-medium text-grayScale-800">Image / Audio</span> slots: drop file or paste URL
-              (imports via <code className="rounded bg-white px-0.5 text-[11px]">POST /files/upload</code>). Other
-              slots: text or JSON.
+              Image, audio, and PDF slots support upload or a URL. Table slots use the visual builder. Other
+              fields accept text or structured values where noted.
             </p>
             <div className="space-y-2">
               <label className="text-xs font-medium uppercase tracking-wider text-grayScale-500">

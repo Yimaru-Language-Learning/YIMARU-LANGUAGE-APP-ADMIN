@@ -20,6 +20,7 @@ import {
 } from "../../components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { cn } from "../../lib/utils";
+import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination";
 import { getTeamMembers, updateTeamMemberStatus } from "../../api/team.api";
 import type { TeamMember } from "../../types/team.types";
 import { toast } from "sonner";
@@ -413,7 +414,7 @@ export function TeamManagementPage() {
                 }}
                 className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
               >
-                {[5, 10, 20, 30, 50].map((size) => (
+                {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                   <option key={size} value={size}>
                     {size}
                   </option>

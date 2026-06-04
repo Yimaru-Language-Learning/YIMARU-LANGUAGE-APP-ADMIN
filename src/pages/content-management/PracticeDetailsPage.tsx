@@ -1093,9 +1093,6 @@ export function PracticeDetailsPage() {
                 placeholder="Optional"
               />
             </div>
-            <p className="text-xs text-grayScale-500">
-              Uses <span className="font-mono">PUT /practices/&#123;id&#125;</span> with the fields above.
-            </p>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={savePracticeLoading}>
@@ -1115,9 +1112,8 @@ export function PracticeDetailsPage() {
             <DialogTitle>Delete this practice?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-grayScale-600">
-            This will call <span className="font-mono">DELETE /practices/&#123;id&#125;</span> and remove the practice
-            for this {parentTabCopy[parentTab].label.toLowerCase()}. The question set is not deleted unless your API
-            cascades.
+            This permanently removes the practice for this {parentTabCopy[parentTab].label.toLowerCase()}. The linked
+            question set may remain unless you remove it separately.
           </p>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button

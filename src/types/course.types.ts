@@ -1066,7 +1066,8 @@ export interface QuestionOption {
 }
 
 export interface CreateQuestionRequest {
-  question_text: string
+  /** Omit for `DYNAMIC` — prompt belongs in `dynamic_payload.stimulus` */
+  question_text?: string
   question_type: string
   difficulty_level?: string
   points?: number

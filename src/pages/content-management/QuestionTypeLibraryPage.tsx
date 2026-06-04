@@ -124,9 +124,7 @@ export function QuestionTypeLibraryPage() {
           <div className="space-y-1">
             <h1 className="text-[32px] font-medium text-grayScale-900 tracking-tight">Question type definitions</h1>
             <p className="text-grayScale-500 text-[16px] font-medium max-w-2xl">
-              Reusable dynamic question type templates from{" "}
-              <code className="text-xs bg-grayScale-100 px-1 rounded">GET /questions/type-definitions</code>. Use them
-              when authoring <code className="text-xs bg-grayScale-100 px-1 rounded">DYNAMIC</code> questions.
+              Reusable templates that define how practice and assessment questions are structured and answered.
             </p>
           </div>
           <Link to="/new-content/question-types/create">

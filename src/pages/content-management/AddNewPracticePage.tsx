@@ -373,30 +373,34 @@ export function AddNewPracticePage() {
                 })
               : undefined;
 
-          const qRes = await createQuestion({
-            question_text: q.questionText,
-            question_type: q.questionType,
-            difficulty_level: q.difficultyLevel,
-            points: q.points,
-            tips: q.tips || undefined,
-            explanation: q.explanation || undefined,
-            status,
-            options: options.length > 0 ? options : undefined,
-            voice_prompt: q.questionType === "DYNAMIC" ? undefined : q.voicePrompt || undefined,
-            sample_answer_voice_prompt:
-              q.questionType === "DYNAMIC" ? undefined : q.sampleAnswerVoicePrompt || undefined,
-            audio_correct_answer_text:
-              q.questionType === "DYNAMIC" ? undefined : q.audioCorrectAnswerText || undefined,
-            image_url: q.questionType === "DYNAMIC" ? undefined : q.imageUrl.trim() || undefined,
-            short_answers:
-              q.questionType !== "DYNAMIC" && q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
-            ...(q.questionType === "DYNAMIC" && q.questionTypeDefinitionId != null && dynamicPayload
+          const qRes = await createQuestion(
+            q.questionType === "DYNAMIC" && q.questionTypeDefinitionId != null && dynamicPayload
               ? {
+                  question_type: "DYNAMIC",
                   question_type_definition_id: q.questionTypeDefinitionId,
                   dynamic_payload: dynamicPayload,
+                  difficulty_level: q.difficultyLevel,
+                  points: q.points,
+                  tips: q.tips || undefined,
+                  explanation: q.explanation || undefined,
+                  status,
                 }
-              : {}),
-          });
+              : {
+                  question_text: q.questionText,
+                  question_type: q.questionType,
+                  difficulty_level: q.difficultyLevel,
+                  points: q.points,
+                  tips: q.tips || undefined,
+                  explanation: q.explanation || undefined,
+                  status,
+                  options: options.length > 0 ? options : undefined,
+                  voice_prompt: q.voicePrompt || undefined,
+                  sample_answer_voice_prompt: q.sampleAnswerVoicePrompt || undefined,
+                  audio_correct_answer_text: q.audioCorrectAnswerText || undefined,
+                  image_url: q.imageUrl.trim() || undefined,
+                  short_answers: q.shortAnswers.length > 0 ? q.shortAnswers : undefined,
+                },
+          );
 
           const questionId = qRes.data?.data?.id;
           if (questionId) {

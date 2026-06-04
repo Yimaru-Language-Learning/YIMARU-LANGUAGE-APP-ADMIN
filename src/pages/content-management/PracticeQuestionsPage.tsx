@@ -20,6 +20,7 @@ import { Input } from "../../components/ui/input"
 import { Select } from "../../components/ui/select"
 import { Textarea } from "../../components/ui/textarea"
 import type { PracticeQuestion, QuestionSetQuestion, QuestionDetail } from "../../types/course.types"
+import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD"
@@ -84,7 +85,7 @@ export function PracticeQuestionsPage() {
   const [loadingDetailIds, setLoadingDetailIds] = useState<Record<number, boolean>>({})
   const [groupBy, setGroupBy] = useState<GroupByOption>("none")
   const [pointsSort, setPointsSort] = useState<PointsSortOption>("desc")
-  const [pageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalQuestions, setTotalQuestions] = useState(0)
 
@@ -736,29 +737,56 @@ export function PracticeQuestionsPage() {
               ))}
             </div>
           ))}
-          {totalQuestions > pageSize && (
-            <div className="flex items-center justify-between rounded-xl border border-grayScale-200 bg-white px-4 py-3">
-              <p className="text-sm text-grayScale-500">
-                Page {currentPage} of {Math.max(1, Math.ceil(totalQuestions / pageSize))}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  onClick={() => void fetchQuestions(currentPage - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= Math.ceil(totalQuestions / pageSize)}
-                  onClick={() => void fetchQuestions(currentPage + 1)}
-                >
-                  Next
-                </Button>
+          {totalQuestions > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-grayScale-200 bg-white px-4 py-3 text-sm text-grayScale-500">
+              <div className="flex flex-wrap items-center gap-2">
+                <span>
+                  Page {currentPage} of {Math.max(1, Math.ceil(totalQuestions / pageSize))} ({totalQuestions}{" "}
+                  total)
+                </span>
+                <span className="hidden h-4 w-px bg-grayScale-200 sm:inline" />
+                <span className="flex items-center gap-2">
+                  Rows per page
+                  <div className="relative">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                        setCurrentPage(1)
+                        void fetchQuestions(1)
+                      }}
+                      className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                    >
+                      {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                  </div>
+                </span>
               </div>
+              {totalQuestions > pageSize ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage <= 1}
+                    onClick={() => void fetchQuestions(currentPage - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= Math.ceil(totalQuestions / pageSize)}
+                    onClick={() => void fetchQuestions(currentPage + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
         </div>

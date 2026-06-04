@@ -71,8 +71,7 @@ import type { Role } from "../../types/rbac.types"
 import type { TeamMember } from "../../types/team.types"
 import type { UserApiDTO } from "../../types/user.types"
 import { toast } from "sonner"
-
-const PAGE_SIZE = 10
+import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   announcement: { icon: Megaphone, color: "text-brand-600", bg: "bg-brand-100" },
@@ -265,6 +264,7 @@ export function NotificationsPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [globalUnread, setGlobalUnread] = useState(0)
   const [offset, setOffset] = useState(0)
+  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
@@ -429,7 +429,7 @@ export function NotificationsPage() {
     setError(false)
     try {
       const [notifRes, unreadRes] = await Promise.all([
-        getNotifications(PAGE_SIZE, currentOffset),
+        getNotifications(pageSize, currentOffset),
         getUnreadCount(),
       ])
       setNotifications(notifRes.data.notifications ?? [])
@@ -440,11 +440,11 @@ export function NotificationsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [pageSize])
 
   useEffect(() => {
     fetchData(offset)
-  }, [offset, fetchData])
+  }, [offset, pageSize, fetchData])
 
   const handleToggleRead = useCallback(async (id: string, currentlyRead: boolean) => {
     setTogglingIds((prev) => new Set(prev).add(id))
@@ -495,10 +495,10 @@ export function NotificationsPage() {
     }
   }, [totalCount])
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const currentPage = Math.floor(offset / pageSize) + 1
   const startEntry = totalCount === 0 ? 0 : offset + 1
-  const endEntry = Math.min(offset + PAGE_SIZE, totalCount)
+  const endEntry = Math.min(offset + pageSize, totalCount)
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
@@ -941,18 +941,25 @@ export function NotificationsPage() {
                 <span className="border-l pl-4">Rows per page</span>
                 <div className="relative">
                   <select
-                    value={PAGE_SIZE}
-                    disabled
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value))
+                      setOffset(0)
+                    }}
                     className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                   >
-                    <option value={PAGE_SIZE}>{PAGE_SIZE}</option>
+                    {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => currentPage > 1 && setOffset(Math.max(0, offset - PAGE_SIZE))}
+                  onClick={() => currentPage > 1 && setOffset(Math.max(0, offset - pageSize))}
                   disabled={currentPage <= 1}
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
@@ -970,7 +977,7 @@ export function NotificationsPage() {
                     <button
                       key={n}
                       type="button"
-                      onClick={() => setOffset((n - 1) * PAGE_SIZE)}
+                      onClick={() => setOffset((n - 1) * pageSize)}
                       className={cn(
                         "h-8 w-8 rounded-md border text-sm font-medium",
                         n === currentPage
@@ -983,7 +990,7 @@ export function NotificationsPage() {
                   ),
                 )}
                 <button
-                  onClick={() => currentPage < totalPages && setOffset(offset + PAGE_SIZE)}
+                  onClick={() => currentPage < totalPages && setOffset(offset + pageSize)}
                   disabled={currentPage >= totalPages}
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",

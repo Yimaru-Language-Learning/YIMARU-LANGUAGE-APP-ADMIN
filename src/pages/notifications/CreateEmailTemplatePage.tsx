@@ -119,11 +119,7 @@ export function CreateEmailTemplatePage() {
           New custom template
         </h1>
         <p className="max-w-2xl text-sm text-grayScale-500">
-          Create a custom template via{" "}
-          <code className="rounded bg-grayScale-100 px-1 text-xs">
-            POST /admin/email-templates
-          </code>
-          . System templates are managed separately.
+          Create a custom email template. System templates are managed separately.
         </p>
       </div>
 

@@ -102,11 +102,7 @@ export function EmailTemplateEditForm({
         <p className="mt-2 text-xs text-grayScale-400">
           Use Go template syntax, e.g.{" "}
           <code className="rounded bg-grayScale-100 px-1">{`{{if .FirstName}}`}</code>.
-          Saved with{" "}
-          <code className="rounded bg-grayScale-100 px-1">
-            PUT /admin/email-templates/{template.id}
-          </code>
-          .
+          Your changes are saved when you submit the form.
         </p>
       </div>
 

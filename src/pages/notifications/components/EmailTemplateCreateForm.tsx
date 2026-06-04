@@ -185,10 +185,7 @@ export function EmailTemplateCreateForm({
         <Button variant="outline" disabled={saving} onClick={onReset}>
           Reset
         </Button>
-        <p className="text-xs text-grayScale-400">
-          Saved with{" "}
-          <code className="rounded bg-grayScale-100 px-1">POST /admin/email-templates</code>
-        </p>
+        <p className="text-xs text-grayScale-400">Your changes are saved when you submit the form.</p>
       </div>
     </div>
   )

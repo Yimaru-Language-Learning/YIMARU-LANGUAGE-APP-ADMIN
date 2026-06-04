@@ -364,12 +364,6 @@ export function LessonPracticesPage() {
                   total={practices.length}
                 />
               ))}
-              <p className="px-1 text-center text-[11px] text-grayScale-400">
-                Source:{" "}
-                <code className="rounded-md bg-grayScale-100 px-1.5 py-0.5 font-mono text-[10px] text-grayScale-500">
-                  GET /lessons/{lid}/practices
-                </code>
-              </p>
             </div>
           )}
         </div>

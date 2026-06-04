@@ -140,10 +140,7 @@ export function EditAppVersionDialog({
               Edit app version
             </DialogTitle>
             <DialogDescription className="text-sm text-grayScale-500">
-              Updates via{" "}
-              <code className="rounded bg-grayScale-100 px-1 text-xs">
-                PUT /admin/app-versions/{version?.id ?? ":id"}
-              </code>
+              Update release rules and messaging for this version.
             </DialogDescription>
           </DialogHeader>
 

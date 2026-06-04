@@ -787,7 +787,7 @@ export function HumanLanguageHierarchyPage() {
             <div>
               <p className="text-sm font-medium text-grayScale-800">Select a sub-category to start managing hierarchy</p>
               <p className="mt-1 text-sm text-grayScale-500">
-                Powered by `GET /course-management/human-language/hierarchy` and `GET /course-management/courses/:courseId/hierarchy`.
+                Choose a sub-category from the list to view and manage its course structure.
               </p>
             </div>
           </CardContent>
@@ -1019,7 +1019,7 @@ export function HumanLanguageHierarchyPage() {
           <DialogHeader>
             <DialogTitle>Create module</DialogTitle>
             <DialogDescription>
-              Add a module to this level. This will call `POST /course-management/modules`.
+              Add a module to this level.
             </DialogDescription>
           </DialogHeader>
 
@@ -1140,7 +1140,7 @@ export function HumanLanguageHierarchyPage() {
           <DialogHeader>
             <DialogTitle>Update module</DialogTitle>
             <DialogDescription>
-              Update this module using `PUT /course-management/modules/:moduleId`.
+              Update this module&apos;s name, order, and settings.
             </DialogDescription>
           </DialogHeader>
 

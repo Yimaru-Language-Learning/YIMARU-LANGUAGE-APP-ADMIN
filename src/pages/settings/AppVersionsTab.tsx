@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Apple,
   Calendar,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Input } from "../../components/ui/input"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { cn } from "../../lib/utils"
+import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import {
   formatAppPlatform,
   formatAppVersionCreatedAt,
@@ -33,8 +35,6 @@ import type { AppPlatform, AppVersion, AppVersionStatus } from "../../types/app-
 import { CreateAppVersionDialog } from "./components/CreateAppVersionDialog"
 import { DeleteAppVersionDialog } from "./components/DeleteAppVersionDialog"
 import { EditAppVersionDialog } from "./components/EditAppVersionDialog"
-
-const PAGE_SIZE = 20
 
 function PlatformIcon({ platform }: { platform: string }) {
   const upper = platform.toUpperCase()
@@ -64,6 +64,7 @@ export function AppVersionsTab() {
   const [versions, setVersions] = useState<AppVersion[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [offset, setOffset] = useState(0)
+  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [query, setQuery] = useState("")
   const [platformFilter, setPlatformFilter] = useState<"all" | AppPlatform>("all")
   const [statusFilter, setStatusFilter] = useState<"all" | AppVersionStatus>("all")
@@ -87,7 +88,7 @@ export function AppVersionsTab() {
     } finally {
       setLoading(false)
     }
-  }, [offset])
+  }, [offset, pageSize])
 
   useEffect(() => {
     void load()
@@ -123,7 +124,7 @@ export function AppVersionsTab() {
   const pageStart = totalCount === 0 ? 0 : offset + 1
   const pageEnd = Math.min(offset + versions.length, totalCount)
   const canPrev = offset > 0
-  const canNext = offset + PAGE_SIZE < totalCount
+  const canNext = offset + pageSize < totalCount
 
   const handleCreated = (version: AppVersion) => {
     if (offset === 0) {
@@ -155,12 +156,7 @@ export function AppVersionsTab() {
           </p>
           <h2 className="text-lg font-bold text-grayScale-900">App version control</h2>
           <p className="mt-1 max-w-2xl text-sm text-grayScale-500">
-            Manage Android and iOS release metadata for in-app update prompts. Versions are loaded
-            from{" "}
-            <code className="rounded bg-grayScale-100 px-1 text-xs">
-              GET /admin/app-versions
-            </code>
-            .
+            Manage Android and iOS release metadata for in-app update prompts.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -440,10 +436,34 @@ export function AppVersionsTab() {
           )}
 
           {!loading && !error && totalCount > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-grayScale-100 pt-4">
-              <p className="text-xs text-grayScale-500">
-                Showing {pageStart}–{pageEnd} of {totalCount}
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-grayScale-100 pt-4 text-sm text-grayScale-500">
+              <div className="flex flex-wrap items-center gap-2">
+                <span>
+                  Showing {pageStart}–{pageEnd} of {totalCount}
+                </span>
+                <span className="hidden h-4 w-px bg-grayScale-200 sm:inline" />
+                <span className="flex items-center gap-2">
+                  Rows per page
+                  <div className="relative">
+                    <select
+                      value={pageSize}
+                      disabled={loading}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                        setOffset(0)
+                      }}
+                      className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                    >
+                      {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                  </div>
+                </span>
+              </div>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -451,7 +471,7 @@ export function AppVersionsTab() {
                   size="sm"
                   className="rounded-[6px]"
                   disabled={!canPrev || loading}
-                  onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+                  onClick={() => setOffset((o) => Math.max(0, o - pageSize))}
                 >
                   <ChevronLeft className="mr-1 h-4 w-4" />
                   Previous
@@ -462,7 +482,7 @@ export function AppVersionsTab() {
                   size="sm"
                   className="rounded-[6px]"
                   disabled={!canNext || loading}
-                  onClick={() => setOffset((o) => o + PAGE_SIZE)}
+                  onClick={() => setOffset((o) => o + pageSize)}
                 >
                   Next
                   <ChevronRight className="ml-1 h-4 w-4" />

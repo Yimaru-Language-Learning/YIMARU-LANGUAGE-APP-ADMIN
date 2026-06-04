@@ -139,10 +139,7 @@ export function EditSubscriptionPlanDialog({
               Edit subscription package
             </DialogTitle>
             <DialogDescription className="text-sm text-grayScale-500">
-              Updates via{" "}
-              <code className="rounded bg-grayScale-100 px-1 text-xs">
-                PUT /subscription-plans/{plan?.id ?? ":id"}
-              </code>
+              Update pricing, duration, and visibility for this plan.
             </DialogDescription>
           </DialogHeader>
 

@@ -111,11 +111,7 @@ export function AddModuleModal({
               Add New Module
             </DialogTitle>
             <DialogDescription className="text-sm text-grayScale-400">
-              Create a module with{" "}
-              <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
-                POST /courses/:courseId/modules
-              </code>
-              .
+              Add a new module to this course.
             </DialogDescription>
           </DialogHeader>
 

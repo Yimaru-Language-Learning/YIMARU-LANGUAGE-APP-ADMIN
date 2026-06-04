@@ -268,7 +268,7 @@ export function AddQuestionPage() {
           return
         }
       } catch {
-        toast.error("Invalid JSON", { description: "Fix dynamic_payload JSON before saving." })
+        toast.error("Invalid JSON", { description: "Fix the dynamic content JSON before saving." })
         return
       }
     }
@@ -419,7 +419,7 @@ export function AddQuestionPage() {
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-grayScale-600">
-                      dynamic_payload (JSON) <span className="text-red-500">*</span>
+                      Dynamic content (JSON) <span className="text-red-500">*</span>
                     </label>
                     <Textarea
                       value={formData.dynamicPayloadJson}

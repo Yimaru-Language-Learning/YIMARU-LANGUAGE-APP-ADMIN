@@ -41,6 +41,18 @@ export function validateDefinitionKinds(
     errors.response_kinds = "ANSWER_TIMER cannot be the only response kind."
   }
 
+  const prepCount = sk.filter((k) => k === "PREP_TIME").length
+  if (prepCount > 1) {
+    errors.stimulus_kinds = "At most one PREP_TIME is allowed."
+  }
+
+  const timerCount = rk.filter((k) => k === "ANSWER_TIMER").length
+  if (timerCount > 1) {
+    errors.response_kinds = errors.response_kinds
+      ? `${errors.response_kinds} At most one ANSWER_TIMER is allowed.`
+      : "At most one ANSWER_TIMER is allowed."
+  }
+
   if (catalog) {
     const sCat = new Set(catalog.stimulus_component_kinds)
     const rCat = new Set(catalog.response_component_kinds)
@@ -124,6 +136,42 @@ function uniqueKindsFromSchemaRows(rows: DynamicElementDefinition[]): string[] {
     if (k) set.add(k)
   }
   return [...set].sort((a, b) => a.localeCompare(b))
+}
+
+const AUXILIARY_RESPONSE_KINDS = new Set(["ANSWER_TIMER"])
+const SHORT_ANSWER_RESPONSE_KINDS = new Set([
+  "SHORT_ANSWER",
+  "TEXT_INPUT",
+  "SELECT_MISSING_WORDS",
+  "MATCHING_ANSWER",
+  "LABEL_SELECTION",
+  "PDF_UPLOAD",
+])
+
+/** Mirrors server runtime mapping (§13). Returns null when create would fail as unmappable. */
+export function inferRuntimeQuestionType(
+  key: string,
+  responseKinds: string[],
+): "TRUE_FALSE" | "AUDIO" | "MCQ" | "SHORT_ANSWER" | "DYNAMIC" | null {
+  const normalizedKey = key.trim().toLowerCase()
+  if (normalizedKey === "true_false") return "TRUE_FALSE"
+  if (responseKinds.includes("AUDIO_RESPONSE")) return "AUDIO"
+  if (responseKinds.includes("MULTIPLE_CHOICE")) return "MCQ"
+  const nonAuxiliary = responseKinds.filter((k) => !AUXILIARY_RESPONSE_KINDS.has(k))
+  if (nonAuxiliary.some((k) => SHORT_ANSWER_RESPONSE_KINDS.has(k))) return "SHORT_ANSWER"
+  if (nonAuxiliary.length > 0) return "DYNAMIC"
+  return null
+}
+
+/** POST /questions/validate-question-type-definition — kinds only. */
+export function buildValidateKindsPayload(
+  draft: QuestionTypeDefinitionCreatePayload,
+): Pick<QuestionTypeDefinitionCreatePayload, "stimulus_component_kinds" | "response_component_kinds"> {
+  const payload = buildCreatePayload(draft)
+  return {
+    stimulus_component_kinds: payload.stimulus_component_kinds,
+    response_component_kinds: payload.response_component_kinds,
+  }
 }
 
 export function buildCreatePayload(

@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { cn } from "../../lib/utils"
+import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { getDashboard } from "../../api/analytics.api"
 import { getUsers, updateUserStatus, type UserStatus } from "../../api/users.api"
 import type { DashboardUsers } from "../../types/analytics.types"
@@ -689,7 +690,7 @@ export function UsersListPage() {
                 }}
                 className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
               >
-                {[5, 10, 20, 30, 50].map((size) => (
+                {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                   <option key={size} value={size}>
                     {size}
                   </option>

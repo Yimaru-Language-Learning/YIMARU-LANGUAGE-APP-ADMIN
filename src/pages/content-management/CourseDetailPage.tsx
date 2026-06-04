@@ -427,11 +427,7 @@ export function CourseDetailPage() {
               <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
                 <DialogTitle>Edit module</DialogTitle>
                 <DialogDescription>
-                  Update name, sort order, and icon (upload or URL). Saved with{" "}
-                  <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
-                    PUT /modules/:id
-                  </code>
-                  .
+                  Update name, sort order, and icon (upload or URL).
                 </DialogDescription>
               </DialogHeader>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">

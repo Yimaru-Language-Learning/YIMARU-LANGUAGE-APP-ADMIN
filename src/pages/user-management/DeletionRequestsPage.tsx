@@ -16,6 +16,7 @@ import {
 import { getDeletionRequests } from "../../api/users.api"
 import { getRoles } from "../../api/rbac.api"
 import { cn } from "../../lib/utils"
+import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import type {
   DeletionRequest,
   DeletionState,
@@ -580,7 +581,7 @@ export function DeletionRequestsPage() {
                     }}
                     className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                   >
-                    {[10, 20, 50, 100].map((size) => (
+                    {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                       <option key={size} value={size}>
                         {size}
                       </option>

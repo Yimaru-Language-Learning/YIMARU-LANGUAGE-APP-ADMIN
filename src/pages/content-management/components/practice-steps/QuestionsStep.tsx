@@ -10,6 +10,8 @@ import {
   emptyDynamicFieldValuesForDefinition,
   legacyQuestionTypeFromDefinition,
 } from "../../../../lib/learnEnglishDefinitionQuestion";
+import { validateLearnEnglishQuestionsWithDefinitions } from "../../../../lib/learnEnglishPracticePublish";
+import { toast } from "sonner";
 
 function defaultMcqOptions() {
   return [
@@ -98,9 +100,9 @@ export function QuestionsStep({
       return (
         <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
           <p className="text-xs leading-snug text-grayScale-600">
-            <span className="font-medium text-grayScale-800">Image / Audio</span> slots use upload or URL import (
-            <code className="rounded bg-white px-0.5 text-[11px]">POST /files/upload</code>
-            ). Others: URL, text, or JSON.
+            <span className="font-medium text-grayScale-800">Image / Audio / PDF</span> use upload or URL.{" "}
+            <span className="font-medium text-grayScale-800">Table</span> uses the visual table builder. Other
+            slots: text or structured JSON where noted.
           </p>
           {def.stimulus_schema.length > 0 ? (
             <div className="space-y-2">
@@ -307,11 +309,8 @@ export function QuestionsStep({
       <div className="space-y-1 px-2">
         <h2 className="text-2xl font-bold text-grayScale-700">Questions</h2>
         <p className="text-grayScale-400 text-lg">
-          Question types are loaded from{" "}
-          <code className="rounded bg-grayScale-100 px-1 text-sm">
-            GET /questions/type-definitions
-          </code>
-          . Pick a type per row, then fill the fields required for that definition.
+          Choose a question type for each item, then fill in the fields that type requires. Questions are saved
+          when you publish or save the practice.
         </p>
       </div>
 
@@ -403,21 +402,28 @@ export function QuestionsStep({
                   ) : null}
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
-                    Question text
-                  </label>
-                  <Input
-                    value={q.text}
-                    onChange={(e) => {
-                      const newQuestions = [...formData.questions];
-                      newQuestions[i].text = e.target.value;
-                      setFormData({ ...formData, questions: newQuestions });
-                    }}
-                    className="min-h-[52px] rounded-xl border-grayScale-200 px-4 py-3 text-base font-medium text-grayScale-700"
-                    placeholder="Question prompt for learners"
-                  />
-                </div>
+                {def && !definitionUsesDynamicPayload(def) ? (
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
+                      Question text
+                    </label>
+                    <Input
+                      value={q.text}
+                      onChange={(e) => {
+                        const newQuestions = [...formData.questions];
+                        newQuestions[i].text = e.target.value;
+                        setFormData({ ...formData, questions: newQuestions });
+                      }}
+                      className="min-h-[52px] rounded-xl border-grayScale-200 px-4 py-3 text-base font-medium text-grayScale-700"
+                      placeholder="Question prompt for learners"
+                    />
+                  </div>
+                ) : def && definitionUsesDynamicPayload(def) ? (
+                  <p className="rounded-lg border border-violet-200 bg-violet-50/60 px-3 py-2 text-xs text-violet-950">
+                    Enter the question prompt in the text or instruction field below, along with any other
+                    required content for this type.
+                  </p>
+                ) : null}
 
                 {def ? renderTypeSpecificFields(q, i, def) : null}
               </div>
@@ -451,7 +457,30 @@ export function QuestionsStep({
         </Button>
         <Button
           type="button"
-          onClick={nextStep}
+          onClick={() => {
+            const mapped = formData.questions.map((row: typeof formData.questions[0]) => ({
+              questionText: String(row.text ?? "").trim(),
+              questionTypeDefinitionId: Number(row.questionTypeDefinitionId),
+              dynamicFieldValues: { ...(row.dynamicFieldValues ?? {}) },
+              mcqOptions: (row.mcqOptions ?? []).map(
+                (o: { text?: string; isCorrect?: boolean }) => ({
+                  option_text: String(o.text ?? "").trim(),
+                  is_correct: Boolean(o.isCorrect),
+                }),
+              ),
+              trueFalseAnswerIsTrue: row.trueFalseCorrect !== false,
+              shortAnswers: (row.shortAnswers ?? []).map((s: string) => String(s)),
+            }));
+            const msg = validateLearnEnglishQuestionsWithDefinitions(
+              mapped,
+              typeDefinitions,
+            );
+            if (msg) {
+              toast.error("Check your questions", { description: msg });
+              return;
+            }
+            nextStep();
+          }}
           disabled={definitionsLoading || !!definitionsError || typeDefinitions.length === 0}
           className="h-10 rounded-[6px] bg-brand-500 px-8 font-bold disabled:opacity-50"
         >

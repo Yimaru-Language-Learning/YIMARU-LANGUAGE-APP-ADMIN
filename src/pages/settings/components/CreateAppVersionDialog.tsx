@@ -148,9 +148,8 @@ export function CreateAppVersionDialog({
               New app version
             </DialogTitle>
             <DialogDescription className="text-sm text-grayScale-500">
-              Publishes a release via{" "}
-              <code className="rounded bg-grayScale-100 px-1 text-xs">POST /admin/app-versions</code>
-              . Learners on older builds will see update prompts based on these rules.
+              Publish a new app release. Learners on older builds will see update prompts based on
+              these rules.
             </DialogDescription>
           </DialogHeader>
 

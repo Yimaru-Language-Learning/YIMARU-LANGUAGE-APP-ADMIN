@@ -15,8 +15,7 @@ export function PublishStatusField({ value, onChange, disabled, className }: Pro
         Publish status <span className="text-red-500">*</span>
       </p>
       <p className="text-xs text-grayScale-500">
-        Sent as <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">publish_status</code> on{" "}
-        <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">POST /practices</code>.
+        Controls whether learners can see this practice after you save.
       </p>
       <div className="flex flex-wrap gap-3" role="radiogroup" aria-label="Publish status">
         {(

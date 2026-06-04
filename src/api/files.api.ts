@@ -1,6 +1,6 @@
 import http from "./http"
 
-export type UploadMediaType = "image" | "audio" | "video"
+export type UploadMediaType = "image" | "audio" | "video" | "pdf"
 export type UploadProvider = "MINIO" | "VIMEO"
 
 export interface UploadMediaResponse {
@@ -120,6 +120,8 @@ export const uploadVideoFile = (fileOrUrl: File | string, options?: UploadMediaO
         description: options?.description,
       })
     : uploadMediaFile("video", fileOrUrl, options)
+
+export const uploadPdfFile = (file: File) => uploadMediaFile("pdf", file)
 
 export const resolveFileUrl = (key: string) =>
   http.get<ResolveFileUrlResponse>("/files/url", {

@@ -20,6 +20,7 @@ import type {
 } from "../../types/questionTypeDefinition.types"
 import {
   buildCreatePayload,
+  buildValidateKindsPayload,
   validateDefinitionBasic,
   validateDefinitionKinds,
   validateDefinitionSchemas,
@@ -75,9 +76,9 @@ export function CreateQuestionTypeFlow() {
 
   const [currentStep, setCurrentStep] = useState(1)
   const [draft, setDraft] = useState<QuestionTypeDefinitionCreatePayload>(initialDraft)
-  const [versionName, setVersionName] = useState("Test 1")
   const [stepErrors, setStepErrors] = useState<FieldErrorMap>({})
   const [definitionReady, setDefinitionReady] = useState(!isEdit)
+  const [isSystemDefinition, setIsSystemDefinition] = useState(false)
 
   const [componentCatalog, setComponentCatalog] = useState<QuestionComponentCatalog>({
     stimulus_component_kinds: [],
@@ -134,7 +135,7 @@ export function CreateQuestionTypeFlow() {
           return
         }
         setDraft(definitionToDraft(def))
-        setVersionName("Test 1")
+        setIsSystemDefinition(Boolean(def.is_system))
         setCurrentStep(1)
         setStepErrors({})
       } catch (e) {
@@ -155,7 +156,6 @@ export function CreateQuestionTypeFlow() {
   useEffect(() => {
     if (!isEdit) {
       setDraft(initialDraft())
-      setVersionName("Test 1")
       setCurrentStep(1)
       setStepErrors({})
       setDefinitionReady(true)
@@ -179,15 +179,10 @@ export function CreateQuestionTypeFlow() {
   }
 
   const handleNextFromStep2 = () => {
-    const versionErr: FieldErrorMap = {}
-    if (!versionName.trim()) {
-      versionErr.version_name = "Version name is required."
-    }
     const eKinds = validateDefinitionKinds(draft, componentCatalog)
-    const mergedKinds = { ...versionErr, ...eKinds }
-    setStepErrors(mergedKinds)
-    if (Object.keys(mergedKinds).length) {
-      toast.error("Complete version name and component selections.")
+    setStepErrors(eKinds)
+    if (Object.keys(eKinds).length) {
+      toast.error("Select valid stimulus and response component kinds.")
       return
     }
 
@@ -233,7 +228,7 @@ export function CreateQuestionTypeFlow() {
         navigate(`/new-content/question-types?updated=${id}`)
         return
       }
-      const validation = await validateQuestionTypeDefinition(body)
+      const validation = await validateQuestionTypeDefinition(buildValidateKindsPayload(body))
       if (!validation.valid) {
         toast.error(validation.message || "Invalid question type definition", {
           description: validation.error ? String(validation.error) : undefined,
@@ -290,20 +285,9 @@ export function CreateQuestionTypeFlow() {
                 {isEdit ? "Edit question type definition" : "Create question type definition"}
               </h1>
               <p className="text-grayScale-500 text-[14px] font-medium max-w-2xl">
-                {isEdit ? (
-                  <>
-                    Update definition{" "}
-                    <code className="text-xs bg-grayScale-100 px-1 rounded">#{editDefinitionId}</code> via{" "}
-                    <code className="text-xs bg-grayScale-100 px-1 rounded">PUT /questions/type-definitions/:id</code>
-                    .
-                  </>
-                ) : (
-                  <>
-                    Build a reusable dynamic question type (schema + kinds) for{" "}
-                    <code className="text-xs bg-grayScale-100 px-1 rounded">DYNAMIC</code> questions. Data is sent to{" "}
-                    <code className="text-xs bg-grayScale-100 px-1 rounded">POST /questions/type-definitions</code>.
-                  </>
-                )}
+                {isEdit
+                  ? `Update reusable question type definition #${editDefinitionId}.`
+                  : "Build a reusable question type template for dynamic practice and assessment questions."}
               </p>
             </div>
             <div className="flex items-center gap-4 shrink-0">
@@ -343,8 +327,6 @@ export function CreateQuestionTypeFlow() {
           <QuestionTypeConfigStep
             draft={draft}
             setDraft={setDraft}
-            versionName={versionName}
-            setVersionName={setVersionName}
             stimulusCatalogKinds={componentCatalog.stimulus_component_kinds}
             responseCatalogKinds={componentCatalog.response_component_kinds}
             catalogLoading={catalogLoading}
@@ -358,7 +340,12 @@ export function CreateQuestionTypeFlow() {
           <QuestionTypeValidatePreviewStep draft={draft} onNext={() => setCurrentStep(4)} onBack={handleBack} />
         )}
         {currentStep === 4 && (
-          <QuestionTypeReviewPublishStep draft={draft} onBack={handleBack} editDefinitionId={editDefinitionId} />
+          <QuestionTypeReviewPublishStep
+            draft={draft}
+            onBack={handleBack}
+            editDefinitionId={editDefinitionId}
+            isSystem={isSystemDefinition}
+          />
         )}
       </div>
     </div>

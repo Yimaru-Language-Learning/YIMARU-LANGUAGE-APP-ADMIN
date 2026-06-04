@@ -216,9 +216,7 @@ export function AddPracticeFlow() {
       return;
     }
     const persona = personaFromId(selectedPersona, personas);
-    const mappedQuestions = formData.questions
-      .filter((q) => String(q.text ?? "").trim())
-      .map((q) => ({
+    const mappedQuestions = formData.questions.map((q) => ({
         questionText: String(q.text ?? "").trim(),
         questionTypeDefinitionId: Number(q.questionTypeDefinitionId),
         dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
@@ -372,6 +370,7 @@ export function AddPracticeFlow() {
               onCancel={() => navigate(backPath)}
               isLessonPractice={isLessonPractice}
               lessonTitle={lessonTitleDisplay}
+              parentSummary={parentSummary}
             />
           );
         case 2:
@@ -515,9 +514,7 @@ export function AddPracticeFlow() {
             </Button>
           </div>
           <p className="text-grayScale-400 text-base">
-            Create a practice: question types from{" "}
-            <code className="text-xs">GET /questions/type-definitions</code>, then
-            question set and POST /practices.
+            Create a practice with story details, a persona, and questions from your question type library.
           </p>
           {lessonId ? (
             <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950">

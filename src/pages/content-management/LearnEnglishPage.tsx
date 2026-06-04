@@ -356,15 +356,8 @@ export function LearnEnglishPage() {
                   Add New Program
                 </DialogTitle>
                 <DialogDescription className="text-sm text-grayScale-400">
-                  Create a learning program via{" "}
-                  <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px] text-grayScale-600">
-                    POST /programs
-                  </code>
-                  . Thumbnail can be a URL or a file uploaded through{" "}
-                  <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px] text-grayScale-600">
-                    POST /files/upload
-                  </code>
-                  .
+                  Create a new learning program. Add a thumbnail as an image URL or by uploading a
+                  file.
                 </DialogDescription>
               </DialogHeader>
               {/* Gradient Divider */}
@@ -739,11 +732,7 @@ export function LearnEnglishPage() {
                 disabled={savingEdit || uploadingEditThumbnail}
               />
               <p className="text-xs text-grayScale-500">
-                Local images are sent to{" "}
-                <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
-                  POST /files/upload
-                </code>
-                ; the returned URL is stored as the program thumbnail.
+                Uploaded images are stored and used as the program thumbnail.
               </p>
             </div>
           </div>

@@ -668,15 +668,7 @@ export function ModuleDetailPage() {
           <DialogHeader>
             <DialogTitle>Edit lesson</DialogTitle>
             <DialogDescription>
-              Update details. Video and thumbnail files use{" "}
-              <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
-                POST /files/upload
-              </code>
-              ; the form is saved with{" "}
-              <code className="rounded bg-grayScale-100 px-1 py-0.5 text-[11px]">
-                PUT /lessons/:id
-              </code>
-              .
+              Update lesson details. Uploaded video and thumbnail files are stored automatically.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">

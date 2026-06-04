@@ -36,6 +36,7 @@ import {
   DialogDescription,
 } from "../../components/ui/dialog";
 import { cn } from "../../lib/utils";
+import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination";
 import { getActivityLogs, getActivityLogById } from "../../api/activity-logs.api";
 import type { ActivityLog, ActivityLogFilters } from "../../types/activity-log.types";
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
@@ -500,7 +501,7 @@ export function UserLogPage() {
                 }}
                 className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
               >
-                {[5, 10, 20, 30, 50].map((size) => (
+                {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                   <option key={size} value={size}>
                     {size}
                   </option>

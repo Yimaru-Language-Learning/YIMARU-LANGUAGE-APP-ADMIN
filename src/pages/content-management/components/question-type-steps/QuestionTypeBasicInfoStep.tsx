@@ -29,10 +29,8 @@ export function QuestionTypeBasicInfoStep({
         <div className="p-10 border-b border-grayScale-200">
           <h2 className="text-[20px] font-medium text-grayScale-900">STEP 1: Definition basics</h2>
           <p className="text-grayScale-500 font-medium mt-1">
-            Set the reusable key, display name, and status. On the next step you will pick stimulus and response
-            component types from the live catalog (
-            <code className="text-xs bg-grayScale-100 px-1 rounded">GET /questions/component-catalog</code>
-            ).
+            Set the reusable key, display name, and status. On the next step you will choose how questions are
+            presented and how learners answer.
           </p>
         </div>
 

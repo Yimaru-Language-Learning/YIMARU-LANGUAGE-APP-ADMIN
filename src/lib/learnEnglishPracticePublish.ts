@@ -9,6 +9,7 @@ import type { PracticeParentKind } from "../types/course.types"
 import type { QuestionTypeDefinition } from "../types/questionTypeDefinition.types"
 import {
   buildCreateQuestionFromDefinition,
+  questionRowHasContent,
   validateDefinitionQuestion,
   type LearnEnglishDefinitionQuestionInput,
 } from "./learnEnglishDefinitionQuestion"
@@ -30,9 +31,12 @@ export function validateLearnEnglishQuestionsWithDefinitions(
   questions: LearnEnglishDefinitionQuestionInput[],
   definitions: QuestionTypeDefinition[],
 ): string | null {
-  const filled = questions.filter((q) => q.questionText.trim())
-  if (filled.length === 0) return "Add at least one question with prompt text."
   const byId = new Map(definitions.map((d) => [d.id, d]))
+  const filled = questions.filter((q) => {
+    const def = byId.get(q.questionTypeDefinitionId)
+    return def ? questionRowHasContent(q, def) : false
+  })
+  if (filled.length === 0) return "Add at least one question with content."
   for (let i = 0; i < filled.length; i++) {
     const q = filled[i]
     if (!Number.isFinite(q.questionTypeDefinitionId) || q.questionTypeDefinitionId <= 0) {
@@ -100,7 +104,10 @@ export async function executeLearnEnglishPracticeCreation(opts: {
     )
   }
 
-  const toCreate = opts.questions.filter((q) => q.questionText.trim())
+  const toCreate = opts.questions.filter((q) => {
+    const def = byId.get(q.questionTypeDefinitionId)
+    return def ? questionRowHasContent(q, def) : false
+  })
   let displayOrder = 0
   for (const q of toCreate) {
     const def = byId.get(q.questionTypeDefinitionId)

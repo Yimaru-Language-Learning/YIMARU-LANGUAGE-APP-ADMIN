@@ -265,8 +265,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
               />
             </div>
             <p className="text-xs text-grayScale-500">
-              This calls <span className="font-mono">POST /question-sets</span> with{" "}
-              <span className="font-mono">set_type: PRACTICE</span>.
+              Creates a practice question set for this course, module, or lesson.
             </p>
             <Button type="button" onClick={handleStep1} disabled={saving}>
               {saving ? <SpinnerIcon className="h-4 w-4" /> : null}
@@ -278,9 +277,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
         {canUseWizard && step === 2 && (
           <div className="space-y-4">
             <p className="text-sm text-grayScale-600">
-              Set id <span className="font-mono font-medium text-grayScale-800">#{questionSetId}</span> — add
-              one or more <strong>AUDIO</strong> questions. Each is created via{" "}
-              <span className="font-mono">POST /questions</span>.
+              Add one or more audio questions to question set #{questionSetId}.
             </p>
             {questionRows.map((row, idx) => (
               <div
@@ -389,8 +386,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
         {canUseWizard && step === 3 && (
           <div className="space-y-4">
             <p className="text-sm text-grayScale-600">
-              Link each question to the set with a display order using{" "}
-              <span className="font-mono">POST /question-sets/&#123;id&#125;/questions</span>.
+              Confirm the order of questions in the set.
             </p>
             <ul className="space-y-2 rounded-xl border border-grayScale-200 bg-white p-3">
               {createdQuestionIds.map((qid, i) => (
@@ -422,12 +418,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
         {canUseWizard && step === 4 && parent && (
           <div className="space-y-4">
             <p className="text-sm text-grayScale-600">
-              Parent:{" "}
-              <span className="font-mono text-xs">
-                {parent.kind} #{parent.id}
-              </span>{" "}
-              · question set <span className="font-mono">#{questionSetId}</span> ·{" "}
-              <span className="font-mono">POST /practices</span>
+              Linked to {parent.kind.toLowerCase()} #{parent.id} · question set #{questionSetId}
             </p>
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-grayScale-500">

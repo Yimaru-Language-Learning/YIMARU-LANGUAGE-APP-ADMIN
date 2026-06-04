@@ -100,9 +100,8 @@ export function SubscriptionPlansTab() {
           </p>
           <h2 className="text-lg font-bold text-grayScale-900">Subscription packages</h2>
           <p className="mt-1 max-w-2xl text-sm text-grayScale-500">
-            Manage learner subscription plans from{" "}
-            <code className="rounded bg-grayScale-100 px-1 text-xs">GET /subscription-plans</code>
-            . Create, edit, or remove packages for the learner checkout flow.
+            Manage learner subscription plans. Create, edit, or remove packages for the learner
+            checkout flow.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

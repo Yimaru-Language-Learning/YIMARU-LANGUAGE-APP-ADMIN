@@ -41,7 +41,7 @@ import type {
   PaymentStatus,
 } from "../../types/payment.types"
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100] as const
+import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 const STATUS_FILTERS: { value: PaymentStatus; label: string }[] = [
   { value: "SUCCESS", label: "Success" },
@@ -168,8 +168,7 @@ export function PaymentsPage() {
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-grayScale-900">Payments</h1>
           <p className="mt-1 max-w-2xl text-sm text-grayScale-500">
-            Browse checkout transactions from{" "}
-            <code className="rounded bg-grayScale-100 px-1 text-xs">GET /admin/payments</code>.
+            Browse and filter checkout transactions from Chapa, Arifpay, and other providers.
           </p>
         </div>
         <Button
@@ -439,7 +438,7 @@ export function PaymentsPage() {
                       }}
                       className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                     >
-                      {PAGE_SIZE_OPTIONS.map((size) => (
+                      {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                         <option key={size} value={size}>
                           {size}
                         </option>

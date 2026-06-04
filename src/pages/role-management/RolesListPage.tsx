@@ -5,6 +5,7 @@ import {
   Search,
   Shield,
   ShieldCheck,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
@@ -37,6 +38,7 @@ import {
 } from "../../api/rbac.api"
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
+import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { toast } from "sonner"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { teamRoleFromRbacRole } from "../../lib/teamRoles"
@@ -49,7 +51,7 @@ export function RolesListPage() {
   const [roles, setRoles] = useState<Role[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [loading, setLoading] = useState(true)
@@ -543,34 +545,59 @@ export function RolesListPage() {
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-grayScale-100 pt-4">
-              <p className="text-xs text-grayScale-400">
-                Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total} roles
-              </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="px-3 text-xs font-medium text-grayScale-600">
-                  {page} / {totalPages}
+          {total > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-grayScale-100 pt-4 text-sm text-grayScale-500">
+              <div className="flex flex-wrap items-center gap-2">
+                <span>
+                  Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total} roles
                 </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <span className="hidden h-4 w-px bg-grayScale-200 sm:inline" />
+                <span className="flex items-center gap-2">
+                  Rows per page
+                  <div className="relative">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                        setPage(1)
+                      }}
+                      className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
+                    >
+                      {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
+                  </div>
+                </span>
               </div>
+              {totalPages > 1 ? (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="px-3 text-xs font-medium text-grayScale-600">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
         </>

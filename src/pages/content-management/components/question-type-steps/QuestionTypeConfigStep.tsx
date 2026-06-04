@@ -1,12 +1,5 @@
 import { useState } from "react"
-import {
-  ArrowLeft,
-  ArrowRight,
-  ChevronDown,
-  ChevronUp,
-  Hourglass,
-  Plus,
-} from "lucide-react"
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Plus } from "lucide-react"
 import { Button } from "../../../../components/ui/button"
 import { Card } from "../../../../components/ui/card"
 import { Input } from "../../../../components/ui/input"
@@ -22,8 +15,6 @@ import { getResponseKindPresentation, getStimulusKindPresentation } from "./comp
 interface QuestionTypeConfigStepProps {
   draft: QuestionTypeDefinitionCreatePayload
   setDraft: React.Dispatch<React.SetStateAction<QuestionTypeDefinitionCreatePayload>>
-  versionName: string
-  setVersionName: (v: string) => void
   stimulusCatalogKinds: string[]
   responseCatalogKinds: string[]
   catalogLoading: boolean
@@ -73,8 +64,6 @@ function rowErrorMap(side: "stimulus" | "response", errors: FieldErrorMap): Reco
 export function QuestionTypeConfigStep({
   draft,
   setDraft,
-  versionName,
-  setVersionName,
   stimulusCatalogKinds,
   responseCatalogKinds,
   catalogLoading,
@@ -83,10 +72,7 @@ export function QuestionTypeConfigStep({
   onNext,
   onBack,
 }: QuestionTypeConfigStepProps) {
-  const [panelOpen, setPanelOpen] = useState(true)
   const [advancedOpen, setAdvancedOpen] = useState(false)
-
-  const title = draft.display_name?.trim() || "Untitled definition"
 
   const handleStimulusKindClick = (kind: string) => {
     setDraft((d) => {
@@ -167,44 +153,15 @@ export function QuestionTypeConfigStep({
   return (
     <div className="space-y-8 pb-32">
       <Card className="max-w-6xl mx-auto overflow-hidden border border-grayScale-200 shadow-sm rounded-2xl bg-white">
-        <button
-          type="button"
-          onClick={() => setPanelOpen((o) => !o)}
-          className="w-full flex items-center justify-between gap-4 px-5 py-4 bg-violet-100/90 hover:bg-violet-100 border-b border-violet-200/80 text-left transition-colors"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-xl bg-white/80 flex items-center justify-center text-violet-700 shrink-0 shadow-sm">
-              <Hourglass className="h-5 w-5" />
-            </div>
-            <span className="text-[17px] font-bold text-grayScale-900 truncate">{title}</span>
-          </div>
-          {panelOpen ? (
-            <ChevronUp className="h-5 w-5 text-grayScale-600 shrink-0" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-grayScale-600 shrink-0" />
-          )}
-        </button>
+        <div className="p-10 border-b border-grayScale-200">
+          <h2 className="text-[20px] font-medium text-grayScale-900">STEP 2: Input &amp; answer types</h2>
+          <p className="text-grayScale-500 font-medium mt-1">
+            Choose what learners see in the question and how they respond. You can add multiple fields of the
+            same type when needed.
+          </p>
+        </div>
 
-        {panelOpen ? (
-          <div className="p-6 sm:p-10 space-y-10">
-            <div className="space-y-2 max-w-xl">
-              <label className="text-[14px] font-semibold text-grayScale-700">
-                Version name <span className="text-red-500">*</span>
-              </label>
-              <Input
-                className="h-11 rounded-[10px] border-grayScale-200 bg-[#F8FAFC]"
-                value={versionName}
-                onChange={(e) => setVersionName(e.target.value)}
-                placeholder="e.g. Test 1"
-              />
-              {errors.version_name ? (
-                <p className="text-sm font-medium text-red-600">{errors.version_name}</p>
-              ) : null}
-              <p className="text-[12px] text-grayScale-400">
-                Local label for this authoring pass (not sent to the API unless you add it to description later).
-              </p>
-            </div>
-
+        <div className="p-6 sm:p-10 space-y-10">
             {catalogLoading ? (
               <p className="text-sm text-grayScale-500">Loading component catalog…</p>
             ) : catalogError ? (
@@ -217,10 +174,8 @@ export function QuestionTypeConfigStep({
                       Section A: Question input types
                     </h3>
                     <p className="text-[14px] text-grayScale-500 mt-1 font-medium">
-                      Choose how the question is presented to the learner. The API lists each kind once in{" "}
-                      <code className="text-[11px] bg-grayScale-100 px-1 rounded">stimulus_component_kinds</code>{" "}
-                      while <code className="text-[11px] bg-grayScale-100 px-1 rounded">stimulus_schema</code> can
-                      include the same kind multiple times (different ids).
+                      Choose how the question is presented to the learner. Use Add slot for multiple fields of
+                      the same type (for example, two text blocks).
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -268,10 +223,8 @@ export function QuestionTypeConfigStep({
                       Section B: Answer types
                     </h3>
                     <p className="text-[14px] text-grayScale-500 mt-1 font-medium">
-                      How should the student answer?{" "}
-                      <code className="text-[11px] bg-grayScale-100 px-1 rounded">response_component_kinds</code> is
-                      deduplicated; use <span className="font-medium text-grayScale-600">Add slot</span> for multiple
-                      fields of the same kind.
+                      How should the student answer? Use Add slot when you need more than one field of the same
+                      answer type.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -353,8 +306,7 @@ export function QuestionTypeConfigStep({
                 </div>
               ) : null}
             </div>
-          </div>
-        ) : null}
+        </div>
 
         <div className="px-4 py-4 border-t border-grayScale-200 flex items-center justify-between bg-[#F8FAFC]">
           <Button

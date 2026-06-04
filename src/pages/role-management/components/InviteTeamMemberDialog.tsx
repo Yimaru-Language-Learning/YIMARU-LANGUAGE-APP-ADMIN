@@ -153,12 +153,8 @@ export function InviteTeamMemberDialog({
             Invite team members
           </DialogTitle>
           <DialogDescription className="text-left text-grayScale-600">
-            Sends one{" "}
-            <code className="rounded bg-grayScale-100 px-1 text-xs">
-              POST /team/members/invite
-            </code>{" "}
-            request per email. Invitees complete setup at{" "}
-            <code className="rounded bg-grayScale-100 px-1 text-xs">/accept-invite</code>
+            Send one invitation per email address. Invitees complete account setup using the link in
+            their email
             {roleLocked ? (
               <>
                 {" "}

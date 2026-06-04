@@ -78,11 +78,8 @@ export function EmailTemplatesPage() {
             Email Templates
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-grayScale-500">
-            Templates from{" "}
-            <code className="rounded bg-grayScale-100 px-1 text-xs">
-              GET /admin/email-templates
-            </code>
-            . Open a template for full preview via slug API.
+            View and edit email templates used for learner and team notifications. Open a template to
+            preview and edit its content.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -1029,7 +1029,7 @@ export function HumanLanguageSubModulePage() {
           <DialogHeader>
             <DialogTitle>Lesson detail</DialogTitle>
             <DialogDescription>
-              Loaded from `GET /course-management/sub-module-lessons/:lessonId`.
+              View and edit lesson details.
             </DialogDescription>
           </DialogHeader>
 

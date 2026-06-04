@@ -104,12 +104,8 @@ export function VideoDetailStep({
             Video
           </h3>
           <p className="text-sm text-grayScale-500 ml-1 max-w-2xl">
-            Upload a file or paste a link (Vimeo, hosted file, etc.). Files are
-            sent to your storage via{" "}
-            <code className="rounded bg-grayScale-100 px-1 text-[11px]">
-              POST /files/upload
-            </code>
-            .
+            Upload a file or paste a link (Vimeo, hosted file, etc.). Uploaded files are stored
+            automatically.
           </p>
           <LessonMediaUploadField
             kind="video"
@@ -260,12 +256,8 @@ export function VideoDetailStep({
                   Pro tip
                 </h3>
                 <p className="text-[12px] text-grayScale-700 font-medium leading-relaxed">
-                  Use clear titles and a thumbnail that matches the lesson. The
-                  lesson is created with{" "}
-                  <code className="rounded bg-white/80 px-1 text-[10px]">
-                    POST /modules/:moduleId/lessons
-                  </code>{" "}
-                  when you publish.
+                  Use clear titles and a thumbnail that matches the lesson. The lesson is created when
+                  you publish.
                 </p>
               </div>
             </div>

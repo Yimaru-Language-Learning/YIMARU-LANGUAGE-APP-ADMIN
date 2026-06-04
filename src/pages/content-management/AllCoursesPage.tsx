@@ -28,6 +28,7 @@ import {
 import { Textarea } from "../../components/ui/textarea"
 import { toast } from "sonner"
 import { cn } from "../../lib/utils"
+import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 
 type CourseWithCategory = Course & { category_name: string }
@@ -422,7 +423,7 @@ export function AllCoursesPage() {
                       }}
                       className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                     >
-                      {[10, 20, 50].map((size) => (
+                      {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                         <option key={size} value={size}>
                           {size}
                         </option>

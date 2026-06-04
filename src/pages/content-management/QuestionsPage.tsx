@@ -19,6 +19,7 @@ import { Badge } from "../../components/ui/badge"
 import { deleteQuestion, getQuestionById, getQuestions, updateQuestion } from "../../api/courses.api"
 import type { QuestionDetail } from "../../types/course.types"
 import { cn } from "../../lib/utils"
+import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 type QuestionTypeFilter = "all" | "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO"
 type DifficultyFilter = "all" | "EASY" | "MEDIUM" | "HARD"
@@ -558,7 +559,7 @@ export function QuestionsPage() {
                     }}
                     className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                   >
-                    {[10, 20, 50].map((size) => (
+                    {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
                       <option key={size} value={size}>
                         {size}
                       </option>

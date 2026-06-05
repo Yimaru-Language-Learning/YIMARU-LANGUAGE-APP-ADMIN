@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Plus, FileText, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, FileText, Video } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
@@ -23,9 +23,18 @@ import {
   updateExamPrepModuleLesson,
   deleteExamPrepModuleLesson,
   getExamPrepModuleLessons,
+  publishExamPrepModuleLesson,
 } from "../../api/courses.api";
 import { uploadImageFile, uploadVideoFile } from "../../api/files.api";
+import { resolveThumbnailForPreview } from "../../lib/videoPreview";
 import type { PracticePublishStatus } from "../../types/course.types";
+
+const LESSON_THUMB_GRADIENTS = [
+  "from-[#CBD5E1] to-[#94A3B8]",
+  "from-[#DBEAFE] to-[#93C5FD]",
+  "from-[#FEF3C7] to-[#FCD34D]",
+  "from-[#FCE7F3] to-[#F9A8D4]",
+] as const;
 
 const MOCK_PRACTICES = [
   {
@@ -61,13 +70,17 @@ export function CourseModuleDetailPage() {
       id: number;
       title: string;
       videoUrl: string;
-      description: string;
+      description: string | null;
       thumbnail: string;
       sortOrder: number;
-      gradient: string;
+      publishStatus: PracticePublishStatus | string | null;
       durationSeconds: number | null;
     }>
   >([]);
+  const [lessonsLoadError, setLessonsLoadError] = useState<string | null>(null);
+  const [publishStatusLessonId, setPublishStatusLessonId] = useState<
+    number | null
+  >(null);
   const [createLessonOpen, setCreateLessonOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
   const [createVideoUrl, setCreateVideoUrl] = useState("");
@@ -123,6 +136,7 @@ export function CourseModuleDetailPage() {
       return;
     }
     setLessonsLoading(true);
+    setLessonsLoadError(null);
     try {
       const response = await getExamPrepModuleLessons(parsedModuleId, {
         limit: 20,
@@ -131,32 +145,27 @@ export function CourseModuleDetailPage() {
       const rows = response.data?.data?.lessons;
       const list = Array.isArray(rows) ? rows : [];
       setLessons(
-        list.map((row, index) => {
+        list.map((row) => {
           const raw = row.duration_seconds ?? row.duration ?? null;
           const n =
             raw == null ? NaN : typeof raw === "number" ? raw : Number(raw);
           const durationSeconds =
             Number.isFinite(n) && n > 0 ? n : null;
           return {
-          id: Number(row.id),
-          title: row.title?.trim() || `Lesson ${row.id}`,
-          videoUrl: row.video_url?.trim() || "",
-          description: row.description?.trim() || "—",
-          thumbnail: row.thumbnail?.trim() || "",
-          sortOrder: Number(row.sort_order ?? 0),
-          durationSeconds,
-          gradient:
-            index % 3 === 1
-              ? "linear-gradient(135deg, rgba(79, 70, 229, 0.35) 0%, rgba(79, 70, 229, 0.6) 100%)"
-              : index % 3 === 2
-                ? "linear-gradient(135deg, rgba(124, 58, 237, 0.35) 0%, rgba(124, 58, 237, 0.6) 100%)"
-                : "linear-gradient(135deg, rgba(158, 40, 145, 0.35) 0%, rgba(158, 40, 145, 0.6) 100%)",
-        };
+            id: Number(row.id),
+            title: row.title?.trim() || `Lesson ${row.id}`,
+            videoUrl: row.video_url?.trim() || "",
+            description: row.description?.trim() || null,
+            thumbnail: row.thumbnail?.trim() || "",
+            sortOrder: Number(row.sort_order ?? 0),
+            publishStatus: row.publish_status ?? null,
+            durationSeconds,
+          };
         }),
       );
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load lessons");
+      setLessonsLoadError("Failed to load lessons. Please try again.");
       setLessons([]);
     } finally {
       setLessonsLoading(false);
@@ -463,6 +472,45 @@ export function CourseModuleDetailPage() {
     }
   };
 
+  const handleToggleLessonPublishStatus = async (
+    lessonId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusLessonId(lessonId);
+    try {
+      await publishExamPrepModuleLesson(lessonId, {
+        publish_status: nextStatus,
+      });
+      setLessons((prev) =>
+        prev.map((l) =>
+          l.id === lessonId ? { ...l, publishStatus: nextStatus } : l,
+        ),
+      );
+      toast.success(
+        nextStatus === "PUBLISHED"
+          ? "Lesson published"
+          : "Lesson saved as draft",
+      );
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ??
+        (nextStatus === "PUBLISHED"
+          ? "Failed to publish lesson"
+          : "Failed to save lesson as draft");
+      toast.error(message);
+    } finally {
+      setPublishStatusLessonId(null);
+    }
+  };
+
+  const lessonAttachPracticePath = (lesson: (typeof lessons)[number]) =>
+    `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}`;
+
+  const lessonPracticesPath = (lesson: (typeof lessons)[number]) =>
+    `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/lessons/${lesson.id}/practices?lessonTitle=${encodeURIComponent(lesson.title)}`;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       {/* Navigation */}
@@ -491,12 +539,12 @@ export function CourseModuleDetailPage() {
             className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2 shadow-sm"
             onClick={() =>
               navigate(
-                `/new-content/courses/${programType}/${courseId}/unit/${unitId}/module/${moduleId}/attach-practice`,
+                `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice`,
               )
             }
           >
             <FileText className="h-5 w-5" />
-            Attach Practice
+            Add Practice
           </Button>
           <Dialog
             open={createLessonOpen}
@@ -693,63 +741,101 @@ export function CourseModuleDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-10 border-b border-grayScale-100">
-        <button
-          onClick={() => setActiveTab("video")}
-          className={cn(
-            "pb-4 text-[16px] font-bold transition-all relative px-2",
-            activeTab === "video"
-              ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand-500"
-              : "text-grayScale-400 hover:text-grayScale-600",
-          )}
-        >
-          Lesson
-        </button>
-        <button
-          onClick={() => setActiveTab("practice")}
-          className={cn(
-            "pb-4 text-[16px] font-bold transition-all relative px-2",
-            activeTab === "practice"
-              ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand-500"
-              : "text-grayScale-400 hover:text-grayScale-600",
-          )}
-        >
-          Practice
-        </button>
+      <div className="border-b border-grayScale-200">
+        <div className="flex gap-10">
+          <button
+            onClick={() => setActiveTab("video")}
+            className={cn(
+              "pb-4 text-[16px] font-medium transition-all relative",
+              activeTab === "video"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                : "text-grayScale-400 hover:text-grayScale-600",
+            )}
+          >
+            Lesson
+          </button>
+          <button
+            onClick={() => setActiveTab("practice")}
+            className={cn(
+              "pb-4 text-[16px] font-medium transition-all relative",
+              activeTab === "practice"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                : "text-grayScale-400 hover:text-grayScale-600",
+            )}
+          >
+            Practice
+          </button>
+        </div>
       </div>
 
-      {/* Grid of Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+      {/* Content */}
+      <div className="mt-8">
         {activeTab === "video" ? (
           lessonsLoading ? (
-            <p className="text-sm text-grayScale-500">Loading lessons...</p>
-          ) : lessons.length === 0 ? (
-            <div className="col-span-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
-              <p className="text-sm font-medium text-grayScale-600">
-                No lessons for this module yet
-              </p>
-              <p className="mt-1 text-sm text-grayScale-400">
-                Create your first lesson to start building this module.
-              </p>
+            <div className="flex flex-col items-center justify-center py-24 text-grayScale-500 text-[15px] font-medium">
+              Loading lessons…
+            </div>
+          ) : lessonsLoadError ? (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/80 px-6 py-8 text-center text-sm text-amber-900 max-w-lg mx-auto">
+              {lessonsLoadError}
+            </div>
+          ) : lessons.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {lessons.map((lesson, i) => (
+                <VideoCard
+                  key={lesson.id}
+                  id={lesson.id}
+                  title={lesson.title}
+                  videoUrl={lesson.videoUrl}
+                  publishStatus={lesson.publishStatus}
+                  hoverModuleActions
+                  thumbnailUrl={resolveThumbnailForPreview(lesson.thumbnail)}
+                  thumbnailGradient={
+                    LESSON_THUMB_GRADIENTS[i % LESSON_THUMB_GRADIENTS.length]
+                  }
+                  durationSeconds={lesson.durationSeconds}
+                  onEdit={() => openEditLesson(lesson)}
+                  onDelete={() => setDeletingLessonId(lesson.id)}
+                  description={lesson.description}
+                  onAddPractice={() => navigate(lessonAttachPracticePath(lesson))}
+                  onViewPractices={() => navigate(lessonPracticesPath(lesson))}
+                  onTogglePublishStatus={(nextStatus) =>
+                    void handleToggleLessonPublishStatus(lesson.id, nextStatus)
+                  }
+                  publishStatusUpdating={publishStatusLessonId === lesson.id}
+                />
+              ))}
             </div>
           ) : (
-            lessons.map((lesson) => (
-              <VideoCard
-                key={lesson.id}
-                title={lesson.title}
-                thumbnailUrl={lesson.thumbnail}
-                videoUrl={lesson.videoUrl}
-                thumbnailGradient={lesson.gradient}
-                durationSeconds={lesson.durationSeconds}
-                hoverModuleActions
-                onEdit={() => openEditLesson(lesson)}
-                onDelete={() => setDeletingLessonId(lesson.id)}
-                description={lesson.description}
-              />
-            ))
+            <div className="flex flex-col items-center justify-center py-32 px-4 rounded-[40px] border-2 border-dashed border-[#F1F5F9] bg-white max-w-4xl mx-auto shadow-sm">
+              <div className="h-20 w-20 rounded-full bg-[#FAF5FF] flex items-center justify-center mb-6">
+                <div className="h-14 w-14 rounded-full bg-[#F5EBFF] flex items-center justify-center">
+                  <Video className="h-7 w-7 text-brand-500 fill-brand-500/10" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-extrabold text-grayScale-900 mb-3">
+                No lessons in this module yet
+              </h2>
+              <p className="text-grayScale-400 font-medium text-[15px] text-center max-w-sm mb-10 leading-relaxed">
+                Lessons are a great way to engage students. Add your first
+                lesson to get started.
+              </p>
+              <Button
+                variant="outline"
+                className="h-12 px-8 rounded-xl border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
+                onClick={() => setCreateLessonOpen(true)}
+              >
+                <Video className="h-5 w-5" />
+                Add Lesson
+              </Button>
+            </div>
           )
         ) : (
-          MOCK_PRACTICES.map((item) => <PracticeCard key={item.id} {...item} />)
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {MOCK_PRACTICES.map((item) => (
+              <PracticeCard key={item.id} {...item} />
+            ))}
+          </div>
         )}
       </div>
 

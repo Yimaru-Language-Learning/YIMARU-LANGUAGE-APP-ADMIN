@@ -557,11 +557,11 @@ export function ProgramDetailPage() {
             variant="outline"
             className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold  flex items-center gap-2"
             onClick={() =>
-              navigate(`/new-content/courses/${programType}/attach-practice`)
+              navigate(`/new-content/courses/${programType}/add-practice`)
             }
           >
             <FileText className="h-5 w-5" />
-            Attach Practice
+            Add Practice
           </Button>
         </div>
       </div>

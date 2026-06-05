@@ -35,13 +35,41 @@ const STEP_LABELS = ["Practice", "Persona", "Questions", "Review"] as const;
 
 export function AddPracticeFlow() {
   const navigate = useNavigate();
-  const { level } = useParams<{ level: string }>();
+  const {
+    level,
+    programType,
+    courseId: routeCourseId,
+    unitId: routeUnitId,
+    moduleId: routeModuleId,
+  } = useParams<{
+    level?: string;
+    programType?: string;
+    courseId?: string;
+    unitId?: string;
+    moduleId?: string;
+  }>();
   const [searchParams] = useSearchParams();
-  const backTo = searchParams.get("backTo");
-  const courseId = searchParams.get("courseId");
-  const moduleId = searchParams.get("moduleId");
+  const backToParam = searchParams.get("backTo");
   const lessonId = searchParams.get("lessonId");
   const lessonTitleRaw = searchParams.get("lessonTitle");
+
+  const isExamPrep = Boolean(programType?.trim());
+
+  const effectiveBackTo = useMemo(() => {
+    if (backToParam?.trim()) return backToParam.trim();
+    if (isExamPrep && routeModuleId) return "module";
+    if (isExamPrep && routeCourseId) return "courses";
+    return null;
+  }, [backToParam, isExamPrep, routeModuleId, routeCourseId]);
+
+  const courseId = isExamPrep
+    ? routeCourseId ?? searchParams.get("courseId")
+    : searchParams.get("courseId");
+  const moduleId = isExamPrep
+    ? routeModuleId ?? searchParams.get("moduleId")
+    : searchParams.get("moduleId");
+  const unitId = isExamPrep ? routeUnitId : null;
+
   const lessonTitleDisplay = (() => {
     const raw = lessonTitleRaw?.trim();
     if (!raw) return null;
@@ -52,12 +80,15 @@ export function AddPracticeFlow() {
     }
   })();
 
-  const isModuleContext = backTo === "module";
-  const isCourseContext = backTo === "modules";
+  const isModuleContext = effectiveBackTo === "module";
+  const isCourseContext =
+    effectiveBackTo === "modules" || effectiveBackTo === "courses";
   const isLessonPractice = useMemo(() => {
     const lid = lessonId ? Number(lessonId) : NaN;
     return Number.isFinite(lid) && lid > 0;
   }, [lessonId]);
+  /** Learn English lesson practices skip story fields; exam prep lessons use the full form. */
+  const isLearnEnglishLessonPractice = isLessonPractice && !isExamPrep;
 
   const parentContext = useMemo((): {
     kind: PracticeParentKind;
@@ -89,18 +120,60 @@ export function AddPracticeFlow() {
     courseId,
   ]);
 
+  const programLabel = isExamPrep
+    ? programType === "skill"
+      ? "Skill-Based Courses"
+      : "English Proficiency Exams"
+    : level
+      ? `Program ${level}`
+      : null;
+
   const backLabel =
-    backTo === "module"
+    effectiveBackTo === "module"
       ? "Back to Module"
-      : backTo === "modules"
+      : effectiveBackTo === "modules"
         ? "Back to Modules"
-        : "Back to Courses";
-  const backPath =
-    backTo === "module" && courseId && moduleId
-      ? `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`
-      : backTo === "modules" && courseId
-        ? `/new-content/learn-english/${level}/courses/${courseId}`
-        : `/new-content/learn-english/${level}/courses`;
+        : effectiveBackTo === "courses"
+          ? "Back to Course"
+          : isExamPrep
+            ? "Back to Program"
+            : "Back to Courses";
+
+  const backPath = useMemo(() => {
+    if (isExamPrep) {
+      if (
+        effectiveBackTo === "module" &&
+        programType &&
+        courseId &&
+        unitId &&
+        moduleId
+      ) {
+        return `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}`;
+      }
+      if (effectiveBackTo === "courses" && programType && courseId) {
+        return `/new-content/courses/${programType}/${courseId}`;
+      }
+      if (programType) {
+        return `/new-content/courses/${programType}`;
+      }
+      return "/new-content";
+    }
+    if (effectiveBackTo === "module" && level && courseId && moduleId) {
+      return `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`;
+    }
+    if (effectiveBackTo === "modules" && level && courseId) {
+      return `/new-content/learn-english/${level}/courses/${courseId}`;
+    }
+    return `/new-content/learn-english/${level}/courses`;
+  }, [
+    isExamPrep,
+    effectiveBackTo,
+    programType,
+    courseId,
+    unitId,
+    moduleId,
+    level,
+  ]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
@@ -194,7 +267,7 @@ export function AddPracticeFlow() {
       return;
     }
     if (
-      !isLessonPractice &&
+      !isLearnEnglishLessonPractice &&
       (!formData.title.trim() || !formData.description.trim())
     ) {
       toast.error("Title and story description are required", {
@@ -243,26 +316,35 @@ export function AddPracticeFlow() {
       lessonTitleDisplay?.trim() ||
       (lessonId ? `Lesson ${lessonId} practice` : "Lesson practice");
 
+    const useExamPrepLessonApi =
+      isExamPrep &&
+      isLessonPractice &&
+      parentContext.kind === "LESSON" &&
+      Number.isFinite(parentContext.id);
+
     setSubmitting(true);
     try {
       await executeLearnEnglishPracticeCreation({
         parentKind: parentContext.kind,
         parentId: parentContext.id,
+        examPrepLessonId: useExamPrepLessonApi ? parentContext.id : undefined,
         status,
-        questionSetTitle: isLessonPractice
+        questionSetTitle: isLearnEnglishLessonPractice
           ? lessonDefaultTitle
           : formData.title.trim() || "Practice set",
-        questionSetDescription: isLessonPractice
+        questionSetDescription: isLearnEnglishLessonPractice
           ? null
           : formData.description.trim() || null,
         shuffleQuestions: formData.shuffleQuestions,
-        practiceTitle: isLessonPractice
+        practiceTitle: isLearnEnglishLessonPractice
           ? lessonDefaultTitle
           : formData.title.trim() || "Untitled practice",
-        storyDescription: isLessonPractice
+        storyDescription: isLearnEnglishLessonPractice
           ? ""
           : formData.description.trim(),
-        storyImage: isLessonPractice ? "" : formData.storyImageUrl.trim(),
+        storyImage: isLearnEnglishLessonPractice
+          ? ""
+          : formData.storyImageUrl.trim(),
         quickTips: formData.tips.trim(),
         personaName: persona?.name ?? null,
         personaId,
@@ -368,7 +450,7 @@ export function AddPracticeFlow() {
               setFormData={setFormData}
               nextStep={nextStep}
               onCancel={() => navigate(backPath)}
-              isLessonPractice={isLessonPractice}
+              isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               parentSummary={parentSummary}
             />
@@ -404,9 +486,9 @@ export function AddPracticeFlow() {
               formData={formData}
               selectedPersona={selectedPersona}
               personas={personas}
-              isLessonPractice={isLessonPractice}
+              isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
-              programLabel={level ? `Program ${level}` : null}
+              programLabel={programLabel}
               courseLabel={courseId ? `Course ${courseId}` : null}
               moduleLabel={moduleId ? `Module ${moduleId}` : null}
               prevStep={prevStep}
@@ -466,9 +548,9 @@ export function AddPracticeFlow() {
             formData={formData}
             selectedPersona={selectedPersona}
             personas={personas}
-            isLessonPractice={isLessonPractice}
+            isLessonPractice={isLearnEnglishLessonPractice}
             lessonTitle={lessonTitleDisplay}
-            programLabel={level ? `Program ${level}` : null}
+            programLabel={programLabel}
             courseLabel={courseId ? `Course ${courseId}` : null}
             moduleLabel={moduleId ? `Module ${moduleId}` : null}
             prevStep={prevStep}

@@ -330,6 +330,7 @@ export interface ExamPrepModuleLessonItem {
   thumbnail?: string | null
   description?: string | null
   sort_order?: number
+  publish_status?: PracticePublishStatus | string | null
   /** Total length in seconds when the API provides it. */
   duration?: number | null
   duration_seconds?: number | null
@@ -359,6 +360,29 @@ export interface UpdateExamPrepModuleLessonRequest {
   thumbnail?: string | null
   description?: string | null
   sort_order: number
+}
+
+/** Publish-only patch: PUT /exam-prep/lessons/:lessonId with { publish_status }. */
+export interface PublishExamPrepModuleLessonRequest {
+  publish_status: PracticePublishStatus
+}
+
+/** POST /exam-prep/lessons/:lessonId/practices */
+export interface CreateExamPrepLessonPracticeRequest {
+  title: string
+  story_description: string
+  story_image: string
+  persona_id: number
+  question_set_id: number
+  quick_tips: string
+}
+
+export interface CreateExamPrepLessonPracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
 }
 
 export interface UpdateExamPrepModuleLessonResponse {

@@ -97,6 +97,9 @@ import type {
   CreateExamPrepModuleLessonResponse,
   UpdateExamPrepModuleLessonRequest,
   UpdateExamPrepModuleLessonResponse,
+  PublishExamPrepModuleLessonRequest,
+  CreateExamPrepLessonPracticeRequest,
+  CreateExamPrepLessonPracticeResponse,
   GetExamPrepModuleLessonsResponse,
   GetTopLevelModuleLessonsResponse,
   GetPracticesByParentContextResponse,
@@ -587,9 +590,25 @@ export const updateExamPrepModuleLesson = (
     data,
   )
 
+/** PUT /exam-prep/lessons/:lessonId — set publish_status only (draft or published). */
+export const publishExamPrepModuleLesson = (
+  lessonId: number,
+  data: PublishExamPrepModuleLessonRequest,
+) => http.put(`/exam-prep/lessons/${lessonId}`, data)
+
 /** English proficiency lesson — DELETE /exam-prep/lessons/:lessonId */
 export const deleteExamPrepModuleLesson = (lessonId: number) =>
   http.delete(`/exam-prep/lessons/${lessonId}`)
+
+/** POST /exam-prep/lessons/:lessonId/practices */
+export const createExamPrepLessonPractice = (
+  lessonId: number,
+  data: CreateExamPrepLessonPracticeRequest,
+) =>
+  http.post<CreateExamPrepLessonPracticeResponse>(
+    `/exam-prep/lessons/${lessonId}/practices`,
+    data,
+  )
 
 /** Top-level course resource (Learn English track) — PUT /courses/:id */
 export const updateTopLevelCourse = (courseId: number, data: UpdateTopLevelCourseRequest) =>

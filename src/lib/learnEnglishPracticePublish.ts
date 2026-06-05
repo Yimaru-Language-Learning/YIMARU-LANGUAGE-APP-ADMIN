@@ -1,6 +1,7 @@
 import type { AxiosError } from "axios"
 import {
   addQuestionToSet,
+  createExamPrepLessonPractice,
   createParentLinkedPractice,
   createQuestion,
   createQuestionSet,
@@ -72,6 +73,8 @@ export async function executeLearnEnglishPracticeCreation(opts: {
   personaId: number
   questions: LearnEnglishDefinitionQuestionInput[]
   definitions: QuestionTypeDefinition[]
+  /** When set, links practice via POST /exam-prep/lessons/:id/practices instead of POST /practices. */
+  examPrepLessonId?: number
 }): Promise<{ questionSetId: number; practiceId: number }> {
   const err = validateLearnEnglishQuestionsWithDefinitions(
     opts.questions,
@@ -128,17 +131,26 @@ export async function executeLearnEnglishPracticeCreation(opts: {
     })
   }
 
-  const practiceRes = await createParentLinkedPractice({
-    parent_kind: opts.parentKind,
-    parent_id: opts.parentId,
-    title: opts.practiceTitle.trim(),
-    story_description: opts.storyDescription.trim(),
-    story_image: opts.storyImage.trim(),
-    question_set_id: setId,
-    quick_tips: opts.quickTips.trim(),
-    publish_status: opts.status,
-    persona_id: opts.personaId,
-  })
+  const practiceRes = opts.examPrepLessonId
+    ? await createExamPrepLessonPractice(opts.examPrepLessonId, {
+        title: opts.practiceTitle.trim(),
+        story_description: opts.storyDescription.trim(),
+        story_image: opts.storyImage.trim(),
+        persona_id: opts.personaId,
+        question_set_id: setId,
+        quick_tips: opts.quickTips.trim(),
+      })
+    : await createParentLinkedPractice({
+        parent_kind: opts.parentKind,
+        parent_id: opts.parentId,
+        title: opts.practiceTitle.trim(),
+        story_description: opts.storyDescription.trim(),
+        story_image: opts.storyImage.trim(),
+        question_set_id: setId,
+        quick_tips: opts.quickTips.trim(),
+        publish_status: opts.status,
+        persona_id: opts.personaId,
+      })
 
   const practiceId = practiceRes.data?.data?.id
   if (!practiceId) {

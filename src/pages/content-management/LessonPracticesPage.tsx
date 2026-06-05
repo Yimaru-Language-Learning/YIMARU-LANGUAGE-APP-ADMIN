@@ -145,16 +145,21 @@ function PracticeCard({
 
 export function LessonPracticesPage() {
   const navigate = useNavigate();
-  const { level, courseId, moduleId, lessonId } = useParams<{
-    level: string;
-    courseId: string;
-    moduleId: string;
-    lessonId: string;
+  const { level, programType, courseId, unitId, moduleId, lessonId } = useParams<{
+    level?: string;
+    programType?: string;
+    courseId?: string;
+    unitId?: string;
+    moduleId?: string;
+    lessonId?: string;
   }>();
   const [searchParams] = useSearchParams();
   const lessonTitle = searchParams.get("lessonTitle")?.trim() || "";
 
-  const backHref = `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`;
+  const isExamPrep = Boolean(programType?.trim());
+  const backHref = isExamPrep
+    ? `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}`
+    : `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`;
 
   const [practices, setPractices] = useState<ParentContextPractice[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -200,7 +205,9 @@ export function LessonPracticesPage() {
   const displayTitle =
     lessonTitle || (validLesson ? `Lesson #${lid}` : "Lesson practices");
 
-  const addPracticeHref = `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`;
+  const addPracticeHref = isExamPrep
+    ? `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`
+    : `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F4F6FB] via-white to-[#F8FAFC]">

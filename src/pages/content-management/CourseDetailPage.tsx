@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -26,17 +26,27 @@ import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.s
 import alertSrc from "../../assets/Alert.svg";
 import {
   deleteTopLevelCourseModule,
+  getPracticesByParentCourse,
   getProgramCourses,
   getTopLevelCourseModules,
+  publishParentLinkedPractice,
+  updateParentLinkedPractice,
   updateTopLevelCourseModule,
 } from "../../api/courses.api";
 import { refreshFileUrl, resolveFileUrl } from "../../api/files.api";
 import type {
+  ParentContextPractice,
   ProgramCourseListItem,
   TopLevelCourseModuleItem,
 } from "../../types/course.types";
+import {
+  isPracticeDraft,
+  isPracticePublished,
+  unwrapPracticesList,
+} from "../../lib/parentContextPractice";
 import { AddModuleModal } from "./components/AddModuleModal";
 import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
+import { ModulePracticeCard } from "./components/ModulePracticeCard";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
 
 const MODULE_CARD_GRADIENT = "from-[#8E44AD] to-[#C39BD3]" as const;
@@ -155,6 +165,17 @@ export function CourseDetailPage() {
     useState<TopLevelCourseModuleItem | null>(null);
   const [deletingModuleInFlight, setDeletingModuleInFlight] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<"modules" | "practice">("modules");
+  const [practiceFilter, setPracticeFilter] = useState("All");
+  const [practices, setPractices] = useState<ParentContextPractice[]>([]);
+  const [practicesLoading, setPracticesLoading] = useState(false);
+  const [practicesLoadError, setPracticesLoadError] = useState<string | null>(
+    null,
+  );
+  const [publishStatusPracticeId, setPublishStatusPracticeId] = useState<
+    number | null
+  >(null);
+
   const openEditModule = (module: TopLevelCourseModuleItem) => {
     setEditingModule(module);
     setEditModuleName(module.name ?? "");
@@ -259,6 +280,91 @@ export function CourseDetailPage() {
   useEffect(() => {
     void loadPage();
   }, [loadPage]);
+
+  const loadCoursePractices = useCallback(async () => {
+    if (!Number.isFinite(courseIdNum) || courseIdNum < 1) {
+      setPractices([]);
+      setPracticesLoadError(null);
+      setPracticesLoading(false);
+      return;
+    }
+    setPracticesLoading(true);
+    setPracticesLoadError(null);
+    try {
+      const res = await getPracticesByParentCourse(courseIdNum, {
+        limit: 100,
+        offset: 0,
+      });
+      setPractices(unwrapPracticesList(res));
+    } catch {
+      setPractices([]);
+      setPracticesLoadError("Failed to load practices. Please try again.");
+    } finally {
+      setPracticesLoading(false);
+    }
+  }, [courseIdNum]);
+
+  useEffect(() => {
+    if (activeTab !== "practice") return;
+    void loadCoursePractices();
+  }, [activeTab, loadCoursePractices]);
+
+  const filteredPractices = useMemo(() => {
+    if (practiceFilter === "Published") {
+      return practices.filter(isPracticePublished);
+    }
+    if (practiceFilter === "Draft") {
+      return practices.filter(isPracticeDraft);
+    }
+    if (practiceFilter === "Archived") {
+      return [];
+    }
+    return practices;
+  }, [practices, practiceFilter]);
+
+  const handlePublishPractice = async (practiceId: number) => {
+    setPublishStatusPracticeId(practiceId);
+    try {
+      await publishParentLinkedPractice(practiceId);
+      setPractices((prev) =>
+        prev.map((p) =>
+          p.id === practiceId ? { ...p, publish_status: "PUBLISHED" } : p,
+        ),
+      );
+      toast.success("Practice published");
+    } catch (e: unknown) {
+      console.error(e);
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to publish practice";
+      toast.error(msg);
+    } finally {
+      setPublishStatusPracticeId(null);
+    }
+  };
+
+  const handleSavePracticeAsDraft = async (practiceId: number) => {
+    setPublishStatusPracticeId(practiceId);
+    try {
+      await updateParentLinkedPractice(practiceId, {
+        publish_status: "DRAFT",
+      });
+      setPractices((prev) =>
+        prev.map((p) =>
+          p.id === practiceId ? { ...p, publish_status: "DRAFT" } : p,
+        ),
+      );
+      toast.success("Practice saved as draft");
+    } catch (e: unknown) {
+      console.error(e);
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to save practice as draft";
+      toast.error(msg);
+    } finally {
+      setPublishStatusPracticeId(null);
+    }
+  };
 
   const handleSaveModuleEdit = async () => {
     if (!editingModule) return;
@@ -391,20 +497,32 @@ export function CourseDetailPage() {
               </Button>
             </div>
           </div>
-          <div className="relative">
-            <div
-              className="absolute inset-0 flex items-center"
-              aria-hidden="true"
-            >
-              <div className="w-full border-t border-grayScale-200" />
-            </div>
-            <div className="relative flex justify-center">
-              <div
-                className="h-[0.5px] w-full rounded-full opacity-20"
-                style={{
-                  background: "gray",
-                }}
-              />
+          <div className="border-b border-grayScale-200">
+            <div className="flex gap-10">
+              <button
+                type="button"
+                onClick={() => setActiveTab("modules")}
+                className={cn(
+                  "pb-4 text-[16px] font-medium transition-all relative",
+                  activeTab === "modules"
+                    ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                    : "text-grayScale-400 hover:text-grayScale-600",
+                )}
+              >
+                Modules
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("practice")}
+                className={cn(
+                  "pb-4 text-[16px] font-medium transition-all relative",
+                  activeTab === "practice"
+                    ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                    : "text-grayScale-400 hover:text-grayScale-600",
+                )}
+              >
+                Practice
+              </button>
             </div>
           </div>
 
@@ -496,99 +614,184 @@ export function CourseDetailPage() {
             </DialogContent>
           </Dialog>
 
-          {modules.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
-              <p className="text-sm font-medium text-grayScale-600">
-                No modules in this course yet
-              </p>
-              <p className="mt-1 text-sm text-grayScale-400">
-                Add modules when your workflow is connected, or create them via
-                the API.
-              </p>
-            </div>
-          ) : (
-            <div
-              className="grid justify-start gap-10"
-              style={{
-                gridTemplateColumns: "repeat(auto-fill, minmax(330px, 330px))",
-              }}
-            >
-              {modules.map((module, index) => {
-                const iconSrc = module.icon?.trim() ?? "";
-                return (
-                  <Card
-                    key={module.id}
-                    className="group relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[16px] border border-grayScale-50 bg-white shadow-sm transition-all duration-300 hover:shadow-lg"
-                  >
-                    <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
-                        aria-label={`Edit ${module.name}`}
-                        onClick={() => openEditModule(module)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
-                        aria-label={`Delete ${module.name}`}
-                        onClick={() => setDeletingModule(module)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <ModuleCardTopMedia iconSrc={iconSrc} />
+          {activeTab === "modules" ? (
+            modules.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+                <p className="text-sm font-medium text-grayScale-600">
+                  No modules in this course yet
+                </p>
+                <p className="mt-1 text-sm text-grayScale-400">
+                  Add a module to organize lessons and practices for this course.
+                </p>
+              </div>
+            ) : (
+              <div
+                className="grid justify-start gap-10"
+                style={{
+                  gridTemplateColumns: "repeat(auto-fill, minmax(330px, 330px))",
+                }}
+              >
+                {modules.map((module, index) => {
+                  const iconSrc = module.icon?.trim() ?? "";
+                  return (
+                    <Card
+                      key={module.id}
+                      className="group relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[16px] border border-grayScale-50 bg-white shadow-sm transition-all duration-300 hover:shadow-lg"
+                    >
+                      <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                          aria-label={`Edit ${module.name}`}
+                          onClick={() => openEditModule(module)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                          aria-label={`Delete ${module.name}`}
+                          onClick={() => setDeletingModule(module)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <ModuleCardTopMedia iconSrc={iconSrc} />
 
-                    <div className="flex min-h-0 flex-1 flex-col gap-6 p-2 pb-4 pt-4">
-                      <div className="flex min-h-0 flex-1 gap-4">
-                        <ModuleIconCircle iconSrc={iconSrc} index={index} />
+                      <div className="flex min-h-0 flex-1 flex-col gap-6 p-2 pb-4 pt-4">
+                        <div className="flex min-h-0 flex-1 gap-4">
+                          <ModuleIconCircle iconSrc={iconSrc} index={index} />
 
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <h3 className="text-lg font-bold tracking-tight text-[#0F172A]">
-                            {module.name}
-                          </h3>
-                          <p className="text-[12px] font-medium leading-snug text-grayScale-400 line-clamp-3">
-                            {module.description?.trim()
-                              ? module.description
-                              : "—"}
-                          </p>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <h3 className="text-lg font-bold tracking-tight text-[#0F172A]">
+                              {module.name}
+                            </h3>
+                            <p className="text-[12px] font-medium leading-snug text-grayScale-400 line-clamp-3">
+                              {module.description?.trim()
+                                ? module.description
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-auto flex shrink-0 items-center gap-3">
+                          <Button
+                            variant="outline"
+                            className="h-10 flex-1 rounded-[6px] border-[#9E2891] text-sm text-[#9E2891] transition-all"
+                            onClick={() =>
+                              navigate(
+                                `/new-content/learn-english/${programIdParam}/courses/${courseIdParam}/modules/${module.id}`,
+                                {
+                                  state: {
+                                    moduleName: module.name,
+                                    moduleDescription:
+                                      module.description?.trim() ?? "",
+                                  },
+                                },
+                              )
+                            }
+                          >
+                            View Detail
+                          </Button>
+                          <PublishPracticeButton
+                            parentKind="MODULE"
+                            parentId={module.id}
+                            className="h-10 flex-1 rounded-[6px] bg-brand-500 text-sm text-white shadow-md shadow-brand-500/10 hover:bg-brand-600 disabled:opacity-60"
+                          />
                         </div>
                       </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )
+          ) : (
+            <div className="space-y-8">
+              <div className="flex items-center gap-10 overflow-x-auto whitespace-nowrap rounded-2xl border border-grayScale-100 bg-white px-8 py-4 shadow-sm">
+                <div className="mr-2 flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest text-grayScale-300">
+                  STATUS:
+                </div>
+                <div className="flex items-center gap-3">
+                  {["All", "Published", "Draft", "Archived"].map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setPracticeFilter(label)}
+                      className={cn(
+                        "h-9 rounded-full px-5 text-[13px] font-bold transition-all",
+                        practiceFilter === label
+                          ? "bg-brand-500 text-white shadow-md shadow-brand-500/20"
+                          : "bg-[#F1F5F9] text-grayScale-500 hover:bg-grayScale-100",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                      <div className="mt-auto flex shrink-0 items-center gap-3">
-                        <Button
-                          variant="outline"
-                          className="h-10 flex-1 rounded-[6px] border-[#9E2891] text-sm text-[#9E2891] transition-all"
-                          onClick={() =>
-                            navigate(
-                              `/new-content/learn-english/${programIdParam}/courses/${courseIdParam}/modules/${module.id}`,
-                              {
-                                state: {
-                                  moduleName: module.name,
-                                  moduleDescription:
-                                    module.description?.trim() ?? "",
-                                },
-                              },
-                            )
-                          }
-                        >
-                          View Detail
-                        </Button>
-                        <PublishPracticeButton
-                          parentKind="MODULE"
-                          parentId={module.id}
-                          className="h-10 flex-1 rounded-[6px] bg-brand-500 text-sm text-white shadow-md shadow-brand-500/10 hover:bg-brand-600 disabled:opacity-60"
-                        />
-                      </div>
+              {practicesLoading ? (
+                <div className="flex flex-col items-center justify-center py-24 text-[15px] font-medium text-grayScale-500">
+                  Loading practices…
+                </div>
+              ) : practicesLoadError ? (
+                <div className="mx-auto max-w-lg rounded-2xl border border-amber-100 bg-amber-50/80 px-6 py-8 text-center text-sm text-amber-900">
+                  {practicesLoadError}
+                </div>
+              ) : filteredPractices.length > 0 ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  {filteredPractices.map((practice) => (
+                    <ModulePracticeCard
+                      key={practice.id}
+                      practice={practice}
+                      statusUpdating={publishStatusPracticeId === practice.id}
+                      onEdit={() =>
+                        navigate(`/content/practices?type=course&id=${courseIdNum}`)
+                      }
+                      onPublish={() => void handlePublishPractice(practice.id)}
+                      onSaveAsDraft={() =>
+                        void handleSavePracticeAsDraft(practice.id)
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="mx-auto flex max-w-4xl flex-col items-center justify-center rounded-[40px] border-2 border-dashed border-[#F1F5F9] bg-white px-4 py-32 shadow-sm">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#FAF5FF]">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F5EBFF]">
+                      <Calendar className="h-7 w-7 text-brand-500" />
                     </div>
-                  </Card>
-                );
-              })}
+                  </div>
+                  <h2 className="mb-3 text-2xl font-extrabold text-grayScale-900">
+                    {practices.length === 0
+                      ? "No practices for this course yet"
+                      : "No practices match this filter"}
+                  </h2>
+                  <p className="mb-10 max-w-sm text-center text-[15px] font-medium leading-relaxed text-grayScale-400">
+                    {practices.length === 0
+                      ? "Add a course-level practice to give learners exercises attached to this course."
+                      : "Try another status filter or add a new practice."}
+                  </p>
+                  {practices.length === 0 ? (
+                    <Button
+                      variant="outline"
+                      className="flex h-12 items-center gap-2 rounded-xl border-brand-500 px-8 font-bold text-brand-500 transition-all hover:bg-brand-50"
+                      onClick={() =>
+                        navigate(
+                          `/new-content/learn-english/${programIdParam}/courses/add-practice?backTo=modules&courseId=${courseIdParam}`,
+                        )
+                      }
+                    >
+                      <Calendar className="h-5 w-5" />
+                      Add Practice
+                    </Button>
+                  ) : null}
+                </div>
+              )}
             </div>
           )}
 

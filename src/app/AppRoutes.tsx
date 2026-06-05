@@ -24,8 +24,6 @@ import { ModuleDetailPage } from "../pages/content-management/ModuleDetailPage";
 import { AddVideoFlow } from "../pages/content-management/AddVideoFlow";
 import { AddPracticeFlow } from "../pages/content-management/AddPracticeFlow";
 import { CourseModuleDetailPage } from "../pages/content-management/CourseModuleDetailPage";
-import { AttachPracticeFlow } from "../pages/content-management/AttachPracticeFlow";
-import { AttachProgramPracticeFlow } from "../pages/content-management/AttachProgramPracticeFlow";
 import { ProgramTypeSelectionPage } from "../pages/content-management/ProgramTypeSelectionPage";
 import { ProgramDetailPage } from "../pages/content-management/ProgramDetailPage";
 import { CourseManagementPage } from "../pages/content-management/CourseManagementPage";
@@ -191,12 +189,16 @@ export function AppRoutes() {
           element={<ProgramDetailPage />}
         />
         <Route
-          path="/new-content/courses/:programType/attach-practice"
-          element={<AttachProgramPracticeFlow />}
+          path="/new-content/courses/:programType/add-practice"
+          element={<AddPracticeFlow />}
         />
         <Route
-          path="/new-content/courses/:programType/:courseId/unit/:unitId/module/:moduleId/attach-practice"
-          element={<AttachPracticeFlow />}
+          path="/new-content/courses/:programType/:courseId/add-practice"
+          element={<AddPracticeFlow />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/:moduleId/add-practice"
+          element={<AddPracticeFlow />}
         />
         <Route
           path="/new-content/courses/:programType/:courseId"
@@ -209,6 +211,10 @@ export function AppRoutes() {
         <Route
           path="/new-content/courses/:programType/:courseId/:unitId/:moduleId"
           element={<CourseModuleDetailPage />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/:moduleId/lessons/:lessonId/practices"
+          element={<LessonPracticesPage />}
         />
         <Route
           path="/new-content/learn-english"

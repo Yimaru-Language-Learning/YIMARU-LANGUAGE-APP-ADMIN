@@ -3,7 +3,6 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Plus,
-  FileText,
   LayoutGrid,
   PlayCircle,
   ClipboardCheck,
@@ -556,17 +555,6 @@ export function CourseManagementPage() {
               </div>
             </DialogContent>
           </Dialog>
-
-          <Button
-            variant="outline"
-            className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
-            onClick={() =>
-              navigate(`/new-content/courses/${programType}/attach-practice`)
-            }
-          >
-            <FileText className="h-5 w-5" />
-            Attach Practice
-          </Button>
         </div>
       </div>
 

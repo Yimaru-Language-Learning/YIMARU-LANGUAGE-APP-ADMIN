@@ -636,8 +636,8 @@ export function PracticeQuestionEditorFields({
     setDefinitionsLoading(true)
     ;(async () => {
       try {
-        const rows = await getQuestionTypeDefinitions({ include_system: true })
-        if (!cancelled) setTypeDefinitions(Array.isArray(rows) ? rows : [])
+        const { definitions: rows } = await getQuestionTypeDefinitions({ include_system: true })
+        if (!cancelled) setTypeDefinitions(rows)
       } catch {
         if (!cancelled) setTypeDefinitions([])
       } finally {

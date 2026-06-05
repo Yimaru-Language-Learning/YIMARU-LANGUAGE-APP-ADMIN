@@ -126,11 +126,19 @@ export function QuestionTypeValidatePreviewStep({
             </div>
             <div>
               <dt className="text-[11px] font-bold uppercase text-grayScale-400">Stimulus slots</dt>
-              <dd className="mt-1 font-medium text-grayScale-800">{payload.stimulus_schema.length}</dd>
+              <dd className="mt-1 font-medium text-grayScale-800">
+                {payload.stimulus_schema.length
+                  ? payload.stimulus_schema.map((r) => r.label).join(" · ")
+                  : "—"}
+              </dd>
             </div>
             <div>
               <dt className="text-[11px] font-bold uppercase text-grayScale-400">Response slots</dt>
-              <dd className="mt-1 font-medium text-grayScale-800">{payload.response_schema.length}</dd>
+              <dd className="mt-1 font-medium text-grayScale-800">
+                {payload.response_schema.length
+                  ? payload.response_schema.map((r) => r.label).join(" · ")
+                  : "—"}
+              </dd>
             </div>
           </dl>
 

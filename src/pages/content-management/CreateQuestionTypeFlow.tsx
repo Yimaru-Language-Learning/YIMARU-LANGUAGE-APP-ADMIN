@@ -30,6 +30,7 @@ import { QuestionTypeBasicInfoStep } from "./components/question-type-steps/Ques
 import { QuestionTypeConfigStep } from "./components/question-type-steps/QuestionTypeConfigStep"
 import { QuestionTypeValidatePreviewStep } from "./components/question-type-steps/QuestionTypeValidatePreviewStep"
 import { QuestionTypeReviewPublishStep } from "./components/question-type-steps/QuestionTypeReviewPublishStep"
+import { defaultLabelForKind } from "../../lib/schemaSlotLabel"
 
 const initialDraft = (): QuestionTypeDefinitionCreatePayload => ({
   key: "",
@@ -46,7 +47,7 @@ function seedSchemaFromKinds(kinds: string[]) {
   return kinds.map((k, i) => ({
     id: `${(k || "field").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "field"}_${i + 1}`,
     kind: k,
-    label: k.replace(/_/g, " "),
+    label: defaultLabelForKind(k),
     required: true as boolean,
   }))
 }
@@ -59,8 +60,14 @@ function definitionToDraft(def: QuestionTypeDefinition): QuestionTypeDefinitionC
     status: def.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     stimulus_component_kinds: [...(def.stimulus_component_kinds ?? [])],
     response_component_kinds: [...(def.response_component_kinds ?? [])],
-    stimulus_schema: (def.stimulus_schema ?? []).map((r) => ({ ...r })),
-    response_schema: (def.response_schema ?? []).map((r) => ({ ...r })),
+    stimulus_schema: (def.stimulus_schema ?? []).map((r) => ({
+      ...r,
+      label: r.label?.trim() || defaultLabelForKind(r.kind),
+    })),
+    response_schema: (def.response_schema ?? []).map((r) => ({
+      ...r,
+      label: r.label?.trim() || defaultLabelForKind(r.kind),
+    })),
   }
 }
 

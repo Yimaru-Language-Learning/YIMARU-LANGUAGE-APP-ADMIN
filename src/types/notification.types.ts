@@ -9,6 +9,7 @@ export interface NotificationPayload {
 export interface Notification {
   id: string
   recipient_id: number
+  receiver_type?: string
   type: string
   level: string
   error_severity: string

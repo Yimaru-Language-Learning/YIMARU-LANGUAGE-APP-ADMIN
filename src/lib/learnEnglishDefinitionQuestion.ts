@@ -4,7 +4,8 @@ import { createEmptyTable, serializeTableSlotValue } from "./dynamicTableValue"
 import { buildDynamicQuestionPayload } from "./practiceDynamicQuestionPayload"
 
 function defaultValueForSchemaSlot(kind: string): string {
-  if (kind.trim().toUpperCase() === "TABLE") {
+  const u = kind.trim().toUpperCase()
+  if (u === "TABLE") {
     return serializeTableSlotValue(createEmptyTable(2, 1))
   }
   return ""

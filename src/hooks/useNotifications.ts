@@ -3,12 +3,13 @@ import { getNotifications, getUnreadCount, markAsRead, markAsUnread, markAllRead
 import type { Notification } from "../types/notification.types"
 
 const MAX_DROPDOWN = 5
+const RECONNECT_MS = 5000
 
 function getWsUrl() {
   const base = import.meta.env.VITE_API_BASE_URL as string
   const wsBase = base.replace(/^https/, "wss").replace(/^http/, "ws")
   const token = localStorage.getItem("access_token") ?? ""
-  return `${wsBase}/ws/connect?token=${token}`
+  return `${wsBase}/ws/connect?token=${encodeURIComponent(token)}`
 }
 
 export function useNotifications() {
@@ -18,6 +19,8 @@ export function useNotifications() {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
+  const intentionalCloseRef = useRef(false)
+  const connectAttemptRef = useRef(0)
 
   const dispatchUpdate = () => {
     window.dispatchEvent(new Event("notifications-updated"))
@@ -40,11 +43,37 @@ export function useNotifications() {
     }
   }, [])
 
-  const connectWs = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close()
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current)
+      reconnectTimer.current = null
     }
+  }, [])
 
+  const disconnectWs = useCallback(
+    (intentional: boolean) => {
+      intentionalCloseRef.current = intentional
+      clearReconnectTimer()
+      const ws = wsRef.current
+      wsRef.current = null
+      if (!ws) return
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close()
+      }
+    },
+    [clearReconnectTimer],
+  )
+
+  const connectWs = useCallback(() => {
+    if (!mountedRef.current) return
+
+    const token = localStorage.getItem("access_token")?.trim()
+    if (!token) return
+
+    disconnectWs(true)
+    intentionalCloseRef.current = false
+
+    const attempt = ++connectAttemptRef.current
     const ws = new WebSocket(getWsUrl())
     wsRef.current = ws
 
@@ -78,47 +107,45 @@ export function useNotifications() {
       }
     }
 
-    ws.onerror = () => {
-      ws.close()
-    }
-
     ws.onclose = () => {
-      if (!mountedRef.current) return
+      if (connectAttemptRef.current !== attempt) return
+      if (wsRef.current === ws) wsRef.current = null
+      if (!mountedRef.current || intentionalCloseRef.current) return
+      clearReconnectTimer()
       reconnectTimer.current = setTimeout(() => {
         if (mountedRef.current) connectWs()
-      }, 5000)
+      }, RECONNECT_MS)
     }
-  }, [])
+  }, [clearReconnectTimer, disconnectWs])
 
   useEffect(() => {
     mountedRef.current = true
+    intentionalCloseRef.current = false
     fetchData()
     connectWs()
 
     return () => {
       mountedRef.current = false
-      wsRef.current?.close()
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
+      disconnectWs(true)
     }
-  }, [fetchData, connectWs])
+  }, [fetchData, connectWs, disconnectWs])
 
   const markOneRead = useCallback(async (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
     )
     setUnreadCount((prev) => Math.max(0, prev - 1))
     dispatchUpdate()
     try {
       await markAsRead(id)
     } catch {
-      // revert on failure
       await fetchData()
     }
   }, [fetchData])
 
   const markOneUnread = useCallback(async (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: false } : n))
+      prev.map((n) => (n.id === id ? { ...n, is_read: false } : n)),
     )
     setUnreadCount((prev) => prev + 1)
     dispatchUpdate()

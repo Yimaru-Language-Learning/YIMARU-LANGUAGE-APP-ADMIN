@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Plus } from "lucide-react"
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
 import { Button } from "../../../../components/ui/button"
 import { Card } from "../../../../components/ui/card"
 import { Input } from "../../../../components/ui/input"
@@ -9,8 +9,13 @@ import type {
 } from "../../../../types/questionTypeDefinition.types"
 import type { FieldErrorMap } from "../../lib/questionTypeDefinitionValidation"
 import { SchemaBuilderSection } from "./SchemaBuilderSection"
+import { SchemaSlotLabelsPanel } from "./SchemaSlotLabelsPanel"
 import { ComponentKindCard } from "./ComponentKindCard"
-import { getResponseKindPresentation, getStimulusKindPresentation } from "./componentKindUi"
+import {
+  defaultLabelForKind,
+  getResponseKindPresentation,
+  getStimulusKindPresentation,
+} from "./componentKindUi"
 
 interface QuestionTypeConfigStepProps {
   draft: QuestionTypeDefinitionCreatePayload
@@ -33,10 +38,6 @@ function slugFragmentFromKind(kind: string): string {
   return s.replace(/^_|_$/g, "") || "field"
 }
 
-function defaultSchemaLabel(kind: string): string {
-  return kind.replace(/_/g, " ")
-}
-
 function nextUniqueSchemaElementId(rows: DynamicElementDefinition[], kind: string): string {
   const base = slugFragmentFromKind(kind)
   const existing = new Set(rows.map((r) => r.id.trim()).filter(Boolean))
@@ -47,6 +48,22 @@ function nextUniqueSchemaElementId(rows: DynamicElementDefinition[], kind: strin
     id = `${base}_${n}`
   }
   return id
+}
+
+function uniqueKindsFromSchemaRows(rows: DynamicElementDefinition[]): string[] {
+  return [...new Set(rows.map((r) => r.kind).filter(Boolean))]
+}
+
+function removeLastSlotOfKind(
+  rows: DynamicElementDefinition[],
+  kind: string,
+): DynamicElementDefinition[] {
+  let removeIndex = -1
+  rows.forEach((row, index) => {
+    if (row.kind === kind) removeIndex = index
+  })
+  if (removeIndex < 0) return rows
+  return rows.filter((_, index) => index !== removeIndex)
 }
 
 function rowErrorMap(side: "stimulus" | "response", errors: FieldErrorMap): Record<number, string> {
@@ -84,7 +101,7 @@ export function QuestionTypeConfigStep({
           stimulus_schema.push({
             id: nextUniqueSchemaElementId(stimulus_schema, kind),
             kind,
-            label: defaultSchemaLabel(kind),
+            label: defaultLabelForKind(kind),
             required: true,
           })
         }
@@ -108,7 +125,7 @@ export function QuestionTypeConfigStep({
           response_schema.push({
             id: nextUniqueSchemaElementId(response_schema, kind),
             kind,
-            label: defaultSchemaLabel(kind),
+            label: defaultLabelForKind(kind),
             required: true,
           })
         }
@@ -129,7 +146,7 @@ export function QuestionTypeConfigStep({
       stimulus_schema.push({
         id: nextUniqueSchemaElementId(stimulus_schema, kind),
         kind,
-        label: defaultSchemaLabel(kind),
+        label: defaultLabelForKind(kind),
         required: true,
       })
       return { ...d, stimulus_schema }
@@ -143,11 +160,49 @@ export function QuestionTypeConfigStep({
       response_schema.push({
         id: nextUniqueSchemaElementId(response_schema, kind),
         kind,
-        label: defaultSchemaLabel(kind),
+        label: defaultLabelForKind(kind),
         required: true,
       })
       return { ...d, response_schema }
     })
+  }
+
+  const removeStimulusSlot = (kind: string) => {
+    setDraft((d) => {
+      const stimulus_schema = removeLastSlotOfKind(d.stimulus_schema, kind)
+      return {
+        ...d,
+        stimulus_schema,
+        stimulus_component_kinds: uniqueKindsFromSchemaRows(stimulus_schema),
+      }
+    })
+  }
+
+  const removeResponseSlot = (kind: string) => {
+    setDraft((d) => {
+      const response_schema = removeLastSlotOfKind(d.response_schema, kind)
+      return {
+        ...d,
+        response_schema,
+        response_component_kinds: uniqueKindsFromSchemaRows(response_schema),
+      }
+    })
+  }
+
+  const setStimulusSchema = (rows: DynamicElementDefinition[]) => {
+    setDraft((d) => ({
+      ...d,
+      stimulus_schema: rows,
+      stimulus_component_kinds: uniqueKindsFromSchemaRows(rows),
+    }))
+  }
+
+  const setResponseSchema = (rows: DynamicElementDefinition[]) => {
+    setDraft((d) => ({
+      ...d,
+      response_schema: rows,
+      response_component_kinds: uniqueKindsFromSchemaRows(rows),
+    }))
   }
 
   return (
@@ -156,8 +211,8 @@ export function QuestionTypeConfigStep({
         <div className="p-10 border-b border-grayScale-200">
           <h2 className="text-[20px] font-medium text-grayScale-900">STEP 2: Input &amp; answer types</h2>
           <p className="text-grayScale-500 font-medium mt-1">
-            Choose what learners see in the question and how they respond. You can add multiple fields of the
-            same type when needed.
+            Choose what learners see in the question and how they respond. Add or remove slots for each type
+            as needed.
           </p>
         </div>
 
@@ -174,8 +229,8 @@ export function QuestionTypeConfigStep({
                       Section A: Question input types
                     </h3>
                     <p className="text-[14px] text-grayScale-500 mt-1 font-medium">
-                      Choose how the question is presented to the learner. Use Add slot for multiple fields of
-                      the same type (for example, two text blocks).
+                      Choose how the question is presented to the learner. Use Add slot / Remove slot to adjust
+                      how many fields of each type you need.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -196,16 +251,31 @@ export function QuestionTypeConfigStep({
                               <span className="text-[12px] text-grayScale-500 font-medium">
                                 {slotCount} slot{slotCount === 1 ? "" : "s"}
                               </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
-                                onClick={() => addStimulusSlot(kind)}
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" />
-                                Add slot
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 shrink-0 text-[12px] font-bold text-grayScale-600 hover:bg-grayScale-100"
+                                  onClick={() => removeStimulusSlot(kind)}
+                                  disabled={slotCount === 0}
+                                  aria-label={`Remove ${label} slot`}
+                                >
+                                  <Minus className="h-3.5 w-3.5 mr-1" />
+                                  Remove
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
+                                  onClick={() => addStimulusSlot(kind)}
+                                  aria-label={`Add ${label} slot`}
+                                >
+                                  <Plus className="h-3.5 w-3.5 mr-1" />
+                                  Add
+                                </Button>
+                              </div>
                             </div>
                           ) : null}
                         </div>
@@ -223,8 +293,8 @@ export function QuestionTypeConfigStep({
                       Section B: Answer types
                     </h3>
                     <p className="text-[14px] text-grayScale-500 mt-1 font-medium">
-                      How should the student answer? Use Add slot when you need more than one field of the same
-                      answer type.
+                      How should the student answer? Use Add slot / Remove slot to adjust how many answer fields
+                      each type needs.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -245,16 +315,31 @@ export function QuestionTypeConfigStep({
                               <span className="text-[12px] text-grayScale-500 font-medium">
                                 {slotCount} slot{slotCount === 1 ? "" : "s"}
                               </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
-                                onClick={() => addResponseSlot(kind)}
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" />
-                                Add slot
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 shrink-0 text-[12px] font-bold text-grayScale-600 hover:bg-grayScale-100"
+                                  onClick={() => removeResponseSlot(kind)}
+                                  disabled={slotCount === 0}
+                                  aria-label={`Remove ${label} slot`}
+                                >
+                                  <Minus className="h-3.5 w-3.5 mr-1" />
+                                  Remove
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
+                                  onClick={() => addResponseSlot(kind)}
+                                  aria-label={`Add ${label} slot`}
+                                >
+                                  <Plus className="h-3.5 w-3.5 mr-1" />
+                                  Add
+                                </Button>
+                              </div>
                             </div>
                           ) : null}
                         </div>
@@ -267,6 +352,14 @@ export function QuestionTypeConfigStep({
                 </section>
               </div>
             )}
+
+            <SchemaSlotLabelsPanel
+              stimulusRows={draft.stimulus_schema}
+              responseRows={draft.response_schema}
+              onStimulusChange={setStimulusSchema}
+              onResponseChange={setResponseSchema}
+              errors={errors}
+            />
 
             <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/50 overflow-hidden">
               <button
@@ -289,7 +382,7 @@ export function QuestionTypeConfigStep({
                     allowedKinds={draft.stimulus_component_kinds}
                     catalogKinds={stimulusCatalogKinds}
                     rows={draft.stimulus_schema}
-                    onChange={(rows) => setDraft((d) => ({ ...d, stimulus_schema: rows }))}
+                    onChange={setStimulusSchema}
                     error={errors.stimulus_schema}
                     rowErrors={rowErrorMap("stimulus", errors)}
                   />
@@ -299,7 +392,7 @@ export function QuestionTypeConfigStep({
                     allowedKinds={draft.response_component_kinds}
                     catalogKinds={responseCatalogKinds}
                     rows={draft.response_schema}
-                    onChange={(rows) => setDraft((d) => ({ ...d, response_schema: rows }))}
+                    onChange={setResponseSchema}
                     error={errors.response_schema}
                     rowErrors={rowErrorMap("response", errors)}
                   />

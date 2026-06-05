@@ -3,6 +3,7 @@ import type {
   QuestionComponentCatalog,
   QuestionTypeDefinitionCreatePayload,
 } from "../../../types/questionTypeDefinition.types"
+import { defaultLabelForKind } from "../../../lib/schemaSlotLabel"
 
 export type FieldErrorMap = Record<string, string>
 
@@ -99,13 +100,18 @@ export function validateDefinitionSchemas(
     const allowedSet = new Set(allowed)
     const catalogSet = side === "stimulus" ? catalog.stimulus : catalog.response
     rows.forEach((row, i) => {
-      if (!row.kind) errors[`${prefix}_${i}`] = "Kind is required."
+      const rowMessages: string[] = []
+      if (!row.kind) rowMessages.push("Kind is required.")
       else if (allowedSet.size && !allowedSet.has(row.kind)) {
-        errors[`${prefix}_${i}`] = `Kind "${row.kind}" is not in selected ${side} kinds.`
+        rowMessages.push(`Kind "${row.kind}" is not in selected ${side} kinds.`)
       }
       if (catalogSet.size && row.kind && !catalogSet.has(row.kind)) {
-        errors[`${prefix}_${i}`] = `Kind "${row.kind}" is not in the ${side} component catalog.`
+        rowMessages.push(`Kind "${row.kind}" is not in the ${side} component catalog.`)
       }
+      if (!row.label?.trim()) {
+        rowMessages.push("Label is required — this is the field title authors see when creating questions.")
+      }
+      if (rowMessages.length) errors[`${prefix}_${i}`] = rowMessages.join(" ")
     })
   }
 
@@ -181,14 +187,14 @@ export function buildCreatePayload(
     ...r,
     id: r.id.trim(),
     kind: r.kind.trim(),
-    label: r.label?.trim() || undefined,
+    label: r.label?.trim() || defaultLabelForKind(r.kind),
     config: r.config && Object.keys(r.config).length ? r.config : undefined,
   }))
   const response_schema = draft.response_schema.map((r) => ({
     ...r,
     id: r.id.trim(),
     kind: r.kind.trim(),
-    label: r.label?.trim() || undefined,
+    label: r.label?.trim() || defaultLabelForKind(r.kind),
     config: r.config && Object.keys(r.config).length ? r.config : undefined,
   }))
 

@@ -3,17 +3,9 @@ import {
   Bell,
   BellOff,
   AlertTriangle,
-  Info,
-  AlertCircle,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Megaphone,
-  UserPlus,
-  CreditCard,
-  BookOpen,
-  Video,
-  ShieldAlert,
   MailOpen,
   Mail,
   CheckCheck,
@@ -53,6 +45,7 @@ import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { useNavigate } from "react-router-dom"
 import {
+  getNotificationById,
   getNotifications,
   getUnreadCount,
   markAsRead,
@@ -63,6 +56,14 @@ import {
   sendBulkEmail,
   sendBulkPush,
 } from "../../api/notifications.api"
+import { NotificationDetailDialog } from "../../components/notifications/NotificationDetailDialog"
+import {
+  DEFAULT_NOTIFICATION_TYPE_CONFIG,
+  formatNotificationTimestamp,
+  formatNotificationTypeLabel,
+  getNotificationLevelBadge,
+  NOTIFICATION_TYPE_CONFIG,
+} from "../../lib/notificationDisplay"
 import { getRoles } from "../../api/rbac.api"
 import { getTeamMembers } from "../../api/team.api"
 import { getUsers } from "../../api/users.api"
@@ -72,68 +73,6 @@ import type { TeamMember } from "../../types/team.types"
 import type { UserApiDTO } from "../../types/user.types"
 import { toast } from "sonner"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
-
-const TYPE_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
-  announcement: { icon: Megaphone, color: "text-brand-600", bg: "bg-brand-100" },
-  system_alert: { icon: ShieldAlert, color: "text-amber-600", bg: "bg-amber-50" },
-  issue_created: { icon: AlertCircle, color: "text-red-500", bg: "bg-red-50" },
-  issue_status_updated: { icon: CheckCircle2, color: "text-sky-600", bg: "bg-sky-50" },
-  course_created: { icon: BookOpen, color: "text-indigo-600", bg: "bg-indigo-50" },
-  course_enrolled: { icon: BookOpen, color: "text-teal-600", bg: "bg-teal-50" },
-  sub_course_created: { icon: BookOpen, color: "text-violet-600", bg: "bg-violet-50" },
-  video_added: { icon: Video, color: "text-pink-600", bg: "bg-pink-50" },
-  user_deleted: { icon: UserPlus, color: "text-red-600", bg: "bg-red-50" },
-  admin_created: { icon: UserPlus, color: "text-brand-600", bg: "bg-brand-100" },
-  team_member_created: { icon: UserPlus, color: "text-emerald-600", bg: "bg-emerald-50" },
-  subscription_activated: { icon: CreditCard, color: "text-green-600", bg: "bg-green-50" },
-  payment_verified: { icon: CreditCard, color: "text-green-600", bg: "bg-green-50" },
-  knowledge_level_update: { icon: Info, color: "text-sky-600", bg: "bg-sky-50" },
-  assessment_assigned: { icon: BookOpen, color: "text-orange-600", bg: "bg-orange-50" },
-}
-
-const DEFAULT_TYPE_CONFIG = { icon: Bell, color: "text-grayScale-500", bg: "bg-grayScale-100" }
-
-function getLevelBadge(level: string) {
-  switch (level) {
-    case "error":
-    case "critical":
-      return "destructive" as const
-    case "warning":
-      return "warning" as const
-    case "success":
-      return "success" as const
-    case "info":
-    default:
-      return "info" as const
-  }
-}
-
-function formatTimestamp(ts: string) {
-  const date = new Date(ts)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60_000)
-  const diffHr = Math.floor(diffMs / 3_600_000)
-  const diffDay = Math.floor(diffMs / 86_400_000)
-
-  if (diffMin < 1) return "Just now"
-  if (diffMin < 60) return `${diffMin}m ago`
-  if (diffHr < 24) return `${diffHr}h ago`
-  if (diffDay < 7) return `${diffDay}d ago`
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  })
-}
-
-function formatTypeLabel(type: string) {
-  return type
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ")
-}
 
 function digitsOnly(value: string, maxLength: number) {
   return value.replace(/\D/g, "").slice(0, maxLength)
@@ -148,7 +87,7 @@ function NotificationItem({
   onToggleRead: (id: string, currentlyRead: boolean) => void
   toggling: boolean
 }) {
-  const config = TYPE_CONFIG[notification.type] ?? DEFAULT_TYPE_CONFIG
+  const config = NOTIFICATION_TYPE_CONFIG[notification.type] ?? DEFAULT_NOTIFICATION_TYPE_CONFIG
   const Icon = config.icon
 
   return (
@@ -189,7 +128,7 @@ function NotificationItem({
               >
                 {getNotificationTitle(notification)}
               </span>
-              <Badge variant={getLevelBadge(notification.level)} className="text-[10px] px-1.5 py-0">
+              <Badge variant={getNotificationLevelBadge(notification.level)} className="text-[10px] px-1.5 py-0">
                 {notification.level}
               </Badge>
             </div>
@@ -205,7 +144,7 @@ function NotificationItem({
 
           <div className="flex shrink-0 items-center gap-2">
             <span className="text-xs text-grayScale-400">
-              {formatTimestamp(notification.timestamp)}
+              {formatNotificationTimestamp(notification.timestamp)}
             </span>
             <button
               type="button"
@@ -235,7 +174,7 @@ function NotificationItem({
         {/* Meta row */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Badge variant="secondary" className="text-[10px] px-2 py-0">
-            {formatTypeLabel(notification.type)}
+            {formatNotificationTypeLabel(notification.type)}
           </Badge>
           <Badge variant="secondary" className="text-[10px] px-2 py-0">
             {notification.delivery_channel}
@@ -270,7 +209,10 @@ export function NotificationsPage() {
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
+  const [selectedNotificationId, setSelectedNotificationId] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState(false)
 
   const [channelFilter, setChannelFilter] = useState<"all" | "push" | "sms">("all")
   const [activeStatusTab, setActiveStatusTab] = useState<"all" | "read" | "unread">("all")
@@ -525,7 +467,7 @@ export function NotificationsPage() {
       const haystack = [
         getNotificationTitle(n),
         getNotificationMessage(n),
-        formatTypeLabel(n.type),
+        formatNotificationTypeLabel(n.type),
         n.delivery_channel,
         n.level,
       ]
@@ -537,9 +479,42 @@ export function NotificationsPage() {
     return true
   })
 
-  const handleOpenDetail = (notification: Notification) => {
-    setSelectedNotification(notification)
+  const loadNotificationDetail = useCallback(async (id: string) => {
+    setDetailLoading(true)
+    setDetailError(false)
+    setSelectedNotification(null)
+    setSelectedNotificationId(id)
     setDetailOpen(true)
+
+    try {
+      const res = await getNotificationById(id)
+      if (!res.data) {
+        setDetailError(true)
+        toast.error("Notification not found")
+        return
+      }
+      setSelectedNotification(res.data)
+      if (!res.data.is_read) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
+        )
+        setGlobalUnread((prev) => Math.max(0, prev - 1))
+        try {
+          await markAsRead(id)
+        } catch {
+          // list refresh on next load will reconcile
+        }
+      }
+    } catch {
+      setDetailError(true)
+      toast.error("Failed to load notification details")
+    } finally {
+      setDetailLoading(false)
+    }
+  }, [])
+
+  const handleOpenDetail = (notification: Notification) => {
+    void loadNotificationDetail(notification.id)
   }
 
   return (
@@ -756,7 +731,7 @@ export function NotificationsPage() {
                         className="h-8 w-[150px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
                       >
                         <span className="truncate">
-                          {typeFilter === "all" ? "All types" : formatTypeLabel(typeFilter)}
+                          {typeFilter === "all" ? "All types" : formatNotificationTypeLabel(typeFilter)}
                         </span>
                         <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
                       </Button>
@@ -766,7 +741,7 @@ export function NotificationsPage() {
                         <DropdownMenuRadioItem value="all">All types</DropdownMenuRadioItem>
                         {Array.from(new Set(notifications.map((n) => n.type))).map((t) => (
                           <DropdownMenuRadioItem key={t} value={t}>
-                            {formatTypeLabel(t)}
+                            {formatNotificationTypeLabel(t)}
                           </DropdownMenuRadioItem>
                         ))}
                       </DropdownMenuRadioGroup>
@@ -830,7 +805,7 @@ export function NotificationsPage() {
                     </TableRow>
                   ) : (
                     filteredNotifications.map((n) => {
-                      const config = TYPE_CONFIG[n.type] ?? DEFAULT_TYPE_CONFIG
+                      const config = NOTIFICATION_TYPE_CONFIG[n.type] ?? DEFAULT_NOTIFICATION_TYPE_CONFIG
                       const Icon = config.icon
                       const isToggling = togglingIds.has(n.id)
                       return (
@@ -854,7 +829,7 @@ export function NotificationsPage() {
                                 <Icon className="h-4 w-4" />
                               </div>
                               <span className="text-xs font-medium text-grayScale-600">
-                                {formatTypeLabel(n.type)}
+                                {formatNotificationTypeLabel(n.type)}
                               </span>
                             </div>
                           </TableCell>
@@ -880,7 +855,7 @@ export function NotificationsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge
-                              variant={getLevelBadge(n.level)}
+                              variant={getNotificationLevelBadge(n.level)}
                               className="text-[10px] uppercase tracking-wide"
                             >
                               {n.is_read ? "Read" : "Unread"}
@@ -888,7 +863,7 @@ export function NotificationsPage() {
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                             <span className="text-xs text-grayScale-400">
-                              {formatTimestamp(n.timestamp)}
+                              {formatNotificationTimestamp(n.timestamp)}
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
@@ -1005,66 +980,18 @@ export function NotificationsPage() {
         </>
       )}
 
-      {/* Detail dialog */}
-      {selectedNotification && (
-        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                  {(() => {
-                    const Icon =
-                      (TYPE_CONFIG[selectedNotification.type] ?? DEFAULT_TYPE_CONFIG).icon
-                    return <Icon className="h-4 w-4" />
-                  })()}
-                </span>
-                <span className="truncate text-base">
-                  {getNotificationTitle(selectedNotification)}
-                </span>
-              </DialogTitle>
-              <DialogDescription>
-                Sent via {selectedNotification.delivery_channel} ·{" "}
-                {formatTimestamp(selectedNotification.timestamp)}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="rounded-lg bg-grayScale-50 p-3">
-                <p className="text-sm text-grayScale-600">
-                  {getNotificationMessage(selectedNotification)}
-                </p>
-              </div>
-
-              <div className="grid gap-3 text-xs text-grayScale-500 sm:grid-cols-2">
-                <div>
-                  <p className="text-grayScale-400">Type</p>
-                  <p className="mt-0.5 font-medium text-grayScale-700">
-                    {formatTypeLabel(selectedNotification.type)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-grayScale-400">Level</p>
-                  <p className="mt-0.5 font-medium text-grayScale-700">
-                    {selectedNotification.level}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-grayScale-400">Channel</p>
-                  <p className="mt-0.5 font-medium text-grayScale-700 capitalize">
-                    {selectedNotification.delivery_channel}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-grayScale-400">Delivery status</p>
-                  <p className="mt-0.5 font-medium text-grayScale-700">
-                    {selectedNotification.delivery_status}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <NotificationDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        notification={selectedNotification}
+        loading={detailLoading}
+        error={detailError}
+        onRetry={
+          selectedNotificationId
+            ? () => void loadNotificationDetail(selectedNotificationId)
+            : undefined
+        }
+      />
 
       {/* Bulk send dialog */}
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>

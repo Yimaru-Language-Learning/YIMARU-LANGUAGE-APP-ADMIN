@@ -261,6 +261,40 @@ export function extractDefinitionMutationId(res: { data?: unknown }): number | u
 /** @deprecated use extractDefinitionMutationId */
 export const extractCreatedDefinitionId = extractDefinitionMutationId
 
+export interface QuestionTypeDefinitionsListParams {
+  include_system?: boolean
+  status?: string
+  limit?: number
+  offset?: number
+}
+
+export interface QuestionTypeDefinitionsListResult {
+  definitions: QuestionTypeDefinition[]
+  total_count?: number
+}
+
+function parseListTotalCount(body: unknown): number | undefined {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return undefined
+  const o = body as Record<string, unknown>
+
+  const direct = Number(o.total_count ?? o.TotalCount ?? o.totalCount)
+  if (Number.isFinite(direct) && direct >= 0) return direct
+
+  const meta = o.metadata ?? o.Metadata
+  if (meta && typeof meta === "object" && !Array.isArray(meta)) {
+    const m = meta as Record<string, unknown>
+    const fromMeta = Number(m.total_count ?? m.TotalCount ?? m.totalCount)
+    if (Number.isFinite(fromMeta) && fromMeta >= 0) return fromMeta
+  }
+
+  const data = o.data ?? o.Data
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return parseListTotalCount(data)
+  }
+
+  return undefined
+}
+
 export function parseDefinitionsList(payload: unknown): QuestionTypeDefinition[] {
   if (!payload) return []
   if (Array.isArray(payload)) {
@@ -270,30 +304,32 @@ export function parseDefinitionsList(payload: unknown): QuestionTypeDefinition[]
   }
   if (typeof payload === "object" && payload !== null) {
     const o = payload as Record<string, unknown>
-    const inner = o.definitions ?? o.items ?? o.rows ?? o.Definitions
+    const inner =
+      o.question_type_definitions ??
+      o.QuestionTypeDefinitions ??
+      o.definitions ??
+      o.items ??
+      o.rows ??
+      o.Definitions
     if (Array.isArray(inner)) return parseDefinitionsList(inner)
-    if (inner && typeof inner === "object") return parseDefinitionsList(inner)
+    if (inner && typeof inner === "object" && !Array.isArray(inner)) return parseDefinitionsList(inner)
     const data = o.data ?? o.Data
     if (Array.isArray(data)) return parseDefinitionsList(data)
-    if (data && typeof data === "object") {
-      const single = normalizeTypeDefinitionFromApi(data)
-      return single ? [single] : []
-    }
+    if (data && typeof data === "object") return parseDefinitionsList(data)
     const single = normalizeTypeDefinitionFromApi(payload)
     return single ? [single] : []
   }
   return []
 }
 
-export async function getQuestionTypeDefinitions(params?: {
-  include_system?: boolean
-  status?: string
-  limit?: number
-  offset?: number
-}) {
+export async function getQuestionTypeDefinitions(
+  params?: QuestionTypeDefinitionsListParams,
+): Promise<QuestionTypeDefinitionsListResult> {
   const res = await http.get<ApiEnvelope<unknown>>("/questions/type-definitions", { params })
   const raw = unwrapApiPayload(res) ?? res.data
-  return parseDefinitionsList(raw)
+  const definitions = parseDefinitionsList(raw)
+  const total_count = parseListTotalCount(raw) ?? parseListTotalCount(res.data)
+  return total_count != null ? { definitions, total_count } : { definitions }
 }
 
 /**

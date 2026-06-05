@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Bell,
   Eye,
   EyeOff,
   Globe,
@@ -23,7 +22,6 @@ import {
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Select } from "../components/ui/select";
-import { Separator } from "../components/ui/separator";
 import { cn } from "../lib/utils";
 import { SpinnerIcon } from "../components/ui/spinner-icon";
 import { changeTeamMemberPassword } from "../api/team.api";
@@ -41,7 +39,6 @@ type SettingsTab =
   | "app-versions"
   | "profile"
   | "security"
-  | "notifications"
   | "appearance";
 
 const tabs: { id: SettingsTab; label: string; icon: typeof User }[] = [
@@ -49,64 +46,8 @@ const tabs: { id: SettingsTab; label: string; icon: typeof User }[] = [
   { id: "app-versions", label: "App versions", icon: Smartphone },
   { id: "profile", label: "Profile", icon: User },
   { id: "security", label: "Security", icon: Shield },
-  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "appearance", label: "Appearance", icon: Palette },
 ];
-
-function Toggle({
-  enabled,
-  onToggle,
-}: {
-  enabled: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      onClick={onToggle}
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none",
-        enabled ? "bg-brand-500" : "bg-grayScale-200",
-      )}
-    >
-      <span
-        className={cn(
-          "pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform",
-          enabled ? "translate-x-5" : "translate-x-0.5",
-        )}
-      />
-    </button>
-  );
-}
-
-function SettingRow({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon: any;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-[6px] px-3 py-4 transition-colors hover:bg-grayScale-100/50">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-grayScale-100 text-grayScale-400">
-          <Icon className="h-4 w-4" />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-grayScale-800">{title}</p>
-          <p className="mt-0.5 text-xs text-grayScale-500">{description}</p>
-        </div>
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  );
-}
 
 function ProfileTab({ profile }: { profile: UserProfileData }) {
   const [firstName, setFirstName] = useState(profile.first_name);
@@ -623,7 +564,6 @@ export function SettingsPage() {
           {activeTab === "app-versions" && <AppVersionsTab />}
           {activeTab === "profile" && <ProfileTab profile={profile} />}
           {activeTab === "security" && <SecurityTab memberId={profile.id} />}
-          {activeTab === "notifications" && <NotificationsTab />}
           {activeTab === "appearance" && <AppearanceTab />}
         </main>
       </div>

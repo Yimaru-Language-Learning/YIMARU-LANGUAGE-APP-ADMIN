@@ -4,6 +4,11 @@ import { Input } from "../../../../components/ui/input"
 import { Textarea } from "../../../../components/ui/textarea"
 import { Select } from "../../../../components/ui/select"
 import type { DynamicElementDefinition } from "../../../../types/questionTypeDefinition.types"
+import {
+  defaultLabelForKind,
+  getResponseKindPresentation,
+  getStimulusKindPresentation,
+} from "./componentKindUi"
 
 type Side = "stimulus" | "response"
 
@@ -23,7 +28,7 @@ function emptyRow(allowedKinds: string[]): DynamicElementDefinition {
   return {
     id: "",
     kind: first,
-    label: "",
+    label: first ? defaultLabelForKind(first) : "",
     required: true,
     config: undefined,
   }
@@ -43,9 +48,23 @@ export function SchemaBuilderSection({
     allowedKinds.length > 0 ? allowedKinds : catalogKinds.length > 0 ? catalogKinds : []
 
   const updateRow = (index: number, patch: Partial<DynamicElementDefinition>) => {
-    const next = rows.map((r, i) => (i === index ? { ...r, ...patch } : r))
+    const next = rows.map((r, i) => {
+      if (i !== index) return r
+      const merged = { ...r, ...patch }
+      if (patch.kind && patch.kind !== r.kind) {
+        const priorDefault = defaultLabelForKind(r.kind)
+        const current = (r.label ?? "").trim()
+        if (!current || current === priorDefault) {
+          merged.label = defaultLabelForKind(patch.kind)
+        }
+      }
+      return merged
+    })
     onChange(next)
   }
+
+  const kindPresentation = (kind: string) =>
+    side === "stimulus" ? getStimulusKindPresentation(kind) : getResponseKindPresentation(kind)
 
   const commitConfigString = (index: number, raw: string) => {
     const trimmed = raw.trim()
@@ -73,9 +92,8 @@ export function SchemaBuilderSection({
         <div>
           <h3 className="text-[16px] font-bold text-grayScale-900">{title}</h3>
           <p className="text-[13px] text-grayScale-500 mt-0.5">
-            Each row defines one element in the{" "}
-            {side === "stimulus" ? "stimulus" : "response"} schema (id, kind, label, required, optional JSON
-            config).
+            Fine-tune slot ids, labels, required flags, and optional config. Labels are the field titles
+            authors see when creating questions.
           </p>
         </div>
         <Button
@@ -145,7 +163,7 @@ export function SchemaBuilderSection({
                 >
                   {kindOptions.map((k) => (
                     <option key={k} value={k}>
-                      {k}
+                      {kindPresentation(k).label} ({k})
                     </option>
                   ))}
                 </Select>
@@ -154,11 +172,13 @@ export function SchemaBuilderSection({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[12px] font-semibold text-grayScale-600">Label</label>
+                <label className="text-[12px] font-semibold text-grayScale-600">
+                  Field label <span className="text-red-500">*</span>
+                </label>
                 <Input
                   value={row.label ?? ""}
                   onChange={(e) => updateRow(index, { label: e.target.value })}
-                  placeholder="Author-facing label"
+                  placeholder={defaultLabelForKind(row.kind)}
                   className="h-10 bg-white"
                 />
               </div>

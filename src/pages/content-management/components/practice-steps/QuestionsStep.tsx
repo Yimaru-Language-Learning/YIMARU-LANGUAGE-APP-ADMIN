@@ -100,9 +100,9 @@ export function QuestionsStep({
       return (
         <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
           <p className="text-xs leading-snug text-grayScale-600">
-            <span className="font-medium text-grayScale-800">Image / Audio / PDF</span> use upload or URL.{" "}
-            <span className="font-medium text-grayScale-800">Table</span> uses the visual table builder. Other
-            slots: text or structured JSON where noted.
+            <span className="font-medium text-grayScale-800">Image, audio, and PDF</span> use upload or URL.{" "}
+            <span className="font-medium text-grayScale-800">Table</span> uses the visual table builder. Timer and
+            prep-time slots use seconds. Other slots use text or structured JSON where noted.
           </p>
           {def.stimulus_schema.length > 0 ? (
             <div className="space-y-2">

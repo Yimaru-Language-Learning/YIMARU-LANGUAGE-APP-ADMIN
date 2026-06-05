@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Layers, Shield } from "lucide-react"
+import { Edit2, Sparkles, Trash2, Layers, Shield } from "lucide-react"
 import { Badge } from "../../../components/ui/badge"
 import { Card } from "../../../components/ui/card"
 import { Button } from "../../../components/ui/button"
@@ -42,7 +42,12 @@ export function QuestionTypeCard({
               <Shield className="h-3 w-3" />
               System
             </Badge>
-          ) : null}
+          ) : (
+            <Badge className="shrink-0 border-none bg-amber-50 text-amber-800 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              Custom
+            </Badge>
+          )}
         </div>
 
         <p className="text-[12px] font-mono text-grayScale-500 break-all">#{id} · {definitionKey}</p>

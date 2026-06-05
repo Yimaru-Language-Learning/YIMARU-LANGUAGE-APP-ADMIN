@@ -20,35 +20,35 @@ import {
   Volume2,
 } from "lucide-react"
 
-/** Human label for API kind codes; unknown kinds fall back to title-cased code. */
+import { defaultLabelForKind, humanizeKind, slotLabel } from "../../../../lib/schemaSlotLabel"
+
+export { defaultLabelForKind, humanizeKind, slotLabel }
+
 const STIMULUS_LABELS: Record<string, string> = {
-  QUESTION_TEXT: "Question Text",
-  PREP_TIME: "Prep Time",
-  INSTRUCTION: "Instruction",
-  AUDIO_PROMPT: "Audio Prompt",
-  AUDIO_CLIP: "Audio Clip",
-  TEXT_PASSAGE: "Text Passage",
-  IMAGE: "Image",
-  CHART: "Chart",
-  MATCHING_INPUTS: "Matching Inputs",
-  SELECT_MISSING_WORDS: "Select Missing Words",
-  TABLE: "Table",
-  FLOW_CHART: "Flow Chart",
-  PDF_ATTACHMENT: "PDF Attachment",
+  QUESTION_TEXT: defaultLabelForKind("QUESTION_TEXT"),
+  PREP_TIME: defaultLabelForKind("PREP_TIME"),
+  INSTRUCTION: defaultLabelForKind("INSTRUCTION"),
+  AUDIO_PROMPT: defaultLabelForKind("AUDIO_PROMPT"),
+  TEXT_PASSAGE: defaultLabelForKind("TEXT_PASSAGE"),
+  IMAGE: defaultLabelForKind("IMAGE"),
+  MATCHING_INPUTS: defaultLabelForKind("MATCHING_INPUTS"),
+  SELECT_MISSING_WORDS: defaultLabelForKind("SELECT_MISSING_WORDS"),
+  TABLE: defaultLabelForKind("TABLE"),
+  PDF_ATTACHMENT: defaultLabelForKind("PDF_ATTACHMENT"),
 }
 
 const RESPONSE_LABELS: Record<string, string> = {
-  AUDIO_RESPONSE: "Audio Response",
-  TEXT_INPUT: "Text Input",
-  SHORT_ANSWER: "Short Answer",
-  MULTIPLE_CHOICE: "Multiple Choice",
-  OPTION: "Options",
-  ANSWER_TIMER: "Answer Timer",
-  SELECT_MISSING_WORDS: "Select Missing Words",
-  PDF_UPLOAD: "PDF Upload",
-  MATCHING_ANSWER: "Matching Answer",
-  LABEL_SELECTION: "Label Selection",
-  SEQUENCE_ORDER: "Sequence Order",
+  AUDIO_RESPONSE: defaultLabelForKind("AUDIO_RESPONSE"),
+  TEXT_INPUT: defaultLabelForKind("TEXT_INPUT"),
+  SHORT_ANSWER: defaultLabelForKind("SHORT_ANSWER"),
+  MULTIPLE_CHOICE: defaultLabelForKind("MULTIPLE_CHOICE"),
+  OPTION: defaultLabelForKind("OPTION"),
+  ANSWER_TIMER: defaultLabelForKind("ANSWER_TIMER"),
+  SELECT_MISSING_WORDS: defaultLabelForKind("SELECT_MISSING_WORDS"),
+  PDF_UPLOAD: defaultLabelForKind("PDF_UPLOAD"),
+  MATCHING_ANSWER: defaultLabelForKind("MATCHING_ANSWER"),
+  LABEL_SELECTION: defaultLabelForKind("LABEL_SELECTION"),
+  SEQUENCE_ORDER: defaultLabelForKind("SEQUENCE_ORDER"),
 }
 
 /** Legacy screenshot labels → map to closest API kind for display only (same code path). */
@@ -60,11 +60,9 @@ const STIMULUS_ICONS: Record<string, LucideIcon> = {
   AUDIO_CLIP: Volume2,
   TEXT_PASSAGE: FileText,
   IMAGE: ImageIcon,
-  CHART: BarChart3,
   MATCHING_INPUTS: Link2,
   SELECT_MISSING_WORDS: ListTodo,
   TABLE: TableIcon,
-  FLOW_CHART: GitBranch,
   PDF_ATTACHMENT: FileUp,
 }
 
@@ -83,13 +81,6 @@ const RESPONSE_ICONS: Record<string, LucideIcon> = {
 }
 
 const DEFAULT_ICON = FileText
-
-function humanizeKind(kind: string): string {
-  return kind
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
 
 export function getStimulusKindPresentation(kind: string): { label: string; Icon: LucideIcon } {
   return {

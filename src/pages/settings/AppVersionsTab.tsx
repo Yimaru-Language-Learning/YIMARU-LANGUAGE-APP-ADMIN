@@ -76,7 +76,7 @@ export function AppVersionsTab() {
     setLoading(true)
     setError(false)
     try {
-      const res = await getAppVersions({ limit: PAGE_SIZE, offset })
+      const res = await getAppVersions({ limit: pageSize, offset })
       setVersions(res.data.versions)
       setTotalCount(res.data.total_count)
     } catch (e) {
@@ -187,7 +187,7 @@ export function AppVersionsTab() {
               <TabletSmartphone className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-grayScale-500">Total (this page)</p>
+              <p className="text-xs font-medium text-grayScale-500">Total versions</p>
               <p className="text-2xl font-bold text-grayScale-900">{totalCount}</p>
             </div>
           </CardContent>

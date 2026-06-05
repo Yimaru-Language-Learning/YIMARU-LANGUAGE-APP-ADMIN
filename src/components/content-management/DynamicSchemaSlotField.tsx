@@ -17,6 +17,7 @@ import { SpinnerIcon } from "../ui/spinner-icon"
 import { cn } from "../../lib/utils"
 import { ResolvedImage } from "../media/ResolvedImage"
 import { DynamicTableBuilder } from "./DynamicTableBuilder"
+import { slotLabel } from "../../lib/schemaSlotLabel"
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024
@@ -30,13 +31,41 @@ export interface DynamicSchemaSlotRow {
   required?: boolean
 }
 
-function slotMediaMode(kind: string): "image" | "audio" | "pdf" | "table" | "text" {
+function slotMediaMode(
+  kind: string,
+): "image" | "audio" | "pdf" | "table" | "seconds" | "text" {
   const u = kind.trim().toUpperCase()
   if (u === "IMAGE") return "image"
   if (u === "TABLE") return "table"
   if (u === "PDF_ATTACHMENT" || u === "PDF_UPLOAD") return "pdf"
-  if (u.startsWith("AUDIO")) return "audio"
+  if (u === "PREP_TIME" || u === "ANSWER_TIMER") return "seconds"
+  if (u === "AUDIO_PROMPT" || u === "AUDIO_CLIP" || u === "AUDIO_RESPONSE") return "audio"
   return "text"
+}
+
+function readSecondsFieldValue(raw: string): string {
+  const t = raw.trim()
+  if (!t) return ""
+  if (/^\d+$/.test(t)) return t
+  try {
+    const parsed = JSON.parse(t) as unknown
+    if (typeof parsed === "number" && Number.isFinite(parsed)) return String(parsed)
+    if (parsed && typeof parsed === "object" && "seconds" in parsed) {
+      const seconds = (parsed as { seconds?: unknown }).seconds
+      if (typeof seconds === "number" && Number.isFinite(seconds)) return String(seconds)
+    }
+  } catch {
+    /* keep raw */
+  }
+  return t
+}
+
+function writeSecondsFieldValue(raw: string): string {
+  const t = raw.trim()
+  if (!t) return ""
+  const n = Number.parseInt(t, 10)
+  if (!Number.isFinite(n) || n < 0) return ""
+  return JSON.stringify({ seconds: n })
 }
 
 function isHttpUrl(s: string): boolean {
@@ -141,7 +170,9 @@ function DynamicImageSlot({
     <div className="space-y-2">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <label className="text-sm font-medium text-grayScale-700">{slotLabel}</label>
-        <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
+        {slotMeta ? (
+          <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
+        ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,36%)] lg:items-start lg:gap-4">
         <div
@@ -411,7 +442,9 @@ function DynamicAudioSlot({
     <div className="space-y-2">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <label className="text-sm font-medium text-grayScale-700">{slotLabel}</label>
-        <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
+        {slotMeta ? (
+          <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
+        ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,36%)] lg:items-start lg:gap-4">
         <div className="min-h-[100px] space-y-2 rounded-lg border border-grayScale-200 bg-grayScale-50/40 p-2.5 lg:min-h-[140px]">
@@ -590,7 +623,9 @@ function DynamicPdfSlot({
     <div className="space-y-2">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <label className="text-sm font-medium text-grayScale-700">{slotLabel}</label>
-        <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
+        {slotMeta ? (
+          <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
+        ) : null}
       </div>
       <input
         ref={fileInputRef}
@@ -645,19 +680,7 @@ export function DynamicSchemaSlotField({
   disabled = false,
 }: DynamicSchemaSlotFieldProps) {
   const mode = slotMediaMode(row.kind)
-  const baseLabel =
-    row.label?.trim() ||
-    (mode === "image"
-      ? "Image"
-      : mode === "audio"
-        ? "Audio"
-        : mode === "pdf"
-          ? "PDF"
-          : mode === "table"
-            ? "Table"
-            : row.kind)
-  const slotLabel = `${baseLabel}${row.required ? " *" : ""}`
-  const slotMeta = `${row.id} · ${row.kind}`
+  const fieldLabel = `${slotLabel(row)}${row.required ? " *" : ""}`
 
   if (mode === "table") {
     return (
@@ -665,19 +688,35 @@ export function DynamicSchemaSlotField({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        slotLabel={slotLabel}
-        slotMeta={slotMeta}
+        slotLabel={fieldLabel}
+        slotMeta=""
       />
+    )
+  }
+
+  if (mode === "seconds") {
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-grayScale-700">{fieldLabel}</label>
+        <Input
+          type="number"
+          min={0}
+          step={1}
+          value={readSecondsFieldValue(value)}
+          onChange={(e) => onChange(writeSecondsFieldValue(e.target.value))}
+          placeholder="e.g. 30"
+          className="h-11 max-w-[200px] rounded-lg border-grayScale-200"
+          disabled={disabled}
+        />
+        <p className="text-[11px] text-grayScale-500">Stored as seconds (e.g. {`{"seconds": 30}`}).</p>
+      </div>
     )
   }
 
   if (mode === "text") {
     return (
       <div className="space-y-2">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <label className="text-sm font-medium text-grayScale-700">{slotLabel}</label>
-          <span className="text-[11px] font-mono text-grayScale-500">{slotMeta}</span>
-        </div>
+        <label className="text-sm font-medium text-grayScale-700">{fieldLabel}</label>
         <Textarea
           rows={3}
           value={value}
@@ -700,8 +739,8 @@ export function DynamicSchemaSlotField({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        slotLabel={slotLabel}
-        slotMeta={slotMeta}
+        slotLabel={fieldLabel}
+        slotMeta=""
       />
     )
   }
@@ -712,8 +751,8 @@ export function DynamicSchemaSlotField({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        slotLabel={slotLabel}
-        slotMeta={slotMeta}
+        slotLabel={fieldLabel}
+        slotMeta=""
       />
     )
   }
@@ -723,8 +762,8 @@ export function DynamicSchemaSlotField({
       value={value}
       onChange={onChange}
       disabled={disabled}
-      slotLabel={slotLabel}
-      slotMeta={slotMeta}
+      slotLabel={fieldLabel}
+      slotMeta=""
     />
   )
 }

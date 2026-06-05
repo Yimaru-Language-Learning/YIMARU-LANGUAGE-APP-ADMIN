@@ -17,6 +17,7 @@ import {
   inferRuntimeQuestionType,
 } from "../../lib/questionTypeDefinitionValidation"
 import { DefinitionRuntimeHint } from "./DefinitionRuntimeHint"
+import { slotLabel } from "./componentKindUi"
 
 interface QuestionTypeReviewPublishStepProps {
   draft: QuestionTypeDefinitionCreatePayload
@@ -218,9 +219,11 @@ function SchemaSlotSummary({
         <ul className="mt-2 space-y-1.5 text-sm">
           {rows.map((r) => (
             <li key={`${r.kind}-${r.id}`} className="flex flex-wrap gap-x-2 text-grayScale-800">
-              <span className="font-mono text-[12px] text-grayScale-600">{r.id}</span>
+              <span className="font-medium">{slotLabel(r)}</span>
               <span className="text-grayScale-400">·</span>
-              <span>{r.kind}</span>
+              <span className="font-mono text-[11px] text-grayScale-500">{r.id}</span>
+              <span className="text-grayScale-400">·</span>
+              <span className="text-grayScale-600">{r.kind}</span>
               {r.required ? (
                 <span className="text-[10px] font-bold uppercase text-brand-600">required</span>
               ) : null}

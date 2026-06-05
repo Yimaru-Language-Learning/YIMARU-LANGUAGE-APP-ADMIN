@@ -150,7 +150,7 @@ export function AddPracticeFlow() {
       setDefinitionsLoading(true);
       setDefinitionsError(null);
       try {
-        const list = await getQuestionTypeDefinitions({
+        const { definitions: list } = await getQuestionTypeDefinitions({
           include_system: true,
           status: "ACTIVE",
         });

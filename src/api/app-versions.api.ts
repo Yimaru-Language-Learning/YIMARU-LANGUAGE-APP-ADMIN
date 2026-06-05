@@ -1,4 +1,5 @@
 import http from "./http"
+import { DEFAULT_TABLE_PAGE_SIZE } from "../lib/tablePagination"
 import type {
   AppVersion,
   AppVersionMutationResponse,
@@ -77,7 +78,7 @@ export type GetAppVersionsParams = {
 }
 
 export const getAppVersions = (params: GetAppVersionsParams = {}) => {
-  const limit = params.limit ?? 20
+  const limit = params.limit ?? DEFAULT_TABLE_PAGE_SIZE
   const offset = params.offset ?? 0
   return http
     .get<AppVersionsListResponse>("/admin/app-versions", { params: { limit, offset } })

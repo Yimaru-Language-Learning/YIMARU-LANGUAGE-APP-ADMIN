@@ -812,9 +812,13 @@ export function PracticeQuestionEditorFields({
                   >
                     <DynamicSchemaSlotField
                       row={row}
+                      side="stimulus"
                       value={value.dynamicFieldValues[`stimulus:${row.id}`] ?? ""}
                       onChange={(next) => setDynamicField(`stimulus:${row.id}`, next)}
                       disabled={controlsDisabled}
+                      allFieldValues={value.dynamicFieldValues}
+                      stimulusSchema={value.dynamicStimulusRows}
+                      responseSchema={value.dynamicResponseRows}
                     />
                   </div>
                 ))}
@@ -830,9 +834,13 @@ export function PracticeQuestionEditorFields({
                   >
                     <DynamicSchemaSlotField
                       row={row}
+                      side="response"
                       value={value.dynamicFieldValues[`response:${row.id}`] ?? ""}
                       onChange={(next) => setDynamicField(`response:${row.id}`, next)}
                       disabled={controlsDisabled}
+                      allFieldValues={value.dynamicFieldValues}
+                      stimulusSchema={value.dynamicStimulusRows}
+                      responseSchema={value.dynamicResponseRows}
                     />
                   </div>
                 ))}

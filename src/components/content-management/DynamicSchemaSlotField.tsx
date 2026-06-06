@@ -6,7 +6,7 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react"
-import { CloudUpload, FileText, Image as ImageIcon, Mic, Pause, Play, X } from "lucide-react"
+import { CloudUpload, FileText, Image as ImageIcon, Mic, Pause, Play, Plus, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { uploadAudioFile, uploadImageFile, uploadPdfFile } from "../../api/files.api"
 import { resolveMediaPreviewUrl } from "../../lib/practiceMedia"
@@ -18,6 +18,30 @@ import { cn } from "../../lib/utils"
 import { ResolvedImage } from "../media/ResolvedImage"
 import { DynamicTableBuilder } from "./DynamicTableBuilder"
 import { slotLabel } from "../../lib/schemaSlotLabel"
+import {
+  addMultipleChoiceOption,
+  parseMultipleChoiceSlotValue,
+  removeMultipleChoiceOption,
+  serializeMultipleChoiceSlotValue,
+  MULTIPLE_CHOICE_MIN_OPTIONS,
+  type MultipleChoiceSlotValue,
+} from "../../lib/multipleChoiceSlotValue"
+import {
+  DynamicMatchingAnswerSlot,
+  DynamicMatchingInputsSlot,
+} from "./DynamicMatchingSlotField"
+import {
+  findMatchingInputsInFieldValues,
+  type MatchingInputsSlotValue,
+} from "../../lib/matchingSlotValue"
+import {
+  DynamicSelectMissingWordsAnswerSlot,
+  DynamicSelectMissingWordsStimulusSlot,
+} from "./DynamicSelectMissingWordsSlotField"
+import {
+  findSelectMissingWordsStimulusInFieldValues,
+  type SelectMissingWordsStimulusValue,
+} from "../../lib/selectMissingWordsSlotValue"
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024
@@ -31,12 +55,49 @@ export interface DynamicSchemaSlotRow {
   required?: boolean
 }
 
+function isMultipleChoiceKind(kind: string): boolean {
+  const u = kind.trim().toUpperCase()
+  return u === "MULTIPLE_CHOICE" || u === "OPTION"
+}
+
+function isMatchingInputsKind(kind: string): boolean {
+  return kind.trim().toUpperCase() === "MATCHING_INPUTS"
+}
+
+function isMatchingAnswerKind(kind: string): boolean {
+  return kind.trim().toUpperCase() === "MATCHING_ANSWER"
+}
+
+function isSelectMissingWordsKind(kind: string): boolean {
+  return kind.trim().toUpperCase() === "SELECT_MISSING_WORDS"
+}
+
 function slotMediaMode(
   kind: string,
-): "image" | "audio" | "pdf" | "table" | "seconds" | "text" {
+  side: "stimulus" | "response",
+):
+  | "image"
+  | "audio"
+  | "pdf"
+  | "table"
+  | "seconds"
+  | "text"
+  | "multiple_choice"
+  | "matching_inputs"
+  | "matching_answer"
+  | "select_missing_words_stimulus"
+  | "select_missing_words_answer" {
   const u = kind.trim().toUpperCase()
   if (u === "IMAGE") return "image"
   if (u === "TABLE") return "table"
+  if (isMultipleChoiceKind(kind)) return "multiple_choice"
+  if (isMatchingInputsKind(kind)) return "matching_inputs"
+  if (isMatchingAnswerKind(kind)) return "matching_answer"
+  if (isSelectMissingWordsKind(kind)) {
+    return side === "response"
+      ? "select_missing_words_answer"
+      : "select_missing_words_stimulus"
+  }
   if (u === "PDF_ATTACHMENT" || u === "PDF_UPLOAD") return "pdf"
   if (u === "PREP_TIME" || u === "ANSWER_TIMER") return "seconds"
   if (u === "AUDIO_PROMPT" || u === "AUDIO_CLIP" || u === "AUDIO_RESPONSE") return "audio"
@@ -567,11 +628,114 @@ function DynamicAudioSlot({
   )
 }
 
+function DynamicMultipleChoiceSlot({
+  value,
+  onChange,
+  disabled,
+  slotLabel: label,
+}: {
+  value: string
+  onChange: (next: string) => void
+  disabled: boolean
+  slotLabel: string
+}) {
+  const parsed = parseMultipleChoiceSlotValue(value)
+
+  const updateValue = (next: MultipleChoiceSlotValue) => {
+    onChange(serializeMultipleChoiceSlotValue(next))
+  }
+
+  const updateOptions = (next: MultipleChoiceSlotValue["options"]) => {
+    updateValue({ options: next })
+  }
+
+  const canRemove = parsed.options.length > MULTIPLE_CHOICE_MIN_OPTIONS
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <label className="text-sm font-medium text-grayScale-700">{label}</label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          className="h-8 gap-1.5 rounded-lg border-brand-200 text-brand-600 hover:bg-brand-50"
+          onClick={() => updateValue(addMultipleChoiceOption(parsed))}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add option
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {parsed.options.map((option, index) => (
+          <div
+            key={`${option.id}-${index}`}
+            className="flex flex-wrap items-center gap-2 sm:flex-nowrap"
+          >
+            <span className="w-6 shrink-0 text-xs font-mono text-grayScale-400">
+              {option.id}
+            </span>
+            <Input
+              value={option.text}
+              onChange={(e) => {
+                const options = [...parsed.options]
+                options[index] = { ...options[index], text: e.target.value }
+                updateOptions(options)
+              }}
+              className="min-w-0 flex-1 rounded-lg border-grayScale-200"
+              placeholder={`Choice ${index + 1}`}
+              disabled={disabled}
+            />
+            <label className="flex shrink-0 items-center gap-2 text-sm text-grayScale-600">
+              <input
+                type="radio"
+                name={`mcq-correct-${label}`}
+                checked={option.is_correct}
+                disabled={disabled}
+                onChange={() => {
+                  updateOptions(
+                    parsed.options.map((opt, i) => ({
+                      ...opt,
+                      is_correct: i === index,
+                    })),
+                  )
+                }}
+              />
+              Correct
+            </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={disabled || !canRemove}
+              className="h-8 w-8 shrink-0 text-grayScale-400 hover:text-red-600 disabled:opacity-40"
+              aria-label={`Remove choice ${option.id}`}
+              onClick={() =>
+                updateValue(removeMultipleChoiceOption(parsed, index))
+              }
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-grayScale-500">
+        Minimum {MULTIPLE_CHOICE_MIN_OPTIONS} options. Mark one as correct.
+      </p>
+    </div>
+  )
+}
+
 export interface DynamicSchemaSlotFieldProps {
   row: DynamicSchemaSlotRow
   value: string
   onChange: (next: string) => void
   disabled?: boolean
+  side: "stimulus" | "response"
+  allFieldValues?: Record<string, string>
+  stimulusSchema?: DynamicSchemaSlotRow[]
+  responseSchema?: DynamicSchemaSlotRow[]
 }
 
 function DynamicPdfSlot({
@@ -678,9 +842,28 @@ export function DynamicSchemaSlotField({
   value,
   onChange,
   disabled = false,
+  side,
+  allFieldValues,
+  stimulusSchema = [],
+  responseSchema = [],
 }: DynamicSchemaSlotFieldProps) {
-  const mode = slotMediaMode(row.kind)
+  const mode = slotMediaMode(row.kind, side)
   const fieldLabel = `${slotLabel(row)}${row.required ? " *" : ""}`
+  const matchingInputs: MatchingInputsSlotValue | null =
+    mode === "matching_answer" && allFieldValues
+      ? findMatchingInputsInFieldValues(
+          allFieldValues,
+          stimulusSchema,
+          responseSchema,
+        )
+      : null
+  const clozeStimulus: SelectMissingWordsStimulusValue | null =
+    mode === "select_missing_words_answer" && allFieldValues
+      ? findSelectMissingWordsStimulusInFieldValues(
+          allFieldValues,
+          stimulusSchema,
+        )
+      : null
 
   if (mode === "table") {
     return (
@@ -710,6 +893,63 @@ export function DynamicSchemaSlotField({
         />
         <p className="text-[11px] text-grayScale-500">Stored as seconds (e.g. {`{"seconds": 30}`}).</p>
       </div>
+    )
+  }
+
+  if (mode === "multiple_choice") {
+    return (
+      <DynamicMultipleChoiceSlot
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={fieldLabel}
+      />
+    )
+  }
+
+  if (mode === "matching_inputs") {
+    return (
+      <DynamicMatchingInputsSlot
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={fieldLabel}
+      />
+    )
+  }
+
+  if (mode === "matching_answer") {
+    return (
+      <DynamicMatchingAnswerSlot
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={fieldLabel}
+        matchingInputs={matchingInputs}
+      />
+    )
+  }
+
+  if (mode === "select_missing_words_stimulus") {
+    return (
+      <DynamicSelectMissingWordsStimulusSlot
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={fieldLabel}
+      />
+    )
+  }
+
+  if (mode === "select_missing_words_answer") {
+    return (
+      <DynamicSelectMissingWordsAnswerSlot
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={fieldLabel}
+        stimulus={clozeStimulus}
+      />
     )
   }
 

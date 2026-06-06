@@ -114,10 +114,14 @@ export function QuestionsStep({
                 >
                   <DynamicSchemaSlotField
                     row={row}
+                    side="stimulus"
                     value={q.dynamicFieldValues?.[`stimulus:${row.id}`] ?? ""}
                     onChange={(next) =>
                       setDynamicValue(i, `stimulus:${row.id}`, next)
                     }
+                    allFieldValues={q.dynamicFieldValues}
+                    stimulusSchema={def.stimulus_schema}
+                    responseSchema={def.response_schema}
                   />
                 </div>
               ))}
@@ -133,10 +137,14 @@ export function QuestionsStep({
                 >
                   <DynamicSchemaSlotField
                     row={row}
+                    side="response"
                     value={q.dynamicFieldValues?.[`response:${row.id}`] ?? ""}
                     onChange={(next) =>
                       setDynamicValue(i, `response:${row.id}`, next)
                     }
+                    allFieldValues={q.dynamicFieldValues}
+                    stimulusSchema={def.stimulus_schema}
+                    responseSchema={def.response_schema}
                   />
                 </div>
               ))}
@@ -464,7 +472,7 @@ export function QuestionsStep({
               dynamicFieldValues: { ...(row.dynamicFieldValues ?? {}) },
               mcqOptions: (row.mcqOptions ?? []).map(
                 (o: { text?: string; isCorrect?: boolean }) => ({
-                  option_text: String(o.text ?? "").trim(),
+                  option_text: String(o.text ?? ""),
                   is_correct: Boolean(o.isCorrect),
                 }),
               ),

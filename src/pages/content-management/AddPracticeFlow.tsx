@@ -295,7 +295,7 @@ export function AddPracticeFlow() {
         dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
         mcqOptions: (q.mcqOptions ?? []).map(
           (o: { text?: string; isCorrect?: boolean }) => ({
-            option_text: String(o.text ?? "").trim(),
+            option_text: String(o.text ?? ""),
             is_correct: Boolean(o.isCorrect),
           }),
         ),

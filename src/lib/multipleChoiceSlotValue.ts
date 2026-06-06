@@ -10,8 +10,10 @@ export interface MultipleChoiceSlotValue {
 
 const DEFAULT_OPTION_IDS = ["a", "b", "c", "d", "e", "f", "g", "h"] as const
 
+export const MULTIPLE_CHOICE_MIN_OPTIONS = 2
+
 export function defaultMultipleChoiceSlotValue(
-  count = 4,
+  count = MULTIPLE_CHOICE_MIN_OPTIONS,
 ): MultipleChoiceSlotValue {
   return {
     options: Array.from({ length: count }, (_, index) => ({
@@ -28,6 +30,70 @@ export function serializeMultipleChoiceSlotValue(
   return JSON.stringify(value)
 }
 
+export function nextMultipleChoiceOptionId(
+  existing: MultipleChoiceOptionValue[],
+): string {
+  const used = new Set(existing.map((option) => option.id))
+  for (const id of DEFAULT_OPTION_IDS) {
+    if (!used.has(id)) return id
+  }
+  return String(existing.length + 1)
+}
+
+export function addMultipleChoiceOption(
+  value: MultipleChoiceSlotValue,
+): MultipleChoiceSlotValue {
+  return {
+    options: [
+      ...value.options,
+      {
+        id: nextMultipleChoiceOptionId(value.options),
+        text: "",
+        is_correct: false,
+      },
+    ],
+  }
+}
+
+export function removeMultipleChoiceOption(
+  value: MultipleChoiceSlotValue,
+  index: number,
+): MultipleChoiceSlotValue {
+  if (value.options.length <= MULTIPLE_CHOICE_MIN_OPTIONS) return value
+  const removed = value.options[index]
+  let options = value.options.filter((_, i) => i !== index)
+  if (
+    removed?.is_correct &&
+    options.length > 0 &&
+    !options.some((option) => option.is_correct)
+  ) {
+    options = options.map((option, i) => ({
+      ...option,
+      is_correct: i === 0,
+    }))
+  }
+  return { options }
+}
+
+export function ensureMinMultipleChoiceOptions(
+  value: MultipleChoiceSlotValue,
+): MultipleChoiceSlotValue {
+  if (value.options.length >= MULTIPLE_CHOICE_MIN_OPTIONS) return value
+  const options = [...value.options]
+  while (options.length < MULTIPLE_CHOICE_MIN_OPTIONS) {
+    options.push({
+      id: nextMultipleChoiceOptionId(options),
+      text: "",
+      is_correct: options.length === 0,
+    })
+  }
+  return { options }
+}
+
+export function multipleChoiceOptionHasValue(text: string): boolean {
+  return text.length > 0
+}
+
 export function parseMultipleChoiceSlotValue(
   raw: string | undefined,
 ): MultipleChoiceSlotValue {
@@ -35,7 +101,7 @@ export function parseMultipleChoiceSlotValue(
   if (!trimmed) return defaultMultipleChoiceSlotValue()
   try {
     const parsed = JSON.parse(trimmed) as unknown
-    return normalizeMultipleChoiceValue(parsed)
+    return ensureMinMultipleChoiceOptions(normalizeMultipleChoiceValue(parsed))
   } catch {
     return defaultMultipleChoiceSlotValue()
   }
@@ -45,15 +111,15 @@ export function normalizeMultipleChoiceValue(
   raw: unknown,
   mcqOptions?: { option_text?: string; text?: string; is_correct?: boolean; isCorrect?: boolean }[],
 ): MultipleChoiceSlotValue {
-  if (mcqOptions?.some((o) => (o.option_text ?? o.text ?? "").trim())) {
+  if (mcqOptions?.some((o) => multipleChoiceOptionHasValue(o.option_text ?? o.text ?? ""))) {
     return {
       options: mcqOptions
         .map((option, index) => ({
           id: DEFAULT_OPTION_IDS[index] ?? String(index + 1),
-          text: (option.option_text ?? option.text ?? "").trim(),
+          text: option.option_text ?? option.text ?? "",
           is_correct: Boolean(option.is_correct ?? option.isCorrect),
         }))
-        .filter((option) => option.text),
+        .filter((option) => multipleChoiceOptionHasValue(option.text)),
     }
   }
 
@@ -95,13 +161,13 @@ function normalizeMultipleChoiceOption(
     const record = raw as Record<string, unknown>
     return {
       id: String(record.id ?? DEFAULT_OPTION_IDS[index] ?? index + 1),
-      text: String(record.text ?? record.option_text ?? "").trim(),
+      text: String(record.text ?? record.option_text ?? ""),
       is_correct: Boolean(record.is_correct ?? record.isCorrect),
     }
   }
   return {
     id: DEFAULT_OPTION_IDS[index] ?? String(index + 1),
-    text: String(raw ?? "").trim(),
+    text: String(raw ?? ""),
     is_correct: false,
   }
 }
@@ -109,14 +175,21 @@ function normalizeMultipleChoiceOption(
 export function multipleChoiceSlotHasContent(
   value: MultipleChoiceSlotValue,
 ): boolean {
-  return value.options.some((option) => option.text.trim())
+  return value.options.some((option) => multipleChoiceOptionHasValue(option.text))
 }
 
 export function validateMultipleChoiceSlotValue(
   value: MultipleChoiceSlotValue,
 ): string | null {
-  const filled = value.options.filter((option) => option.text.trim())
-  if (filled.length < 2) return "Add at least two choices with text."
+  if (value.options.length < MULTIPLE_CHOICE_MIN_OPTIONS) {
+    return `Add at least ${MULTIPLE_CHOICE_MIN_OPTIONS} choices.`
+  }
+  const filled = value.options.filter((option) =>
+    multipleChoiceOptionHasValue(option.text),
+  )
+  if (filled.length < MULTIPLE_CHOICE_MIN_OPTIONS) {
+    return `Add at least ${MULTIPLE_CHOICE_MIN_OPTIONS} choices with text.`
+  }
   if (!filled.some((option) => option.is_correct)) {
     return "Mark one choice as correct."
   }

@@ -160,10 +160,14 @@ export function legacyQuestionTypeFromDefinition(
   return null
 }
 
+export type QuestionDifficultyLevel = "EASY" | "MEDIUM" | "HARD"
+
 export interface LearnEnglishDefinitionQuestionInput {
   questionText: string
   questionTypeDefinitionId: number
   dynamicFieldValues: Record<string, string>
+  difficultyLevel?: QuestionDifficultyLevel
+  points?: number
   mcqOptions?: { option_text: string; is_correct: boolean }[]
   trueFalseAnswerIsTrue?: boolean
   shortAnswers?: string[]
@@ -269,13 +273,27 @@ export function questionRowHasContent(
   return false
 }
 
+function normalizeQuestionDifficulty(
+  value: string | undefined,
+): QuestionDifficultyLevel {
+  const upper = (value ?? "EASY").trim().toUpperCase()
+  if (upper === "MEDIUM" || upper === "HARD") return upper
+  return "EASY"
+}
+
+function normalizeQuestionPoints(value: number | undefined): number {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 1) return 1
+  return Math.round(n)
+}
+
 export function buildCreateQuestionFromDefinition(
   def: QuestionTypeDefinition,
   q: LearnEnglishDefinitionQuestionInput,
   status: "DRAFT" | "PUBLISHED",
 ): CreateQuestionRequest {
-  const difficulty = "EASY"
-  const points = 1
+  const difficulty = normalizeQuestionDifficulty(q.difficultyLevel)
+  const points = normalizeQuestionPoints(q.points)
   const question_text = q.questionText.trim()
 
   if (definitionUsesDynamicPayload(def)) {

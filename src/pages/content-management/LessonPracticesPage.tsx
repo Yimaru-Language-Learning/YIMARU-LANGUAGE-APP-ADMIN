@@ -9,14 +9,28 @@ import {
   Loader2,
   RefreshCw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { getPracticesByParentLesson } from "../../api/courses.api";
+import {
+  deleteExamPrepPractice,
+  getExamPrepLessonPractices,
+  getPracticesByParentLesson,
+} from "../../api/courses.api";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import type {
+  ExamPrepLessonPractice,
+  GetExamPrepLessonPracticesResponse,
   GetPracticesByParentContextResponse,
   ParentContextPractice,
 } from "../../types/course.types";
@@ -31,6 +45,32 @@ function unwrapPracticesEnvelope(
   return b.data ?? b.Data ?? null;
 }
 
+function unwrapExamPrepPracticesEnvelope(
+  res: { data?: GetExamPrepLessonPracticesResponse & { Data?: GetExamPrepLessonPracticesResponse["data"] } },
+): GetExamPrepLessonPracticesResponse["data"] | null {
+  const b = res.data;
+  if (!b) return null;
+  return b.data ?? b.Data ?? null;
+}
+
+function mapExamPrepPracticeToCard(
+  practice: ExamPrepLessonPractice,
+): ParentContextPractice {
+  return {
+    id: practice.id,
+    parent_kind: "LESSON",
+    parent_id: practice.lesson_id,
+    title: practice.title,
+    story_description: practice.story_description ?? "",
+    story_image: practice.story_image ?? "",
+    question_set_id: practice.question_set_id,
+    quick_tips: practice.quick_tips ?? "",
+    publish_status: practice.publish_status,
+    persona_id: practice.persona_id,
+    created_at: practice.created_at,
+  };
+}
+
 function formatPracticeDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
@@ -42,10 +82,12 @@ function PracticeCard({
   practice,
   index,
   total,
+  onDelete,
 }: {
   practice: ParentContextPractice;
   index: number;
   total: number;
+  onDelete?: () => void;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const thumb = resolveThumbnailForPreview(practice.story_image);
@@ -91,13 +133,35 @@ function PracticeCard({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col p-6 sm:p-7">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-500">
-                Practice {index + 1} of {total}
-              </span>
-              <Badge variant="secondary" className="font-mono text-[10px] font-semibold">
-                ID {practice.id}
-              </Badge>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-500">
+                  Practice {index + 1} of {total}
+                </span>
+                <Badge variant="secondary" className="font-mono text-[10px] font-semibold">
+                  ID {practice.id}
+                </Badge>
+                {practice.publish_status ? (
+                  <Badge
+                    variant={practice.publish_status === "PUBLISHED" ? "default" : "secondary"}
+                    className="text-[10px] font-semibold normal-case"
+                  >
+                    {practice.publish_status}
+                  </Badge>
+                ) : null}
+              </div>
+              {onDelete ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </Button>
+              ) : null}
             </div>
 
             <h2 className="text-xl font-semibold leading-snug tracking-tight text-grayScale-900 sm:text-[1.35rem]">
@@ -165,6 +229,8 @@ export function LessonPracticesPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [practiceToDelete, setPracticeToDelete] = useState<ParentContextPractice | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const lid = lessonId ? Number(lessonId) : NaN;
   const validLesson = Number.isFinite(lid) && lid > 0;
@@ -179,15 +245,29 @@ export function LessonPracticesPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await getPracticesByParentLesson(lid, { limit: 100, offset: 0 });
-      const envelope = unwrapPracticesEnvelope(res);
-      const list = Array.isArray(envelope?.practices) ? envelope.practices : [];
-      setPractices(list);
-      setTotalCount(
-        typeof envelope?.total_count === "number"
-          ? envelope.total_count
-          : list.length,
-      );
+      if (isExamPrep) {
+        const res = await getExamPrepLessonPractices(lid, { limit: 100, offset: 0 });
+        const envelope = unwrapExamPrepPracticesEnvelope(res);
+        const list = Array.isArray(envelope?.practices)
+          ? envelope.practices.map(mapExamPrepPracticeToCard)
+          : [];
+        setPractices(list);
+        setTotalCount(
+          typeof envelope?.total_count === "number"
+            ? envelope.total_count
+            : list.length,
+        );
+      } else {
+        const res = await getPracticesByParentLesson(lid, { limit: 100, offset: 0 });
+        const envelope = unwrapPracticesEnvelope(res);
+        const list = Array.isArray(envelope?.practices) ? envelope.practices : [];
+        setPractices(list);
+        setTotalCount(
+          typeof envelope?.total_count === "number"
+            ? envelope.total_count
+            : list.length,
+        );
+      }
     } catch {
       setPractices([]);
       setTotalCount(0);
@@ -196,7 +276,7 @@ export function LessonPracticesPage() {
     } finally {
       setLoading(false);
     }
-  }, [lid, validLesson]);
+  }, [isExamPrep, lid, validLesson]);
 
   useEffect(() => {
     void load();
@@ -208,6 +288,22 @@ export function LessonPracticesPage() {
   const addPracticeHref = isExamPrep
     ? `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`
     : `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`;
+
+  const confirmDeletePractice = async () => {
+    if (!practiceToDelete) return;
+    setDeleting(true);
+    try {
+      await deleteExamPrepPractice(practiceToDelete.id);
+      toast.success("Practice deleted");
+      setPracticeToDelete(null);
+      await load();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to delete practice");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F4F6FB] via-white to-[#F8FAFC]">
@@ -369,12 +465,52 @@ export function LessonPracticesPage() {
                   practice={p}
                   index={i}
                   total={practices.length}
+                  onDelete={
+                    isExamPrep ? () => setPracticeToDelete(p) : undefined
+                  }
                 />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      <Dialog
+        open={practiceToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPracticeToDelete(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this practice?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-grayScale-600">
+            <span className="font-semibold text-grayScale-900">
+              {practiceToDelete?.title}
+            </span>{" "}
+            will be removed from this lesson. This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleting}
+              onClick={() => setPracticeToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => void confirmDeletePractice()}
+            >
+              {deleting ? "Deleting…" : "Delete practice"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

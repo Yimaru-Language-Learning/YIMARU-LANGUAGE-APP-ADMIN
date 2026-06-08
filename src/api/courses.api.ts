@@ -100,6 +100,7 @@ import type {
   PublishExamPrepModuleLessonRequest,
   CreateExamPrepLessonPracticeRequest,
   CreateExamPrepLessonPracticeResponse,
+  GetExamPrepLessonPracticesResponse,
   GetExamPrepModuleLessonsResponse,
   GetTopLevelModuleLessonsResponse,
   GetPracticesByParentContextResponse,
@@ -608,6 +609,22 @@ export const createExamPrepLessonPractice = (
   http.post<CreateExamPrepLessonPracticeResponse>(
     `/exam-prep/lessons/${lessonId}/practices`,
     data,
+  )
+
+/** GET /exam-prep/lessons/:lessonId/practices */
+export const getExamPrepLessonPractices = (
+  lessonId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetExamPrepLessonPracticesResponse>(
+    `/exam-prep/lessons/${lessonId}/practices`,
+    { params },
+  )
+
+/** DELETE /exam-prep/practices/:practiceId */
+export const deleteExamPrepPractice = (practiceId: number) =>
+  http.delete<{ message: string; success: boolean; status_code: number; metadata: unknown }>(
+    `/exam-prep/practices/${practiceId}`,
   )
 
 /** Top-level course resource (Learn English track) — PUT /courses/:id */

@@ -375,11 +375,40 @@ export interface CreateExamPrepLessonPracticeRequest {
   persona_id: number
   question_set_id: number
   quick_tips: string
+  publish_status?: PracticePublishStatus
 }
 
 export interface CreateExamPrepLessonPracticeResponse {
   message: string
   data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** Row from GET /exam-prep/lessons/:lessonId/practices */
+export interface ExamPrepLessonPractice {
+  id: number
+  lesson_id: number
+  title: string
+  story_description?: string
+  story_image?: string
+  persona_id?: number | null
+  question_set_id: number
+  publish_status?: PracticePublishStatus | string | null
+  quick_tips?: string
+  created_at: string
+  updated_at?: string
+}
+
+export interface GetExamPrepLessonPracticesResponse {
+  message: string
+  data: {
+    practices: ExamPrepLessonPractice[]
+    total_count: number
+    limit: number
+    offset: number
+  }
   success: boolean
   status_code: number
   metadata: unknown | null

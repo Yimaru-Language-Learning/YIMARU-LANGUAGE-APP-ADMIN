@@ -27,6 +27,8 @@ function createEmptyQuestionRow(id: string) {
     id,
     questionTypeDefinitionId: null as number | null,
     text: "",
+    difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
+    points: 1,
     dynamicFieldValues: {} as Record<string, string>,
     mcqOptions: defaultMcqOptions(),
     trueFalseCorrect: true,
@@ -374,6 +376,55 @@ export function QuestionsStep({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
+                      Difficulty
+                    </label>
+                    <select
+                      className="h-11 w-full rounded-lg border border-grayScale-200 bg-white px-3 text-sm font-medium text-grayScale-800"
+                      value={q.difficultyLevel ?? "EASY"}
+                      onChange={(e) => {
+                        const newQuestions = [...formData.questions];
+                        newQuestions[i] = {
+                          ...newQuestions[i],
+                          difficultyLevel: e.target.value as
+                            | "EASY"
+                            | "MEDIUM"
+                            | "HARD",
+                        };
+                        setFormData({ ...formData, questions: newQuestions });
+                      }}
+                    >
+                      <option value="EASY">Easy</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HARD">Hard</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
+                      Points
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={q.points ?? 1}
+                      onChange={(e) => {
+                        const newQuestions = [...formData.questions];
+                        const parsed = Number.parseInt(e.target.value, 10);
+                        newQuestions[i] = {
+                          ...newQuestions[i],
+                          points:
+                            Number.isFinite(parsed) && parsed > 0 ? parsed : 1,
+                        };
+                        setFormData({ ...formData, questions: newQuestions });
+                      }}
+                      className="h-11 rounded-lg border-grayScale-200"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">

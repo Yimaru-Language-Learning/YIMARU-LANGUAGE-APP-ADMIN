@@ -15,10 +15,10 @@ import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.
 import { getQuestionTypeDefinitions } from "../../api/questionTypeDefinitions.api";
 import { emptyDynamicFieldValuesForDefinition } from "../../lib/learnEnglishDefinitionQuestion";
 import {
-  executeLearnEnglishPracticeCreation,
   learnEnglishPracticeApiErrorMessage,
   validateLearnEnglishQuestionsWithDefinitions,
 } from "../../lib/learnEnglishPracticePublish";
+import { executePracticeCreation } from "../../lib/practiceCreationOrchestrator";
 
 import { ContextStep } from "./components/practice-steps/ContextStep";
 import { ScenarioStep } from "./components/practice-steps/ScenarioStep";
@@ -198,6 +198,8 @@ export function AddPracticeFlow() {
         id: "q1",
         questionTypeDefinitionId: null as number | null,
         text: "",
+        difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
+        points: 1,
         dynamicFieldValues: {} as Record<string, string>,
         mcqOptions: [
           { text: "", isCorrect: true },
@@ -292,6 +294,11 @@ export function AddPracticeFlow() {
     const mappedQuestions = formData.questions.map((q) => ({
         questionText: String(q.text ?? "").trim(),
         questionTypeDefinitionId: Number(q.questionTypeDefinitionId),
+        difficultyLevel: (q.difficultyLevel ?? "EASY") as
+          | "EASY"
+          | "MEDIUM"
+          | "HARD",
+        points: Number.isFinite(Number(q.points)) ? Number(q.points) : 1,
         dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
         mcqOptions: (q.mcqOptions ?? []).map(
           (o: { text?: string; isCorrect?: boolean }) => ({
@@ -324,7 +331,7 @@ export function AddPracticeFlow() {
 
     setSubmitting(true);
     try {
-      await executeLearnEnglishPracticeCreation({
+      await executePracticeCreation({
         parentKind: parentContext.kind,
         parentId: parentContext.id,
         examPrepLessonId: useExamPrepLessonApi ? parentContext.id : undefined,
@@ -351,13 +358,7 @@ export function AddPracticeFlow() {
         questions: mappedQuestions,
         definitions: typeDefinitions,
       });
-      toast.success(
-        status === "PUBLISHED" ? "Practice published" : "Draft saved",
-        {
-          description:
-            "Question set, questions, and parent-linked practice were created.",
-        },
-      );
+      toast.success("Practice created successfully");
       setIsPublished(true);
     } catch (e) {
       toast.error("Could not save practice", {
@@ -415,6 +416,8 @@ export function AddPracticeFlow() {
                     questionTypeDefinitionId:
                       typeDefinitions[0]?.id ?? (null as number | null),
                     text: "",
+                    difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
+                    points: 1,
                     dynamicFieldValues: typeDefinitions[0]
                       ? emptyDynamicFieldValuesForDefinition(typeDefinitions[0])
                       : {},

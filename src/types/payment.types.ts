@@ -54,8 +54,13 @@ export interface PaymentsListResponse {
 
 export interface GetPaymentsParams {
   status?: PaymentStatus
+  /** Takes precedence over `payment_method` when both are sent. */
   provider?: PaymentProvider
+  payment_method?: PaymentMethod
   plan_category?: PaymentPlanCategory
+  currency?: string
+  /** Partial match on session_id, nonce, or transaction_id. */
+  reference?: string
   limit?: number
   offset?: number
 }

@@ -7,8 +7,10 @@ import {
   CreditCard,
   Eye,
   RefreshCw,
+  Search,
   TrendingUp,
   Wallet,
+  X,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
@@ -23,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog"
+import { Input } from "../../components/ui/input"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { cn } from "../../lib/utils"
 import {
@@ -44,9 +47,12 @@ import type {
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 const STATUS_FILTERS: { value: PaymentStatus; label: string }[] = [
-  { value: "SUCCESS", label: "Success" },
   { value: "PENDING", label: "Pending" },
+  { value: "PROCESSING", label: "Processing" },
+  { value: "SUCCESS", label: "Success" },
   { value: "FAILED", label: "Failed" },
+  { value: "CANCELLED", label: "Cancelled" },
+  { value: "EXPIRED", label: "Expired" },
 ]
 
 const PROVIDER_FILTERS: { value: PaymentProvider; label: string }[] = [
@@ -64,7 +70,11 @@ type PaymentListFilters = {
   status: PaymentStatus | ""
   provider: PaymentProvider | ""
   planCategory: PaymentPlanCategory | ""
+  currency: string
+  reference: string
 }
+
+const TEXT_FILTER_DEBOUNCE_MS = 400
 
 function copyText(value: string, label: string) {
   if (!value) return
@@ -82,16 +92,44 @@ export function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "">("")
   const [providerFilter, setProviderFilter] = useState<PaymentProvider | "">("")
   const [planCategoryFilter, setPlanCategoryFilter] = useState<PaymentPlanCategory | "">("")
+  const [currencyInput, setCurrencyInput] = useState("")
+  const [referenceInput, setReferenceInput] = useState("")
+  const [currencyFilter, setCurrencyFilter] = useState("")
+  const [referenceFilter, setReferenceFilter] = useState("")
   const [selected, setSelected] = useState<Payment | null>(null)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setCurrencyFilter(currencyInput.trim().toUpperCase())
+    }, TEXT_FILTER_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [currencyInput])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setReferenceFilter(referenceInput.trim())
+    }, TEXT_FILTER_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [referenceInput])
+
+  useEffect(() => {
+    setOffset(0)
+  }, [currencyFilter, referenceFilter])
 
   const listFilters: PaymentListFilters = {
     status: statusFilter,
     provider: providerFilter,
     planCategory: planCategoryFilter,
+    currency: currencyFilter,
+    reference: referenceFilter,
   }
 
   const hasActiveFilters = Boolean(
-    listFilters.status || listFilters.provider || listFilters.planCategory,
+    listFilters.status ||
+      listFilters.provider ||
+      listFilters.planCategory ||
+      listFilters.currency ||
+      listFilters.reference,
   )
 
   const fetchPayments = useCallback(
@@ -105,6 +143,8 @@ export function PaymentsPage() {
           ...(filters.status ? { status: filters.status } : {}),
           ...(filters.provider ? { provider: filters.provider } : {}),
           ...(filters.planCategory ? { plan_category: filters.planCategory } : {}),
+          ...(filters.currency ? { currency: filters.currency } : {}),
+          ...(filters.reference ? { reference: filters.reference } : {}),
         })
         setPayments(res.data.payments)
         setTotalCount(res.data.total_count)
@@ -123,7 +163,16 @@ export function PaymentsPage() {
 
   useEffect(() => {
     void fetchPayments(offset, pageSize, listFilters)
-  }, [offset, pageSize, statusFilter, providerFilter, planCategoryFilter, fetchPayments])
+  }, [
+    offset,
+    pageSize,
+    statusFilter,
+    providerFilter,
+    planCategoryFilter,
+    currencyFilter,
+    referenceFilter,
+    fetchPayments,
+  ])
 
   const toggleStatus = (value: PaymentStatus) => {
     setStatusFilter((current) => (current === value ? "" : value))
@@ -144,6 +193,10 @@ export function PaymentsPage() {
     setStatusFilter("")
     setProviderFilter("")
     setPlanCategoryFilter("")
+    setCurrencyInput("")
+    setReferenceInput("")
+    setCurrencyFilter("")
+    setReferenceFilter("")
     setOffset(0)
   }
 
@@ -271,19 +324,85 @@ export function PaymentsPage() {
                   onClick={() => togglePlanCategory(value)}
                 />
               ))}
-              {hasActiveFilters ? (
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="payments-currency-filter"
+                  className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
+                >
+                  Currency
+                </label>
+                <div className="relative">
+                  <Input
+                    id="payments-currency-filter"
+                    value={currencyInput}
+                    onChange={(e) => setCurrencyInput(e.target.value)}
+                    placeholder="e.g. ETB"
+                    disabled={loading}
+                    className="h-9 rounded-[6px] border-grayScale-200 pr-8 text-sm uppercase"
+                  />
+                  {currencyInput ? (
+                    <button
+                      type="button"
+                      aria-label="Clear currency filter"
+                      disabled={loading}
+                      onClick={() => setCurrencyInput("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-grayScale-400 hover:text-grayScale-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="payments-reference-filter"
+                  className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
+                >
+                  Reference
+                </label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-grayScale-400" />
+                  <Input
+                    id="payments-reference-filter"
+                    value={referenceInput}
+                    onChange={(e) => setReferenceInput(e.target.value)}
+                    placeholder="Session, nonce, or transaction ID"
+                    disabled={loading}
+                    className="h-9 rounded-[6px] border-grayScale-200 pl-8 pr-8 text-sm"
+                  />
+                  {referenceInput ? (
+                    <button
+                      type="button"
+                      aria-label="Clear reference filter"
+                      disabled={loading}
+                      onClick={() => setReferenceInput("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-grayScale-400 hover:text-grayScale-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+                <p className="text-[10px] text-grayScale-400">
+                  Partial match on session ID, nonce, or transaction ID
+                </p>
+              </div>
+            </div>
+            {hasActiveFilters ? (
+              <div className="flex justify-end border-t border-grayScale-100 pt-2">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="ml-auto h-7 rounded-[6px] px-2 text-xs text-grayScale-500"
+                  className="h-7 rounded-[6px] px-2 text-xs text-grayScale-500"
                   disabled={loading}
                   onClick={clearFilters}
                 >
-                  Clear filters
+                  Clear all filters
                 </Button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
 
           {loading ? (

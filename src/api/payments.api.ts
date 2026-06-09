@@ -82,8 +82,14 @@ function buildQueryParams(params: GetPaymentsParams): Record<string, string | nu
     offset: Math.max(0, params.offset ?? 0),
   }
   if (params.status?.trim()) query.status = params.status.trim()
-  if (params.provider?.trim()) query.provider = params.provider.trim()
+  if (params.provider?.trim()) {
+    query.provider = params.provider.trim()
+  } else if (params.payment_method?.trim()) {
+    query.payment_method = params.payment_method.trim()
+  }
   if (params.plan_category?.trim()) query.plan_category = params.plan_category.trim()
+  if (params.currency?.trim()) query.currency = params.currency.trim()
+  if (params.reference?.trim()) query.reference = params.reference.trim()
   return query
 }
 

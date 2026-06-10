@@ -29,21 +29,28 @@ import {
   getPracticesByParentCourse,
   getProgramCourses,
   getTopLevelCourseModules,
-  publishParentLinkedPractice,
-  updateParentLinkedPractice,
+  setParentLinkedPracticePublishStatus,
+  setTopLevelCourseModuleAccessTier,
+  setTopLevelCourseModulePublishStatus,
   updateTopLevelCourseModule,
 } from "../../api/courses.api";
 import { refreshFileUrl, resolveFileUrl } from "../../api/files.api";
 import type {
   ParentContextPractice,
+  ContentAccessTier,
+  PracticePublishStatus,
   ProgramCourseListItem,
   TopLevelCourseModuleItem,
 } from "../../types/course.types";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import { ContentPageDescription } from "./components/ContentPageDescription";
 import {
-  isPracticeDraft,
-  isPracticePublished,
-  unwrapPracticesList,
-} from "../../lib/parentContextPractice";
+  filterBySearchAndPublishStatus,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
+import { unwrapPracticesList } from "../../lib/parentContextPractice";
 import { AddModuleModal } from "./components/AddModuleModal";
 import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
 import { ModulePracticeCard } from "./components/ModulePracticeCard";
@@ -166,7 +173,12 @@ export function CourseDetailPage() {
   const [deletingModuleInFlight, setDeletingModuleInFlight] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"modules" | "practice">("modules");
-  const [practiceFilter, setPracticeFilter] = useState("All");
+  const [moduleSearch, setModuleSearch] = useState("");
+  const [modulePublishStatusFilter, setModulePublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+  const [practiceSearch, setPracticeSearch] = useState("");
+  const [practicePublishStatusFilter, setPracticePublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
   const [practices, setPractices] = useState<ParentContextPractice[]>([]);
   const [practicesLoading, setPracticesLoading] = useState(false);
   const [practicesLoadError, setPracticesLoadError] = useState<string | null>(
@@ -175,6 +187,12 @@ export function CourseDetailPage() {
   const [publishStatusPracticeId, setPublishStatusPracticeId] = useState<
     number | null
   >(null);
+  const [publishStatusModuleId, setPublishStatusModuleId] = useState<
+    number | null
+  >(null);
+  const [accessTierModuleId, setAccessTierModuleId] = useState<number | null>(
+    null,
+  );
 
   const openEditModule = (module: TopLevelCourseModuleItem) => {
     setEditingModule(module);
@@ -309,60 +327,115 @@ export function CourseDetailPage() {
     void loadCoursePractices();
   }, [activeTab, loadCoursePractices]);
 
-  const filteredPractices = useMemo(() => {
-    if (practiceFilter === "Published") {
-      return practices.filter(isPracticePublished);
-    }
-    if (practiceFilter === "Draft") {
-      return practices.filter(isPracticeDraft);
-    }
-    if (practiceFilter === "Archived") {
-      return [];
-    }
-    return practices;
-  }, [practices, practiceFilter]);
+  const filteredModules = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(modules, {
+        search: moduleSearch,
+        publishStatusFilter: modulePublishStatusFilter,
+        getSearchFields: (m) => [m.name, m.description],
+        getPublishStatus: (m) => m.publish_status,
+      }),
+    [modulePublishStatusFilter, moduleSearch, modules],
+  );
 
-  const handlePublishPractice = async (practiceId: number) => {
+  const filteredPractices = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(practices, {
+        search: practiceSearch,
+        publishStatusFilter: practicePublishStatusFilter,
+        getSearchFields: (p) => [
+          p.title,
+          p.story_description,
+          p.quick_tips,
+        ],
+        getPublishStatus: (p) => p.publish_status,
+      }),
+    [practicePublishStatusFilter, practiceSearch, practices],
+  );
+
+  const handlePracticePublishStatus = async (
+    practiceId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
     setPublishStatusPracticeId(practiceId);
     try {
-      await publishParentLinkedPractice(practiceId);
+      await setParentLinkedPracticePublishStatus(practiceId, {
+        publish_status: nextStatus,
+      });
       setPractices((prev) =>
         prev.map((p) =>
-          p.id === practiceId ? { ...p, publish_status: "PUBLISHED" } : p,
+          p.id === practiceId ? { ...p, publish_status: nextStatus } : p,
         ),
       );
-      toast.success("Practice published");
+      toast.success(
+        nextStatus === "PUBLISHED"
+          ? "Practice published"
+          : "Practice saved as draft",
+      );
     } catch (e: unknown) {
       console.error(e);
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to publish practice";
+          ?.message ?? "Failed to update practice status";
       toast.error(msg);
     } finally {
       setPublishStatusPracticeId(null);
     }
   };
 
-  const handleSavePracticeAsDraft = async (practiceId: number) => {
-    setPublishStatusPracticeId(practiceId);
+  const handleModulePublishStatus = async (
+    moduleId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusModuleId(moduleId);
     try {
-      await updateParentLinkedPractice(practiceId, {
-        publish_status: "DRAFT",
+      await setTopLevelCourseModulePublishStatus(moduleId, {
+        publish_status: nextStatus,
       });
-      setPractices((prev) =>
-        prev.map((p) =>
-          p.id === practiceId ? { ...p, publish_status: "DRAFT" } : p,
+      setModules((prev) =>
+        prev.map((m) =>
+          m.id === moduleId ? { ...m, publish_status: nextStatus } : m,
         ),
       );
-      toast.success("Practice saved as draft");
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Module published" : "Module saved as draft",
+      );
     } catch (e: unknown) {
       console.error(e);
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to save practice as draft";
+          ?.message ?? "Failed to update module status";
       toast.error(msg);
     } finally {
-      setPublishStatusPracticeId(null);
+      setPublishStatusModuleId(null);
+    }
+  };
+
+  const handleModuleAccessTier = async (
+    moduleId: number,
+    nextTier: ContentAccessTier,
+  ) => {
+    setAccessTierModuleId(moduleId);
+    try {
+      await setTopLevelCourseModuleAccessTier(moduleId, {
+        access_tier: nextTier,
+      });
+      setModules((prev) =>
+        prev.map((m) =>
+          m.id === moduleId ? { ...m, access_tier: nextTier } : m,
+        ),
+      );
+      toast.success(
+        nextTier === "PREMIUM" ? "Module set to Premium" : "Module set to Free",
+      );
+    } catch (e: unknown) {
+      console.error(e);
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update module access tier";
+      toast.error(msg);
+    } finally {
+      setAccessTierModuleId(null);
     }
   };
 
@@ -471,9 +544,9 @@ export function CourseDetailPage() {
               <h1 className="text-2xl font-medium tracking-tight text-grayScale-900">
                 {displayTitle}
               </h1>
-              <p className="mt-1 max-w-2xl text-sm font-medium text-grayScale-500">
+              <ContentPageDescription className="mt-1 text-sm font-medium text-grayScale-500">
                 {displayDescription}
-              </p>
+              </ContentPageDescription>
             </div>
             <div className="flex items-center gap-4">
               <Button
@@ -625,13 +698,29 @@ export function CourseDetailPage() {
                 </p>
               </div>
             ) : (
+              <div className="space-y-6">
+                <ContentListSearchFilterBar
+                  search={moduleSearch}
+                  onSearchChange={setModuleSearch}
+                  publishStatusFilter={modulePublishStatusFilter}
+                  onPublishStatusFilterChange={setModulePublishStatusFilter}
+                  searchPlaceholder="Search modules by name or description…"
+                  searchAriaLabel="Search modules"
+                />
+                {filteredModules.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+                    <p className="text-sm font-medium text-grayScale-600">
+                      No modules match your search or status filter
+                    </p>
+                  </div>
+                ) : (
               <div
                 className="grid justify-start gap-10"
                 style={{
                   gridTemplateColumns: "repeat(auto-fill, minmax(330px, 330px))",
                 }}
               >
-                {modules.map((module, index) => {
+                {filteredModules.map((module, index) => {
                   const iconSrc = module.icon?.trim() ?? "";
                   return (
                     <Card
@@ -667,6 +756,30 @@ export function CourseDetailPage() {
                           <ModuleIconCircle iconSrc={iconSrc} index={index} />
 
                           <div className="min-w-0 flex-1 space-y-1">
+                            <div className="mb-1 flex flex-wrap gap-2">
+                              <ContentPublishStatusChip
+                                publishStatus={module.publish_status}
+                                updating={publishStatusModuleId === module.id}
+                                contentLabel="module"
+                                onToggle={(nextStatus) =>
+                                  void handleModulePublishStatus(
+                                    module.id,
+                                    nextStatus,
+                                  )
+                                }
+                              />
+                              <ContentAccessTierChip
+                                accessTier={module.access_tier}
+                                updating={accessTierModuleId === module.id}
+                                contentLabel="module"
+                                onToggle={(nextTier) =>
+                                  void handleModuleAccessTier(
+                                    module.id,
+                                    nextTier,
+                                  )
+                                }
+                              />
+                            </div>
                             <h3 className="text-lg font-bold tracking-tight text-[#0F172A]">
                               {module.name}
                             </h3>
@@ -708,31 +821,19 @@ export function CourseDetailPage() {
                   );
                 })}
               </div>
+                )}
+              </div>
             )
           ) : (
             <div className="space-y-8">
-              <div className="flex items-center gap-10 overflow-x-auto whitespace-nowrap rounded-2xl border border-grayScale-100 bg-white px-8 py-4 shadow-sm">
-                <div className="mr-2 flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest text-grayScale-300">
-                  STATUS:
-                </div>
-                <div className="flex items-center gap-3">
-                  {["All", "Published", "Draft", "Archived"].map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => setPracticeFilter(label)}
-                      className={cn(
-                        "h-9 rounded-full px-5 text-[13px] font-bold transition-all",
-                        practiceFilter === label
-                          ? "bg-brand-500 text-white shadow-md shadow-brand-500/20"
-                          : "bg-[#F1F5F9] text-grayScale-500 hover:bg-grayScale-100",
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ContentListSearchFilterBar
+                search={practiceSearch}
+                onSearchChange={setPracticeSearch}
+                publishStatusFilter={practicePublishStatusFilter}
+                onPublishStatusFilterChange={setPracticePublishStatusFilter}
+                searchPlaceholder="Search practices by title or description…"
+                searchAriaLabel="Search practices"
+              />
 
               {practicesLoading ? (
                 <div className="flex flex-col items-center justify-center py-24 text-[15px] font-medium text-grayScale-500">
@@ -752,9 +853,14 @@ export function CourseDetailPage() {
                       onEdit={() =>
                         navigate(`/content/practices?type=course&id=${courseIdNum}`)
                       }
-                      onPublish={() => void handlePublishPractice(practice.id)}
+                      onPublish={() =>
+                        void handlePracticePublishStatus(
+                          practice.id,
+                          "PUBLISHED",
+                        )
+                      }
                       onSaveAsDraft={() =>
-                        void handleSavePracticeAsDraft(practice.id)
+                        void handlePracticePublishStatus(practice.id, "DRAFT")
                       }
                     />
                   ))}
@@ -769,7 +875,7 @@ export function CourseDetailPage() {
                   <h2 className="mb-3 text-2xl font-extrabold text-grayScale-900">
                     {practices.length === 0
                       ? "No practices for this course yet"
-                      : "No practices match this filter"}
+                      : "No practices match your search or status filter"}
                   </h2>
                   <p className="mb-10 max-w-sm text-center text-[15px] font-medium leading-relaxed text-grayScale-400">
                     {practices.length === 0

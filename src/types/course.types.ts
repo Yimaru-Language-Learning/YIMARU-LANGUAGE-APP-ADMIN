@@ -66,6 +66,8 @@ export interface LearningProgramListItem {
   description?: string | null
   thumbnail?: string | null
   sort_order: number
+  publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   created_at: string
 }
 
@@ -111,6 +113,8 @@ export interface ProgramCourseListItem {
   name: string
   description: string
   sort_order: number
+  publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   created_at: string
   thumbnail?: string | null
   /** Some list endpoints may expose the image as `thumbnail_url` instead. */
@@ -159,6 +163,8 @@ export interface ExamPrepCatalogCourseItem {
   units_count?: number
   modules_count?: number
   lessons_count?: number
+  publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   created_at?: string
   updated_at?: string
 }
@@ -212,6 +218,8 @@ export interface ExamPrepCatalogUnitItem {
   description?: string | null
   thumbnail?: string | null
   sort_order?: number
+  publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   modules_count?: number
   lessons_count?: number
   videos_count?: number
@@ -271,6 +279,8 @@ export interface ExamPrepUnitModuleItem {
   thumbnail?: string | null
   icon?: string | null
   sort_order?: number
+  publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   lessons_count?: number
   videos_count?: number
   practices_count?: number
@@ -331,6 +341,7 @@ export interface ExamPrepModuleLessonItem {
   description?: string | null
   sort_order?: number
   publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   /** Total length in seconds when the API provides it. */
   duration?: number | null
   duration_seconds?: number | null
@@ -457,6 +468,8 @@ export interface TopLevelCourseModuleItem {
   description: string
   icon?: string | null
   sort_order: number
+  publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   created_at: string
 }
 
@@ -507,6 +520,7 @@ export interface TopLevelModuleLessonItem {
   description: string
   sort_order: number
   publish_status?: PracticePublishStatus | string | null
+  access_tier?: ContentAccessTier | string | null
   has_practice?: boolean
   /** Total length in seconds when the API provides it. */
   duration?: number | null
@@ -558,6 +572,18 @@ export interface GetPracticesByParentContextResponse {
 export type PracticeParentKind = "COURSE" | "MODULE" | "LESSON"
 
 export type PracticePublishStatus = "DRAFT" | "PUBLISHED"
+
+export type ContentAccessTier = "FREE" | "PREMIUM"
+
+/** PUT body when only toggling access_tier on a content resource. */
+export interface AccessTierOnlyRequest {
+  access_tier: ContentAccessTier
+}
+
+/** PUT body when only toggling draft/published on a content resource. */
+export interface PublishStatusOnlyRequest {
+  publish_status: PracticePublishStatus
+}
 
 /** POST /practices — create practice linked to a course, module, or lesson (Learn English). */
 export interface CreateParentLinkedPracticeRequest {
@@ -1637,6 +1663,11 @@ export interface GetSubCourseEntryAssessmentResponse {
 export interface ReorderItem {
   id: number
   position: number
+}
+
+/** Reorder endpoints: PUT with { ordered_ids: number[] } */
+export interface ReorderOrderedIdsRequest {
+  ordered_ids: number[]
 }
 
 // Ratings

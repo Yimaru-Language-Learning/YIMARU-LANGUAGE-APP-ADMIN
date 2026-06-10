@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -27,9 +27,21 @@ import { ResolvedImage } from "../../components/media/ResolvedImage";
 import {
   createExamPrepCatalogCourse,
   getExamPrepCatalogCourses,
+  setExamPrepCatalogCourseAccessTier,
+  setExamPrepCatalogCoursePublishStatus,
   updateExamPrepCatalogCourse,
   deleteExamPrepCatalogCourse,
 } from "../../api/courses.api";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import { ContentPageDescription } from "./components/ContentPageDescription";
+import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import {
+  filterBySearchAndPublishStatus,
+  hasActiveContentFilters,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
 import { uploadImageFile } from "../../api/files.api";
 import uploadIcon from "../../assets/icons/upload.png";
 
@@ -50,11 +62,19 @@ export function ProgramDetailPage() {
       description: string;
       thumbnail?: string | null;
       sortOrder: number;
+      publishStatus: PracticePublishStatus | string | null;
+      accessTier: ContentAccessTier | string | null;
       unitsCount: number;
       modulesCount: number;
       lessonsCount: number;
     }[]
   >([]);
+  const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
+    number | null
+  >(null);
+  const [accessTierUpdatingId, setAccessTierUpdatingId] = useState<
+    number | null
+  >(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
@@ -99,6 +119,8 @@ export function ProgramDetailPage() {
           description: row.description?.trim() || "—",
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
+          publishStatus: row.publish_status ?? null,
+          accessTier: row.access_tier ?? null,
           unitsCount: Number(row.units_count ?? 0),
           modulesCount: Number(row.modules_count ?? 0),
           lessonsCount: Number(row.lessons_count ?? 0),
@@ -116,21 +138,94 @@ export function ProgramDetailPage() {
   useEffect(() => {
     void loadCatalogCourses();
   }, [loadCatalogCourses]);
-  const proficiencyCourses = [
-    ...currentProgram.courses,
-    ...createdCourses.map((course) => ({
-      id: course.id,
-      name: course.name,
-      description: course.description,
-      units_count: course.unitsCount,
-      modules_count: course.modulesCount,
-      lessons_count: course.lessonsCount,
-      logo: null,
-      thumbnail: course.thumbnail ?? "",
-      sort_order: course.sortOrder,
-      buttonText: "View Detail",
-    })),
-  ];
+  const proficiencyCourses = useMemo(
+    () => [
+      ...currentProgram.courses,
+      ...createdCourses.map((course) => ({
+        id: course.id,
+        name: course.name,
+        description: course.description,
+        units_count: course.unitsCount,
+        modules_count: course.modulesCount,
+        lessons_count: course.lessonsCount,
+        logo: null,
+        thumbnail: course.thumbnail ?? "",
+        sort_order: course.sortOrder,
+        publish_status: course.publishStatus,
+        access_tier: course.accessTier,
+        buttonText: "View Detail",
+      })),
+    ],
+    [createdCourses, currentProgram.courses],
+  );
+  const [listSearch, setListSearch] = useState("");
+  const [publishStatusFilter, setPublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+
+  const filteredProficiencyCourses = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(proficiencyCourses, {
+        search: listSearch,
+        publishStatusFilter,
+        getSearchFields: (c) => [c.name, c.description],
+        getPublishStatus: (c) => c.publish_status,
+      }),
+    [listSearch, proficiencyCourses, publishStatusFilter],
+  );
+
+  const handleCoursePublishStatus = async (
+    courseId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusUpdatingId(courseId);
+    try {
+      await setExamPrepCatalogCoursePublishStatus(courseId, {
+        publish_status: nextStatus,
+      });
+      setCreatedCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId ? { ...c, publishStatus: nextStatus } : c,
+        ),
+      );
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Course published" : "Course saved as draft",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update course status";
+      toast.error(message);
+    } finally {
+      setPublishStatusUpdatingId(null);
+    }
+  };
+
+  const handleCourseAccessTier = async (
+    courseId: number,
+    nextTier: ContentAccessTier,
+  ) => {
+    setAccessTierUpdatingId(courseId);
+    try {
+      await setExamPrepCatalogCourseAccessTier(courseId, {
+        access_tier: nextTier,
+      });
+      setCreatedCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId ? { ...c, accessTier: nextTier } : c,
+        ),
+      );
+      toast.success(
+        nextTier === "PREMIUM" ? "Course set to Premium" : "Course set to Free",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update course access tier";
+      toast.error(message);
+    } finally {
+      setAccessTierUpdatingId(null);
+    }
+  };
 
   const isHttpUrl = (value: string) =>
     value.startsWith("http://") || value.startsWith("https://");
@@ -425,9 +520,9 @@ export function ProgramDetailPage() {
           <h1 className="text-[26px] font-medium tracking-tight text-grayScale-900">
             {currentProgram.title}
           </h1>
-          <p className="max-w-2xl text-[15px] font-medium  text-grayScale-500">
+          <ContentPageDescription className="text-[15px] font-medium text-grayScale-500">
             {currentProgram.description}
-          </p>
+          </ContentPageDescription>
         </div>
 
         <div className="flex items-center gap-3 pt-2">
@@ -582,7 +677,18 @@ export function ProgramDetailPage() {
       </div>
 
       {/* Cards Grid */}
-      <div className="flex flex-wrap gap-8 mt-10">
+      <div className="mt-10 space-y-6">
+        {programType === "proficiency" && !catalogLoading && proficiencyCourses.length > 0 ? (
+          <ContentListSearchFilterBar
+            search={listSearch}
+            onSearchChange={setListSearch}
+            publishStatusFilter={publishStatusFilter}
+            onPublishStatusFilterChange={setPublishStatusFilter}
+            searchPlaceholder="Search courses by name or description…"
+            searchAriaLabel="Search catalog courses"
+          />
+        ) : null}
+        <div className="flex flex-wrap gap-8">
         {programType === "proficiency" && catalogLoading ? (
           <p className="text-sm text-grayScale-500">Loading catalog courses...</p>
         ) : null}
@@ -598,9 +704,20 @@ export function ProgramDetailPage() {
               Create your first exam-prep catalog course to start organizing units, modules, and lessons.
             </p>
           </div>
+        ) : programType === "proficiency" && filteredProficiencyCourses.length === 0 ? (
+          <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+            <p className="text-sm font-medium text-grayScale-600">
+              No courses match your search or status filter
+            </p>
+            {hasActiveContentFilters(listSearch, publishStatusFilter) ? (
+              <p className="mt-1 text-sm text-grayScale-400">
+                Try different keywords or clear the publish status filter.
+              </p>
+            ) : null}
+          </div>
         ) : (
           (programType === "proficiency"
-            ? proficiencyCourses
+            ? filteredProficiencyCourses
             : currentProgram.courses
           ).map((course: any) => (
             <Card
@@ -650,6 +767,26 @@ export function ProgramDetailPage() {
 
             {/* Content */}
             <div className="space-y-4 pt-2 flex-1">
+              {programType === "proficiency" ? (
+                <div className="flex flex-wrap gap-2">
+                  <ContentPublishStatusChip
+                    publishStatus={course.publish_status}
+                    updating={publishStatusUpdatingId === Number(course.id)}
+                    contentLabel="course"
+                    onToggle={(nextStatus) =>
+                      void handleCoursePublishStatus(Number(course.id), nextStatus)
+                    }
+                  />
+                  <ContentAccessTierChip
+                    accessTier={course.access_tier}
+                    updating={accessTierUpdatingId === Number(course.id)}
+                    contentLabel="course"
+                    onToggle={(nextTier) =>
+                      void handleCourseAccessTier(Number(course.id), nextTier)
+                    }
+                  />
+                </div>
+              ) : null}
               <h3 className="text-[18px] font-medium text-grayScale-900">
                 {course.name}
               </h3>
@@ -693,6 +830,7 @@ export function ProgramDetailPage() {
             </Card>
           ))
         )}
+        </div>
       </div>
 
       <Dialog

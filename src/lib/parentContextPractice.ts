@@ -3,6 +3,7 @@ import type {
   ParentContextPractice,
   PracticePublishStatus,
 } from "../types/course.types"
+import { isPublishedPublishStatus, normalizePublishStatus } from "./publishStatus"
 
 export function unwrapPracticesList(
   res: {
@@ -21,19 +22,11 @@ export function unwrapPracticesList(
 export function practicePublishStatus(
   practice: ParentContextPractice,
 ): PracticePublishStatus | null {
-  const raw = practice.publish_status
-  if (raw === "DRAFT" || raw === "PUBLISHED") return raw
-  if (typeof raw === "string") {
-    const upper = raw.toUpperCase()
-    if (upper === "DRAFT" || upper === "PUBLISHED") {
-      return upper as PracticePublishStatus
-    }
-  }
-  return null
+  return normalizePublishStatus(practice.publish_status)
 }
 
 export function isPracticePublished(practice: ParentContextPractice): boolean {
-  return practicePublishStatus(practice) === "PUBLISHED"
+  return isPublishedPublishStatus(practice.publish_status)
 }
 
 export function isPracticeDraft(practice: ParentContextPractice): boolean {

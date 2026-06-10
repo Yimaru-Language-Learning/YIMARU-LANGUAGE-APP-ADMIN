@@ -24,6 +24,7 @@ import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination";
 import { getTeamMembers, updateTeamMemberStatus } from "../../api/team.api";
 import type { TeamMember } from "../../types/team.types";
 import { toast } from "sonner";
+import { InviteTeamMemberDialog } from "../role-management/components/InviteTeamMemberDialog";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -96,9 +97,9 @@ export function TeamManagementPage() {
   const [confirmDialog, setConfirmDialog] = useState<{ id: number; name: string; newStatus: string } | null>(null);
   const [updating, setUpdating] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchMembers = async () => {
+  const fetchMembers = async () => {
       setLoading(true);
       try {
         const batchSize = 100;
@@ -128,7 +129,8 @@ export function TeamManagementPage() {
       }
     };
 
-    fetchMembers();
+  useEffect(() => {
+    void fetchMembers();
   }, []);
 
   const filteredMembers = useMemo(() => {
@@ -224,7 +226,7 @@ export function TeamManagementPage() {
         </div>
         <Button
           className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto"
-          onClick={() => navigate("/team/add")}
+          onClick={() => setInviteOpen(true)}
         >
           <Plus className="h-4 w-4" />
           Add Team Member
@@ -473,6 +475,12 @@ export function TeamManagementPage() {
       </div>
 
       {/* Status Update Confirmation Modal */}
+      <InviteTeamMemberDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onInvited={() => void fetchMembers()}
+      />
+
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm rounded-xl bg-white shadow-2xl">

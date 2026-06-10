@@ -62,6 +62,7 @@ import type {
   SubCourse,
   GetSubCourseEntryAssessmentResponse,
   ReorderItem,
+  ReorderOrderedIdsRequest,
   GetRatingsResponse,
   GetRatingsParams,
   GetVimeoSampleResponse,
@@ -109,6 +110,8 @@ import type {
   UpdateParentLinkedPracticeRequest,
   UpdateParentLinkedPracticeResponse,
   PublishParentLinkedPracticeRequest,
+  PublishStatusOnlyRequest,
+  AccessTierOnlyRequest,
   UpdateTopLevelModuleLessonRequest,
   PublishTopLevelModuleLessonRequest,
   CreateTopLevelModuleLessonRequest,
@@ -468,6 +471,28 @@ export const getProgramCourses = (
   params?: { limit?: number; offset?: number },
 ) => http.get<GetProgramCoursesResponse>(`/programs/${programId}/courses`, { params })
 
+/** PUT /programs/reorder */
+export const reorderLearningPrograms = (data: ReorderOrderedIdsRequest) =>
+  http.put("/programs/reorder", data)
+
+/** PUT /programs/:programId/courses/reorder */
+export const reorderProgramCourses = (
+  programId: number,
+  data: ReorderOrderedIdsRequest,
+) => http.put(`/programs/${programId}/courses/reorder`, data)
+
+/** PUT /courses/:courseId/modules/reorder */
+export const reorderTopLevelCourseModules = (
+  courseId: number,
+  data: ReorderOrderedIdsRequest,
+) => http.put(`/courses/${courseId}/modules/reorder`, data)
+
+/** PUT /modules/:moduleId/lessons/reorder */
+export const reorderModuleLessons = (
+  moduleId: number,
+  data: ReorderOrderedIdsRequest,
+) => http.put(`/modules/${moduleId}/lessons/reorder`, data)
+
 export const createProgramCourse = (
   programId: number,
   data: CreateProgramCourseRequest,
@@ -597,6 +622,12 @@ export const publishExamPrepModuleLesson = (
   data: PublishExamPrepModuleLessonRequest,
 ) => http.put(`/exam-prep/lessons/${lessonId}`, data)
 
+/** PUT /exam-prep/lessons/:lessonId — set access_tier only. */
+export const setExamPrepModuleLessonAccessTier = (
+  lessonId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/exam-prep/lessons/${lessonId}`, data)
+
 /** English proficiency lesson — DELETE /exam-prep/lessons/:lessonId */
 export const deleteExamPrepModuleLesson = (lessonId: number) =>
   http.delete(`/exam-prep/lessons/${lessonId}`)
@@ -626,6 +657,84 @@ export const deleteExamPrepPractice = (practiceId: number) =>
   http.delete<{ message: string; success: boolean; status_code: number; metadata: unknown }>(
     `/exam-prep/practices/${practiceId}`,
   )
+
+/** PUT /exam-prep/practices/:practiceId — set publish_status only. */
+export const setExamPrepPracticePublishStatus = (
+  practiceId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/exam-prep/practices/${practiceId}`, data)
+
+/** PUT /programs/:programId — set publish_status only. */
+export const setLearningProgramPublishStatus = (
+  programId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/programs/${programId}`, data)
+
+/** PUT /programs/:programId — set access_tier only. */
+export const setLearningProgramAccessTier = (
+  programId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/programs/${programId}`, data)
+
+/** PUT /courses/:courseId — set publish_status only (program-linked course). */
+export const setProgramCoursePublishStatus = (
+  courseId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/courses/${courseId}`, data)
+
+/** PUT /courses/:courseId — set access_tier only. */
+export const setProgramCourseAccessTier = (
+  courseId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/courses/${courseId}`, data)
+
+/** PUT /exam-prep/catalog-courses/:catalogCourseId — set publish_status only. */
+export const setExamPrepCatalogCoursePublishStatus = (
+  catalogCourseId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/exam-prep/catalog-courses/${catalogCourseId}`, data)
+
+/** PUT /exam-prep/catalog-courses/:catalogCourseId — set access_tier only. */
+export const setExamPrepCatalogCourseAccessTier = (
+  catalogCourseId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/exam-prep/catalog-courses/${catalogCourseId}`, data)
+
+/** PUT /exam-prep/units/:unitId — set publish_status only. */
+export const setExamPrepCatalogUnitPublishStatus = (
+  unitId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/exam-prep/units/${unitId}`, data)
+
+/** PUT /exam-prep/units/:unitId — set access_tier only. */
+export const setExamPrepCatalogUnitAccessTier = (
+  unitId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/exam-prep/units/${unitId}`, data)
+
+/** PUT /exam-prep/modules/:moduleId — set publish_status only. */
+export const setExamPrepUnitModulePublishStatus = (
+  moduleId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/exam-prep/modules/${moduleId}`, data)
+
+/** PUT /exam-prep/modules/:moduleId — set access_tier only. */
+export const setExamPrepUnitModuleAccessTier = (
+  moduleId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/exam-prep/modules/${moduleId}`, data)
+
+/** PUT /modules/:moduleId — set publish_status only (Learn English module). */
+export const setTopLevelCourseModulePublishStatus = (
+  moduleId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/modules/${moduleId}`, data)
+
+/** PUT /modules/:moduleId — set access_tier only. */
+export const setTopLevelCourseModuleAccessTier = (
+  moduleId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/modules/${moduleId}`, data)
 
 /** Top-level course resource (Learn English track) — PUT /courses/:id */
 export const updateTopLevelCourse = (courseId: number, data: UpdateTopLevelCourseRequest) =>
@@ -690,6 +799,12 @@ export const publishTopLevelModuleLesson = (
   data: PublishTopLevelModuleLessonRequest,
 ) => http.put(`/lessons/${lessonId}`, data)
 
+/** PUT /lessons/:id — set access_tier only. */
+export const setTopLevelModuleLessonAccessTier = (
+  lessonId: number,
+  data: AccessTierOnlyRequest,
+) => http.put(`/lessons/${lessonId}`, data)
+
 /** Learn English top-level module lesson — DELETE /lessons/:id */
 export const deleteTopLevelModuleLesson = (lessonId: number) =>
   http.delete(`/lessons/${lessonId}`)
@@ -725,11 +840,18 @@ export const updateParentLinkedPractice = (
   data: UpdateParentLinkedPracticeRequest,
 ) => http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
 
-/** PUT /practices/:id — set publish_status (e.g. publish a draft). */
+/** PUT /practices/:id — set publish_status only. */
+export const setParentLinkedPracticePublishStatus = (
+  practiceId: number,
+  data: PublishParentLinkedPracticeRequest,
+) =>
+  http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
+
+/** PUT /practices/:id — publish a draft practice. */
 export const publishParentLinkedPractice = (practiceId: number) =>
-  http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, {
+  setParentLinkedPracticePublishStatus(practiceId, {
     publish_status: "PUBLISHED",
-  } satisfies PublishParentLinkedPracticeRequest)
+  })
 
 /** DELETE /practices/:id */
 export const deleteParentLinkedPractice = (practiceId: number) =>

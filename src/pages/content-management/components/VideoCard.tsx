@@ -33,7 +33,12 @@ import {
   isDirectVideoFileUrl,
 } from "../../../lib/videoPreview";
 import { PreviewLimitedFileVideo } from "./PreviewLimitedFileVideo";
-import type { PracticePublishStatus } from "../../../types/course.types";
+import { PublishStatusConfirmDialog } from "./PublishStatusConfirmDialog";
+import type {
+  ContentAccessTier,
+  PracticePublishStatus,
+} from "../../../types/course.types";
+import { ContentAccessTierChip } from "./ContentAccessTierChip";
 
 function resolvePublishBadge(
   publishStatus?: PracticePublishStatus | string | null,
@@ -90,6 +95,9 @@ interface VideoCardProps {
   /** Toggle draft ↔ published via PUT /lessons/:id (module lesson cards). */
   onTogglePublishStatus?: (nextStatus: PracticePublishStatus) => void;
   publishStatusUpdating?: boolean;
+  accessTier?: ContentAccessTier | string | null;
+  onToggleAccessTier?: (nextTier: ContentAccessTier) => void;
+  accessTierUpdating?: boolean;
   /** Shown under title on module lesson cards; reserved height keeps grid rows even. */
   description?: string | null;
 }
@@ -110,6 +118,9 @@ export function VideoCard({
   onViewPractices,
   onTogglePublishStatus,
   publishStatusUpdating = false,
+  accessTier,
+  onToggleAccessTier,
+  accessTierUpdating = false,
   hoverModuleActions = false,
   description,
 }: VideoCardProps) {
@@ -118,6 +129,9 @@ export function VideoCard({
     number | null
   >(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [pendingPublishStatus, setPendingPublishStatus] =
+    useState<PracticePublishStatus | null>(null);
   /** Iframe players ignore URL limits in many cases — unmount after real time. */
   const [iframeSessionDone, setIframeSessionDone] = useState(false);
   const [iframeSessionKey, setIframeSessionKey] = useState(0);
@@ -138,6 +152,23 @@ export function VideoCard({
   const previewLengthLabel = formatPreviewLength(
     DEFAULT_PREVIEW_MAX_SECONDS,
   );
+  const requestPublishStatusChange = (
+    nextStatus: PracticePublishStatus,
+    e?: React.MouseEvent,
+  ) => {
+    e?.stopPropagation();
+    if (publishStatusUpdating) return;
+    setPendingPublishStatus(nextStatus);
+    setPublishConfirmOpen(true);
+  };
+
+  const confirmPublishStatusChange = () => {
+    if (!pendingPublishStatus || !onTogglePublishStatus) return;
+    onTogglePublishStatus(pendingPublishStatus);
+    setPublishConfirmOpen(false);
+    setPendingPublishStatus(null);
+  };
+
   const publishBadge = resolvePublishBadge(
     publishStatus,
     status,
@@ -242,6 +273,7 @@ export function VideoCard({
   };
 
   return (
+    <>
     <div
       className={cn(
         "group relative flex h-full min-h-0 flex-col overflow-hidden rounded-[24px] border border-grayScale-50 bg-white shadow-sm transition-all duration-300 hover:shadow-lg",
@@ -453,30 +485,39 @@ export function VideoCard({
             "justify-between",
           )}
         >
-          {/* Publish status badge */}
-          {publishBadge ? (
-            <div
-              className={cn(
-                "flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider",
-                publishBadge.isPublished
-                  ? "border-[#D1FAE5] bg-[#ECFDF5] text-[#059669]"
-                  : "border-[#E5E7EB] bg-grayScale-50 text-grayScale-500",
-              )}
-            >
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {publishBadge ? (
               <div
                 className={cn(
-                  "h-1.5 w-1.5 flex-shrink-0 rounded-full",
-                  publishBadge.isPublished ? "bg-[#10B981]" : "bg-[#9CA3AF]",
+                  "flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider",
+                  publishBadge.isPublished
+                    ? "border-[#D1FAE5] bg-[#ECFDF5] text-[#059669]"
+                    : "border-[#E5E7EB] bg-grayScale-50 text-grayScale-500",
                 )}
+              >
+                <div
+                  className={cn(
+                    "h-1.5 w-1.5 flex-shrink-0 rounded-full",
+                    publishBadge.isPublished ? "bg-[#10B981]" : "bg-[#9CA3AF]",
+                  )}
+                />
+                {publishBadge.label}
+              </div>
+            ) : (
+              <div className="flex min-w-0 items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-grayScale-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-grayScale-500">
+                <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#9CA3AF]" />
+                Lesson
+              </div>
+            )}
+            {accessTier != null || onToggleAccessTier ? (
+              <ContentAccessTierChip
+                accessTier={accessTier}
+                updating={accessTierUpdating}
+                contentLabel="lesson"
+                onToggle={onToggleAccessTier}
               />
-              {publishBadge.label}
-            </div>
-          ) : (
-            <div className="flex min-w-0 items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-grayScale-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-grayScale-500">
-              <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#9CA3AF]" />
-              Lesson
-            </div>
-          )}
+            ) : null}
+          </div>
           {hoverModuleActions && onTogglePublishStatus ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -485,11 +526,11 @@ export function VideoCard({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 flex-shrink-0 rounded-full text-grayScale-400 hover:bg-grayScale-50 hover:text-grayScale-600"
-                  disabled={publishStatusUpdating}
+                  disabled={publishStatusUpdating || accessTierUpdating}
                   aria-label={`Lesson options: ${title}`}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {publishStatusUpdating ? (
+                  {publishStatusUpdating || accessTierUpdating ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <MoreVertical className="h-5 w-5" />
@@ -498,11 +539,11 @@ export function VideoCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem
-                  disabled={publishStatusUpdating}
+                  disabled={publishStatusUpdating || accessTierUpdating}
                   onClick={(e) => {
-                    e.stopPropagation();
-                    onTogglePublishStatus(
+                    requestPublishStatusChange(
                       publishBadge?.isPublished ? "DRAFT" : "PUBLISHED",
+                      e,
                     );
                   }}
                 >
@@ -578,5 +619,17 @@ export function VideoCard({
         ) : null}
       </div>
     </div>
+    <PublishStatusConfirmDialog
+      open={publishConfirmOpen}
+      onOpenChange={(open) => {
+        setPublishConfirmOpen(open);
+        if (!open) setPendingPublishStatus(null);
+      }}
+      nextStatus={pendingPublishStatus}
+      contentLabel="lesson"
+      confirming={publishStatusUpdating}
+      onConfirm={confirmPublishStatusChange}
+    />
+    </>
   );
 }

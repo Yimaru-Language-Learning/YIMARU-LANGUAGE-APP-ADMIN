@@ -20,7 +20,8 @@ export function ReorderContentPage() {
           </h1>
           <p className="max-w-2xl text-sm text-grayScale-500">
             Drag and drop programs, courses, modules, and lessons to change
-            their display order.
+            their display order. Changes are saved automatically when you drop an
+            item.
           </p>
         </div>
       </div>

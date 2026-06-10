@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -17,6 +17,8 @@ import {
   deleteExamPrepPractice,
   getExamPrepLessonPractices,
   getPracticesByParentLesson,
+  setExamPrepPracticePublishStatus,
+  setParentLinkedPracticePublishStatus,
 } from "../../api/courses.api";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -33,7 +35,14 @@ import type {
   GetExamPrepLessonPracticesResponse,
   GetPracticesByParentContextResponse,
   ParentContextPractice,
+  PracticePublishStatus,
 } from "../../types/course.types";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import {
+  filterBySearchAndPublishStatus,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
 import { resolveThumbnailForPreview } from "../../lib/videoPreview";
 import { cn } from "../../lib/utils";
 
@@ -83,11 +92,15 @@ function PracticeCard({
   index,
   total,
   onDelete,
+  onTogglePublishStatus,
+  publishStatusUpdating,
 }: {
   practice: ParentContextPractice;
   index: number;
   total: number;
   onDelete?: () => void;
+  onTogglePublishStatus?: (nextStatus: PracticePublishStatus) => void;
+  publishStatusUpdating?: boolean;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const thumb = resolveThumbnailForPreview(practice.story_image);
@@ -141,14 +154,12 @@ function PracticeCard({
                 <Badge variant="secondary" className="font-mono text-[10px] font-semibold">
                   ID {practice.id}
                 </Badge>
-                {practice.publish_status ? (
-                  <Badge
-                    variant={practice.publish_status === "PUBLISHED" ? "default" : "secondary"}
-                    className="text-[10px] font-semibold normal-case"
-                  >
-                    {practice.publish_status}
-                  </Badge>
-                ) : null}
+                <ContentPublishStatusChip
+                  publishStatus={practice.publish_status}
+                  updating={publishStatusUpdating}
+                  contentLabel="practice"
+                  onToggle={onTogglePublishStatus}
+                />
               </div>
               {onDelete ? (
                 <Button
@@ -231,6 +242,27 @@ export function LessonPracticesPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [practiceToDelete, setPracticeToDelete] = useState<ParentContextPractice | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
+    number | null
+  >(null);
+  const [listSearch, setListSearch] = useState("");
+  const [publishStatusFilter, setPublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+
+  const filteredPractices = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(practices, {
+        search: listSearch,
+        publishStatusFilter,
+        getSearchFields: (p) => [
+          p.title,
+          p.story_description,
+          p.quick_tips,
+        ],
+        getPublishStatus: (p) => p.publish_status,
+      }),
+    [listSearch, practices, publishStatusFilter],
+  );
 
   const lid = lessonId ? Number(lessonId) : NaN;
   const validLesson = Number.isFinite(lid) && lid > 0;
@@ -288,6 +320,39 @@ export function LessonPracticesPage() {
   const addPracticeHref = isExamPrep
     ? `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`
     : `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`;
+
+  const handlePracticePublishStatus = async (
+    practiceId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusUpdatingId(practiceId);
+    try {
+      if (isExamPrep) {
+        await setExamPrepPracticePublishStatus(practiceId, {
+          publish_status: nextStatus,
+        });
+      } else {
+        await setParentLinkedPracticePublishStatus(practiceId, {
+          publish_status: nextStatus,
+        });
+      }
+      setPractices((prev) =>
+        prev.map((p) =>
+          p.id === practiceId ? { ...p, publish_status: nextStatus } : p,
+        ),
+      );
+      toast.success(
+        nextStatus === "PUBLISHED"
+          ? "Practice published"
+          : "Practice saved as draft",
+      );
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to update practice status");
+    } finally {
+      setPublishStatusUpdatingId(null);
+    }
+  };
 
   const confirmDeletePractice = async () => {
     if (!practiceToDelete) return;
@@ -459,17 +524,39 @@ export function LessonPracticesPage() {
             </Card>
           ) : (
             <div className="space-y-5">
-              {practices.map((p, i) => (
+              <ContentListSearchFilterBar
+                search={listSearch}
+                onSearchChange={setListSearch}
+                publishStatusFilter={publishStatusFilter}
+                onPublishStatusFilterChange={setPublishStatusFilter}
+                searchPlaceholder="Search practices by title or description…"
+                searchAriaLabel="Search practices"
+              />
+              {filteredPractices.length === 0 ? (
+                <Card className="border-dashed border-grayScale-200 bg-white/90 shadow-sm">
+                  <CardContent className="px-6 py-14 text-center">
+                    <p className="text-sm font-medium text-grayScale-600">
+                      No practices match your search or status filter
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+              filteredPractices.map((p, i) => (
                 <PracticeCard
                   key={p.id}
                   practice={p}
                   index={i}
-                  total={practices.length}
+                  total={filteredPractices.length}
                   onDelete={
                     isExamPrep ? () => setPracticeToDelete(p) : undefined
                   }
+                  publishStatusUpdating={publishStatusUpdatingId === p.id}
+                  onTogglePublishStatus={(nextStatus) =>
+                    void handlePracticePublishStatus(p.id, nextStatus)
+                  }
                 />
-              ))}
+              ))
+              )}
             </div>
           )}
         </div>

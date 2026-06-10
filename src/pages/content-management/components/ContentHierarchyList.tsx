@@ -36,12 +36,23 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "../../../lib/utils";
+import { toast } from "sonner";
 import {
   getLearningPrograms,
   getProgramCourses,
   getTopLevelCourseModules,
   getModuleLessons,
+  reorderLearningPrograms,
+  reorderProgramCourses,
+  reorderTopLevelCourseModules,
+  reorderModuleLessons,
 } from "../../../api/courses.api";
+
+function sortBySortOrder<T extends { sort_order?: number }>(items: T[]): T[] {
+  return [...items].sort(
+    (a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0),
+  );
+}
 
 // --- Types ---
 export type ItemType = "program" | "course" | "module" | "lesson";
@@ -327,7 +338,9 @@ export function ContentHierarchyList() {
       // 1. Fetch Programs
       const programsRes = await getLearningPrograms();
       const programData = programsRes.data?.data;
-      const fetchedPrograms: Program[] = (programData?.programs || []).map(
+      const fetchedPrograms: Program[] = sortBySortOrder(
+        programData?.programs || [],
+      ).map(
         (p) => ({
           id: String(p.id),
           name: p.name,
@@ -347,7 +360,7 @@ export function ContentHierarchyList() {
       const coursesResults = await Promise.all(coursesPromises);
       const fetchedCourses: Course[] = coursesResults.flatMap((res, idx) => {
         const courseData = res.data?.data;
-        return (courseData?.courses || []).map((c) => ({
+        return sortBySortOrder(courseData?.courses || []).map((c) => ({
           id: String(c.id),
           name: c.name,
           thumbnail: c.thumbnail_url || c.thumbnail || undefined,
@@ -367,7 +380,7 @@ export function ContentHierarchyList() {
       const modulesResults = await Promise.all(modulesPromises);
       const fetchedModules: Module[] = modulesResults.flatMap((res, idx) => {
         const moduleData = res.data?.data;
-        return (moduleData?.modules || []).map((m) => ({
+        return sortBySortOrder(moduleData?.modules || []).map((m) => ({
           id: String(m.id),
           name: m.name,
           thumbnail: m.icon || undefined,
@@ -387,7 +400,7 @@ export function ContentHierarchyList() {
       const lessonsResults = await Promise.all(lessonsPromises);
       const fetchedLessons: Lesson[] = lessonsResults.flatMap((res, idx) => {
         const lessonData = res.data?.data;
-        return (lessonData?.lessons || []).map((l) => ({
+        return sortBySortOrder(lessonData?.lessons || []).map((l) => ({
           id: String(l.id),
           name: l.title,
           thumbnail: l.thumbnail || undefined,
@@ -410,16 +423,115 @@ export function ContentHierarchyList() {
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const reorder = <T extends BaseItem>(
-    list: T[],
-    setList: React.Dispatch<React.SetStateAction<T[]>>,
-    activeId: UniqueIdentifier,
-    overId: UniqueIdentifier,
+  const toOrderedIds = (items: BaseItem[]) =>
+    items.map((item) => Number(item.id));
+
+  const reorderSiblings = <T extends BaseItem>(
+    siblings: T[],
+    activeId: string,
+    overId: string,
+  ): T[] | null => {
+    const oldIndex = siblings.findIndex((i) => i.id === activeId);
+    const newIndex = siblings.findIndex((i) => i.id === overId);
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
+      return null;
+    }
+    return arrayMove(siblings, oldIndex, newIndex);
+  };
+
+  const reorderErrorMessage = (error: unknown, fallback: string) => {
+    const message = (error as { response?: { data?: { message?: string } } })
+      ?.response?.data?.message;
+    return typeof message === "string" && message.trim() ? message : fallback;
+  };
+
+  const handleProgramReorder = async (activeId: string, overId: string) => {
+    const reordered = reorderSiblings(programs, activeId, overId);
+    if (!reordered) return;
+
+    const previous = programs;
+    setPrograms(reordered);
+    try {
+      await reorderLearningPrograms({ ordered_ids: toOrderedIds(reordered) });
+      toast.success("Programs reordered");
+    } catch (error) {
+      setPrograms(previous);
+      toast.error(reorderErrorMessage(error, "Failed to reorder programs"));
+    }
+  };
+
+  const handleCourseReorder = async (
+    programId: string,
+    activeId: string,
+    overId: string,
   ) => {
-    const oldIndex = list.findIndex((i) => i.id === String(activeId));
-    const newIndex = list.findIndex((i) => i.id === String(overId));
-    if (oldIndex !== -1 && newIndex !== -1) {
-      setList(arrayMove(list, oldIndex, newIndex));
+    const siblings = courses.filter((course) => course.programId === programId);
+    const reordered = reorderSiblings(siblings, activeId, overId);
+    if (!reordered) return;
+
+    const previous = courses;
+    setCourses((prev) => [
+      ...prev.filter((course) => course.programId !== programId),
+      ...reordered,
+    ]);
+    try {
+      await reorderProgramCourses(Number(programId), {
+        ordered_ids: toOrderedIds(reordered),
+      });
+      toast.success("Courses reordered");
+    } catch (error) {
+      setCourses(previous);
+      toast.error(reorderErrorMessage(error, "Failed to reorder courses"));
+    }
+  };
+
+  const handleModuleReorder = async (
+    courseId: string,
+    activeId: string,
+    overId: string,
+  ) => {
+    const siblings = modules.filter((module) => module.courseId === courseId);
+    const reordered = reorderSiblings(siblings, activeId, overId);
+    if (!reordered) return;
+
+    const previous = modules;
+    setModules((prev) => [
+      ...prev.filter((module) => module.courseId !== courseId),
+      ...reordered,
+    ]);
+    try {
+      await reorderTopLevelCourseModules(Number(courseId), {
+        ordered_ids: toOrderedIds(reordered),
+      });
+      toast.success("Modules reordered");
+    } catch (error) {
+      setModules(previous);
+      toast.error(reorderErrorMessage(error, "Failed to reorder modules"));
+    }
+  };
+
+  const handleLessonReorder = async (
+    moduleId: string,
+    activeId: string,
+    overId: string,
+  ) => {
+    const siblings = lessons.filter((lesson) => lesson.moduleId === moduleId);
+    const reordered = reorderSiblings(siblings, activeId, overId);
+    if (!reordered) return;
+
+    const previous = lessons;
+    setLessons((prev) => [
+      ...prev.filter((lesson) => lesson.moduleId !== moduleId),
+      ...reordered,
+    ]);
+    try {
+      await reorderModuleLessons(Number(moduleId), {
+        ordered_ids: toOrderedIds(reordered),
+      });
+      toast.success("Lessons reordered");
+    } catch (error) {
+      setLessons(previous);
+      toast.error(reorderErrorMessage(error, "Failed to reorder lessons"));
     }
   };
 
@@ -487,7 +599,7 @@ export function ContentHierarchyList() {
             <DraggableList
               items={programs}
               onReorder={(active, over) =>
-                reorder(programs, setPrograms, active, over)
+                void handleProgramReorder(active, over)
               }
               icon={<LayoutGrid className="h-4 w-4" />}
               onEdit={(id) => handleEdit("program", id)}
@@ -521,7 +633,7 @@ export function ContentHierarchyList() {
                   <DraggableList
                     items={programCourses}
                     onReorder={(active, over) =>
-                      reorder(courses, setCourses, active, over)
+                      void handleCourseReorder(program.id, active, over)
                     }
                     icon={<BookOpen className="h-4 w-4" />}
                     onEdit={(id) => handleEdit("course", id)}
@@ -558,7 +670,7 @@ export function ContentHierarchyList() {
                   <DraggableList
                     items={courseModules}
                     onReorder={(active, over) =>
-                      reorder(modules, setModules, active, over)
+                      void handleModuleReorder(course.id, active, over)
                     }
                     icon={<Layers className="h-4 w-4" />}
                     onEdit={(id) => handleEdit("module", id)}
@@ -595,7 +707,7 @@ export function ContentHierarchyList() {
                   <DraggableList
                     items={moduleLessons}
                     onReorder={(active, over) =>
-                      reorder(lessons, setLessons, active, over)
+                      void handleLessonReorder(module.id, active, over)
                     }
                     icon={<PlayCircle className="h-4 w-4" />}
                     onEdit={(id) => handleEdit("lesson", id)}

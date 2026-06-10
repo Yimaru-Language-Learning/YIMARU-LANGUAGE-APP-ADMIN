@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -28,11 +28,21 @@ import { toast } from "sonner";
 import { ResolvedImage } from "../../components/media/ResolvedImage";
 import {
   createExamPrepCatalogUnit,
+  setExamPrepCatalogUnitAccessTier,
+  setExamPrepCatalogUnitPublishStatus,
   updateExamPrepCatalogUnit,
   deleteExamPrepCatalogUnit,
   getExamPrepCatalogUnits,
 } from "../../api/courses.api";
 import { uploadImageFile } from "../../api/files.api";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import {
+  filterBySearchAndPublishStatus,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
 
 export function CourseManagementPage() {
   const navigate = useNavigate();
@@ -55,12 +65,20 @@ export function CourseManagementPage() {
       description: string;
       thumbnail: string;
       sortOrder: number;
+      publishStatus: PracticePublishStatus | string | null;
+      accessTier: ContentAccessTier | string | null;
       modules: number;
       lessons: number;
       practices: number;
       gradient: string;
     }>
   >([]);
+  const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
+    number | null
+  >(null);
+  const [accessTierUpdatingId, setAccessTierUpdatingId] = useState<
+    number | null
+  >(null);
   const [unitsLoading, setUnitsLoading] = useState(false);
   const [editingUnitId, setEditingUnitId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
@@ -71,6 +89,20 @@ export function CourseManagementPage() {
   const editThumbnailFileInputRef = useRef<HTMLInputElement>(null);
   const [deletingUnitId, setDeletingUnitId] = useState<number | null>(null);
   const [deletingUnit, setDeletingUnit] = useState(false);
+  const [listSearch, setListSearch] = useState("");
+  const [publishStatusFilter, setPublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+
+  const filteredUnits = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(units, {
+        search: listSearch,
+        publishStatusFilter,
+        getSearchFields: (u) => [u.name, u.description],
+        getPublishStatus: (u) => u.publishStatus,
+      }),
+    [listSearch, publishStatusFilter, units],
+  );
 
   // Mock data for display titles
   const courseTitles: Record<string, string> = {
@@ -101,6 +133,8 @@ export function CourseManagementPage() {
           description: row.description?.trim() || "—",
           thumbnail: row.thumbnail?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
+          publishStatus: row.publish_status ?? null,
+          accessTier: row.access_tier ?? null,
           modules: Number(row.modules_count ?? 0),
           lessons: Number(row.lessons_count ?? row.videos_count ?? 0),
           practices: Number(row.practices_count ?? 0),
@@ -124,6 +158,58 @@ export function CourseManagementPage() {
   useEffect(() => {
     void loadUnits();
   }, [loadUnits]);
+
+  const handleUnitPublishStatus = async (
+    unitId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusUpdatingId(unitId);
+    try {
+      await setExamPrepCatalogUnitPublishStatus(unitId, {
+        publish_status: nextStatus,
+      });
+      setUnits((prev) =>
+        prev.map((u) =>
+          u.id === unitId ? { ...u, publishStatus: nextStatus } : u,
+        ),
+      );
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Unit published" : "Unit saved as draft",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update unit status";
+      toast.error(message);
+    } finally {
+      setPublishStatusUpdatingId(null);
+    }
+  };
+
+  const handleUnitAccessTier = async (
+    unitId: number,
+    nextTier: ContentAccessTier,
+  ) => {
+    setAccessTierUpdatingId(unitId);
+    try {
+      await setExamPrepCatalogUnitAccessTier(unitId, { access_tier: nextTier });
+      setUnits((prev) =>
+        prev.map((u) =>
+          u.id === unitId ? { ...u, accessTier: nextTier } : u,
+        ),
+      );
+      toast.success(
+        nextTier === "PREMIUM" ? "Unit set to Premium" : "Unit set to Free",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update unit access tier";
+      toast.error(message);
+    } finally {
+      setAccessTierUpdatingId(null);
+    }
+  };
 
   const isHttpUrl = (value: string) =>
     value.startsWith("http://") || value.startsWith("https://");
@@ -574,7 +660,18 @@ export function CourseManagementPage() {
       </div>
 
       {/* Grid of Units */}
-      <div className="flex flex-wrap gap-4 pt-4">
+      <div className="space-y-4 pt-4">
+        {!unitsLoading && units.length > 0 ? (
+          <ContentListSearchFilterBar
+            search={listSearch}
+            onSearchChange={setListSearch}
+            publishStatusFilter={publishStatusFilter}
+            onPublishStatusFilterChange={setPublishStatusFilter}
+            searchPlaceholder="Search units by name or description…"
+            searchAriaLabel="Search units"
+          />
+        ) : null}
+        <div className="flex flex-wrap gap-4">
         {unitsLoading ? (
           <p className="text-sm text-grayScale-500">Loading units...</p>
         ) : units.length === 0 ? (
@@ -586,8 +683,14 @@ export function CourseManagementPage() {
               Create your first unit to start organizing modules, lessons, and practices.
             </p>
           </div>
+        ) : filteredUnits.length === 0 ? (
+          <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+            <p className="text-sm font-medium text-grayScale-600">
+              No units match your search or status filter
+            </p>
+          </div>
         ) : (
-          units.map((unit) => (
+          filteredUnits.map((unit) => (
           <Card
             key={unit.id}
             className="group relative flex w-[400px] flex-col h-full bg-white rounded-[12px] border border-grayScale-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
@@ -633,6 +736,24 @@ export function CourseManagementPage() {
 
             <div className="p-4 flex flex-col flex-1 space-y-6">
               <div className="space-y-3 flex-1">
+                <div className="flex flex-wrap gap-2">
+                  <ContentPublishStatusChip
+                    publishStatus={unit.publishStatus}
+                    updating={publishStatusUpdatingId === unit.id}
+                    contentLabel="unit"
+                    onToggle={(nextStatus) =>
+                      void handleUnitPublishStatus(unit.id, nextStatus)
+                    }
+                  />
+                  <ContentAccessTierChip
+                    accessTier={unit.accessTier}
+                    updating={accessTierUpdatingId === unit.id}
+                    contentLabel="unit"
+                    onToggle={(nextTier) =>
+                      void handleUnitAccessTier(unit.id, nextTier)
+                    }
+                  />
+                </div>
                 <h3 className="text-[18px] font-medium text-grayScale-900  transition-colors">
                   {unit.name}
                 </h3>
@@ -679,6 +800,7 @@ export function CourseManagementPage() {
           </Card>
           ))
         )}
+        </div>
       </div>
 
       <Dialog

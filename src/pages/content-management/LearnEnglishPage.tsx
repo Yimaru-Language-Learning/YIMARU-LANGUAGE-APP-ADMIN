@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, ArrowRight, Pencil, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -21,9 +21,20 @@ import alertSrc from "../../assets/Alert.svg";
 import {
   getLearningPrograms,
   createLearningProgram,
+  setLearningProgramAccessTier,
+  setLearningProgramPublishStatus,
   updateLearningProgram,
   deleteLearningProgram,
 } from "../../api/courses.api";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import {
+  filterBySearchAndPublishStatus,
+  hasActiveContentFilters,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
 import { refreshFileUrl, uploadImageFile } from "../../api/files.api";
 import type { LearningProgramListItem } from "../../types/course.types";
 
@@ -71,6 +82,26 @@ export function LearnEnglishPage() {
   const [deletingProgram, setDeletingProgram] =
     useState<LearningProgramListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
+    number | null
+  >(null);
+  const [accessTierUpdatingId, setAccessTierUpdatingId] = useState<
+    number | null
+  >(null);
+  const [listSearch, setListSearch] = useState("");
+  const [publishStatusFilter, setPublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+
+  const filteredPrograms = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(programs, {
+        search: listSearch,
+        publishStatusFilter,
+        getSearchFields: (p) => [p.name, p.description],
+        getPublishStatus: (p) => p.publish_status,
+      }),
+    [programs, listSearch, publishStatusFilter],
+  );
 
   const openEdit = (program: LearningProgramListItem) => {
     setEditingProgram(program);
@@ -251,6 +282,58 @@ export function LearnEnglishPage() {
       toast.error(msg);
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleProgramPublishStatus = async (
+    programId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusUpdatingId(programId);
+    try {
+      await setLearningProgramPublishStatus(programId, {
+        publish_status: nextStatus,
+      });
+      setPrograms((prev) =>
+        prev.map((p) =>
+          p.id === programId ? { ...p, publish_status: nextStatus } : p,
+        ),
+      );
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Program published" : "Program saved as draft",
+      );
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update program status";
+      toast.error(msg);
+    } finally {
+      setPublishStatusUpdatingId(null);
+    }
+  };
+
+  const handleProgramAccessTier = async (
+    programId: number,
+    nextTier: ContentAccessTier,
+  ) => {
+    setAccessTierUpdatingId(programId);
+    try {
+      await setLearningProgramAccessTier(programId, { access_tier: nextTier });
+      setPrograms((prev) =>
+        prev.map((p) =>
+          p.id === programId ? { ...p, access_tier: nextTier } : p,
+        ),
+      );
+      toast.success(
+        nextTier === "PREMIUM" ? "Program set to Premium" : "Program set to Free",
+      );
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update program access tier";
+      toast.error(msg);
+    } finally {
+      setAccessTierUpdatingId(null);
     }
   };
 
@@ -559,8 +642,29 @@ export function LearnEnglishPage() {
           </p>
         </div>
       ) : (
+        <div className="space-y-6">
+          <ContentListSearchFilterBar
+            search={listSearch}
+            onSearchChange={setListSearch}
+            publishStatusFilter={publishStatusFilter}
+            onPublishStatusFilterChange={setPublishStatusFilter}
+            searchPlaceholder="Search programs by name or description…"
+            searchAriaLabel="Search programs"
+          />
+          {filteredPrograms.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+              <p className="text-sm font-medium text-grayScale-600">
+                No programs match your search or status filter
+              </p>
+              {hasActiveContentFilters(listSearch, publishStatusFilter) ? (
+                <p className="mt-1 text-sm text-grayScale-400">
+                  Try different keywords or clear the publish status filter.
+                </p>
+              ) : null}
+            </div>
+          ) : (
         <div className="flex flex-wrap gap-10">
-          {programs.map((program) => (
+          {filteredPrograms.map((program) => (
             <Card
               key={program.id}
               className="group relative w-[290px] overflow-hidden border-none shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
@@ -604,6 +708,24 @@ export function LearnEnglishPage() {
               />
               <CardContent className="bg-white p-6 flex flex-col h-[280px]">
                 <div className="flex-1 min-h-0">
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <ContentPublishStatusChip
+                      publishStatus={program.publish_status}
+                      updating={publishStatusUpdatingId === program.id}
+                      contentLabel="program"
+                      onToggle={(nextStatus) =>
+                        void handleProgramPublishStatus(program.id, nextStatus)
+                      }
+                    />
+                    <ContentAccessTierChip
+                      accessTier={program.access_tier}
+                      updating={accessTierUpdatingId === program.id}
+                      contentLabel="program"
+                      onToggle={(nextTier) =>
+                        void handleProgramAccessTier(program.id, nextTier)
+                      }
+                    />
+                  </div>
                   <h3 className="text-xl font-bold text-grayScale-700 line-clamp-2">
                     {program.name}
                   </h3>
@@ -626,6 +748,8 @@ export function LearnEnglishPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -28,10 +28,20 @@ import { ResolvedImage } from "../../components/media/ResolvedImage";
 import {
   createExamPrepUnitModule,
   getExamPrepUnitModules,
+  setExamPrepUnitModuleAccessTier,
+  setExamPrepUnitModulePublishStatus,
   updateExamPrepUnitModule,
   deleteExamPrepUnitModule,
 } from "../../api/courses.api";
 import { uploadImageFile } from "../../api/files.api";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import {
+  filterBySearchAndPublishStatus,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
 
 export function UnitManagementPage() {
   const navigate = useNavigate();
@@ -70,11 +80,19 @@ export function UnitManagementPage() {
       thumbnail: string;
       icon: string;
       sortOrder: number;
+      publishStatus: PracticePublishStatus | string | null;
+      accessTier: ContentAccessTier | string | null;
       lessons: number;
       practices: number;
       gradient: string;
     }>
   >([]);
+  const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
+    number | null
+  >(null);
+  const [accessTierUpdatingId, setAccessTierUpdatingId] = useState<
+    number | null
+  >(null);
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
@@ -87,6 +105,20 @@ export function UnitManagementPage() {
   const editIconFileInputRef = useRef<HTMLInputElement>(null);
   const [deletingModuleId, setDeletingModuleId] = useState<number | null>(null);
   const [deletingModule, setDeletingModule] = useState(false);
+  const [listSearch, setListSearch] = useState("");
+  const [publishStatusFilter, setPublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+
+  const filteredModules = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(modules, {
+        search: listSearch,
+        publishStatusFilter,
+        getSearchFields: (m) => [m.name, m.description],
+        getPublishStatus: (m) => m.publishStatus,
+      }),
+    [listSearch, modules, publishStatusFilter],
+  );
 
   const isHttpUrl = (value: string) =>
     value.startsWith("http://") || value.startsWith("https://");
@@ -131,6 +163,8 @@ export function UnitManagementPage() {
           thumbnail: row.thumbnail?.trim() || "",
           icon: row.icon?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
+          publishStatus: row.publish_status ?? null,
+          accessTier: row.access_tier ?? null,
           lessons: Number(row.lessons_count ?? row.videos_count ?? 0),
           practices: Number(row.practices_count ?? 0),
           gradient:
@@ -153,6 +187,58 @@ export function UnitManagementPage() {
   useEffect(() => {
     void loadModules();
   }, [loadModules]);
+
+  const handleModulePublishStatus = async (
+    moduleId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusUpdatingId(moduleId);
+    try {
+      await setExamPrepUnitModulePublishStatus(moduleId, {
+        publish_status: nextStatus,
+      });
+      setModules((prev) =>
+        prev.map((m) =>
+          m.id === moduleId ? { ...m, publishStatus: nextStatus } : m,
+        ),
+      );
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Module published" : "Module saved as draft",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update module status";
+      toast.error(message);
+    } finally {
+      setPublishStatusUpdatingId(null);
+    }
+  };
+
+  const handleModuleAccessTier = async (
+    moduleId: number,
+    nextTier: ContentAccessTier,
+  ) => {
+    setAccessTierUpdatingId(moduleId);
+    try {
+      await setExamPrepUnitModuleAccessTier(moduleId, { access_tier: nextTier });
+      setModules((prev) =>
+        prev.map((m) =>
+          m.id === moduleId ? { ...m, accessTier: nextTier } : m,
+        ),
+      );
+      toast.success(
+        nextTier === "PREMIUM" ? "Module set to Premium" : "Module set to Free",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update module access tier";
+      toast.error(message);
+    } finally {
+      setAccessTierUpdatingId(null);
+    }
+  };
 
   const clearCreateModuleForm = () => {
     setCreateName("");
@@ -655,7 +741,18 @@ export function UnitManagementPage() {
       </div>
 
       {/* Grid of Modules */}
-      <div className="flex flex-wrap gap-4 pt-4">
+      <div className="space-y-4 pt-4">
+        {!modulesLoading && modules.length > 0 ? (
+          <ContentListSearchFilterBar
+            search={listSearch}
+            onSearchChange={setListSearch}
+            publishStatusFilter={publishStatusFilter}
+            onPublishStatusFilterChange={setPublishStatusFilter}
+            searchPlaceholder="Search modules by name or description…"
+            searchAriaLabel="Search modules"
+          />
+        ) : null}
+        <div className="flex flex-wrap gap-4">
         {modulesLoading ? (
           <p className="text-sm text-grayScale-500">Loading modules...</p>
         ) : modules.length === 0 ? (
@@ -667,8 +764,14 @@ export function UnitManagementPage() {
               Create your first module to start organizing lessons and practices.
             </p>
           </div>
+        ) : filteredModules.length === 0 ? (
+          <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+            <p className="text-sm font-medium text-grayScale-600">
+              No modules match your search or status filter
+            </p>
+          </div>
         ) : (
-          modules.map((module, index) => (
+          filteredModules.map((module, index) => (
             <Card
               key={`${module.id}-${index}`}
               className="group relative flex w-[400px] flex-col bg-white rounded-[12px] border border-grayScale-100 overflow-hidden shadow-sm hover:shadow-md transition-all"
@@ -730,6 +833,24 @@ export function UnitManagementPage() {
                   </div>
 
                   <div className="space-y-1">
+                    <div className="mb-1 flex flex-wrap gap-2">
+                      <ContentPublishStatusChip
+                        publishStatus={module.publishStatus}
+                        updating={publishStatusUpdatingId === module.id}
+                        contentLabel="module"
+                        onToggle={(nextStatus) =>
+                          void handleModulePublishStatus(module.id, nextStatus)
+                        }
+                      />
+                      <ContentAccessTierChip
+                        accessTier={module.accessTier}
+                        updating={accessTierUpdatingId === module.id}
+                        contentLabel="module"
+                        onToggle={(nextTier) =>
+                          void handleModuleAccessTier(module.id, nextTier)
+                        }
+                      />
+                    </div>
                     <h3 className="text-[16px] font-medium text-grayScale-900 leading-tight">
                       {module.name}
                     </h3>
@@ -771,6 +892,7 @@ export function UnitManagementPage() {
             </Card>
           ))
         )}
+        </div>
       </div>
 
       <Dialog

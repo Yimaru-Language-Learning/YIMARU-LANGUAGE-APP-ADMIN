@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Plus, Pencil, Trash2, X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -22,11 +22,24 @@ import {
   deleteTopLevelCourse,
   getLearningPrograms,
   getProgramCourses,
+  setProgramCourseAccessTier,
+  setProgramCoursePublishStatus,
   updateTopLevelCourse,
 } from "../../api/courses.api";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import { ContentPageDescription } from "./components/ContentPageDescription";
+import {
+  filterBySearchAndPublishStatus,
+  hasActiveContentFilters,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
 import { uploadImageFile } from "../../api/files.api";
 import type {
+  ContentAccessTier,
   LearningProgramListItem,
+  PracticePublishStatus,
   ProgramCourseListItem,
 } from "../../types/course.types";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
@@ -64,8 +77,80 @@ export function ProgramCoursesPage() {
   const [createSaving, setCreateSaving] = useState(false);
   const [createUploadingThumbnail, setCreateUploadingThumbnail] = useState(false);
   const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+  const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
+    number | null
+  >(null);
+  const [accessTierUpdatingId, setAccessTierUpdatingId] = useState<
+    number | null
+  >(null);
+  const [listSearch, setListSearch] = useState("");
+  const [publishStatusFilter, setPublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+
+  const filteredCourses = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(courses, {
+        search: listSearch,
+        publishStatusFilter,
+        getSearchFields: (c) => [c.name, c.description],
+        getPublishStatus: (c) => c.publish_status,
+      }),
+    [courses, listSearch, publishStatusFilter],
+  );
 
   const programIdValid = Number.isFinite(programId) && programId >= 1;
+
+  const handleCoursePublishStatus = async (
+    courseId: number,
+    nextStatus: PracticePublishStatus,
+  ) => {
+    setPublishStatusUpdatingId(courseId);
+    try {
+      await setProgramCoursePublishStatus(courseId, {
+        publish_status: nextStatus,
+      });
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId ? { ...c, publish_status: nextStatus } : c,
+        ),
+      );
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Course published" : "Course saved as draft",
+      );
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update course status";
+      toast.error(msg);
+    } finally {
+      setPublishStatusUpdatingId(null);
+    }
+  };
+
+  const handleCourseAccessTier = async (
+    courseId: number,
+    nextTier: ContentAccessTier,
+  ) => {
+    setAccessTierUpdatingId(courseId);
+    try {
+      await setProgramCourseAccessTier(courseId, { access_tier: nextTier });
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === courseId ? { ...c, access_tier: nextTier } : c,
+        ),
+      );
+      toast.success(
+        nextTier === "PREMIUM" ? "Course set to Premium" : "Course set to Free",
+      );
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update course access tier";
+      toast.error(msg);
+    } finally {
+      setAccessTierUpdatingId(null);
+    }
+  };
 
   const loadData = useCallback(async () => {
     if (!Number.isFinite(programId) || programId < 1) {
@@ -342,9 +427,9 @@ export function ProgramCoursesPage() {
             {programTitle}
           </h1>
           {programDescription ? (
-            <p className="max-w-2xl text-[15px] leading-relaxed text-grayScale-400">
+            <ContentPageDescription className="text-[15px] text-grayScale-400">
               {programDescription}
-            </p>
+            </ContentPageDescription>
           ) : loading ? (
             <div className="flex items-center gap-2 pt-1">
               <img
@@ -579,8 +664,24 @@ export function ProgramCoursesPage() {
           </p>
         </div>
       ) : (
+        <div className="space-y-6">
+          <ContentListSearchFilterBar
+            search={listSearch}
+            onSearchChange={setListSearch}
+            publishStatusFilter={publishStatusFilter}
+            onPublishStatusFilterChange={setPublishStatusFilter}
+            searchPlaceholder="Search courses by name or description…"
+            searchAriaLabel="Search courses"
+          />
+          {filteredCourses.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+              <p className="text-sm font-medium text-grayScale-600">
+                No courses match your search or status filter
+              </p>
+            </div>
+          ) : (
         <div className="flex flex-wrap gap-10">
-          {courses.map((course) => {
+          {filteredCourses.map((course) => {
             const modules =
               course.module_count ?? course.modules_count ?? 0;
             const lessons = course.lesson_count ?? course.videos_count ?? 0;
@@ -631,6 +732,24 @@ export function ProgramCoursesPage() {
                   }
                 />
                 <CardContent className="p-6">
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <ContentPublishStatusChip
+                      publishStatus={course.publish_status}
+                      updating={publishStatusUpdatingId === course.id}
+                      contentLabel="course"
+                      onToggle={(nextStatus) =>
+                        void handleCoursePublishStatus(course.id, nextStatus)
+                      }
+                    />
+                    <ContentAccessTierChip
+                      accessTier={course.access_tier}
+                      updating={accessTierUpdatingId === course.id}
+                      contentLabel="course"
+                      onToggle={(nextTier) =>
+                        void handleCourseAccessTier(course.id, nextTier)
+                      }
+                    />
+                  </div>
                   <h3 className="text-xl font-bold text-grayScale-700">
                     {course.name}
                   </h3>
@@ -687,6 +806,8 @@ export function ProgramCoursesPage() {
               </Card>
             );
           })}
+        </div>
+          )}
         </div>
       )}
 

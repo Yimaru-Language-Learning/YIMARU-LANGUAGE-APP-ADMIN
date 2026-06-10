@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Plus, FileText, Video } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
@@ -24,10 +24,20 @@ import {
   deleteExamPrepModuleLesson,
   getExamPrepModuleLessons,
   publishExamPrepModuleLesson,
+  setExamPrepModuleLessonAccessTier,
 } from "../../api/courses.api";
 import { uploadImageFile, uploadVideoFile } from "../../api/files.api";
 import { resolveThumbnailForPreview } from "../../lib/videoPreview";
-import type { PracticePublishStatus } from "../../types/course.types";
+import type {
+  ContentAccessTier,
+  PracticePublishStatus,
+} from "../../types/course.types";
+import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import { ContentPageDescription } from "./components/ContentPageDescription";
+import {
+  filterBySearchAndPublishStatus,
+  type PublishStatusFilter,
+} from "../../lib/contentListFilters";
 
 const LESSON_THUMB_GRADIENTS = [
   "from-[#CBD5E1] to-[#94A3B8]",
@@ -74,6 +84,7 @@ export function CourseModuleDetailPage() {
       thumbnail: string;
       sortOrder: number;
       publishStatus: PracticePublishStatus | string | null;
+      accessTier: ContentAccessTier | string | null;
       durationSeconds: number | null;
     }>
   >([]);
@@ -81,6 +92,23 @@ export function CourseModuleDetailPage() {
   const [publishStatusLessonId, setPublishStatusLessonId] = useState<
     number | null
   >(null);
+  const [accessTierLessonId, setAccessTierLessonId] = useState<number | null>(
+    null,
+  );
+  const [lessonSearch, setLessonSearch] = useState("");
+  const [lessonPublishStatusFilter, setLessonPublishStatusFilter] =
+    useState<PublishStatusFilter>("all");
+
+  const filteredLessons = useMemo(
+    () =>
+      filterBySearchAndPublishStatus(lessons, {
+        search: lessonSearch,
+        publishStatusFilter: lessonPublishStatusFilter,
+        getSearchFields: (l) => [l.title, l.description],
+        getPublishStatus: (l) => l.publishStatus,
+      }),
+    [lessonPublishStatusFilter, lessonSearch, lessons],
+  );
   const [createLessonOpen, setCreateLessonOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
   const [createVideoUrl, setCreateVideoUrl] = useState("");
@@ -159,6 +187,7 @@ export function CourseModuleDetailPage() {
             thumbnail: row.thumbnail?.trim() || "",
             sortOrder: Number(row.sort_order ?? 0),
             publishStatus: row.publish_status ?? null,
+            accessTier: row.access_tier ?? null,
             durationSeconds,
           };
         }),
@@ -505,6 +534,34 @@ export function CourseModuleDetailPage() {
     }
   };
 
+  const handleToggleLessonAccessTier = async (
+    lessonId: number,
+    nextTier: ContentAccessTier,
+  ) => {
+    setAccessTierLessonId(lessonId);
+    try {
+      await setExamPrepModuleLessonAccessTier(lessonId, {
+        access_tier: nextTier,
+      });
+      setLessons((prev) =>
+        prev.map((l) =>
+          l.id === lessonId ? { ...l, accessTier: nextTier } : l,
+        ),
+      );
+      toast.success(
+        nextTier === "PREMIUM" ? "Lesson set to Premium" : "Lesson set to Free",
+      );
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update lesson access tier";
+      toast.error(message);
+    } finally {
+      setAccessTierLessonId(null);
+    }
+  };
+
   const lessonAttachPracticePath = (lesson: (typeof lessons)[number]) =>
     `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}`;
 
@@ -528,9 +585,9 @@ export function CourseModuleDetailPage() {
           <h1 className="text-[32px] font-extrabold tracking-tight text-[#0D1421]">
             {moduleTitle}
           </h1>
-          <p className="max-w-2xl text-[16px] font-medium leading-relaxed text-grayScale-400">
+          <ContentPageDescription className="text-[16px] font-medium text-grayScale-400">
             {moduleDescription}
-          </p>
+          </ContentPageDescription>
         </div>
 
         <div className="flex items-center gap-3 pt-2">
@@ -780,8 +837,24 @@ export function CourseModuleDetailPage() {
               {lessonsLoadError}
             </div>
           ) : lessons.length > 0 ? (
+            <div className="space-y-6">
+              <ContentListSearchFilterBar
+                search={lessonSearch}
+                onSearchChange={setLessonSearch}
+                publishStatusFilter={lessonPublishStatusFilter}
+                onPublishStatusFilterChange={setLessonPublishStatusFilter}
+                searchPlaceholder="Search lessons by title or description…"
+                searchAriaLabel="Search lessons"
+              />
+              {filteredLessons.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+                  <p className="text-sm font-medium text-grayScale-600">
+                    No lessons match your search or status filter
+                  </p>
+                </div>
+              ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {lessons.map((lesson, i) => (
+              {filteredLessons.map((lesson, i) => (
                 <VideoCard
                   key={lesson.id}
                   id={lesson.id}
@@ -803,8 +876,15 @@ export function CourseModuleDetailPage() {
                     void handleToggleLessonPublishStatus(lesson.id, nextStatus)
                   }
                   publishStatusUpdating={publishStatusLessonId === lesson.id}
+                  accessTier={lesson.accessTier}
+                  onToggleAccessTier={(nextTier) =>
+                    void handleToggleLessonAccessTier(lesson.id, nextTier)
+                  }
+                  accessTierUpdating={accessTierLessonId === lesson.id}
                 />
               ))}
+            </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-32 px-4 rounded-[40px] border-2 border-dashed border-[#F1F5F9] bg-white max-w-4xl mx-auto shadow-sm">

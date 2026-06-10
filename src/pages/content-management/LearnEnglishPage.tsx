@@ -228,6 +228,7 @@ export function LearnEnglishPage() {
       await createLearningProgram({
         name,
         description: createDescription.trim(),
+        category: "LEARN_ENGLISH",
         thumbnail: createThumbnail.trim(),
         sort_order,
       });

@@ -78,9 +78,12 @@ export interface UpdateLearningProgramRequest {
   sort_order: number
 }
 
+export type LearningProgramCategory = "LEARN_ENGLISH"
+
 export interface CreateLearningProgramRequest {
   name: string
   description: string
+  category: LearningProgramCategory
   thumbnail: string
   sort_order: number
 }

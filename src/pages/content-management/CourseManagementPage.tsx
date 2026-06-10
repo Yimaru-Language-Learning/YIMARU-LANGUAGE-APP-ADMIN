@@ -28,6 +28,8 @@ import { toast } from "sonner";
 import { ResolvedImage } from "../../components/media/ResolvedImage";
 import {
   createExamPrepCatalogUnit,
+  getExamPrepCatalogCourses,
+  setExamPrepCatalogCoursePublishStatus,
   setExamPrepCatalogUnitAccessTier,
   setExamPrepCatalogUnitPublishStatus,
   updateExamPrepCatalogUnit,
@@ -38,6 +40,7 @@ import { uploadImageFile } from "../../api/files.api";
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import { ContentPageDescription } from "./components/ContentPageDescription";
 import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
 import {
   filterBySearchAndPublishStatus,
@@ -92,6 +95,13 @@ export function CourseManagementPage() {
   const [listSearch, setListSearch] = useState("");
   const [publishStatusFilter, setPublishStatusFilter] =
     useState<PublishStatusFilter>("all");
+  const [catalogCourseName, setCatalogCourseName] = useState("Course");
+  const [catalogCourseDescription, setCatalogCourseDescription] = useState("");
+  const [catalogCoursePublishStatus, setCatalogCoursePublishStatus] = useState<
+    PracticePublishStatus | string | null
+  >(null);
+  const [catalogCoursePublishStatusUpdating, setCatalogCoursePublishStatusUpdating] =
+    useState(false);
 
   const filteredUnits = useMemo(
     () =>
@@ -104,14 +114,24 @@ export function CourseManagementPage() {
     [listSearch, publishStatusFilter, units],
   );
 
-  // Mock data for display titles
-  const courseTitles: Record<string, string> = {
-    duolingo: "Duolingo English Test",
-    ielts: "IELTS Academic",
-  };
+  const courseDisplayName = catalogCourseName;
 
-  const courseDisplayName =
-    courseTitles[courseId || ""] || "Duolingo English Test";
+  const loadCatalogCourse = useCallback(async () => {
+    if (!Number.isFinite(catalogCourseId) || catalogCourseId < 1) return;
+    try {
+      const response = await getExamPrepCatalogCourses({ limit: 100, offset: 0 });
+      const rows = response.data?.data?.catalog_courses;
+      const list = Array.isArray(rows) ? rows : [];
+      const row = list.find((c) => Number(c.id) === catalogCourseId);
+      if (row) {
+        setCatalogCourseName(row.name?.trim() || `Course ${catalogCourseId}`);
+        setCatalogCourseDescription(row.description?.trim() || "");
+        setCatalogCoursePublishStatus(row.publish_status ?? null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, [catalogCourseId]);
 
   const loadUnits = useCallback(async () => {
     if (!Number.isFinite(catalogCourseId) || catalogCourseId < 1) {
@@ -156,8 +176,35 @@ export function CourseManagementPage() {
   }, [catalogCourseId]);
 
   useEffect(() => {
+    void loadCatalogCourse();
+  }, [loadCatalogCourse]);
+
+  useEffect(() => {
     void loadUnits();
   }, [loadUnits]);
+
+  const handleCatalogCoursePublishStatus = async (
+    nextStatus: PracticePublishStatus,
+  ) => {
+    if (!Number.isFinite(catalogCourseId) || catalogCourseId < 1) return;
+    setCatalogCoursePublishStatusUpdating(true);
+    try {
+      await setExamPrepCatalogCoursePublishStatus(catalogCourseId, {
+        publish_status: nextStatus,
+      });
+      setCatalogCoursePublishStatus(nextStatus);
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Course published" : "Course saved as draft",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update course status";
+      toast.error(message);
+    } finally {
+      setCatalogCoursePublishStatusUpdating(false);
+    }
+  };
 
   const handleUnitPublishStatus = async (
     unitId: number,
@@ -484,12 +531,28 @@ export function CourseManagementPage() {
       {/* Header section */}
       <div className="flex items-start justify-between">
         <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ContentPublishStatusChip
+              publishStatus={catalogCoursePublishStatus}
+              updating={catalogCoursePublishStatusUpdating}
+              contentLabel="course"
+              onToggle={(nextStatus) =>
+                void handleCatalogCoursePublishStatus(nextStatus)
+              }
+            />
+          </div>
           <h1 className="text-[28px] font-medium tracking-tight text-grayScale-900">
             {courseDisplayName}
           </h1>
-          <p className="max-w-2xl text-[15px] font-medium leading-relaxed text-grayScale-500">
-            Manage units and modules inside the {courseDisplayName}
-          </p>
+          {catalogCourseDescription ? (
+            <ContentPageDescription className="text-[15px] font-medium text-grayScale-500">
+              {catalogCourseDescription}
+            </ContentPageDescription>
+          ) : (
+            <p className="max-w-2xl text-[15px] font-medium leading-relaxed text-grayScale-500">
+              Manage units and modules inside {courseDisplayName}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-3 pt-2">

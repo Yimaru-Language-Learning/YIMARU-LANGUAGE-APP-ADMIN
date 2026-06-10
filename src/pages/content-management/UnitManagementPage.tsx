@@ -27,7 +27,9 @@ import { toast } from "sonner";
 import { ResolvedImage } from "../../components/media/ResolvedImage";
 import {
   createExamPrepUnitModule,
+  getExamPrepCatalogUnits,
   getExamPrepUnitModules,
+  setExamPrepCatalogUnitPublishStatus,
   setExamPrepUnitModuleAccessTier,
   setExamPrepUnitModulePublishStatus,
   updateExamPrepUnitModule,
@@ -37,6 +39,7 @@ import { uploadImageFile } from "../../api/files.api";
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import { ContentPageDescription } from "./components/ContentPageDescription";
 import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
 import {
   filterBySearchAndPublishStatus,
@@ -51,17 +54,15 @@ export function UnitManagementPage() {
     unitId: string;
   }>();
 
-  // Mock titles
-  const unitTitles: Record<string, string> = {
-    unit1: "Greetings & Introductions",
-    unit2: "Speaking",
-    unit3: "Reading",
-  };
-
-  const unitDisplayName =
-    unitTitles[unitId || ""] || "Greetings & Introductions";
-
   const parsedUnitId = Number(unitId);
+  const catalogCourseId = Number(courseId);
+  const [unitDisplayName, setUnitDisplayName] = useState("Unit");
+  const [unitDescription, setUnitDescription] = useState("");
+  const [unitPublishStatus, setUnitPublishStatus] = useState<
+    PracticePublishStatus | string | null
+  >(null);
+  const [unitPublishStatusUpdating, setUnitPublishStatusUpdating] =
+    useState(false);
   const [addModuleOpen, setAddModuleOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
@@ -142,6 +143,38 @@ export function UnitManagementPage() {
     return uploadedUrl;
   };
 
+  const loadUnit = useCallback(async () => {
+    if (
+      !Number.isFinite(catalogCourseId) ||
+      catalogCourseId < 1 ||
+      !Number.isFinite(parsedUnitId) ||
+      parsedUnitId < 1
+    ) {
+      return;
+    }
+    try {
+      const response = await getExamPrepCatalogUnits(catalogCourseId, {
+        limit: 100,
+        offset: 0,
+      });
+      const rows = response.data?.data?.units;
+      const list = Array.isArray(rows) ? rows : [];
+      const row = list.find((u) => Number(u.id) === parsedUnitId);
+      if (row) {
+        setUnitDisplayName(row.name?.trim() || `Unit ${parsedUnitId}`);
+        setUnitDescription(row.description?.trim() || "");
+        setUnitPublishStatus(row.publish_status ?? null);
+      } else {
+        setUnitDisplayName(`Unit ${parsedUnitId}`);
+        setUnitDescription("");
+        setUnitPublishStatus(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setUnitDisplayName(`Unit ${parsedUnitId}`);
+    }
+  }, [catalogCourseId, parsedUnitId]);
+
   const loadModules = useCallback(async () => {
     if (!Number.isFinite(parsedUnitId) || parsedUnitId < 1) {
       setModules([]);
@@ -185,8 +218,33 @@ export function UnitManagementPage() {
   }, [parsedUnitId]);
 
   useEffect(() => {
+    void loadUnit();
+  }, [loadUnit]);
+
+  useEffect(() => {
     void loadModules();
   }, [loadModules]);
+
+  const handleUnitPublishStatus = async (nextStatus: PracticePublishStatus) => {
+    if (!Number.isFinite(parsedUnitId) || parsedUnitId < 1) return;
+    setUnitPublishStatusUpdating(true);
+    try {
+      await setExamPrepCatalogUnitPublishStatus(parsedUnitId, {
+        publish_status: nextStatus,
+      });
+      setUnitPublishStatus(nextStatus);
+      toast.success(
+        nextStatus === "PUBLISHED" ? "Unit published" : "Unit saved as draft",
+      );
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update unit status";
+      toast.error(message);
+    } finally {
+      setUnitPublishStatusUpdating(false);
+    }
+  };
 
   const handleModulePublishStatus = async (
     moduleId: number,
@@ -530,10 +588,25 @@ export function UnitManagementPage() {
       </Link>
 
       {/* Header section */}
-      <div className="flex items-start justify-between">
-        <h1 className="text-[28px] font-medium tracking-tight text-grayScale-900">
-          {unitDisplayName}
-        </h1>
+      <div className="flex items-start justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ContentPublishStatusChip
+              publishStatus={unitPublishStatus}
+              updating={unitPublishStatusUpdating}
+              contentLabel="unit"
+              onToggle={(nextStatus) => void handleUnitPublishStatus(nextStatus)}
+            />
+          </div>
+          <h1 className="text-[28px] font-medium tracking-tight text-grayScale-900">
+            {unitDisplayName}
+          </h1>
+          {unitDescription ? (
+            <ContentPageDescription className="text-[15px] font-medium text-grayScale-500">
+              {unitDescription}
+            </ContentPageDescription>
+          ) : null}
+        </div>
 
         <Dialog
           open={addModuleOpen}

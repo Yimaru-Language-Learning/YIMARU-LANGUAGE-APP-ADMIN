@@ -29,7 +29,7 @@ import {
   getPracticesByParentCourse,
   getProgramCourses,
   getTopLevelCourseModules,
-  setParentLinkedPracticePublishStatus,
+  setLearnEnglishPracticePublishStatus,
   setTopLevelCourseModuleAccessTier,
   setTopLevelCourseModulePublishStatus,
   updateTopLevelCourseModule,
@@ -359,7 +359,7 @@ export function CourseDetailPage() {
   ) => {
     setPublishStatusPracticeId(practiceId);
     try {
-      await setParentLinkedPracticePublishStatus(practiceId, {
+      await setLearnEnglishPracticePublishStatus(practiceId, {
         publish_status: nextStatus,
       });
       setPractices((prev) =>

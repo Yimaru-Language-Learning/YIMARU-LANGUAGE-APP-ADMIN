@@ -3,19 +3,12 @@ import {
   BookOpen,
   Calendar,
   Edit2,
-  Loader2,
   MoreVertical,
   Pencil,
   Play,
   Trash2,
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../../components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -33,12 +26,12 @@ import {
   isDirectVideoFileUrl,
 } from "../../../lib/videoPreview";
 import { PreviewLimitedFileVideo } from "./PreviewLimitedFileVideo";
-import { PublishStatusConfirmDialog } from "./PublishStatusConfirmDialog";
 import type {
   ContentAccessTier,
   PracticePublishStatus,
 } from "../../../types/course.types";
 import { ContentAccessTierChip } from "./ContentAccessTierChip";
+import { ContentPublishStatusChip } from "./ContentPublishStatusChip";
 
 function resolvePublishBadge(
   publishStatus?: PracticePublishStatus | string | null,
@@ -129,9 +122,6 @@ export function VideoCard({
     number | null
   >(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
-  const [pendingPublishStatus, setPendingPublishStatus] =
-    useState<PracticePublishStatus | null>(null);
   /** Iframe players ignore URL limits in many cases — unmount after real time. */
   const [iframeSessionDone, setIframeSessionDone] = useState(false);
   const [iframeSessionKey, setIframeSessionKey] = useState(0);
@@ -152,23 +142,6 @@ export function VideoCard({
   const previewLengthLabel = formatPreviewLength(
     DEFAULT_PREVIEW_MAX_SECONDS,
   );
-  const requestPublishStatusChange = (
-    nextStatus: PracticePublishStatus,
-    e?: React.MouseEvent,
-  ) => {
-    e?.stopPropagation();
-    if (publishStatusUpdating) return;
-    setPendingPublishStatus(nextStatus);
-    setPublishConfirmOpen(true);
-  };
-
-  const confirmPublishStatusChange = () => {
-    if (!pendingPublishStatus || !onTogglePublishStatus) return;
-    onTogglePublishStatus(pendingPublishStatus);
-    setPublishConfirmOpen(false);
-    setPendingPublishStatus(null);
-  };
-
   const publishBadge = resolvePublishBadge(
     publishStatus,
     status,
@@ -487,22 +460,32 @@ export function VideoCard({
         >
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {publishBadge ? (
-              <div
-                className={cn(
-                  "flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider",
-                  publishBadge.isPublished
-                    ? "border-[#D1FAE5] bg-[#ECFDF5] text-[#059669]"
-                    : "border-[#E5E7EB] bg-grayScale-50 text-grayScale-500",
-                )}
-              >
+              onTogglePublishStatus ? (
+                <ContentPublishStatusChip
+                  publishStatus={publishStatus ?? publishBadge.label}
+                  updating={publishStatusUpdating}
+                  contentLabel="lesson"
+                  onToggle={onTogglePublishStatus}
+                  className="text-[11px]"
+                />
+              ) : (
                 <div
                   className={cn(
-                    "h-1.5 w-1.5 flex-shrink-0 rounded-full",
-                    publishBadge.isPublished ? "bg-[#10B981]" : "bg-[#9CA3AF]",
+                    "flex min-w-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider",
+                    publishBadge.isPublished
+                      ? "border-[#D1FAE5] bg-[#ECFDF5] text-[#059669]"
+                      : "border-[#E5E7EB] bg-grayScale-50 text-grayScale-500",
                   )}
-                />
-                {publishBadge.label}
-              </div>
+                >
+                  <div
+                    className={cn(
+                      "h-1.5 w-1.5 flex-shrink-0 rounded-full",
+                      publishBadge.isPublished ? "bg-[#10B981]" : "bg-[#9CA3AF]",
+                    )}
+                  />
+                  {publishBadge.label}
+                </div>
+              )
             ) : (
               <div className="flex min-w-0 items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-grayScale-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-grayScale-500">
                 <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#9CA3AF]" />
@@ -518,42 +501,7 @@ export function VideoCard({
               />
             ) : null}
           </div>
-          {hoverModuleActions && onTogglePublishStatus ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 flex-shrink-0 rounded-full text-grayScale-400 hover:bg-grayScale-50 hover:text-grayScale-600"
-                  disabled={publishStatusUpdating || accessTierUpdating}
-                  aria-label={`Lesson options: ${title}`}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {publishStatusUpdating || accessTierUpdating ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <MoreVertical className="h-5 w-5" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  disabled={publishStatusUpdating || accessTierUpdating}
-                  onClick={(e) => {
-                    requestPublishStatusChange(
-                      publishBadge?.isPublished ? "DRAFT" : "PUBLISHED",
-                      e,
-                    );
-                  }}
-                >
-                  {publishBadge?.isPublished
-                    ? "Save as draft"
-                    : "Publish lesson"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : !hoverModuleActions ? (
+          {!hoverModuleActions ? (
             <button
               type="button"
               className="h-8 w-8 flex flex-shrink-0 items-center justify-center rounded-full hover:bg-grayScale-50 transition-colors text-grayScale-400"
@@ -619,17 +567,6 @@ export function VideoCard({
         ) : null}
       </div>
     </div>
-    <PublishStatusConfirmDialog
-      open={publishConfirmOpen}
-      onOpenChange={(open) => {
-        setPublishConfirmOpen(open);
-        if (!open) setPendingPublishStatus(null);
-      }}
-      nextStatus={pendingPublishStatus}
-      contentLabel="lesson"
-      confirming={publishStatusUpdating}
-      onConfirm={confirmPublishStatusChange}
-    />
     </>
   );
 }

@@ -18,7 +18,7 @@ import {
   getExamPrepLessonPractices,
   getPracticesByParentLesson,
   setExamPrepPracticePublishStatus,
-  setParentLinkedPracticePublishStatus,
+  setLearnEnglishPracticePublishStatus,
 } from "../../api/courses.api";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -332,7 +332,7 @@ export function LessonPracticesPage() {
           publish_status: nextStatus,
         });
       } else {
-        await setParentLinkedPracticePublishStatus(practiceId, {
+        await setLearnEnglishPracticePublishStatus(practiceId, {
           publish_status: nextStatus,
         });
       }

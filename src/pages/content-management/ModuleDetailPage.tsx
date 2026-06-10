@@ -8,7 +8,7 @@ import {
   getPracticesByParentModule,
   getTopLevelCourseModules,
   publishTopLevelModuleLesson,
-  setParentLinkedPracticePublishStatus,
+  setLearnEnglishPracticePublishStatus,
   setTopLevelModuleLessonAccessTier,
   updateTopLevelModuleLesson,
 } from "../../api/courses.api";
@@ -290,7 +290,7 @@ export function ModuleDetailPage() {
   ) => {
     setPublishStatusPracticeId(practiceId);
     try {
-      await setParentLinkedPracticePublishStatus(practiceId, {
+      await setLearnEnglishPracticePublishStatus(practiceId, {
         publish_status: nextStatus,
       });
       setPractices((prev) =>

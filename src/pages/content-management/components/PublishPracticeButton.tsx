@@ -4,8 +4,7 @@ import { toast } from "sonner"
 import {
   getPracticesByParentCourse,
   getPracticesByParentModule,
-  publishParentLinkedPractice,
-  updateParentLinkedPractice,
+  setLearnEnglishPracticePublishStatus,
 } from "../../../api/courses.api"
 import type { PracticeParentKind } from "../../../types/course.types"
 import { Button } from "../../../components/ui/button"
@@ -86,7 +85,9 @@ export function PublishPracticeButton({
         return
       }
       for (const practice of drafts) {
-        await publishParentLinkedPractice(practice.id)
+        await setLearnEnglishPracticePublishStatus(practice.id, {
+          publish_status: "PUBLISHED",
+        })
       }
       toast.success(
         drafts.length === 1
@@ -120,7 +121,7 @@ export function PublishPracticeButton({
         return
       }
       for (const practice of toDraft) {
-        await updateParentLinkedPractice(practice.id, {
+        await setLearnEnglishPracticePublishStatus(practice.id, {
           publish_status: "DRAFT",
         })
       }

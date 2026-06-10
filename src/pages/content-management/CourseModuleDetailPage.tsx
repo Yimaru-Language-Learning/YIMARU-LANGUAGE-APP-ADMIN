@@ -23,8 +23,10 @@ import {
   updateExamPrepModuleLesson,
   deleteExamPrepModuleLesson,
   getExamPrepModuleLessons,
-  publishExamPrepModuleLesson,
+  getExamPrepUnitModules,
   setExamPrepModuleLessonAccessTier,
+  setExamPrepModuleLessonPublishStatus,
+  setExamPrepUnitModulePublishStatus,
 } from "../../api/courses.api";
 import { uploadImageFile, uploadVideoFile } from "../../api/files.api";
 import { resolveThumbnailForPreview } from "../../lib/videoPreview";
@@ -34,6 +36,7 @@ import type {
 } from "../../types/course.types";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
+import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -72,8 +75,16 @@ export function CourseModuleDetailPage() {
     moduleId: string;
   }>();
   const parsedModuleId = Number(moduleId);
+  const parsedUnitId = Number(unitId);
 
   const [activeTab, setActiveTab] = useState<"video" | "practice">("video");
+  const [moduleTitle, setModuleTitle] = useState("Module");
+  const [moduleDescription, setModuleDescription] = useState("—");
+  const [modulePublishStatus, setModulePublishStatus] = useState<
+    PracticePublishStatus | string | null
+  >(null);
+  const [modulePublishStatusUpdating, setModulePublishStatusUpdating] =
+    useState(false);
   const [lessonsLoading, setLessonsLoading] = useState(false);
   const [lessons, setLessons] = useState<
     Array<{
@@ -133,8 +144,42 @@ export function CourseModuleDetailPage() {
   const [deletingLessonId, setDeletingLessonId] = useState<number | null>(null);
   const [deletingLesson, setDeletingLesson] = useState(false);
 
-  const moduleTitle = "Module 1: Basic Phrases";
-  const moduleDescription = "Learn essential phrases for daily conversations.";
+  const loadModule = useCallback(async () => {
+    if (
+      !Number.isFinite(parsedUnitId) ||
+      parsedUnitId < 1 ||
+      !Number.isFinite(parsedModuleId) ||
+      parsedModuleId < 1
+    ) {
+      return;
+    }
+    try {
+      const response = await getExamPrepUnitModules(parsedUnitId, {
+        limit: 100,
+        offset: 0,
+      });
+      const rows = response.data?.data?.modules;
+      const list = Array.isArray(rows) ? rows : [];
+      const row = list.find((m) => Number(m.id) === parsedModuleId);
+      if (row) {
+        setModuleTitle(row.name?.trim() || `Module ${parsedModuleId}`);
+        setModuleDescription(row.description?.trim() || "—");
+        setModulePublishStatus(row.publish_status ?? null);
+      } else {
+        setModuleTitle(`Module ${parsedModuleId}`);
+        setModuleDescription("—");
+        setModulePublishStatus(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setModuleTitle(`Module ${parsedModuleId}`);
+      setModuleDescription("—");
+    }
+  }, [parsedModuleId, parsedUnitId]);
+
+  useEffect(() => {
+    void loadModule();
+  }, [loadModule]);
 
   const isHttpUrl = (value: string) =>
     value.startsWith("http://") || value.startsWith("https://");
@@ -501,13 +546,37 @@ export function CourseModuleDetailPage() {
     }
   };
 
+  const handleModulePublishStatus = async (nextStatus: PracticePublishStatus) => {
+    if (!Number.isFinite(parsedModuleId) || parsedModuleId < 1) return;
+    setModulePublishStatusUpdating(true);
+    try {
+      await setExamPrepUnitModulePublishStatus(parsedModuleId, {
+        publish_status: nextStatus,
+      });
+      setModulePublishStatus(nextStatus);
+      toast.success(
+        nextStatus === "PUBLISHED"
+          ? "Module published"
+          : "Module saved as draft",
+      );
+    } catch (error: unknown) {
+      console.error(error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update module status";
+      toast.error(message);
+    } finally {
+      setModulePublishStatusUpdating(false);
+    }
+  };
+
   const handleToggleLessonPublishStatus = async (
     lessonId: number,
     nextStatus: PracticePublishStatus,
   ) => {
     setPublishStatusLessonId(lessonId);
     try {
-      await publishExamPrepModuleLesson(lessonId, {
+      await setExamPrepModuleLessonPublishStatus(lessonId, {
         publish_status: nextStatus,
       });
       setLessons((prev) =>
@@ -582,6 +651,14 @@ export function CourseModuleDetailPage() {
       {/* Header section */}
       <div className="flex items-start justify-between">
         <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ContentPublishStatusChip
+              publishStatus={modulePublishStatus}
+              updating={modulePublishStatusUpdating}
+              contentLabel="module"
+              onToggle={(nextStatus) => void handleModulePublishStatus(nextStatus)}
+            />
+          </div>
           <h1 className="text-[32px] font-extrabold tracking-tight text-[#0D1421]">
             {moduleTitle}
           </h1>

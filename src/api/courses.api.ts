@@ -616,11 +616,17 @@ export const updateExamPrepModuleLesson = (
     data,
   )
 
-/** PUT /exam-prep/lessons/:lessonId — set publish_status only (draft or published). */
+/** PUT /exam-prep/lessons/:lessonId — set publish_status only. */
+export const setExamPrepModuleLessonPublishStatus = (
+  lessonId: number,
+  data: PublishStatusOnlyRequest,
+) => http.put(`/exam-prep/lessons/${lessonId}`, data)
+
+/** @deprecated Use setExamPrepModuleLessonPublishStatus */
 export const publishExamPrepModuleLesson = (
   lessonId: number,
   data: PublishExamPrepModuleLessonRequest,
-) => http.put(`/exam-prep/lessons/${lessonId}`, data)
+) => setExamPrepModuleLessonPublishStatus(lessonId, data)
 
 /** PUT /exam-prep/lessons/:lessonId — set access_tier only. */
 export const setExamPrepModuleLessonAccessTier = (
@@ -840,16 +846,22 @@ export const updateParentLinkedPractice = (
   data: UpdateParentLinkedPracticeRequest,
 ) => http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
 
-/** PUT /practices/:id — set publish_status only. */
-export const setParentLinkedPracticePublishStatus = (
+/** PUT /practices/:id — set publish_status only (Learn English practice). */
+export const setLearnEnglishPracticePublishStatus = (
   practiceId: number,
-  data: PublishParentLinkedPracticeRequest,
+  data: PublishStatusOnlyRequest,
 ) =>
   http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
 
+/** @deprecated Use setLearnEnglishPracticePublishStatus */
+export const setParentLinkedPracticePublishStatus = (
+  practiceId: number,
+  data: PublishParentLinkedPracticeRequest,
+) => setLearnEnglishPracticePublishStatus(practiceId, data)
+
 /** PUT /practices/:id — publish a draft practice. */
 export const publishParentLinkedPractice = (practiceId: number) =>
-  setParentLinkedPracticePublishStatus(practiceId, {
+  setLearnEnglishPracticePublishStatus(practiceId, {
     publish_status: "PUBLISHED",
   })
 

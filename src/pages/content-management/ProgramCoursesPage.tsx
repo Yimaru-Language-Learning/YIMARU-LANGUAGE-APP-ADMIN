@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
 import uploadIcon from "../../assets/icons/upload.png";
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg";
 import alertSrc from "../../assets/Alert.svg";
@@ -64,6 +65,7 @@ export function ProgramCoursesPage() {
     null,
   );
   const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -72,6 +74,7 @@ export function ProgramCoursesPage() {
 
   const [createCourseOpen, setCreateCourseOpen] = useState(false);
   const [createName, setCreateName] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
   const [createSortOrder, setCreateSortOrder] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
@@ -218,6 +221,7 @@ export function ProgramCoursesPage() {
   const openEditCourse = (course: ProgramCourseListItem) => {
     setEditingCourse(course);
     setEditName(course.name ?? "");
+    setEditDescription(course.description?.trim() ?? "");
     setEditThumbnail(
       course.thumbnail?.trim() || course.thumbnail_url?.trim() || "",
     );
@@ -227,6 +231,7 @@ export function ProgramCoursesPage() {
   const closeEditCourse = () => {
     setEditingCourse(null);
     setEditName("");
+    setEditDescription("");
     setEditSortOrder("");
     setEditThumbnail("");
     setUploadingEditThumbnail(false);
@@ -291,7 +296,7 @@ export function ProgramCoursesPage() {
     try {
       await updateTopLevelCourse(editingCourse.id, {
         name,
-        description: editingCourse.description?.trim() ?? "",
+        description: editDescription.trim(),
         thumbnail: editThumbnail.trim(),
         sort_order,
       });
@@ -311,6 +316,7 @@ export function ProgramCoursesPage() {
 
   const clearCreateCourseForm = () => {
     setCreateName("");
+    setCreateDescription("");
     setCreateSortOrder("");
     setCreateThumbnail("");
     setCreateUploadingThumbnail(false);
@@ -381,7 +387,7 @@ export function ProgramCoursesPage() {
     try {
       await createProgramCourse(programId, {
         name,
-        description: "",
+        description: createDescription.trim(),
         thumbnail: createThumbnail.trim(),
         sort_order,
       });
@@ -505,6 +511,20 @@ export function ProgramCoursesPage() {
                           onChange={(e) => setCreateName(e.target.value)}
                           placeholder="e.g. Introduction to German A1"
                           className="h-12 rounded-xl"
+                          disabled={createSaving || createUploadingThumbnail}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[15px] font-medium text-grayScale-700">
+                          Description
+                        </label>
+                        <Textarea
+                          value={createDescription}
+                          onChange={(e) => setCreateDescription(e.target.value)}
+                          placeholder="Short summary of the course"
+                          rows={3}
+                          className="min-h-[88px] resize-y rounded-xl"
                           disabled={createSaving || createUploadingThumbnail}
                         />
                       </div>
@@ -822,7 +842,7 @@ export function ProgramCoursesPage() {
           <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
             <DialogTitle>Edit course</DialogTitle>
             <DialogDescription>
-              Update name, sort order, and thumbnail.
+              Update name, description, sort order, and thumbnail.
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
@@ -836,6 +856,19 @@ export function ProgramCoursesPage() {
                 onChange={(e) => setEditName(e.target.value)}
                 className="rounded-xl"
                 placeholder="Course name"
+                disabled={savingEdit || uploadingEditThumbnail}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-grayScale-700">
+                Description
+              </label>
+              <Textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={4}
+                className="min-h-[100px] resize-y rounded-xl"
+                placeholder="Short summary of the course"
                 disabled={savingEdit || uploadingEditThumbnail}
               />
             </div>

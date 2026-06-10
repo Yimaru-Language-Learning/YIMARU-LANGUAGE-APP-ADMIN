@@ -9,6 +9,7 @@ import {
   DialogClose,
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { Textarea } from "../../../components/ui/textarea";
 import { toast } from "sonner";
 import { createTopLevelCourseModule } from "../../../api/courses.api";
 import { ModuleIconUploadField } from "./ModuleIconUploadField";
@@ -27,6 +28,7 @@ export function AddModuleModal({
   onCreated,
 }: AddModuleModalProps) {
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [sortOrder, setSortOrder] = useState("");
   const [icon, setIcon] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +37,7 @@ export function AddModuleModal({
   useEffect(() => {
     if (isOpen) {
       setName("");
+      setDescription("");
       setSortOrder("");
       setIcon("");
       setSubmitting(false);
@@ -44,6 +47,7 @@ export function AddModuleModal({
 
   const resetAndClose = () => {
     setName("");
+    setDescription("");
     setSortOrder("");
     setIcon("");
     setIconUploadBusy(false);
@@ -82,7 +86,7 @@ export function AddModuleModal({
     try {
       await createTopLevelCourseModule(courseId, {
         name: trimmedName,
-        description: "",
+        description: description.trim(),
         icon: icon.trim(),
         sort_order,
       });
@@ -146,6 +150,20 @@ export function AddModuleModal({
               className="h-12 rounded-xl"
               disabled={submitting}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[15px] font-medium text-grayScale-700">
+              Description
+            </label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short summary of the module"
+              rows={3}
+              className="min-h-[88px] resize-y rounded-xl"
+              disabled={submitting || iconUploadBusy}
             />
           </div>
 

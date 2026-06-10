@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
 import { cn } from "../../lib/utils";
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg";
 import alertSrc from "../../assets/Alert.svg";
@@ -162,6 +163,7 @@ export function CourseDetailPage() {
   const [editingModule, setEditingModule] =
     useState<TopLevelCourseModuleItem | null>(null);
   const [editModuleName, setEditModuleName] = useState("");
+  const [editModuleDescription, setEditModuleDescription] = useState("");
   const [editModuleSortOrder, setEditModuleSortOrder] = useState("");
   const [editModuleIcon, setEditModuleIcon] = useState("");
   const [editModuleIconUploadBusy, setEditModuleIconUploadBusy] =
@@ -197,6 +199,7 @@ export function CourseDetailPage() {
   const openEditModule = (module: TopLevelCourseModuleItem) => {
     setEditingModule(module);
     setEditModuleName(module.name ?? "");
+    setEditModuleDescription(module.description ?? "");
     setEditModuleSortOrder(String(module.sort_order ?? 0));
     setEditModuleIcon(module.icon?.trim() ?? "");
     setEditModuleIconUploadBusy(false);
@@ -460,7 +463,7 @@ export function CourseDetailPage() {
     try {
       await updateTopLevelCourseModule(editingModule.id, {
         name,
-        description: editingModule.description?.trim() ?? "",
+        description: editModuleDescription.trim(),
         icon: editModuleIcon.trim(),
         sort_order,
       });
@@ -618,7 +621,7 @@ export function CourseDetailPage() {
               <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
                 <DialogTitle>Edit module</DialogTitle>
                 <DialogDescription>
-                  Update name, sort order, and icon (upload or URL).
+                  Update name, description, sort order, and icon (upload or URL).
                 </DialogDescription>
               </DialogHeader>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
@@ -633,6 +636,19 @@ export function CourseDetailPage() {
                     className="rounded-xl"
                     placeholder="e.g. Grammar basics"
                     disabled={savingModuleEdit}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-grayScale-700">
+                    Description
+                  </label>
+                  <Textarea
+                    value={editModuleDescription}
+                    onChange={(e) => setEditModuleDescription(e.target.value)}
+                    rows={4}
+                    className="min-h-[100px] resize-y rounded-xl"
+                    placeholder="Short summary of the module"
+                    disabled={savingModuleEdit || editModuleIconUploadBusy}
                   />
                 </div>
                 <div className="space-y-2">

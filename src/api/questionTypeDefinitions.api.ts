@@ -273,6 +273,9 @@ export interface QuestionTypeDefinitionsListResult {
   total_count?: number
 }
 
+/** Page size when auto-fetching every definition (dropdowns, editors). */
+const DEFINITIONS_FETCH_ALL_PAGE_SIZE = 100
+
 function parseListTotalCount(body: unknown): number | undefined {
   if (!body || typeof body !== "object" || Array.isArray(body)) return undefined
   const o = body as Record<string, unknown>
@@ -322,7 +325,7 @@ export function parseDefinitionsList(payload: unknown): QuestionTypeDefinition[]
   return []
 }
 
-export async function getQuestionTypeDefinitions(
+async function fetchQuestionTypeDefinitionsPage(
   params?: QuestionTypeDefinitionsListParams,
 ): Promise<QuestionTypeDefinitionsListResult> {
   const res = await http.get<ApiEnvelope<unknown>>("/questions/type-definitions", { params })
@@ -330,6 +333,53 @@ export async function getQuestionTypeDefinitions(
   const definitions = parseDefinitionsList(raw)
   const total_count = parseListTotalCount(raw) ?? parseListTotalCount(res.data)
   return total_count != null ? { definitions, total_count } : { definitions }
+}
+
+/**
+ * Lists question type definitions. When `limit` / `offset` are omitted, fetches every page
+ * so dropdowns receive the full catalog (the API defaults to a capped page size).
+ */
+export async function getQuestionTypeDefinitions(
+  params?: QuestionTypeDefinitionsListParams,
+): Promise<QuestionTypeDefinitionsListResult> {
+  const hasExplicitPagination = params?.limit !== undefined || params?.offset !== undefined
+  if (hasExplicitPagination) {
+    return fetchQuestionTypeDefinitionsPage(params)
+  }
+
+  const allDefinitions: QuestionTypeDefinition[] = []
+  const seenIds = new Set<number>()
+  let offset = 0
+  let total_count: number | undefined
+
+  while (true) {
+    const page = await fetchQuestionTypeDefinitionsPage({
+      ...params,
+      limit: DEFINITIONS_FETCH_ALL_PAGE_SIZE,
+      offset,
+    })
+
+    if (total_count === undefined && page.total_count != null) {
+      total_count = page.total_count
+    }
+
+    for (const def of page.definitions) {
+      if (seenIds.has(def.id)) continue
+      seenIds.add(def.id)
+      allDefinitions.push(def)
+    }
+
+    if (page.definitions.length === 0) break
+    if (total_count != null && allDefinitions.length >= total_count) break
+    if (page.definitions.length < DEFINITIONS_FETCH_ALL_PAGE_SIZE) break
+
+    offset += page.definitions.length
+  }
+
+  return {
+    definitions: allDefinitions,
+    total_count: total_count ?? allDefinitions.length,
+  }
 }
 
 /**

@@ -1,4 +1,31 @@
-import { Trash2, Plus, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  Trash2,
+  Plus,
+  ArrowRight,
+  GripVertical,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+} from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { Input } from "../../../../components/ui/input";
@@ -11,7 +38,110 @@ import {
   legacyQuestionTypeFromDefinition,
 } from "../../../../lib/learnEnglishDefinitionQuestion";
 import { validateLearnEnglishQuestionsWithDefinitions } from "../../../../lib/learnEnglishPracticePublish";
+import { cn } from "../../../../lib/utils";
 import { toast } from "sonner";
+
+function syncQuestionDisplayOrders<T extends { displayOrder?: number }>(
+  questions: T[],
+): T[] {
+  return questions.map((q, index) => ({ ...q, displayOrder: index + 1 }));
+}
+
+function truncateText(value: string, max = 100): string {
+  const trimmed = value.trim();
+  return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
+}
+
+function questionSummaryPreview(
+  q: {
+    text?: string;
+    dynamicFieldValues?: Record<string, string>;
+    questionTypeDefinitionId?: number | null;
+    difficultyLevel?: string;
+    points?: number;
+  },
+  def: QuestionTypeDefinition | undefined,
+): string {
+  const text = String(q.text ?? "").trim();
+  if (text) return truncateText(text);
+
+  const values = Object.values(q.dynamicFieldValues ?? {})
+    .map((v) => String(v ?? "").trim())
+    .filter((v) => v && !v.startsWith("{") && !v.startsWith("["));
+  if (values[0]) return truncateText(values[0]);
+
+  if (def) return questionTypeDefinitionListLabel(def);
+  return "No content yet";
+}
+
+function QuestionCollapsibleBody({
+  expanded,
+  children,
+}: {
+  expanded: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid transition-[grid-template-rows] duration-300 ease-in-out",
+        expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+      )}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div
+          className={cn(
+            "border-t border-grayScale-50 transition-opacity duration-300",
+            expanded ? "opacity-100" : "opacity-0",
+          )}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface SortableQuestionCardProps {
+  id: string;
+  children: (opts: {
+    dragHandleProps: React.HTMLAttributes<HTMLButtonElement>;
+    isDragging: boolean;
+  }) => React.ReactNode;
+}
+
+function SortableQuestionCard({ id, children }: SortableQuestionCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(isDragging && "relative z-50 opacity-60")}
+    >
+      {children({
+        isDragging,
+        dragHandleProps: {
+          ...attributes,
+          ...listeners,
+          type: "button",
+        },
+      })}
+    </div>
+  );
+}
 
 function defaultMcqOptions() {
   return [
@@ -22,9 +152,11 @@ function defaultMcqOptions() {
   ];
 }
 
-function createEmptyQuestionRow(id: string) {
+function createEmptyQuestionRow(id: string, displayOrder = 1) {
   return {
     id,
+    displayOrder,
+    serverQuestionId: null as number | null,
     questionTypeDefinitionId: null as number | null,
     text: "",
     difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
@@ -55,6 +187,65 @@ export function QuestionsStep({
   definitionsLoading,
   definitionsError,
 }: QuestionsStepProps) {
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [expandedQuestionIds, setExpandedQuestionIds] = useState<Set<string>>(
+    () => new Set(formData.questions[0]?.id ? [formData.questions[0].id] : []),
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const questionIds = formData.questions.map((q: { id: string }) => q.id);
+  const canReorder = formData.questions.length > 1;
+  const activeDragIndex = activeDragId
+    ? formData.questions.findIndex((q: { id: string }) => q.id === activeDragId)
+    : -1;
+
+  const reorderQuestions = (activeId: string, overId: string) => {
+    const oldIndex = formData.questions.findIndex(
+      (q: { id: string }) => q.id === activeId,
+    );
+    const newIndex = formData.questions.findIndex(
+      (q: { id: string }) => q.id === overId,
+    );
+    if (oldIndex === -1 || newIndex === -1) return;
+    setFormData({
+      ...formData,
+      questions: syncQuestionDisplayOrders(
+        arrayMove(formData.questions, oldIndex, newIndex),
+      ),
+    });
+  };
+
+  const toggleQuestionExpanded = (id: string) => {
+    setExpandedQuestionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const collapseAllQuestions = () => setExpandedQuestionIds(new Set());
+
+  const expandAllQuestions = () =>
+    setExpandedQuestionIds(new Set(questionIds));
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+    collapseAllQuestions();
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      reorderQuestions(String(active.id), String(over.id));
+    }
+    setActiveDragId(null);
+  };
+
   const applyDefinitionToQuestion = (
     index: number,
     definitionId: number,
@@ -93,8 +284,9 @@ export function QuestionsStep({
     }
     setFormData({
       ...formData,
-      questions: [...formData.questions, row],
+      questions: syncQuestionDisplayOrders([...formData.questions, row]),
     });
+    setExpandedQuestionIds(new Set([id]));
   };
 
   const renderTypeSpecificFields = (q: any, i: number, def: QuestionTypeDefinition) => {
@@ -319,10 +511,35 @@ export function QuestionsStep({
       <div className="space-y-1 px-2">
         <h2 className="text-2xl font-bold text-grayScale-700">Questions</h2>
         <p className="text-grayScale-400 text-lg">
-          Choose a question type for each item, then fill in the fields that type requires. Questions are saved
-          when you publish or save the practice.
+          Choose a question type for each item, then fill in the fields that type requires. Collapse cards to
+          compare and drag them into order. Questions are saved when you publish or save the practice.
         </p>
       </div>
+
+      {formData.questions.length > 1 ? (
+        <div className="flex flex-wrap items-center justify-end gap-2 px-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2 rounded-lg border-grayScale-200 text-grayScale-700"
+            onClick={collapseAllQuestions}
+          >
+            <ChevronsDownUp className="h-4 w-4" />
+            Collapse all
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2 rounded-lg border-grayScale-200 text-grayScale-700"
+            onClick={expandAllQuestions}
+          >
+            <ChevronsUpDown className="h-4 w-4" />
+            Expand all
+          </Button>
+        </div>
+      ) : null}
 
       {definitionsError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -334,50 +551,134 @@ export function QuestionsStep({
         <p className="px-2 text-sm text-grayScale-500">Loading question types…</p>
       ) : null}
 
-      <div className="space-y-6">
-        {formData.questions.map((q: any, i: number) => {
-          const def = typeDefinitions.find(
-            (d) => d.id === q.questionTypeDefinitionId,
-          );
-          return (
-            <Card
-              key={q.id}
-              className="relative overflow-hidden rounded-2xl border border-grayScale-50 bg-white shadow-soft"
-            >
-              <div className="absolute bottom-0 left-0 top-0 w-[5px] bg-brand-500" />
-              <div className="space-y-6 px-5 pb-7 pt-4 pl-7">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-grayScale-50 pb-4">
-                  <span className="text-base font-bold text-grayScale-500">
-                    Question {i + 1}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    type="button"
-                    className="text-brand-500 hover:bg-brand-50 rounded-lg"
-                    onClick={() => {
-                      const newQuestions = formData.questions.filter(
-                        (item: any) => item.id !== q.id,
-                      );
-                      if (newQuestions.length > 0) {
-                        setFormData({ ...formData, questions: newQuestions });
-                        return;
-                      }
-                      const row = createEmptyQuestionRow("q1");
-                      if (typeDefinitions[0]) {
-                        row.questionTypeDefinitionId = typeDefinitions[0].id;
-                        row.dynamicFieldValues =
-                          emptyDynamicFieldValuesForDefinition(
-                            typeDefinitions[0],
-                          );
-                      }
-                      setFormData({ ...formData, questions: [row] });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={questionIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-3">
+            {formData.questions.map((q: any, i: number) => {
+              const def = typeDefinitions.find(
+                (d) => d.id === q.questionTypeDefinitionId,
+              );
+              const isExpanded = expandedQuestionIds.has(q.id);
+              const summary = questionSummaryPreview(q, def);
+              const typeLabel = def
+                ? questionTypeDefinitionListLabel(def)
+                : "No type selected";
+              return (
+                <SortableQuestionCard key={q.id} id={q.id}>
+                  {({ dragHandleProps, isDragging }) => (
+                    <Card
+                      className={cn(
+                        "relative overflow-hidden rounded-2xl border border-grayScale-50 bg-white shadow-soft transition-shadow duration-300",
+                        isDragging && "shadow-lg ring-2 ring-brand-200",
+                        !isExpanded && "hover:border-grayScale-200",
+                      )}
+                    >
+                      <div className="absolute bottom-0 left-0 top-0 w-[5px] bg-brand-500" />
+                      <div className="pl-7">
+                        <div
+                          className={cn(
+                            "flex items-start gap-2 px-4 py-3 sm:px-5",
+                            isExpanded ? "pb-1" : "pb-3",
+                          )}
+                        >
+                          {canReorder ? (
+                            <button
+                              {...dragHandleProps}
+                              className="mt-0.5 shrink-0 cursor-grab touch-none rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-grayScale-50 hover:text-grayScale-600 active:cursor-grabbing"
+                              aria-label={`Drag to reorder question ${i + 1}`}
+                            >
+                              <GripVertical className="h-5 w-5" />
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                            onClick={() => toggleQuestionExpanded(q.id)}
+                            aria-expanded={isExpanded}
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "mt-0.5 h-5 w-5 shrink-0 text-grayScale-400 transition-transform duration-300",
+                                isExpanded && "rotate-180",
+                              )}
+                            />
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <span className="text-base font-bold text-grayScale-700">
+                                  Question {q.displayOrder ?? i + 1}
+                                </span>
+                                <span className="rounded-full bg-grayScale-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-600">
+                                  {q.difficultyLevel ?? "EASY"}
+                                </span>
+                                <span className="text-xs font-medium text-grayScale-500">
+                                  {q.points ?? 1} pt{(q.points ?? 1) === 1 ? "" : "s"}
+                                </span>
+                              </div>
+                              <p className="text-xs font-medium text-brand-600">
+                                {typeLabel}
+                              </p>
+                              <p
+                                className={cn(
+                                  "text-sm text-grayScale-500 transition-all duration-300",
+                                  isExpanded
+                                    ? "line-clamp-1 opacity-80"
+                                    : "line-clamp-2",
+                                )}
+                              >
+                                {summary}
+                              </p>
+                            </div>
+                          </button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            type="button"
+                            className="shrink-0 text-brand-500 hover:bg-brand-50 rounded-lg"
+                            onClick={() => {
+                              const newQuestions = formData.questions.filter(
+                                (item: any) => item.id !== q.id,
+                              );
+                              setExpandedQuestionIds((prev) => {
+                                const next = new Set(prev);
+                                next.delete(q.id);
+                                return next;
+                              });
+                              if (newQuestions.length > 0) {
+                                setFormData({
+                                  ...formData,
+                                  questions: syncQuestionDisplayOrders(newQuestions),
+                                });
+                                return;
+                              }
+                              const row = createEmptyQuestionRow("q1");
+                              if (typeDefinitions[0]) {
+                                row.questionTypeDefinitionId = typeDefinitions[0].id;
+                                row.dynamicFieldValues =
+                                  emptyDynamicFieldValuesForDefinition(
+                                    typeDefinitions[0],
+                                  );
+                              }
+                              setFormData({
+                                ...formData,
+                                questions: syncQuestionDisplayOrders([row]),
+                              });
+                              setExpandedQuestionIds(new Set(["q1"]));
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
 
+                        <QuestionCollapsibleBody expanded={isExpanded}>
+                          <div className="space-y-6 px-4 pb-6 pt-4 sm:px-5 sm:pb-7">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
@@ -484,25 +785,63 @@ export function QuestionsStep({
                   </p>
                 ) : null}
 
-                {def ? renderTypeSpecificFields(q, i, def) : null}
-              </div>
+                            {def ? renderTypeSpecificFields(q, i, def) : null}
+                          </div>
+                        </QuestionCollapsibleBody>
+                      </div>
+                    </Card>
+                  )}
+                </SortableQuestionCard>
+              );
+            })}
+          </div>
+        </SortableContext>
+        <DragOverlay>
+          {activeDragId && activeDragIndex >= 0 ? (
+            <Card className="relative w-[min(100vw-2rem,42rem)] overflow-hidden rounded-2xl border border-brand-300 bg-white py-3 pl-7 pr-4 shadow-xl">
+              <div className="absolute bottom-0 left-0 top-0 w-[5px] bg-brand-500" />
+              {(() => {
+                const dragged = formData.questions[activeDragIndex];
+                const draggedDef = typeDefinitions.find(
+                  (d) => d.id === dragged?.questionTypeDefinitionId,
+                );
+                return (
+                  <div className="flex items-start gap-2 pl-4">
+                    <GripVertical className="mt-0.5 h-5 w-5 shrink-0 text-grayScale-400" />
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-base font-bold text-grayScale-700">
+                        Question{" "}
+                        {dragged?.displayOrder ?? activeDragIndex + 1}
+                      </p>
+                      <p className="text-xs font-medium text-brand-600">
+                        {draggedDef
+                          ? questionTypeDefinitionListLabel(draggedDef)
+                          : "No type selected"}
+                      </p>
+                      <p className="line-clamp-2 text-sm text-grayScale-500">
+                        {questionSummaryPreview(dragged, draggedDef)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
             </Card>
-          );
-        })}
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
-        <div className="flex items-center gap-8 pt-4">
-          <button
-            type="button"
-            onClick={addQuestion}
-            disabled={definitionsLoading || typeDefinitions.length === 0}
-            className="flex items-center gap-3 text-base font-bold text-brand-500 transition-all hover:opacity-80 disabled:opacity-40"
-          >
-            <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-brand-500">
-              <Plus className="h-3 w-3 stroke-[4]" />
-            </div>
-            Add question
-          </button>
-        </div>
+      <div className="flex items-center gap-8 pt-4">
+        <button
+          type="button"
+          onClick={addQuestion}
+          disabled={definitionsLoading || typeDefinitions.length === 0}
+          className="flex items-center gap-3 text-base font-bold text-brand-500 transition-all hover:opacity-80 disabled:opacity-40"
+        >
+          <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-brand-500">
+            <Plus className="h-3 w-3 stroke-[4]" />
+          </div>
+          Add question
+        </button>
       </div>
 
       <div className="flex items-center justify-between pt-8">

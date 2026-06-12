@@ -88,6 +88,7 @@ const navEntries: NavEntry[] = [
       { label: "Inbox", to: "/notifications", end: true },
       { label: "Email templates", to: "/notifications/email-templates" },
       { label: "Send notification", to: "/notifications/create" },
+      { label: "Scheduled", to: "/notifications/scheduled" },
     ],
   },
 

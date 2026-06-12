@@ -104,14 +104,23 @@ export async function executePracticeCreation(
   })
   const setId = extractCreatedResourceId(setRes, "Could not create question set")
 
-  const toCreate = opts.questions.filter((q) => {
-    const def = byId.get(q.questionTypeDefinitionId)
-    return def ? questionRowHasContent(q, def) : false
-  })
+  const toCreate = opts.questions
+    .map((q, index) => ({
+      q,
+      sortOrder:
+        Number.isFinite(q.displayOrder) && (q.displayOrder ?? 0) > 0
+          ? Number(q.displayOrder)
+          : index + 1,
+    }))
+    .filter(({ q }) => {
+      const def = byId.get(q.questionTypeDefinitionId)
+      return def ? questionRowHasContent(q, def) : false
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 
-  // Steps 2 & 3 — create questions and attach to set
+  // Steps 2 & 3 — create questions and attach to set (order from step 3 drag-and-drop)
   let displayOrder = 0
-  for (const q of toCreate) {
+  for (const { q } of toCreate) {
     const def = byId.get(q.questionTypeDefinitionId)
     if (!def) throw new Error(`Missing definition #${q.questionTypeDefinitionId}`)
     displayOrder += 1

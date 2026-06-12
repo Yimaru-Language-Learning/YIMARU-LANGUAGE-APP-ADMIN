@@ -168,6 +168,7 @@ export interface LearnEnglishDefinitionQuestionInput {
   dynamicFieldValues: Record<string, string>
   difficultyLevel?: QuestionDifficultyLevel
   points?: number
+  displayOrder?: number
   mcqOptions?: { option_text: string; is_correct: boolean }[]
   trueFalseAnswerIsTrue?: boolean
   shortAnswers?: string[]

@@ -5,6 +5,7 @@ import {
   BookOpen,
   Calendar,
   Clock,
+  Edit2,
   Hash,
   Loader2,
   RefreshCw,
@@ -91,6 +92,7 @@ function PracticeCard({
   practice,
   index,
   total,
+  onEdit,
   onDelete,
   onTogglePublishStatus,
   publishStatusUpdating,
@@ -98,6 +100,7 @@ function PracticeCard({
   practice: ParentContextPractice;
   index: number;
   total: number;
+  onEdit?: () => void;
   onDelete?: () => void;
   onTogglePublishStatus?: (nextStatus: PracticePublishStatus) => void;
   publishStatusUpdating?: boolean;
@@ -201,7 +204,7 @@ function PracticeCard({
               </div>
             ) : null}
 
-            <div className="mt-6 flex flex-wrap gap-2 border-t border-grayScale-100 pt-5">
+            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-grayScale-100 pt-5">
               <Badge variant="secondary" className="gap-1.5 pl-2 pr-2.5 py-1 font-medium normal-case">
                 <Hash className="h-3 w-3 opacity-70" aria-hidden />
                 Question set {practice.question_set_id}
@@ -210,6 +213,18 @@ function PracticeCard({
                 <Clock className="h-3 w-3 opacity-70" aria-hidden />
                 {formatPracticeDate(practice.created_at)}
               </Badge>
+              {onEdit ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto h-9 rounded-[10px] border-brand-500 text-xs font-bold text-brand-500 hover:bg-brand-50"
+                  onClick={onEdit}
+                >
+                  <Edit2 className="mr-1.5 h-3.5 w-3.5" />
+                  Edit
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -320,6 +335,16 @@ export function LessonPracticesPage() {
   const addPracticeHref = isExamPrep
     ? `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`
     : `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`;
+
+  const editPracticeHref = (practiceId: number) => {
+    const titleQuery = lessonTitle
+      ? `lessonTitle=${encodeURIComponent(lessonTitle)}&`
+      : "";
+    if (isExamPrep) {
+      return `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/lessons/${lid}/edit-practice/${practiceId}?${titleQuery}backTo=lesson`;
+    }
+    return `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/lessons/${lid}/edit-practice/${practiceId}?${titleQuery}backTo=lesson`;
+  };
 
   const handlePracticePublishStatus = async (
     practiceId: number,
@@ -547,6 +572,7 @@ export function LessonPracticesPage() {
                   practice={p}
                   index={i}
                   total={filteredPractices.length}
+                  onEdit={() => void navigate(editPracticeHref(p.id))}
                   onDelete={
                     isExamPrep ? () => setPracticeToDelete(p) : undefined
                   }

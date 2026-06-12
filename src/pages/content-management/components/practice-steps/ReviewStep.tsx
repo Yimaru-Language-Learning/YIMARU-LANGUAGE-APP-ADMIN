@@ -38,6 +38,8 @@ interface ReviewStepProps {
   submitting: boolean;
   onSaveDraft: () => void;
   onPublish: () => void;
+  publishLabel?: string;
+  publishingLabel?: string;
 }
 
 export function ReviewStep({
@@ -58,6 +60,8 @@ export function ReviewStep({
   submitting,
   onSaveDraft,
   onPublish,
+  publishLabel,
+  publishingLabel,
 }: ReviewStepProps) {
   const persona = personaFromId(selectedPersona, personas);
 
@@ -114,6 +118,8 @@ export function ReviewStep({
       onBack={prevStep}
       onSaveDraft={onSaveDraft}
       onPublish={onPublish}
+      publishLabel={publishLabel}
+      publishingLabel={publishingLabel}
     />
   );
 }

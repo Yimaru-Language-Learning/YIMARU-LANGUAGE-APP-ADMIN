@@ -23,6 +23,7 @@ import { LessonPracticesPage } from "../pages/content-management/LessonPractices
 import { ModuleDetailPage } from "../pages/content-management/ModuleDetailPage";
 import { AddVideoFlow } from "../pages/content-management/AddVideoFlow";
 import { AddPracticeFlow } from "../pages/content-management/AddPracticeFlow";
+import { EditPracticeFlow } from "../pages/content-management/EditPracticeFlow";
 import { CourseModuleDetailPage } from "../pages/content-management/CourseModuleDetailPage";
 import { ProgramTypeSelectionPage } from "../pages/content-management/ProgramTypeSelectionPage";
 import { ProgramDetailPage } from "../pages/content-management/ProgramDetailPage";
@@ -33,6 +34,7 @@ import { CreateQuestionTypeFlow } from "../pages/content-management/CreateQuesti
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { NotificationsPage } from "../pages/notifications/NotificationsPage";
 import { CreateNotificationPage } from "../pages/notifications/CreateNotificationPage";
+import { ScheduledNotificationsPage } from "../pages/notifications/ScheduledNotificationsPage";
 import { EmailTemplatesPage } from "../pages/notifications/EmailTemplatesPage";
 import { EmailTemplateDetailPage } from "../pages/notifications/EmailTemplateDetailPage";
 import { CreateEmailTemplatePage } from "../pages/notifications/CreateEmailTemplatePage";
@@ -217,6 +219,10 @@ export function AppRoutes() {
           element={<LessonPracticesPage />}
         />
         <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/:moduleId/lessons/:lessonId/edit-practice/:practiceId"
+          element={<EditPracticeFlow />}
+        />
+        <Route
           path="/new-content/learn-english"
           element={<LearnEnglishPage />}
         />
@@ -241,6 +247,18 @@ export function AppRoutes() {
           element={<LessonPracticesPage />}
         />
         <Route
+          path="/new-content/learn-english/:level/courses/:courseId/edit-practice/:practiceId"
+          element={<EditPracticeFlow />}
+        />
+        <Route
+          path="/new-content/learn-english/:level/courses/:courseId/modules/:moduleId/edit-practice/:practiceId"
+          element={<EditPracticeFlow />}
+        />
+        <Route
+          path="/new-content/learn-english/:level/courses/:courseId/modules/:moduleId/lessons/:lessonId/edit-practice/:practiceId"
+          element={<EditPracticeFlow />}
+        />
+        <Route
           path="/new-content/learn-english/:level/courses/add-practice"
           element={<AddPracticeFlow />}
         />
@@ -261,6 +279,10 @@ export function AppRoutes() {
         <Route
           path="/notifications/create"
           element={<CreateNotificationPage />}
+        />
+        <Route
+          path="/notifications/scheduled"
+          element={<ScheduledNotificationsPage />}
         />
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/user-log" element={<UserLogPage />} />

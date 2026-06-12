@@ -633,6 +633,103 @@ export interface UpdateParentLinkedPracticeResponse {
   metadata: unknown | null
 }
 
+/** Question row in GET/PUT /practices/:id/full and /exam-prep/practices/:id/full. */
+export interface PracticeFullQuestionItem {
+  id?: number | null
+  display_order: number
+  question_text?: string
+  question_type: string
+  question_type_definition_id?: number | null
+  dynamic_payload?: DynamicQuestionPayload | null
+  difficulty_level?: string
+  points?: number
+  status?: PracticePublishStatus | string
+  options?: QuestionOption[]
+  short_answers?: QuestionShortAnswer[] | string[]
+  voice_prompt?: string
+  sample_answer_voice_prompt?: string
+  audio_correct_answer_text?: string
+  image_url?: string
+  tips?: string
+  explanation?: string
+  created_at?: string
+}
+
+export interface PracticeFullQuestionSet {
+  id: number
+  title: string
+  description?: string | null
+  set_type?: string
+  owner_type?: string
+  owner_id?: number
+  persona?: string | null
+  shuffle_questions?: boolean
+  status?: PracticePublishStatus | string
+  time_limit_minutes?: number | null
+  passing_score?: number | null
+  intro_video_url?: string | null
+  question_count?: number
+  created_at?: string
+}
+
+export interface PracticeFullPractice {
+  id: number
+  title: string
+  story_description?: string
+  story_image?: string
+  persona_id?: number | null
+  question_set_id: number
+  publish_status?: PracticePublishStatus | string | null
+  quick_tips?: string
+  lesson_id?: number
+  parent_kind?: string
+  parent_id?: number
+  created_at?: string
+}
+
+export interface PracticeFullData {
+  practice: PracticeFullPractice
+  question_set: PracticeFullQuestionSet
+  questions: PracticeFullQuestionItem[]
+}
+
+export interface GetPracticeFullResponse {
+  message: string
+  data: PracticeFullData
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface UpdatePracticeFullRequest {
+  practice: {
+    title: string
+    story_description: string
+    story_image: string
+    persona_id: number
+    quick_tips: string
+    publish_status: PracticePublishStatus
+  }
+  question_set: {
+    title: string
+    description?: string | null
+    time_limit_minutes?: number | null
+    passing_score?: number | null
+    shuffle_questions: boolean
+    status: PracticePublishStatus
+    intro_video_url?: string | null
+  }
+  questions: PracticeFullQuestionItem[]
+}
+
+export interface UpdatePracticeFullResponse {
+  message: string
+  data: PracticeFullData
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
 /** Body for PUT /lessons/:id (Learn English top-level module lessons). */
 export interface UpdateTopLevelModuleLessonRequest {
   title: string

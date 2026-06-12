@@ -867,7 +867,9 @@ export function CourseDetailPage() {
                       practice={practice}
                       statusUpdating={publishStatusPracticeId === practice.id}
                       onEdit={() =>
-                        navigate(`/content/practices?type=course&id=${courseIdNum}`)
+                        navigate(
+                          `/new-content/learn-english/${programIdParam}/courses/${courseIdNum}/edit-practice/${practice.id}?backTo=courses`,
+                        )
                       }
                       onPublish={() =>
                         void handlePracticePublishStatus(

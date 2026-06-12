@@ -60,7 +60,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-grayScale-100">
+    <div className="flex h-dvh min-h-screen overflow-hidden bg-grayScale-100">
       <Sidebar
         isOpen={sidebarOpen}
         isCollapsed={sidebarCollapsed}
@@ -68,15 +68,18 @@ export function AppLayout() {
         onClose={handleSidebarClose}
       />
       <div
-        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${
+        className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[margin] duration-300 ${
           sidebarCollapsed ? "lg:ml-[88px]" : "lg:ml-[264px]"
         }`}
       >
         <Topbar onSidebarToggle={handleSidebarToggle} />
-        <main ref={mainRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-8 pt-4 sm:px-4 lg:px-6">
+        <main
+          ref={mainRef}
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-8 pt-4 sm:px-4 lg:px-6"
+        >
           <Outlet />
         </main>
-        <footer className="border-t bg-grayScale-50 px-4 py-3 lg:px-6">
+        <footer className="shrink-0 border-t bg-grayScale-50 px-4 py-3 lg:px-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-grayScale-400">
             <span>Powered by</span>
             <a

@@ -657,7 +657,7 @@ export function ModuleDetailPage() {
                     statusUpdating={publishStatusPracticeId === practice.id}
                     onEdit={() =>
                       navigate(
-                        `/content/practices?type=module&id=${moduleId}`,
+                        `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/edit-practice/${practice.id}?backTo=module`,
                       )
                     }
                     onPublish={() =>

@@ -35,6 +35,8 @@ export type PracticeSequentialReviewProps = {
   onBack: () => void;
   onSaveDraft: () => void;
   onPublish: () => void;
+  publishLabel?: string;
+  publishingLabel?: string;
   sectionTitle?: string;
   sectionSubtitle?: string;
 };
@@ -136,6 +138,8 @@ export function PracticeSequentialReview({
   onBack,
   onSaveDraft,
   onPublish,
+  publishLabel = "Publish Now",
+  publishingLabel = "Publishing…",
   sectionTitle = "Create Practice Questions",
   sectionSubtitle = "Define the dialogue flow and interactions for this scenario.",
 }: PracticeSequentialReviewProps) {
@@ -280,7 +284,7 @@ export function PracticeSequentialReview({
                 {filledQuestions.length}
               </span>
             </div>
-            <div className="max-h-[min(70vh,40rem)] space-y-6 overflow-y-auto px-6 py-5">
+            <div className="max-h-[min(70vh,40rem)] space-y-6 overflow-y-auto overscroll-y-contain px-6 py-5">
               {filledQuestions.map((question, index) => (
                 <div key={question.id} className="space-y-3">
                   <span className="text-sm font-bold text-grayScale-400">
@@ -329,7 +333,7 @@ export function PracticeSequentialReview({
                 </button>
               ) : null}
             </div>
-            <div className="max-h-[min(70vh,40rem)] space-y-6 overflow-y-auto px-6 py-5">
+            <div className="max-h-[min(70vh,40rem)] space-y-6 overflow-y-auto overscroll-y-contain px-6 py-5">
               {filledQuestions.map((question, index) => (
                 <div key={question.id} className="space-y-3">
                   <span className="text-sm font-bold text-grayScale-400">
@@ -398,7 +402,7 @@ export function PracticeSequentialReview({
             ) : (
               <Rocket className="h-4 w-4" />
             )}
-            {saving ? "Publishing…" : "Publish Now"}
+            {saving ? publishingLabel : publishLabel}
           </Button>
         </div>
       </div>

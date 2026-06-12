@@ -55,3 +55,92 @@ export interface GetNotificationsResponse {
 export interface UnreadCountResponse {
   unread: number
 }
+
+export type NotificationChannel = "sms" | "email" | "push" | "in_app"
+
+export type ScheduledNotificationStatus =
+  | "pending"
+  | "processing"
+  | "sent"
+  | "failed"
+  | "cancelled"
+
+export type InAppNotificationLevel = "info" | "warning" | "error" | "success"
+
+export type PlatformRole =
+  | "STUDENT"
+  | "OPEN_LEARNER"
+  | "INSTRUCTOR"
+  | "ADMIN"
+  | "SUPER_ADMIN"
+  | "SUPPORT"
+
+export interface BulkSendResult {
+  total_recipients?: number
+  sent: number
+  failed: number
+  target_users?: number
+  image?: string
+}
+
+export interface ScheduledNotificationTargetRaw {
+  phones?: string[]
+  emails?: string[]
+  type?: string
+  level?: string
+}
+
+export interface ScheduledNotification {
+  id: number
+  channel: NotificationChannel
+  title?: string
+  message: string
+  html?: string
+  scheduled_at: string
+  status: ScheduledNotificationStatus
+  target_user_ids?: number[]
+  target_role?: string
+  target_raw?: ScheduledNotificationTargetRaw
+  attempt_count?: number
+  last_error?: string
+  processing_started_at?: string | null
+  sent_at?: string | null
+  cancelled_at?: string | null
+  created_by?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ListScheduledNotificationsResponse {
+  scheduled_notifications: ScheduledNotification[]
+  total_count: number
+  limit: number
+  page: number
+}
+
+export interface BulkSmsRequest {
+  message: string
+  user_ids?: number[]
+  role?: string
+  phone_numbers?: string[]
+  scheduled_at?: string
+}
+
+export interface BulkInAppRequest {
+  title: string
+  message: string
+  user_ids?: number[]
+  role?: string
+  scheduled_at?: string
+  type?: string
+  level?: InAppNotificationLevel
+}
+
+export interface GetScheduledNotificationsParams {
+  status?: ScheduledNotificationStatus
+  channel?: NotificationChannel
+  after?: string
+  before?: string
+  limit?: number
+  page?: number
+}

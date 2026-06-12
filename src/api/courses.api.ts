@@ -108,6 +108,9 @@ import type {
   CreateParentLinkedPracticeRequest,
   CreateParentLinkedPracticeResponse,
   UpdateParentLinkedPracticeRequest,
+  GetPracticeFullResponse,
+  UpdatePracticeFullRequest,
+  UpdatePracticeFullResponse,
   UpdateParentLinkedPracticeResponse,
   PublishParentLinkedPracticeRequest,
   PublishStatusOnlyRequest,
@@ -845,6 +848,31 @@ export const updateParentLinkedPractice = (
   practiceId: number,
   data: UpdateParentLinkedPracticeRequest,
 ) => http.put<UpdateParentLinkedPracticeResponse>(`/practices/${practiceId}`, data)
+
+/** GET /practices/:id/full — Learn English practice with question set and questions. */
+export const getLearnEnglishPracticeFull = (practiceId: number) =>
+  http.get<GetPracticeFullResponse>(`/practices/${practiceId}/full`)
+
+/** PUT /practices/:id/full — atomic update of practice, question set, and questions. */
+export const updateLearnEnglishPracticeFull = (
+  practiceId: number,
+  data: UpdatePracticeFullRequest,
+) =>
+  http.put<UpdatePracticeFullResponse>(`/practices/${practiceId}/full`, data)
+
+/** GET /exam-prep/practices/:id/full */
+export const getExamPrepPracticeFull = (practiceId: number) =>
+  http.get<GetPracticeFullResponse>(`/exam-prep/practices/${practiceId}/full`)
+
+/** PUT /exam-prep/practices/:id/full */
+export const updateExamPrepPracticeFull = (
+  practiceId: number,
+  data: UpdatePracticeFullRequest,
+) =>
+  http.put<UpdatePracticeFullResponse>(
+    `/exam-prep/practices/${practiceId}/full`,
+    data,
+  )
 
 /** PUT /practices/:id — set publish_status only (Learn English practice). */
 export const setLearnEnglishPracticePublishStatus = (

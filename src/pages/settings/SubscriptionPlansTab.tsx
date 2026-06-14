@@ -12,11 +12,13 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { getSubscriptionPlans } from "../../api/subscription-plans.api"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import {
   formatPlanCategory,
@@ -89,6 +91,14 @@ export function SubscriptionPlansTab() {
 
   const handleDeleted = (id: number) => {
     setPlans((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  const activeFilterCount = countActiveFilters([
+    { value: statusFilter, defaultValue: "all" },
+  ])
+
+  const clearFilters = () => {
+    setStatusFilter("all")
   }
 
   return (
@@ -168,16 +178,21 @@ export function SubscriptionPlansTab() {
           <CardTitle className="text-sm font-bold text-grayScale-900">All packages</CardTitle>
         </CardHeader>
         <CardContent className="min-w-0 space-y-4 p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-              <Input
-                className="rounded-[6px] pl-9"
-                placeholder="Search by name, description, or category…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
+          <AdminFiltersPanel
+            activeFilterCount={activeFilterCount}
+            onClearFilters={clearFilters}
+            search={
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+                <Input
+                  className="rounded-[6px] pl-9"
+                  placeholder="Search by name, description, or category…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+            }
+          >
             <div className="flex flex-wrap gap-2">
               {(
                 [
@@ -201,7 +216,7 @@ export function SubscriptionPlansTab() {
                 </button>
               ))}
             </div>
-          </div>
+          </AdminFiltersPanel>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16">

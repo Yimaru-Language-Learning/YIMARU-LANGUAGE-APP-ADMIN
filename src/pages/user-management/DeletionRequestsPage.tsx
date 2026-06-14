@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react"
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import { Badge } from "../../components/ui/badge"
@@ -15,6 +16,7 @@ import {
 } from "../../components/ui/table"
 import { getDeletionRequests } from "../../api/users.api"
 import { getRoles } from "../../api/rbac.api"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import type {
@@ -236,6 +238,16 @@ export function DeletionRequestsPage() {
     setPage(1)
   }
 
+  const activeFilterCount = countActiveFilters([
+    { value: role },
+    { value: status },
+    { value: state },
+    { value: requestedAfter },
+    { value: requestedBefore },
+    { value: scheduledAfter },
+    { value: scheduledBefore },
+  ])
+
   return (
     <div className="space-y-6">
       <div>
@@ -245,28 +257,29 @@ export function DeletionRequestsPage() {
         </p>
       </div>
 
-      <Card className="overflow-visible rounded-2xl border border-brand-100/70 bg-white shadow-soft">
-        <CardHeader className="border-b border-brand-100/70 bg-gradient-to-r from-brand-100/50 via-white to-brand-100/25 pb-4">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold text-grayScale-700">
-            <SlidersHorizontal className="h-4 w-4 text-brand-600" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5 bg-gradient-to-b from-white to-brand-100/10 pt-5">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-            <div className="relative lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
-              <Input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  setPage(1)
-                }}
-                placeholder="Search name, email, phone..."
-                className="h-11 rounded-xl border-grayScale-200 bg-white pl-10 shadow-sm transition focus-visible:border-brand-400 focus-visible:ring-brand-200"
-              />
-            </div>
-            <div className="relative" ref={roleMenuRef}>
+      <AdminFiltersPanel
+        className="overflow-visible rounded-2xl border border-brand-100/70 shadow-soft"
+        activeFilterCount={activeFilterCount}
+        onClearFilters={resetFilters}
+        clearLabel="Clear filters"
+        summary={`${total} request${total === 1 ? "" : "s"}`}
+        search={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
+            <Input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setPage(1)
+              }}
+              placeholder="Search name, email, phone..."
+              className="h-11 rounded-xl border-grayScale-200 bg-white pl-10 shadow-sm transition focus-visible:border-brand-400 focus-visible:ring-brand-200"
+            />
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <div className="relative" ref={roleMenuRef}>
               <button
                 type="button"
                 className="flex h-11 w-full items-center justify-between rounded-xl border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600 shadow-sm transition hover:bg-grayScale-50 focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
@@ -478,18 +491,8 @@ export function DeletionRequestsPage() {
               }}
               placeholder={`Scheduled before (${DATE_PLACEHOLDER})`}
             />
-            <div className="flex justify-end lg:col-start-4 lg:col-span-1">
-              <Button
-                variant="outline"
-                className="h-11 rounded-xl border-brand-200 px-5 text-brand-700 hover:bg-brand-100/40"
-                onClick={resetFilters}
-              >
-                Clear Filters
-              </Button>
-            </div>
           </div>
-        </CardContent>
-      </Card>
+      </AdminFiltersPanel>
 
       <Card className="shadow-soft">
         <CardHeader className="border-b border-grayScale-200 pb-4">

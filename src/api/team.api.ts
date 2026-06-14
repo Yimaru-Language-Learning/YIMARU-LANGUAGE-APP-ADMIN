@@ -9,11 +9,78 @@ import type {
 import type {
   ChangeTeamMemberPasswordRequest,
   ChangeTeamMemberPasswordResponse,
+  GetTeamMeResponse,
   GetTeamMembersResponse,
   GetTeamMemberResponse,
   CreateTeamMemberRequest,
   UpdateTeamMemberRequest,
+  UpdateTeamMeRequest,
+  TeamMember,
+  TeamMemberDetail,
 } from "../types/team.types"
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+}
+
+function optionalString(value: unknown): string | null {
+  if (value == null) return null
+  const text = String(value).trim()
+  return text ? text : null
+}
+
+export function normalizeTeamMemberDetail(raw: unknown): TeamMemberDetail | null {
+  if (!isRecord(raw)) return null
+  const id = Number(raw.id)
+  if (!Number.isFinite(id)) return null
+
+  return {
+    id,
+    first_name: String(raw.first_name ?? ""),
+    last_name: String(raw.last_name ?? ""),
+    email: String(raw.email ?? ""),
+    phone_number: String(raw.phone_number ?? ""),
+    team_role: String(raw.team_role ?? ""),
+    department: String(raw.department ?? ""),
+    job_title: String(raw.job_title ?? ""),
+    bio: optionalString(raw.bio),
+    status: String(raw.status ?? ""),
+    email_verified: raw.email_verified === true,
+    last_login: optionalString(raw.last_login),
+    created_at: String(raw.created_at ?? ""),
+    updated_at: optionalString(raw.updated_at),
+  }
+}
+
+export function normalizeTeamMember(raw: unknown): TeamMember | null {
+  if (!isRecord(raw)) return null
+  const id = Number(raw.id)
+  if (!Number.isFinite(id)) return null
+
+  const permissionsRaw = raw.permissions
+  const permissions = Array.isArray(permissionsRaw)
+    ? permissionsRaw.map((entry) => String(entry))
+    : undefined
+
+  return {
+    id,
+    first_name: String(raw.first_name ?? ""),
+    last_name: String(raw.last_name ?? ""),
+    email: String(raw.email ?? ""),
+    phone_number: String(raw.phone_number ?? ""),
+    team_role: String(raw.team_role ?? ""),
+    department: String(raw.department ?? ""),
+    job_title: String(raw.job_title ?? ""),
+    employment_type: optionalString(raw.employment_type) ?? undefined,
+    hire_date: optionalString(raw.hire_date) ?? undefined,
+    bio: optionalString(raw.bio) ?? undefined,
+    status: String(raw.status ?? ""),
+    email_verified: raw.email_verified === true,
+    permissions,
+    last_login: optionalString(raw.last_login),
+    created_at: String(raw.created_at ?? ""),
+  }
+}
 
 export const getTeamMembers = (page?: number, pageSize?: number) =>
   http.get<GetTeamMembersResponse>("/team/members", {
@@ -24,7 +91,27 @@ export const getTeamMembers = (page?: number, pageSize?: number) =>
   })
 
 export const getTeamMemberById = (id: number) =>
-  http.get<GetTeamMemberResponse>(`/team/members/${id}`)
+  http.get<GetTeamMemberResponse>(`/team/members/${id}`).then((res) => {
+    const body = res.data
+    const member = normalizeTeamMemberDetail(body?.data)
+    if (!member) {
+      throw new Error("Invalid team member response")
+    }
+    return {
+      ...res,
+      data: {
+        ...body,
+        data: member,
+      },
+    }
+  })
+
+/** GET /team/me — signed-in team member profile */
+export const getTeamMe = () => http.get<GetTeamMeResponse>("/team/me")
+
+/** PUT /team/me — update signed-in team member profile */
+export const updateTeamMe = (data: UpdateTeamMeRequest) =>
+  http.put<GetTeamMeResponse>("/team/me", data)
 
 export const createTeamMember = (data: CreateTeamMemberRequest) =>
   http.post("/team/register", data)

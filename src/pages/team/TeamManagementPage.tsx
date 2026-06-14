@@ -8,6 +8,7 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -19,6 +20,8 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import { ToggleSwitch } from "../../components/ui/toggle-switch";
+import { countActiveFilters } from "../../lib/adminFilterUtils";
 import { cn } from "../../lib/utils";
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination";
 import { getTeamMembers, updateTeamMemberStatus } from "../../api/team.api";
@@ -215,6 +218,16 @@ export function TeamManagementPage() {
     setConfirmDialog(null);
   };
 
+  const activeFilterCount = countActiveFilters([
+    { value: roleFilter },
+    { value: statusFilter },
+  ]);
+
+  const clearFilters = () => {
+    setRoleFilter("");
+    setStatusFilter("");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -233,50 +246,54 @@ export function TeamManagementPage() {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-white p-3">
-        <div className="relative w-full sm:flex-1 sm:w-auto">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-          <Input
-            placeholder="Search by name or email address..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <AdminFiltersPanel
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
+        search={
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+            <Input
+              placeholder="Search by name or email address..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        }
+      >
+        <div className="flex flex-wrap gap-3">
+          <div className="relative">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="h-9 appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="">Role: All</option>
+              <option value="super_admin">Super Admin</option>
+              <option value="admin">Admin</option>
+              <option value="content_manager">Content Manager</option>
+              <option value="instructor">Instructor</option>
+              <option value="support_agent">Support Agent</option>
+              <option value="finance">Finance</option>
+              <option value="hr">HR</option>
+              <option value="analyst">Analyst</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
+          </div>
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="">Status: All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
+          </div>
         </div>
-
-        <div className="relative">
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="h-10 appearance-none rounded-lg border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Role: All</option>
-            <option value="super_admin">Super Admin</option>
-            <option value="admin">Admin</option>
-            <option value="content_manager">Content Manager</option>
-            <option value="instructor">Instructor</option>
-            <option value="support_agent">Support Agent</option>
-            <option value="finance">Finance</option>
-            <option value="hr">HR</option>
-            <option value="analyst">Analyst</option>
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-        </div>
-
-        <div className="relative">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 appearance-none rounded-lg border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Status: All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-        </div>
-
-      </div>
+      </AdminFiltersPanel>
 
       <div className="rounded-xl border bg-white">
         <Table>
@@ -371,24 +388,10 @@ export function TeamManagementPage() {
                       )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggle(member.id)}
-                        className={cn(
-                          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border p-0.5 transition-all duration-200",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-1",
-                          isActive
-                            ? "border-brand-500 bg-brand-500 shadow-[0_6px_16px_rgba(168,85,247,0.35)]"
-                            : "border-grayScale-300 bg-grayScale-200 hover:bg-grayScale-300/80"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-out",
-                            isActive ? "translate-x-5" : "translate-x-0"
-                          )}
-                        />
-                      </button>
+                      <ToggleSwitch
+                        checked={isActive}
+                        onCheckedChange={() => handleToggle(member.id)}
+                      />
                     </TableCell>
                   </TableRow>
                 );

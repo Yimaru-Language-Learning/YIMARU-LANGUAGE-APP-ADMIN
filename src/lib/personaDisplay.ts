@@ -41,6 +41,26 @@ export function mapPersonaToCard(persona: PersonaListItem): PersonaCardModel {
   }
 }
 
+export function formatPersonaDate(dateStr: string | null | undefined): string {
+  if (!dateStr?.trim()) return "—"
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+}
+
+export function personaStatusLabel(isActive: boolean): string {
+  return isActive ? "Active" : "Inactive"
+}
+
+export function personaGenderLabel(gender: string | null | undefined): string {
+  const value = gender?.trim()
+  return value ? value : "—"
+}
+
 export function unwrapPersonasList(
   res: { data?: GetPersonasResponse & { Data?: GetPersonasResponse["data"] } },
 ): PersonaListItem[] {

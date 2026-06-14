@@ -81,41 +81,35 @@ export const mapUserApiToUser = (u: UserApiDTO): User => ({
   createdAt: u.created_at ?? "",
 })
 
+/** GET /user/single/:id — single learner profile */
 export interface UserProfileData {
   id: number
   first_name: string
   last_name: string
   gender: string
   birth_day: string | null
-
   email: string
-  phone_number: string
   role: string
-  age: number
+  age_group: string
   education_level: string
   country: string
   region: string
-
   nick_name: string
   occupation: string
   learning_goal: string
   language_goal: string
   language_challange: string
   favoutite_topic: string
-
   email_verified: boolean
   phone_verified: boolean
   status: string
-
   last_login: string | null
   profile_completed: boolean
-  preferred_language: string
+  profile_completion_percentage: number
   profile_picture_url: string
-
+  preferred_language: string
   created_at: string
-  updated_at?: string | null // optional
-  age_group?: string
-  profile_completion_percentage?: number
+  subscription_status: string
 }
 
 export interface UserProfileResponse {
@@ -139,11 +133,11 @@ export interface UserRecentActivityData {
 }
 
 export interface UserRecentActivityResponse {
-  message?: string
-  data?: UserRecentActivityData
-  success?: boolean
-  status_code?: number
-  metadata?: unknown
+  message: string
+  data: UserRecentActivityData
+  success: boolean
+  status_code: number
+  metadata: null
 }
 
 export interface UserSummary {

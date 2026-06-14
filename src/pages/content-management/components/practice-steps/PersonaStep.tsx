@@ -1,4 +1,5 @@
 import { Check, ArrowRight, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
 import {
   Avatar,
@@ -67,7 +68,10 @@ export function PersonaStep({
             No active personas available.
           </p>
           <p className="mt-1 text-sm text-grayScale-400">
-            Add personas in the admin panel, then return here.
+            <Link to="/personas" className="font-medium text-brand-600 hover:underline">
+              Add personas
+            </Link>{" "}
+            in the admin panel, then return here.
           </p>
         </div>
       ) : (

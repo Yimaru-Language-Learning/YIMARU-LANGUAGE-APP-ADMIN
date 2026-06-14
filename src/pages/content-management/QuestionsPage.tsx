@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { Plus, Search, Edit, Trash2, HelpCircle, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { Button } from "../../components/ui/button"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import { Select } from "../../components/ui/select"
@@ -17,6 +18,7 @@ import {
 } from "../../components/ui/table"
 import { Badge } from "../../components/ui/badge"
 import { deleteQuestion, getQuestionById, getQuestions, updateQuestion } from "../../api/courses.api"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import type { QuestionDetail } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
@@ -321,6 +323,19 @@ export function QuestionsPage() {
     return pages
   }
 
+  const clearFilters = () => {
+    setTypeFilter("all")
+    setDifficultyFilter("all")
+    setStatusFilter("all")
+    setPage(1)
+  }
+
+  const activeFilterCount = countActiveFilters([
+    { value: typeFilter, defaultValue: "all" },
+    { value: difficultyFilter, defaultValue: "all" },
+    { value: statusFilter, defaultValue: "all" },
+  ])
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -359,23 +374,29 @@ export function QuestionsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 pt-5">
-          {/* Search and Filters */}
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
-              <Input
-                placeholder="Search questions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 transition-colors focus:border-brand-300 focus:ring-brand-200"
-              />
-            </div>
-
+          <AdminFiltersPanel
+            className="border-0 shadow-none"
+            activeFilterCount={activeFilterCount}
+            onClearFilters={clearFilters}
+            summary={`Showing ${paginatedQuestions.length} of ${totalCount} questions`}
+            search={
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
+                <Input
+                  placeholder="Search questions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 transition-colors focus:border-brand-300 focus:ring-brand-200"
+                />
+              </div>
+            }
+          >
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={typeFilter}
                 onChange={(e) => {
                   setTypeFilter(e.target.value as QuestionTypeFilter)
+                  setPage(1)
                 }}
               >
                 <option value="all">All Types</option>
@@ -388,6 +409,7 @@ export function QuestionsPage() {
                 value={difficultyFilter}
                 onChange={(e) => {
                   setDifficultyFilter(e.target.value as DifficultyFilter)
+                  setPage(1)
                 }}
               >
                 <option value="all">All Difficulties</option>
@@ -399,6 +421,7 @@ export function QuestionsPage() {
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value as StatusFilter)
+                  setPage(1)
                 }}
               >
                 <option value="all">All Statuses</option>
@@ -407,12 +430,7 @@ export function QuestionsPage() {
                 <option value="INACTIVE">Inactive</option>
               </Select>
             </div>
-          </div>
-
-          {/* Results count */}
-          <div className="text-xs font-medium text-grayScale-400">
-            Showing {paginatedQuestions.length} of {totalCount} questions
-          </div>
+          </AdminFiltersPanel>
 
           <div className="rounded-xl border bg-white">
             <Table>

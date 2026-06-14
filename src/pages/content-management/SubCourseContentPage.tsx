@@ -16,19 +16,19 @@ import {
   createCourseVideo,
   updateSubCourseVideo,
   deleteSubCourseVideo,
-  getRatings,
   getVimeoSample,
 } from "../../api/courses.api"
+import { getRatings } from "../../api/ratings.api"
 import { uploadVideoFile } from "../../api/files.api"
 import type {
   SubCourse,
   QuestionSet,
   SubCourseVideo,
-  Rating,
   VimeoSampleVideo,
   VideoStatus,
   VideoVisibility,
 } from "../../types/course.types"
+import type { Rating } from "../../types/ratings.types"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 
 type TabType = "video" | "practice" | "ratings"

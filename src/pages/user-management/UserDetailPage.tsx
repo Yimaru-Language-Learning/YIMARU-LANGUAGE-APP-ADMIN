@@ -1,18 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
-  BarChart3,
   BookOpen,
-  Calendar,
   CheckCircle2,
   Globe,
   GraduationCap,
-  Lock,
   Mail,
   MapPin,
-  Phone,
   PlayCircle,
-  RefreshCw,
   Target,
   UserPlus,
 } from "lucide-react";
@@ -23,26 +18,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Separator } from "../../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { cn } from "../../lib/utils";
-import { useUsersStore } from "../../zustand/userStore";
-import { getUserById, getUserRecentActivity } from "../../api/users.api";
-import { getCourseCategories, getCoursesByCategory } from "../../api/courses.api";
 import {
-  getAdminLearnerCourseProgress,
-  getAdminLearnerCourseProgressSummary,
-} from "../../api/progress.api";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../components/ui/table";
-import { Select } from "../../components/ui/select";
+  getUserById,
+  getUserLearningActivity,
+  getUserRecentActivity,
+  getUserSubscriptions,
+} from "../../api/users.api";
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
-import type { LearnerCourseProgressItem, LearnerCourseProgressSummary } from "../../types/progress.types";
-import type { Course } from "../../types/course.types";
-import type { UserRecentActivityItem } from "../../types/user.types";
+import type { UserProfileData, UserRecentActivityItem } from "../../types/user.types";
+import type { UserLearningActivityData, UserSubscriptionsData } from "../../types/userAdmin.types";
+import { UserLearningActivitySection } from "./components/UserLearningActivitySection";
+import { UserSubscriptionsSection } from "./components/UserSubscriptionsSection";
 
 const activityIcons = {
   completed: CheckCircle2,
@@ -59,7 +45,59 @@ function visualActivityKind(kind: string): keyof typeof activityIcons {
   return "default";
 }
 
-/** Matches Recent Activity mock: "Today, 10:27 AM" / "Yesterday, 3:45 PM" / "Jan 10, 2025". */
+function displayValue(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : "—";
+}
+
+function formatRoleLabel(role: string): string {
+  const value = role.trim();
+  if (!value) return "—";
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function formatStatusLabel(status: string): string {
+  const value = status.trim();
+  if (!value) return "—";
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function formatAgeGroup(ageGroup: string): string {
+  const value = ageGroup.trim();
+  if (!value) return "—";
+  return value.replace(/_/g, "-");
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr?.trim()) return "—";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value?.trim()) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function formatActivityOccurredAt(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
@@ -69,7 +107,7 @@ function formatActivityOccurredAt(iso: string): string {
   const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const dayDiff = Math.round((startToday - startThat) / 86_400_000);
 
-  const timePart = d.toLocaleTimeString("en-US", {
+  const timePart = d.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -78,114 +116,131 @@ function formatActivityOccurredAt(iso: string): string {
   if (dayDiff === 0) return `Today, ${timePart}`;
   if (dayDiff === 1) return `Yesterday, ${timePart}`;
 
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
-type CourseOption = Course & { category_name: string };
+function getAccountStatusClasses(status: string): string {
+  const normalized = status.trim().toUpperCase();
+  if (normalized === "ACTIVE") {
+    return "bg-mint-500/15 text-mint-500 border border-mint-500/25";
+  }
+  return "bg-destructive/15 text-destructive border border-destructive/25";
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="h-5 w-32 animate-pulse rounded bg-grayScale-100" />
+      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        <div className="space-y-6">
+          <div className="h-80 animate-pulse rounded-2xl bg-grayScale-100" />
+          <div className="h-64 animate-pulse rounded-2xl bg-grayScale-100" />
+        </div>
+        <div className="space-y-6">
+          <div className="h-56 animate-pulse rounded-2xl bg-grayScale-100" />
+          <div className="h-72 animate-pulse rounded-2xl bg-grayScale-100" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function UserDetailPage() {
   const { id } = useParams();
-  const userProfile = useUsersStore((s) => s.userProfile);
-  const setUserProfile = useUsersStore((s) => s.setUserProfile);
-  const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
-  const [loadingCourseOptions, setLoadingCourseOptions] = useState(false);
-  const [selectedProgressCourseId, setSelectedProgressCourseId] = useState<number | null>(null);
-  const [progressItems, setProgressItems] = useState<LearnerCourseProgressItem[]>([]);
-  const [progressSummary, setProgressSummary] = useState<LearnerCourseProgressSummary | null>(null);
-  const [loadingProgress, setLoadingProgress] = useState(false);
-  const [progressError, setProgressError] = useState<string | null>(null);
+  const [user, setUser] = useState<UserProfileData | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [userError, setUserError] = useState<string | null>(null);
+  const [learningActivity, setLearningActivity] = useState<UserLearningActivityData | null>(null);
+  const [learningActivityLoading, setLearningActivityLoading] = useState(false);
+  const [learningActivityError, setLearningActivityError] = useState<string | null>(null);
+  const [subscriptions, setSubscriptions] = useState<UserSubscriptionsData | null>(null);
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
+  const [subscriptionsError, setSubscriptionsError] = useState<string | null>(null);
   const [recentActivityItems, setRecentActivityItems] = useState<UserRecentActivityItem[]>([]);
   const [recentActivityLoading, setRecentActivityLoading] = useState(false);
+  const [recentActivityError, setRecentActivityError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const userId = Number(id);
+    if (!Number.isFinite(userId) || userId <= 0) {
+      setUserError("Invalid user ID.");
+      setLoadingUser(false);
+      return;
+    }
+
+    const fetchUser = async () => {
+      setLoadingUser(true);
+      setUserError(null);
+      try {
+        const res = await getUserById(userId);
+        setUser(res.data.data);
+      } catch (err) {
+        console.error("Failed to fetch user profile", err);
+        setUser(null);
+        setUserError("User not found.");
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    void fetchUser();
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
-    const fetchUser = async () => {
-      try {
-        const res = await getUserById(Number(id));
-        setUserProfile(res.data.data);
-      } catch (err) {
-        console.error("Failed to fetch user profile", err);
-        setUserProfile(null);
-      }
-    };
-    fetchUser();
-  }, [id, setUserProfile]);
-
-  useEffect(() => {
-    const loadCourseOptions = async () => {
-      setLoadingCourseOptions(true);
-      try {
-        const categoriesRes = await getCourseCategories();
-        const categories = categoriesRes.data?.data?.categories ?? [];
-        const options: CourseOption[] = [];
-
-        for (const category of categories) {
-          const coursesRes = await getCoursesByCategory(category.id);
-          const courses = coursesRes.data?.data?.courses ?? [];
-          options.push(
-            ...courses.map((course) => ({
-              ...course,
-              category_name: category.name,
-            })),
-          );
-        }
-
-        setCourseOptions(options);
-        if (options.length > 0 && !selectedProgressCourseId) {
-          setSelectedProgressCourseId(options[0].id);
-        }
-      } catch {
-        setCourseOptions([]);
-      } finally {
-        setLoadingCourseOptions(false);
-      }
-    };
-
-    loadCourseOptions();
-  }, []);
-
-  useEffect(() => {
-    if (!id || !selectedProgressCourseId) return;
-
     const userId = Number(id);
     if (Number.isNaN(userId)) return;
 
-    const loadProgress = async () => {
-      setLoadingProgress(true);
-      setProgressError(null);
+    const loadLearningActivity = async () => {
+      setLearningActivityLoading(true);
+      setLearningActivityError(null);
       try {
-        const [summaryRes, detailRes] = await Promise.all([
-          getAdminLearnerCourseProgressSummary(userId, selectedProgressCourseId),
-          getAdminLearnerCourseProgress(userId, selectedProgressCourseId),
-        ]);
-
-        setProgressSummary(summaryRes.data?.data ?? null);
-        const ordered = [...(detailRes.data?.data ?? [])].sort(
-          (a, b) => a.display_order - b.display_order || a.sub_course_id - b.sub_course_id,
-        );
-        setProgressItems(ordered);
-      } catch (err: any) {
-        setProgressSummary(null);
-        setProgressItems([]);
-        const status = err?.response?.status;
-        if (status === 403) {
-          setProgressError("Missing permission: progress.get_any_user");
-        } else if (status === 400) {
-          setProgressError("Invalid learner or course selection.");
-        } else {
-          setProgressError(err?.response?.data?.message || "Failed to load learner progress.");
-        }
+        const res = await getUserLearningActivity(userId);
+        setLearningActivity(res.data.data);
+      } catch (err) {
+        console.error("Failed to load learning activity", err);
+        setLearningActivity(null);
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          "Failed to load learning activity.";
+        setLearningActivityError(message);
       } finally {
-        setLoadingProgress(false);
+        setLearningActivityLoading(false);
       }
     };
 
-    loadProgress();
-  }, [id, selectedProgressCourseId]);
+    void loadLearningActivity();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const userId = Number(id);
+    if (Number.isNaN(userId)) return;
+
+    const loadSubscriptions = async () => {
+      setSubscriptionsLoading(true);
+      setSubscriptionsError(null);
+      try {
+        const res = await getUserSubscriptions(userId);
+        setSubscriptions(res.data.data);
+      } catch (err) {
+        console.error("Failed to load subscriptions", err);
+        setSubscriptions(null);
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          "Failed to load subscriptions.";
+        setSubscriptionsError(message);
+      } finally {
+        setSubscriptionsLoading(false);
+      }
+    };
+
+    void loadSubscriptions();
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -194,57 +249,46 @@ export function UserDetailPage() {
 
     const loadRecent = async () => {
       setRecentActivityLoading(true);
+      setRecentActivityError(null);
       try {
         const res = await getUserRecentActivity(userId);
-        const items = res.data?.data?.items ?? [];
+        const items = [...(res.data.data.items ?? [])].sort(
+          (a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime(),
+        );
         setRecentActivityItems(items);
       } catch (err) {
         console.error("Failed to load recent activity", err);
         setRecentActivityItems([]);
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          "Failed to load recent activity.";
+        setRecentActivityError(message);
       } finally {
         setRecentActivityLoading(false);
       }
     };
 
-    loadRecent();
+    void loadRecent();
   }, [id]);
 
-  const progressMetrics = useMemo(() => {
-    if (progressSummary) {
-      return {
-        total: progressSummary.total_sub_courses ?? 0,
-        completed: progressSummary.completed_sub_courses ?? 0,
-        inProgress: progressSummary.in_progress_sub_courses ?? 0,
-        locked: progressSummary.locked_sub_courses ?? 0,
-        averageProgress: Math.round(progressSummary.overall_progress_percentage ?? 0),
-      };
-    }
+  if (loadingUser) return <LoadingSkeleton />;
 
-    const total = progressItems.length;
-    const completed = progressItems.filter((item) => item.progress_status === "COMPLETED").length;
-    const inProgress = progressItems.filter((item) => item.progress_status === "IN_PROGRESS").length;
-    const locked = progressItems.filter((item) => item.is_locked).length;
-    const averageProgress =
-      total === 0
-        ? 0
-        : Math.round(
-            progressItems.reduce((sum, item) => sum + Number(item.progress_percentage || 0), 0) / total,
-          );
-
-    return { total, completed, inProgress, locked, averageProgress };
-  }, [progressItems, progressSummary]);
-
-  if (!userProfile) {
+  if (userError || !user) {
     return (
       <div className="mx-auto w-full max-w-3xl space-y-4 py-12">
+        <Link
+          to="/users/list"
+          className="inline-flex items-center gap-2 text-sm font-medium text-grayScale-500 transition-colors hover:text-brand-600"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Users
+        </Link>
         <Card className="shadow-soft">
           <CardContent className="flex flex-col items-center gap-4 p-10">
-            <div className="h-16 w-16 rounded-full bg-grayScale-100 flex items-center justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-grayScale-100">
               <Target className="h-8 w-8 text-grayScale-300" />
             </div>
-            <div className="text-lg font-semibold text-grayScale-600">
-              User not found
-            </div>
+            <p className="text-lg font-semibold text-grayScale-600">{userError || "User not found"}</p>
             <Button asChild variant="outline" className="mt-2">
               <Link to="/users/list">Back to Users</Link>
             </Button>
@@ -254,92 +298,74 @@ export function UserDetailPage() {
     );
   }
 
-  const user = userProfile;
-  const fullName = `${user.first_name} ${user.last_name}`;
+  const fullName = `${user.first_name} ${user.last_name}`.trim();
   const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase();
+  const profilePicture = user.profile_picture_url?.trim() || undefined;
 
-  const infoFields = [
-    { icon: Phone, label: "Phone", value: user.phone_number },
-    { icon: Mail, label: "Email", value: user.email },
-    { icon: Globe, label: "Country", value: user.country || "Ethiopia" },
-    { icon: MapPin, label: "Region", value: user.region },
+  const contactFields = [
+    { icon: Mail, label: "Email", value: displayValue(user.email) },
+    { icon: Globe, label: "Country", value: displayValue(user.country) },
+    { icon: MapPin, label: "Region", value: displayValue(user.region) },
   ];
-
-  const statusVariant = (status: LearnerCourseProgressItem["progress_status"]) => {
-    if (status === "COMPLETED") return "success" as const;
-    if (status === "IN_PROGRESS") return "warning" as const;
-    return "secondary" as const;
-  };
-
-  const formatDateTime = (value?: string | null) => {
-    if (!value) return "—";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "—";
-    return parsed.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link
-          to="/users/list"
-          className="inline-flex items-center gap-2 text-sm font-medium text-grayScale-500 transition-colors hover:text-brand-600"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Users
-        </Link>
+      <Link
+        to="/users/list"
+        className="inline-flex items-center gap-2 text-sm font-medium text-grayScale-500 transition-colors hover:text-brand-600"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Users
+      </Link>
+
+      <div>
+        <p className="text-sm font-semibold text-grayScale-500">Learners</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">{fullName}</h1>
+        <p className="mt-1 text-sm text-grayScale-500">
+          User #{user.id} · {formatRoleLabel(user.role)}
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-        {/* ── Left column ── */}
         <div className="space-y-6">
-          {/* Profile card */}
-          <Card className="overflow-hidden">
-            <div className="h-24 bg-gradient-to-br from-brand-600 via-brand-500 to-brand-400" />
-            <CardContent className="-mt-12 space-y-5 px-4 sm:px-6 pb-6 pt-0">
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="h-20 w-20 ring-4 ring-white shadow-soft">
-                  <AvatarImage src={user.profile_picture_url ?? undefined} alt={fullName} />
-                  <AvatarFallback className="bg-brand-100 text-brand-600 text-xl">
-                    {initials}
+          <Card className="overflow-hidden shadow-soft">
+            <CardContent className="space-y-5 p-5">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 shrink-0">
+                  {profilePicture ? <AvatarImage src={profilePicture} alt={fullName} /> : null}
+                  <AvatarFallback className="bg-brand-100 text-lg font-semibold text-brand-600">
+                    {initials || "?"}
                   </AvatarFallback>
                 </Avatar>
-                <h2 className="mt-3 text-lg font-semibold text-grayScale-600">
-                  {fullName}
-                </h2>
-                <Badge
-                  className={cn(
-                    "mt-1.5",
-                    user.status === "ACTIVE"
-                      ? "bg-mint-500/15 text-mint-500 border border-mint-500/25"
-                      : "bg-destructive/15 text-destructive border border-destructive/25"
-                  )}
-                >
-                  {user.status === "ACTIVE" ? "Active" : "Inactive"}
-                </Badge>
+                <div className="min-w-0">
+                  <h2 className="truncate text-lg font-semibold text-grayScale-800">{fullName}</h2>
+                  {user.nick_name.trim() ? (
+                    <p className="text-sm text-grayScale-500">@{user.nick_name.trim()}</p>
+                  ) : null}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge className={cn(getAccountStatusClasses(user.status))}>
+                      {formatStatusLabel(user.status)}
+                    </Badge>
+                    <Badge variant={user.email_verified ? "default" : "outline"}>
+                      {user.email_verified ? "Email verified" : "Email unverified"}
+                    </Badge>
+                  </div>
+                </div>
               </div>
 
               <Separator />
 
               <div className="space-y-3">
-                {infoFields.map(({ icon: Icon, label, value }) => (
+                {contactFields.map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-center gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-grayScale-100">
                       <Icon className="h-4 w-4 text-grayScale-400" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
                         {label}
-                      </div>
-                      <div className="truncate text-sm text-grayScale-600">
-                        {value || "—"}
-                      </div>
+                      </p>
+                      <p className="truncate text-sm text-grayScale-700">{value}</p>
                     </div>
                   </div>
                 ))}
@@ -347,275 +373,96 @@ export function UserDetailPage() {
 
               <Separator />
 
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-grayScale-100">
-                  <Calendar className="h-4 w-4 text-grayScale-400" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
-                    Joined
-                  </div>
-                  <div className="text-sm text-grayScale-600">
-                    {user.created_at
-                      ? new Date(user.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })
-                      : "—"}
-                  </div>
-                </div>
+              <div className="grid gap-3 text-sm">
+                <InfoRow label="Joined" value={formatDate(user.created_at)} />
+                <InfoRow label="Last login" value={formatDateTime(user.last_login)} />
+                <InfoRow label="Gender" value={displayValue(user.gender)} />
+                <InfoRow label="Birthday" value={formatDate(user.birth_day)} />
+                <InfoRow label="Occupation" value={displayValue(user.occupation)} />
               </div>
             </CardContent>
           </Card>
 
-          {/* Subscription card */}
-          <Card>
+          <Card className="shadow-soft">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle>Subscription</CardTitle>
-                <Badge
-                  className={cn(
-                    user.status === "ACTIVE"
-                      ? "bg-mint-500/15 text-mint-500 border border-mint-500/25"
-                      : "bg-destructive/15 text-destructive border border-destructive/25"
-                  )}
-                >
-                  {user.status === "ACTIVE" ? "Active" : "Inactive"}
-                </Badge>
-              </div>
+              <CardTitle className="text-base">Account</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-xl bg-grayScale-100 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wider text-grayScale-400">
-                    Plan
-                  </span>
-                  <span className="text-sm font-semibold text-grayScale-600">6-Month</span>
-                </div>
-                <Separator />
-                <div className="flex flex-wrap items-center justify-between gap-1">
-                  <span className="text-xs font-medium uppercase tracking-wider text-grayScale-400">
-                    Expires
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-grayScale-600">Nov 13, 2025</span>
-                    <Badge className="bg-gold-100 text-gold-600 text-[10px] border border-gold-300">
-                      3 days left
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <Button className="w-full bg-brand-600 hover:bg-brand-500 text-white transition-colors">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Extend Subscription
-              </Button>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Button variant="outline" className="w-full text-sm">
-                  Mark as Paid
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-sm text-destructive border-destructive/40 hover:bg-destructive/5"
-                >
-                  Cancel
-                </Button>
-              </div>
+              <InfoRow
+                label="Phone verified"
+                value={user.phone_verified ? "Verified" : "Not verified"}
+              />
+              <InfoRow
+                label="Profile completed"
+                value={user.profile_completed ? "Yes" : "No"}
+              />
+              <InfoRow
+                label="Profile completion"
+                value={`${user.profile_completion_percentage}%`}
+              />
+              <InfoRow
+                label="Preferred language"
+                value={displayValue(user.preferred_language)}
+              />
             </CardContent>
           </Card>
+
+          <UserSubscriptionsSection
+            subscriptions={subscriptions}
+            loading={subscriptionsLoading}
+            error={subscriptionsError}
+          />
         </div>
 
-        {/* ── Right column ── */}
         <div className="space-y-6">
-          {/* Learning profile */}
-          <Card>
+          <Card className="shadow-soft">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100/50">
                   <GraduationCap className="h-4 w-4 text-brand-600" />
                 </div>
-                <CardTitle>Learning Profile</CardTitle>
+                <CardTitle className="text-base">Learning profile</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-                <InfoItem
-                  label="Education Level"
-                  value={user.education_level || "Undergraduate"}
-                />
-                <InfoItem
-                  label="Age Group"
-                  value={user.age ? `${user.age} years` : "25-34"}
-                />
-                <div>
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400 mb-1">
-                    Proficiency
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-grayScale-600">Intermediate</span>
-                    <span className="inline-flex h-5 items-center rounded-md bg-brand-100/60 px-1.5 text-[11px] font-semibold text-brand-600">
-                      B1
-                    </span>
-                  </div>
-                </div>
-                <InfoItem
-                  label="Preferred Topic"
-                  value={user.favoutite_topic || "Business"}
-                />
-                <TagItem label="Learning Path" value={user.learning_goal || "Business English"} />
-                <TagItem label="Challenge" value={user.language_challange || "Speaking"} />
+                <InfoItem label="Education level" value={displayValue(user.education_level)} />
+                <InfoItem label="Age group" value={formatAgeGroup(user.age_group)} />
+                <InfoItem label="Favorite topic" value={displayValue(user.favoutite_topic)} />
+                <InfoItem label="Language goal" value={displayValue(user.language_goal)} />
+                <InfoItem label="Challenge" value={displayValue(user.language_challange)} />
+                <InfoItem label="Role" value={formatRoleLabel(user.role)} />
               </div>
 
-              <Separator />
-
-              <div>
-                <div className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400 mb-2">
-                  Primary Goal
-                </div>
-                <div className="rounded-xl bg-grayScale-100 p-4 text-sm leading-relaxed text-grayScale-600">
-                  {user.learning_goal ||
-                    "Improve business communication skills for professional advancement"}
-                </div>
-              </div>
+              {user.learning_goal.trim() ? (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
+                      Learning goal
+                    </p>
+                    <div className="rounded-xl bg-grayScale-100 p-4 text-sm leading-relaxed text-grayScale-700">
+                      {user.learning_goal.trim()}
+                    </div>
+                  </div>
+                </>
+              ) : null}
             </CardContent>
           </Card>
 
-          {/* Learner course progress */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100/70">
-                    <BarChart3 className="h-4 w-4 text-sky-600" />
-                  </div>
-                  <CardTitle>Learner Course Progress</CardTitle>
-                </div>
-                <div className="w-full sm:w-72">
-                  <Select
-                    value={selectedProgressCourseId ? String(selectedProgressCourseId) : ""}
-                    onChange={(e) =>
-                      setSelectedProgressCourseId(e.target.value ? Number(e.target.value) : null)
-                    }
-                    disabled={loadingCourseOptions || courseOptions.length === 0}
-                  >
-                    <option value="">
-                      {loadingCourseOptions ? "Loading course sub-categories..." : "Select course sub-category..."}
-                    </option>
-                    {courseOptions.map((course) => (
-                      <option key={course.id} value={course.id}>
-                        {course.title} ({course.category_name})
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                <Metric label="Total Sub-courses" value={progressMetrics.total} />
-                <Metric label="Completed" value={progressMetrics.completed} />
-                <Metric label="In Progress" value={progressMetrics.inProgress} />
-                <Metric label="Locked" value={progressMetrics.locked} />
-                <Metric label="Avg Progress" value={`${progressMetrics.averageProgress}%`} />
-              </div>
+          <UserLearningActivitySection
+            activity={learningActivity}
+            loading={learningActivityLoading}
+            error={learningActivityError}
+          />
 
-              {progressError && (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                  {progressError}
-                </div>
-              )}
-
-              {!progressError && loadingProgress && (
-                <div className="flex items-center gap-2 rounded-lg border border-grayScale-200 bg-grayScale-100 px-3 py-2 text-xs text-grayScale-500">
-                  <SpinnerIcon className="h-3.5 w-3.5" />
-                  Loading learner progress...
-                </div>
-              )}
-
-              {!progressError && !loadingProgress && selectedProgressCourseId && progressItems.length === 0 && (
-                <div className="rounded-lg border border-dashed border-grayScale-200 px-3 py-5 text-center text-xs text-grayScale-400">
-                  No learner progress records found for this course sub-category.
-                </div>
-              )}
-
-              {!progressError && !loadingProgress && progressItems.length > 0 && (
-                <div className="overflow-x-auto rounded-xl border bg-white">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Course</TableHead>
-                        <TableHead>Level</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Progress</TableHead>
-                        <TableHead>Started</TableHead>
-                        <TableHead>Completed</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {progressItems.map((item) => (
-                        <TableRow key={item.sub_course_id}>
-                          <TableCell className="min-w-[220px]">
-                            <div className="flex items-start gap-2">
-                              {item.is_locked && <Lock className="mt-0.5 h-3.5 w-3.5 text-gold-600" />}
-                              <div>
-                                <p className="text-sm font-medium text-grayScale-700">{item.title}</p>
-                                {item.description && (
-                                  <p className="mt-0.5 line-clamp-1 text-xs text-grayScale-400">{item.description}</p>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{item.level}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={statusVariant(item.progress_status)}>{item.progress_status}</Badge>
-                          </TableCell>
-                          <TableCell className="min-w-[170px]">
-                            <div className="space-y-1">
-                              <div className="h-2 w-full rounded-full bg-grayScale-200">
-                                <div
-                                  className={cn(
-                                    "h-2 rounded-full transition-all",
-                                    item.progress_status === "COMPLETED"
-                                      ? "bg-mint-500"
-                                      : item.progress_status === "IN_PROGRESS"
-                                        ? "bg-gold-600"
-                                        : "bg-grayScale-300",
-                                  )}
-                                  style={{
-                                    width: `${Math.min(100, Math.max(0, item.progress_percentage || 0))}%`,
-                                  }}
-                                />
-                              </div>
-                              <p className="text-[11px] text-grayScale-500">{item.progress_percentage}%</p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs text-grayScale-500">
-                            {formatDateTime(item.started_at)}
-                          </TableCell>
-                          <TableCell className="text-xs text-grayScale-500">
-                            {formatDateTime(item.completed_at)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent activity */}
-          <Card>
+          <Card className="shadow-soft">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold-100/60">
                   <BookOpen className="h-4 w-4 text-gold-600" />
                 </div>
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle className="text-base">Recent activity</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -624,6 +471,8 @@ export function UserDetailPage() {
                   <SpinnerIcon className="h-5 w-5" />
                   Loading activity…
                 </div>
+              ) : recentActivityError ? (
+                <p className="py-8 text-center text-sm text-destructive">{recentActivityError}</p>
               ) : recentActivityItems.length === 0 ? (
                 <p className="py-8 text-center text-sm text-grayScale-400">No recent activity yet.</p>
               ) : (
@@ -634,9 +483,9 @@ export function UserDetailPage() {
                     const isLast = index === recentActivityItems.length - 1;
                     return (
                       <div key={item.id} className="relative flex gap-4 pb-5 last:pb-0">
-                        {!isLast && (
+                        {!isLast ? (
                           <div className="absolute bottom-0 left-[15px] top-8 w-px bg-grayScale-200" />
-                        )}
+                        ) : null}
                         <div
                           className={cn(
                             "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
@@ -652,10 +501,10 @@ export function UserDetailPage() {
                           <Icon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0 flex-1 pt-1">
-                          <div className="text-sm font-medium text-grayScale-600">{item.headline}</div>
-                          <div className="mt-0.5 text-xs text-grayScale-400">
+                          <p className="text-sm font-medium text-grayScale-700">{item.headline}</p>
+                          <p className="mt-0.5 text-xs text-grayScale-400">
                             {formatActivityOccurredAt(item.occurred_at)}
-                          </div>
+                          </p>
                         </div>
                       </div>
                     );
@@ -673,32 +522,17 @@ export function UserDetailPage() {
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400 mb-1">
-        {label}
-      </div>
-      <div className="text-sm text-grayScale-600">{value}</div>
+      <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">{label}</p>
+      <p className="text-sm text-grayScale-700">{value}</p>
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-grayScale-200 bg-grayScale-50 px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-grayScale-400">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-grayScale-700">{value}</div>
-    </div>
-  );
-}
-
-function TagItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400 mb-1">
-        {label}
-      </div>
-      <span className="inline-block rounded-lg border border-grayScale-200 bg-grayScale-100 px-2.5 py-1 text-xs font-medium text-grayScale-600">
-        {value}
-      </span>
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm text-grayScale-500">{label}</span>
+      <span className="text-sm font-medium text-grayScale-700">{value}</span>
     </div>
   );
 }

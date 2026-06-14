@@ -17,11 +17,13 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { getAppVersions } from "../../api/app-versions.api"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import {
@@ -147,6 +149,16 @@ export function AppVersionsTab() {
     setTotalCount((c) => Math.max(0, c - 1))
   }
 
+  const activeFilterCount = countActiveFilters([
+    { value: platformFilter, defaultValue: "all" },
+    { value: statusFilter, defaultValue: "all" },
+  ])
+
+  const clearFilters = () => {
+    setPlatformFilter("all")
+    setStatusFilter("all")
+  }
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 min-w-0 w-full max-w-full space-y-6 duration-300">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -237,16 +249,21 @@ export function AppVersionsTab() {
           <CardTitle className="text-sm font-bold text-grayScale-900">Release history</CardTitle>
         </CardHeader>
         <CardContent className="min-w-0 space-y-4 p-4 sm:p-6">
-          <div className="flex min-w-0 flex-col gap-4">
-            <div className="relative w-full min-w-0">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-              <Input
-                className="w-full rounded-[6px] pl-9"
-                placeholder="Search version, notes, platform…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
+          <AdminFiltersPanel
+            activeFilterCount={activeFilterCount}
+            onClearFilters={clearFilters}
+            search={
+              <div className="relative w-full min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+                <Input
+                  className="w-full rounded-[6px] pl-9"
+                  placeholder="Search version, notes, platform…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+            }
+          >
             <div className="flex min-w-0 flex-wrap gap-2">
               {(
                 [
@@ -294,7 +311,7 @@ export function AppVersionsTab() {
                 </button>
               ))}
             </div>
-          </div>
+          </AdminFiltersPanel>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16">

@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog"
@@ -26,6 +27,7 @@ type NotificationDetailDialogProps = {
   loading?: boolean
   error?: boolean
   onRetry?: () => void
+  onDelete?: () => void
 }
 
 export function NotificationDetailDialog({
@@ -35,6 +37,7 @@ export function NotificationDetailDialog({
   loading = false,
   error = false,
   onRetry,
+  onDelete,
 }: NotificationDetailDialogProps) {
   const config = notification
     ? NOTIFICATION_TYPE_CONFIG[notification.type] ?? DEFAULT_NOTIFICATION_TYPE_CONFIG
@@ -161,6 +164,14 @@ export function NotificationDetailDialog({
                 </div>
               ) : null}
             </div>
+
+            {onDelete ? (
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button variant="destructive" onClick={onDelete}>
+                  Delete notification
+                </Button>
+              </DialogFooter>
+            ) : null}
           </>
         ) : null}
       </DialogContent>

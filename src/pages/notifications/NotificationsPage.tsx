@@ -11,7 +11,9 @@ import {
   MailX,
   Search,
   ChevronDown,
+  Trash2,
 } from "lucide-react"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Card, CardContent } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -24,6 +26,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { useNavigate } from "react-router-dom"
@@ -37,6 +40,7 @@ import {
   markAllUnread,
 } from "../../api/notifications.api"
 import { NotificationDetailDialog } from "../../components/notifications/NotificationDetailDialog"
+import { NotificationDeleteDialog } from "../../components/notifications/NotificationDeleteDialog"
 import {
   DEFAULT_NOTIFICATION_TYPE_CONFIG,
   formatNotificationTimestamp,
@@ -183,6 +187,7 @@ export function NotificationsPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState(false)
+  const [notificationPendingDelete, setNotificationPendingDelete] = useState<Notification | null>(null)
 
   const [channelFilter, setChannelFilter] = useState<"all" | "push" | "sms">("all")
   const [activeStatusTab, setActiveStatusTab] = useState<"all" | "read" | "unread">("all")
@@ -303,6 +308,20 @@ export function NotificationsPage() {
     return true
   })
 
+  const activeFilterCount = countActiveFilters([
+    { value: activeStatusTab, defaultValue: "all" },
+    { value: channelFilter, defaultValue: "all" },
+    { value: typeFilter, defaultValue: "all" },
+    { value: levelFilter, defaultValue: "all" },
+  ])
+
+  const clearFilters = () => {
+    setActiveStatusTab("all")
+    setChannelFilter("all")
+    setTypeFilter("all")
+    setLevelFilter("all")
+  }
+
   const loadNotificationDetail = useCallback(async (id: string) => {
     setDetailLoading(true)
     setDetailError(false)
@@ -340,6 +359,22 @@ export function NotificationsPage() {
   const handleOpenDetail = (notification: Notification) => {
     void loadNotificationDetail(notification.id)
   }
+
+  const handleNotificationDeleted = useCallback((id: string) => {
+    const removed = notifications.find((n) => n.id === id)
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    setTotalCount((prev) => Math.max(0, prev - 1))
+    if (removed && !removed.is_read) {
+      setGlobalUnread((prev) => Math.max(0, prev - 1))
+    }
+    if (selectedNotificationId === id) {
+      setDetailOpen(false)
+      setSelectedNotification(null)
+      setSelectedNotificationId(null)
+    }
+    setNotificationPendingDelete(null)
+    window.dispatchEvent(new Event("notifications-updated"))
+  }, [notifications, selectedNotificationId])
 
   return (
     <div className="mx-auto w-full max-w-6xl bg-grayScale-50/60 rounded-2xl px-3 py-4 sm:px-4 sm:py-5">
@@ -485,34 +520,13 @@ export function NotificationsPage() {
       {/* Filters + table */}
       {!loading && !error && notifications.length > 0 && (
         <>
-          {/* Status tabs */}
-          <div className="mb-2 border-b border-grayScale-200">
-            <div className="-mb-px flex gap-6">
-              {(["all", "unread", "read"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveStatusTab(tab)}
-                  className={cn(
-                    "relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all",
-                    activeStatusTab === tab
-                      ? "text-brand-600"
-                      : "text-grayScale-400 hover:text-grayScale-700",
-                  )}
-                >
-                  {tab === "all" ? "All" : tab === "unread" ? "Unread" : "Read"}
-                  {activeStatusTab === tab && (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Filters */}
-          <Card className="mb-3 shadow-none">
-            <CardContent className="flex flex-wrap items-center gap-3 p-4">
-              <div className="relative flex-1 min-w-[180px] max-w-sm">
+          <AdminFiltersPanel
+            className="mb-3"
+            activeFilterCount={activeFilterCount}
+            onClearFilters={clearFilters}
+            summary={`${filteredNotifications.length} shown · ${totalCount} total`}
+            search={
+              <div className="relative w-full">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
                 <Input
                   placeholder="Search by title, message, or type…"
@@ -521,84 +535,107 @@ export function NotificationsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-grayScale-500">Channel</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
-                      >
-                        <span className="truncate">{channelFilter === "all" ? "All" : channelFilter.toUpperCase()}</span>
-                        <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[130px]">
-                      <DropdownMenuRadioGroup
-                        value={channelFilter}
-                        onValueChange={(value) => setChannelFilter(value as typeof channelFilter)}
-                      >
-                        <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="push">Push</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="sms">SMS</DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-grayScale-500">Type</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-8 w-[150px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
-                      >
-                        <span className="truncate">
-                          {typeFilter === "all" ? "All types" : formatNotificationTypeLabel(typeFilter)}
-                        </span>
-                        <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[220px]">
-                      <DropdownMenuRadioGroup value={typeFilter} onValueChange={setTypeFilter}>
-                        <DropdownMenuRadioItem value="all">All types</DropdownMenuRadioItem>
-                        {Array.from(new Set(notifications.map((n) => n.type))).map((t) => (
-                          <DropdownMenuRadioItem key={t} value={t}>
-                            {formatNotificationTypeLabel(t)}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-grayScale-500">Level</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
-                      >
-                        <span className="truncate">{levelFilter === "all" ? "All levels" : levelFilter}</span>
-                        <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[150px]">
-                      <DropdownMenuRadioGroup value={levelFilter} onValueChange={setLevelFilter}>
-                        <DropdownMenuRadioItem value="all">All levels</DropdownMenuRadioItem>
-                        {Array.from(new Set(notifications.map((n) => n.level))).map((lvl) => (
-                          <DropdownMenuRadioItem key={lvl} value={lvl}>
-                            {lvl}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+            }
+          >
+            <div className="border-b border-grayScale-200">
+              <div className="-mb-px flex gap-6">
+                {(["all", "unread", "read"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveStatusTab(tab)}
+                    className={cn(
+                      "relative px-1 pb-3.5 pt-1 text-sm font-semibold transition-all",
+                      activeStatusTab === tab
+                        ? "text-brand-600"
+                        : "text-grayScale-400 hover:text-grayScale-700",
+                    )}
+                  >
+                    {tab === "all" ? "All" : tab === "unread" ? "Unread" : "Read"}
+                    {activeStatusTab === tab && (
+                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-500" />
+                    )}
+                  </button>
+                ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-grayScale-500">Channel</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                    >
+                      <span className="truncate">{channelFilter === "all" ? "All" : channelFilter.toUpperCase()}</span>
+                      <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[130px]">
+                    <DropdownMenuRadioGroup
+                      value={channelFilter}
+                      onValueChange={(value) => setChannelFilter(value as typeof channelFilter)}
+                    >
+                      <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="push">Push</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="sms">SMS</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-grayScale-500">Type</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-8 w-[150px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                    >
+                      <span className="truncate">
+                        {typeFilter === "all" ? "All types" : formatNotificationTypeLabel(typeFilter)}
+                      </span>
+                      <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[220px]">
+                    <DropdownMenuRadioGroup value={typeFilter} onValueChange={setTypeFilter}>
+                      <DropdownMenuRadioItem value="all">All types</DropdownMenuRadioItem>
+                      {Array.from(new Set(notifications.map((n) => n.type))).map((t) => (
+                        <DropdownMenuRadioItem key={t} value={t}>
+                          {formatNotificationTypeLabel(t)}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-grayScale-500">Level</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                    >
+                      <span className="truncate">{levelFilter === "all" ? "All levels" : levelFilter}</span>
+                      <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[150px]">
+                    <DropdownMenuRadioGroup value={levelFilter} onValueChange={setLevelFilter}>
+                      <DropdownMenuRadioItem value="all">All levels</DropdownMenuRadioItem>
+                      {Array.from(new Set(notifications.map((n) => n.level))).map((lvl) => (
+                        <DropdownMenuRadioItem key={lvl} value={lvl}>
+                          {lvl}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </AdminFiltersPanel>
 
           <Card className="overflow-hidden rounded-xl border bg-white shadow-none">
             <CardContent className="p-0">
@@ -719,6 +756,15 @@ export function NotificationsPage() {
                               >
                                 View
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setNotificationPendingDelete(n)}
+                                title="Delete notification"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -815,6 +861,20 @@ export function NotificationsPage() {
             ? () => void loadNotificationDetail(selectedNotificationId)
             : undefined
         }
+        onDelete={
+          selectedNotification
+            ? () => setNotificationPendingDelete(selectedNotification)
+            : undefined
+        }
+      />
+
+      <NotificationDeleteDialog
+        notification={notificationPendingDelete}
+        open={notificationPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setNotificationPendingDelete(null)
+        }}
+        onDeleted={handleNotificationDeleted}
       />
     </div>
   )

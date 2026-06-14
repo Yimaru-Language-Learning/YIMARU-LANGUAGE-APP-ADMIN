@@ -6,7 +6,6 @@ import {
   Lock,
   Moon,
   Palette,
-  Save,
   Shield,
   Sun,
   User,
@@ -21,13 +20,12 @@ import {
 } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-import { Select } from "../components/ui/select";
 import { cn } from "../lib/utils";
 import { SpinnerIcon } from "../components/ui/spinner-icon";
 import { changeTeamMemberPassword } from "../api/team.api";
 import { logoutToLogin } from "../lib/auth";
-import { getMyProfile, updateProfile } from "../api/users.api";
-import type { UserProfileData } from "../types/user.types";
+import { getMyProfile } from "../api/users.api";
+import type { TeamMeProfile } from "../types/team.types";
 import { toast } from "sonner";
 import { AppVersionsTab } from "./settings/AppVersionsTab";
 import { SubscriptionPlansTab } from "./settings/SubscriptionPlansTab";
@@ -37,132 +35,15 @@ import { useTheme } from "../contexts/ThemeContext";
 type SettingsTab =
   | "subscription"
   | "app-versions"
-  | "profile"
   | "security"
   | "appearance";
 
-const tabs: { id: SettingsTab; label: string; icon: typeof User }[] = [
+const tabs: { id: SettingsTab; label: string; icon: typeof Shield }[] = [
   { id: "subscription", label: "Subscription packages", icon: CreditCard },
   { id: "app-versions", label: "App versions", icon: Smartphone },
-  { id: "profile", label: "Profile", icon: User },
   { id: "security", label: "Security", icon: Shield },
   { id: "appearance", label: "Appearance", icon: Palette },
 ];
-
-function ProfileTab({ profile }: { profile: UserProfileData }) {
-  const [firstName, setFirstName] = useState(profile.first_name);
-  const [lastName, setLastName] = useState(profile.last_name);
-  const [nickName, setNickName] = useState(profile.nick_name || "");
-  const [language, setLanguage] = useState(profile.preferred_language || "en");
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await updateProfile({
-        first_name: firstName,
-        last_name: lastName,
-        nick_name: nickName,
-        preferred_language: language,
-      });
-      toast.success("Profile settings saved");
-    } catch {
-      toast.error("Failed to save profile settings.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <Card className="border border-grayScale-100 rounded-[6px] overflow-hidden">
-        <div className="h-1 w-full bg-brand-500" />
-        <CardHeader className="pb-3 border-b border-grayScale-50">
-          <CardTitle className="text-sm font-bold text-grayScale-900">
-            Personal Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5 pb-6">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                First Name
-              </label>
-              <Input
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="rounded-[6px]"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                Last Name
-              </label>
-              <Input
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="rounded-[6px]"
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-              Nickname
-            </label>
-            <Input
-              value={nickName}
-              onChange={(e) => setNickName(e.target.value)}
-              className="rounded-[6px]"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border border-grayScale-100 rounded-[6px] overflow-hidden">
-        <div className="h-1 w-full bg-brand-400" />
-        <CardHeader className="pb-3 border-b border-grayScale-50">
-          <CardTitle className="text-sm font-bold text-grayScale-900">
-            Preferences
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5 pb-6">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                Preferred Language
-              </label>
-              <Select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="rounded-[6px]"
-              >
-                <option value="en">English</option>
-                <option value="am">Amharic</option>
-                <option value="or">Afan Oromo</option>
-                <option value="ti">Tigrinya</option>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end">
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="min-w-[140px] rounded-[6px] font-bold"
-        >
-          {saving ? (
-            <SpinnerIcon className="h-4 w-4" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          {saving ? "Saving…" : "Save Changes"}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function SecurityTab({ memberId }: { memberId: number }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -474,7 +355,7 @@ function AppearanceTab() {
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("subscription");
-  const [profile, setProfile] = useState<UserProfileData | null>(null);
+  const [profile, setProfile] = useState<TeamMeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -535,8 +416,8 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-8 lg:flex-row lg:items-start">
-        <nav className="flex shrink-0 flex-row gap-1 overflow-x-auto rounded-[8px] border border-grayScale-100 bg-white p-1 lg:w-56 lg:flex-col">
+      <div className="space-y-6">
+        <nav className="flex gap-1 overflow-x-auto border-b border-grayScale-100 pb-px">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -546,10 +427,10 @@ export function SettingsPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-2.5 whitespace-nowrap rounded-[6px] px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                  "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors",
                   active
-                    ? "bg-brand-50 text-brand-600"
-                    : "text-grayScale-600 hover:bg-grayScale-50",
+                    ? "border-brand-500 text-brand-600"
+                    : "border-transparent text-grayScale-500 hover:border-grayScale-200 hover:text-grayScale-700",
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -559,10 +440,9 @@ export function SettingsPage() {
           })}
         </nav>
 
-        <main className="min-h-[400px] min-w-0 w-full flex-1">
+        <main className="min-h-[400px] min-w-0 w-full">
           {activeTab === "subscription" && <SubscriptionPlansTab />}
           {activeTab === "app-versions" && <AppVersionsTab />}
-          {activeTab === "profile" && <ProfileTab profile={profile} />}
           {activeTab === "security" && <SecurityTab memberId={profile.id} />}
           {activeTab === "appearance" && <AppearanceTab />}
         </main>

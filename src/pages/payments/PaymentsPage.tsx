@@ -15,6 +15,7 @@ import {
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { getPayments } from "../../api/payments.api"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -26,7 +27,9 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog"
 import { Input } from "../../components/ui/input"
+import { Select } from "../../components/ui/select"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import {
   formatPaymentAmount,
@@ -37,6 +40,7 @@ import {
   paymentCustomerName,
   paymentStatusBadgeVariant,
 } from "../../lib/payments"
+import { SUBSCRIPTION_CURRENCIES } from "../../lib/subscriptionPlans"
 import type {
   Payment,
   PaymentPlanCategory,
@@ -92,18 +96,10 @@ export function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "">("")
   const [providerFilter, setProviderFilter] = useState<PaymentProvider | "">("")
   const [planCategoryFilter, setPlanCategoryFilter] = useState<PaymentPlanCategory | "">("")
-  const [currencyInput, setCurrencyInput] = useState("")
-  const [referenceInput, setReferenceInput] = useState("")
   const [currencyFilter, setCurrencyFilter] = useState("")
+  const [referenceInput, setReferenceInput] = useState("")
   const [referenceFilter, setReferenceFilter] = useState("")
   const [selected, setSelected] = useState<Payment | null>(null)
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setCurrencyFilter(currencyInput.trim().toUpperCase())
-    }, TEXT_FILTER_DEBOUNCE_MS)
-    return () => window.clearTimeout(timer)
-  }, [currencyInput])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -114,7 +110,7 @@ export function PaymentsPage() {
 
   useEffect(() => {
     setOffset(0)
-  }, [currencyFilter, referenceFilter])
+  }, [referenceFilter])
 
   const listFilters: PaymentListFilters = {
     status: statusFilter,
@@ -124,13 +120,15 @@ export function PaymentsPage() {
     reference: referenceFilter,
   }
 
-  const hasActiveFilters = Boolean(
-    listFilters.status ||
-      listFilters.provider ||
-      listFilters.planCategory ||
-      listFilters.currency ||
-      listFilters.reference,
-  )
+  const activeFilterCount = countActiveFilters([
+    { value: statusFilter },
+    { value: providerFilter },
+    { value: planCategoryFilter },
+    { value: currencyFilter },
+    { value: referenceFilter },
+  ])
+
+  const hasActiveFilters = activeFilterCount > 0
 
   const fetchPayments = useCallback(
     async (nextOffset: number, limit: number, filters: PaymentListFilters) => {
@@ -193,9 +191,8 @@ export function PaymentsPage() {
     setStatusFilter("")
     setProviderFilter("")
     setPlanCategoryFilter("")
-    setCurrencyInput("")
-    setReferenceInput("")
     setCurrencyFilter("")
+    setReferenceInput("")
     setReferenceFilter("")
     setOffset(0)
   }
@@ -282,7 +279,10 @@ export function PaymentsPage() {
           <CardTitle className="text-sm font-bold text-grayScale-900">Transaction history</CardTitle>
         </CardHeader>
         <CardContent className="min-w-0 space-y-4 p-4 sm:p-6">
-          <div className="flex flex-col gap-3 rounded-[8px] border border-grayScale-100 bg-grayScale-50/40 p-3 sm:p-4">
+          <AdminFiltersPanel
+            activeFilterCount={activeFilterCount}
+            onClearFilters={clearFilters}
+          >
             <div className="flex flex-wrap items-center gap-2">
               <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
                 Status
@@ -333,27 +333,23 @@ export function PaymentsPage() {
                 >
                   Currency
                 </label>
-                <div className="relative">
-                  <Input
-                    id="payments-currency-filter"
-                    value={currencyInput}
-                    onChange={(e) => setCurrencyInput(e.target.value)}
-                    placeholder="e.g. ETB"
-                    disabled={loading}
-                    className="h-9 rounded-[6px] border-grayScale-200 pr-8 text-sm uppercase"
-                  />
-                  {currencyInput ? (
-                    <button
-                      type="button"
-                      aria-label="Clear currency filter"
-                      disabled={loading}
-                      onClick={() => setCurrencyInput("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-grayScale-400 hover:text-grayScale-600"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  ) : null}
-                </div>
+                <Select
+                  id="payments-currency-filter"
+                  value={currencyFilter}
+                  onChange={(e) => {
+                    setCurrencyFilter(e.target.value)
+                    setOffset(0)
+                  }}
+                  disabled={loading}
+                  className="h-9 rounded-[6px] text-sm"
+                >
+                  <option value="">All currencies</option>
+                  {SUBSCRIPTION_CURRENCIES.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <label
@@ -389,21 +385,7 @@ export function PaymentsPage() {
                 </p>
               </div>
             </div>
-            {hasActiveFilters ? (
-              <div className="flex justify-end border-t border-grayScale-100 pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 rounded-[6px] px-2 text-xs text-grayScale-500"
-                  disabled={loading}
-                  onClick={clearFilters}
-                >
-                  Clear all filters
-                </Button>
-              </div>
-            ) : null}
-          </div>
+          </AdminFiltersPanel>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16">

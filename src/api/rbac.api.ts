@@ -30,6 +30,10 @@ export const setRolePermissions = (roleId: number, data: SetRolePermissionsReque
 export const getAllPermissions = () =>
   http.get<GetPermissionsResponse>("/rbac/permissions")
 
+/** POST /rbac/permissions/sync — upsert permission definitions and default role links. */
+export const syncRbacPermissions = () =>
+  http.post<{ message?: string }>("/rbac/permissions/sync")
+
 export const deleteRole = (roleId: number) =>
   http.delete<DeleteRoleResponse>(`/rbac/roles/${roleId}`)
 

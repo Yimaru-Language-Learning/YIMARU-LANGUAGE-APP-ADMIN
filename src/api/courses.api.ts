@@ -63,9 +63,9 @@ import type {
   GetSubCourseEntryAssessmentResponse,
   ReorderItem,
   ReorderOrderedIdsRequest,
-  GetRatingsResponse,
-  GetRatingsParams,
   GetVimeoSampleResponse,
+  GetVimeoVideoResponse,
+  VimeoSampleVideo,
   CreateCourseVideoRequest,
   GetLearningProgramsResponse,
   UpdateLearningProgramRequest,
@@ -1394,12 +1394,52 @@ export const reorderVideos = reorderNotYetSupported
 
 export const reorderPractices = reorderNotYetSupported
 
-// Ratings
-export const getRatings = (params: GetRatingsParams) =>
-  http.get<GetRatingsResponse>("/ratings", { params })
+// Ratings — see ratings.api.ts
+export { getRatings } from "./ratings.api"
 
 // Vimeo Sample Video
 export const getVimeoSample = (videoId: string, width = 640, height = 360) =>
   http.get<GetVimeoSampleResponse>("/vimeo/sample", {
     params: { video_id: videoId, width, height },
   })
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+}
+
+function readString(raw: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = raw[key]
+    if (value == null) continue
+    const text = String(value).trim()
+    if (text) return text
+  }
+  return ""
+}
+
+function normalizeVimeoVideoDetails(raw: unknown): VimeoSampleVideo {
+  if (!isRecord(raw)) throw new Error("Invalid Vimeo video response")
+
+  return {
+    vimeo_id: readString(raw, "vimeo_id", "VimeoID"),
+    uri: readString(raw, "uri", "URI"),
+    name: readString(raw, "name", "Name"),
+    description: readString(raw, "description", "Description"),
+    duration: Number(raw.duration ?? raw.Duration) || 0,
+    width: Number(raw.width ?? raw.Width) || 0,
+    height: Number(raw.height ?? raw.Height) || 0,
+    link: readString(raw, "link", "Link"),
+    embed_url: readString(raw, "embed_url", "EmbedURL", "EmbedUrl"),
+    embed_html: readString(raw, "embed_html", "EmbedHTML", "EmbedHtml"),
+    thumbnail_url: readString(raw, "thumbnail_url", "ThumbnailURL", "ThumbnailUrl"),
+    status: readString(raw, "status", "Status"),
+    transcode_status: readString(raw, "transcode_status", "TranscodeStatus"),
+  }
+}
+
+export async function getVimeoVideo(videoId: string): Promise<VimeoSampleVideo> {
+  const res = await http.get<GetVimeoVideoResponse>(
+    `/vimeo/videos/${encodeURIComponent(videoId.trim())}`,
+  )
+  return normalizeVimeoVideoDetails(res.data.data)
+}

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { BookOpen, ChevronDown, ChevronRight, FolderTree, Languages, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "../../components/ui/badge"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog"
@@ -18,6 +19,7 @@ import {
   updateModule,
 } from "../../api/courses.api"
 import { uploadImageFile } from "../../api/files.api"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import type { CourseHierarchyRow, HumanLanguageHierarchyFlatRow, Practice } from "../../types/course.types"
 
 type IdFilterValue = number | "ALL"
@@ -650,6 +652,18 @@ export function HumanLanguageHierarchyPage() {
     window.sessionStorage.setItem(HUMAN_LANGUAGE_RETURN_STATE_KEY, JSON.stringify(payload))
   }
 
+  const clearFilters = () => {
+    setSelectedSubCategoryId("ALL")
+    setSelectedCourseId("ALL")
+    setSelectedLevelId("ALL")
+  }
+
+  const activeFilterCount = countActiveFilters([
+    { value: selectedSubCategoryId, defaultValue: "ALL" },
+    { value: selectedCourseId, defaultValue: "ALL" },
+    { value: selectedLevelId, defaultValue: "ALL" },
+  ])
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -667,12 +681,12 @@ export function HumanLanguageHierarchyPage() {
         </Button>
       </div>
 
-      <Card className="border border-grayScale-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
+      <AdminFiltersPanel
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
+        defaultOpen={activeFilterCount > 0}
+      >
+        <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label htmlFor="hl-subcategory-filter" className="text-xs font-semibold uppercase tracking-wide text-grayScale-500">
                 Subcategory
@@ -764,8 +778,7 @@ export function HumanLanguageHierarchyPage() {
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+      </AdminFiltersPanel>
 
       {selectedSubCategoryId !== "ALL" ? (
         <div className="flex flex-wrap gap-2">

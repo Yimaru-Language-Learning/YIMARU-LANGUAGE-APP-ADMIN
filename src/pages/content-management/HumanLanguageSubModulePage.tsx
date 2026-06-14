@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, BookOpen, Eye, FileText, Plus, Search, Trophy, Video } from "lucide-react"
 import { toast } from "sonner"
 import { Card } from "../../components/ui/card"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Button } from "../../components/ui/button"
 import { Badge } from "../../components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog"
@@ -12,6 +13,7 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { Textarea } from "../../components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { cn } from "../../lib/utils"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import {
   getLessonsBySubModule,
   getQuestionSetsByOwner,
@@ -347,6 +349,17 @@ export function HumanLanguageSubModulePage() {
     () => filterLessons(lessons, lessonSearch, lessonActiveFilter),
     [lessons, lessonSearch, lessonActiveFilter],
   )
+
+  const practiceActiveFilterCount = countActiveFilters([
+    { value: practiceStatusFilter, defaultValue: "all" },
+  ])
+  const lessonActiveFilterCount = countActiveFilters([
+    { value: lessonActiveFilter, defaultValue: "all" },
+  ])
+  const capstoneActiveFilterCount = countActiveFilters([
+    { value: capstoneStatusFilter, defaultValue: "all" },
+  ])
+
   const subModuleLabel = useMemo(() => {
     const rawTitle = subCourse?.title?.trim()
     if (!rawTitle) return "Sub-module"
@@ -797,19 +810,24 @@ export function HumanLanguageSubModulePage() {
 
       {activeTab === "practices" ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4">
-            <div className="relative min-w-[200px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search by title or description…"
-                value={practiceSearch}
-                onChange={(e) => setPracticeSearch(e.target.value)}
-                aria-label="Search practices"
-              />
-            </div>
+          <AdminFiltersPanel
+            activeFilterCount={practiceActiveFilterCount}
+            onClearFilters={() => setPracticeStatusFilter("all")}
+            search={
+              <div className="relative min-w-[200px] w-full">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+                <Input
+                  className="pl-9"
+                  placeholder="Search by title or description…"
+                  value={practiceSearch}
+                  onChange={(e) => setPracticeSearch(e.target.value)}
+                  aria-label="Search practices"
+                />
+              </div>
+            }
+          >
             <Select
-              className="w-full sm:w-48 sm:shrink-0"
+              className="w-full sm:w-48"
               value={practiceStatusFilter}
               onChange={(e) => setPracticeStatusFilter(e.target.value as "all" | QuestionSetStatus)}
               aria-label="Filter practices by status"
@@ -819,7 +837,7 @@ export function HumanLanguageSubModulePage() {
               <option value="DRAFT">Draft</option>
               <option value="ARCHIVED">Archived</option>
             </Select>
-          </div>
+          </AdminFiltersPanel>
           {renderQuestionSetTable(
             filteredPractices,
             practices,
@@ -833,19 +851,24 @@ export function HumanLanguageSubModulePage() {
 
       {activeTab === "lessons" ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4">
-            <div className="relative min-w-[200px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search by title or description…"
-                value={lessonSearch}
-                onChange={(e) => setLessonSearch(e.target.value)}
-                aria-label="Search lessons"
-              />
-            </div>
+          <AdminFiltersPanel
+            activeFilterCount={lessonActiveFilterCount}
+            onClearFilters={() => setLessonActiveFilter("all")}
+            search={
+              <div className="relative min-w-[200px] w-full">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+                <Input
+                  className="pl-9"
+                  placeholder="Search by title or description…"
+                  value={lessonSearch}
+                  onChange={(e) => setLessonSearch(e.target.value)}
+                  aria-label="Search lessons"
+                />
+              </div>
+            }
+          >
             <Select
-              className="w-full sm:w-48 sm:shrink-0"
+              className="w-full sm:w-48"
               value={lessonActiveFilter}
               onChange={(e) => setLessonActiveFilter(e.target.value as LessonActiveFilter)}
               aria-label="Filter lessons by status"
@@ -854,26 +877,31 @@ export function HumanLanguageSubModulePage() {
               <option value="active">Active only</option>
               <option value="inactive">Inactive only</option>
             </Select>
-          </div>
+          </AdminFiltersPanel>
           {renderLessonsTable(filteredLessons, lessons)}
         </div>
       ) : null}
 
       {activeTab === "capstones" ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4">
-            <div className="relative min-w-[200px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search by title or description…"
-                value={capstoneSearch}
-                onChange={(e) => setCapstoneSearch(e.target.value)}
-                aria-label="Search capstones"
-              />
-            </div>
+          <AdminFiltersPanel
+            activeFilterCount={capstoneActiveFilterCount}
+            onClearFilters={() => setCapstoneStatusFilter("all")}
+            search={
+              <div className="relative min-w-[200px] w-full">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+                <Input
+                  className="pl-9"
+                  placeholder="Search by title or description…"
+                  value={capstoneSearch}
+                  onChange={(e) => setCapstoneSearch(e.target.value)}
+                  aria-label="Search capstones"
+                />
+              </div>
+            }
+          >
             <Select
-              className="w-full sm:w-48 sm:shrink-0"
+              className="w-full sm:w-48"
               value={capstoneStatusFilter}
               onChange={(e) => setCapstoneStatusFilter(e.target.value as "all" | QuestionSetStatus)}
               aria-label="Filter capstones by status"
@@ -883,7 +911,7 @@ export function HumanLanguageSubModulePage() {
               <option value="DRAFT">Draft</option>
               <option value="ARCHIVED">Archived</option>
             </Select>
-          </div>
+          </AdminFiltersPanel>
           {renderQuestionSetTable(
             filteredCapstones,
             capstones,

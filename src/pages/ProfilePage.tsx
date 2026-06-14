@@ -1,433 +1,491 @@
-import { useEffect, useState, type ChangeEvent } from "react";
-import { BadgeCheck, Briefcase, CalendarDays, Mail, Phone, Shield, User } from "lucide-react";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
+import { useEffect, useState } from "react"
+import {
+  BadgeCheck,
+  CalendarDays,
+  Clock3,
+  Mail,
+  Phone,
+  Shield,
+  User,
+} from "lucide-react"
+import { toast } from "sonner"
+import { getTeamMe, updateTeamMe } from "../api/team.api"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../components/ui/dialog";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { FileUpload } from "../components/ui/file-upload";
-import { getMyProfile } from "../api/users.api";
-import { updateTeamMember } from "../api/team.api";
-import { uploadImageFile } from "../api/files.api";
-import { SpinnerIcon } from "../components/ui/spinner-icon";
-import type { UpdateTeamMemberRequest } from "../types/team.types";
-import { toast } from "sonner";
+} from "../components/ui/dialog"
+import { Input } from "../components/ui/input"
+import { SpinnerIcon } from "../components/ui/spinner-icon"
+import { Textarea } from "../components/ui/textarea"
+import { cn } from "../lib/utils"
+import type { TeamMeProfile } from "../types/team.types"
+import { ProfileAvatarUpload } from "../components/profile/ProfileAvatarUpload"
+import { PersonaProfilePictureUploadField } from "./personas/components/PersonaProfilePictureUploadField"
 
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  if (!dateStr) return "—"
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return dateStr
+  return date.toLocaleDateString(undefined, {
     year: "numeric",
     month: "long",
     day: "numeric",
-  });
+  })
 }
 
 function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleString("en-US", {
+  if (!dateStr) return "—"
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return dateStr
+  return date.toLocaleString(undefined, {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  })
 }
 
-interface TeamMeProfile {
-  id: number
-  first_name: string
-  last_name: string
-  email: string
-  phone_number: string
-  team_role: string
-  department: string
-  job_title: string
-  employment_type: string
-  hire_date: string
-  bio: string
-  status: string
-  email_verified: boolean
-  permissions: string[]
-  last_login: string | null
-  created_at: string
-  emergency_contact?: string
-  work_phone?: string
-  profile_picture_url?: string
+function formatRoleLabel(role: string): string {
+  const value = role.trim()
+  if (!value) return "—"
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ")
+}
+
+function formatStatusLabel(status: string): string {
+  const value = status.trim()
+  if (!value) return "—"
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+}
+
+function displayValue(value: string | null | undefined): string {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : "—"
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="mb-1 text-xs font-medium text-grayScale-500">{label}</p>
+      <p className="text-sm font-medium text-grayScale-700">{value}</p>
+    </div>
+  )
 }
 
 function LoadingSkeleton() {
   return (
-    <div className="w-full space-y-8 py-10">
-      <div className="animate-pulse space-y-8">
-        <div className="overflow-hidden rounded-2xl border border-grayScale-100">
-          <div className="h-40 bg-gradient-to-r from-grayScale-100 via-grayScale-200/60 to-grayScale-100" />
-          <div className="flex flex-col items-center px-8 pb-8">
-            <div className="-mt-14 h-28 w-28 rounded-full bg-grayScale-100 ring-4 ring-white" />
-            <div className="mt-4 h-6 w-48 rounded-lg bg-grayScale-100" />
-            <div className="mt-3 h-5 w-24 rounded-full bg-grayScale-100" />
-            <div className="mt-5 flex gap-3">
-              <div className="h-7 w-20 rounded-full bg-grayScale-100" />
-              <div className="h-7 w-28 rounded-full bg-grayScale-100" />
-              <div className="h-7 w-28 rounded-full bg-grayScale-100" />
-            </div>
-          </div>
-        </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-2xl border border-grayScale-100 p-6">
-              <div className="mb-5 h-5 w-40 rounded bg-grayScale-100" />
-              <div className="space-y-4">
-                {[1, 2, 3, 4].map((j) => (
-                  <div key={j} className="flex items-center justify-between">
-                    <div className="h-4 w-20 rounded bg-grayScale-100" />
-                    <div className="h-4 w-28 rounded bg-grayScale-100" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="mx-auto w-full max-w-5xl space-y-6 py-8">
+      <div className="h-8 w-48 animate-pulse rounded-lg bg-grayScale-100" />
+      <div className="h-40 animate-pulse rounded-2xl bg-grayScale-100" />
+      <div className="grid gap-6 md:grid-cols-2">
+        {[1, 2].map((item) => (
+          <div key={item} className="h-56 animate-pulse rounded-2xl bg-grayScale-100" />
+        ))}
       </div>
     </div>
-  );
+  )
+}
+
+type EditFormState = {
+  first_name: string
+  last_name: string
+  phone_number: string
+  department: string
+  job_title: string
+  profile_picture_url: string
+  bio: string
+  work_phone: string
+}
+
+function profileToEditForm(profile: TeamMeProfile): EditFormState {
+  return {
+    first_name: profile.first_name,
+    last_name: profile.last_name,
+    phone_number: profile.phone_number,
+    department: profile.department ?? "",
+    job_title: profile.job_title ?? "",
+    profile_picture_url: profile.profile_picture_url ?? "",
+    bio: profile.bio ?? "",
+    work_phone: profile.work_phone ?? "",
+  }
 }
 
 export function ProfilePage() {
-  const [profile, setProfile] = useState<TeamMeProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
-  const [editForm, setEditForm] = useState<UpdateTeamMemberRequest>({
+  const [profile, setProfile] = useState<TeamMeProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [uploadingPicture, setUploadingPicture] = useState(false)
+  const [editForm, setEditForm] = useState<EditFormState>({
     first_name: "",
     last_name: "",
     phone_number: "",
+    department: "",
+    job_title: "",
     profile_picture_url: "",
     bio: "",
-  });
+    work_phone: "",
+  })
+
+  const busy = saving || uploadingPicture
+
+  const loadProfile = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getTeamMe()
+      setProfile(res.data.data)
+    } catch (err) {
+      console.error("Failed to fetch profile", err)
+      setProfile(null)
+      setError("Failed to load profile. Please try again later.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await getMyProfile();
-        setProfile((res.data?.data ?? null) as unknown as TeamMeProfile | null);
-      } catch (err) {
-        console.error("Failed to fetch profile", err);
-        setError("Failed to load profile. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
+    void loadProfile()
+  }, [])
 
   const startEditing = () => {
-    if (!profile) return;
-    const nextForm: UpdateTeamMemberRequest = {
-      first_name: profile.first_name ?? "",
-      last_name: profile.last_name ?? "",
-      phone_number: profile.phone_number ?? "",
-      profile_picture_url: profile.profile_picture_url ?? "",
-      bio: profile.bio ?? "",
-    };
-    setEditForm(nextForm);
-    setProfilePictureFile(null);
-    setEditing(true);
-  };
-
-  const cancelEditing = () => {
-    setProfilePictureFile(null);
-    setEditing(false);
-  };
-
-  const updateField = (field: keyof UpdateTeamMemberRequest, value: string) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }));
-  };
+    if (!profile) return
+    setEditForm(profileToEditForm(profile))
+    setUploadingPicture(false)
+    setEditing(true)
+  }
 
   const handleSave = async () => {
-    if (!profile) return;
+    if (!profile) return
 
-    let nextProfilePictureUrl = editForm.profile_picture_url ?? "";
-    if (profilePictureFile) {
-      try {
-        const uploadRes = await uploadImageFile(profilePictureFile);
-        const uploadedUrl = uploadRes.data?.data?.url?.trim();
-        if (!uploadedUrl) throw new Error("Missing uploaded image url");
-        nextProfilePictureUrl = uploadedUrl;
-      } catch (err) {
-        console.error("Failed to upload profile picture:", err);
-        toast.error("Failed to upload profile picture");
-        return;
-      }
+    const firstName = editForm.first_name.trim()
+    const lastName = editForm.last_name.trim()
+
+    if (!firstName || !lastName) {
+      toast.error("First name and last name are required")
+      return
     }
 
-    const payload: UpdateTeamMemberRequest = {
-      bio: editForm.bio ?? "",
-      first_name: editForm.first_name ?? "",
-      last_name: editForm.last_name ?? "",
-      phone_number: editForm.phone_number ?? "",
-      profile_picture_url: nextProfilePictureUrl,
-    };
-
-    setSaving(true);
+    setSaving(true)
     try {
-      await updateTeamMember(profile.id, payload);
-      const refreshed = await getMyProfile();
-      setProfile((refreshed.data?.data ?? null) as unknown as TeamMeProfile | null);
-      setEditing(false);
-      setProfilePictureFile(null);
-      toast.success("Profile updated successfully");
+      const res = await updateTeamMe({
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: editForm.phone_number.trim(),
+        department: editForm.department.trim(),
+        job_title: editForm.job_title.trim(),
+        profile_picture_url: editForm.profile_picture_url.trim(),
+        bio: editForm.bio.trim(),
+        work_phone: editForm.work_phone.trim(),
+      })
+      setProfile(res.data.data)
+      setEditing(false)
+      toast.success(res.data.message || "Profile updated successfully")
     } catch (err) {
-      console.error("Failed to update team member profile", err);
-      toast.error("Failed to update profile");
+      console.error("Failed to update profile", err)
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to update profile"
+      toast.error(message)
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading) return <LoadingSkeleton />
 
   if (error || !profile) {
     return (
-      <div className="w-full py-16">
+      <div className="mx-auto w-full max-w-5xl py-16">
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-5 p-12">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-grayScale-100">
               <User className="h-10 w-10 text-grayScale-300" />
             </div>
             <div className="text-center">
-              <p className="text-lg font-semibold tracking-tight text-grayScale-600">
+              <p className="text-lg font-semibold text-grayScale-700">
                 {error || "Profile not available"}
               </p>
-              <p className="mt-1 text-sm text-grayScale-400">
+              <p className="mt-1 text-sm text-grayScale-500">
                 Please check your connection and try again.
               </p>
+            </div>
+            <Button variant="outline" onClick={() => void loadProfile()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const fullName = `${profile.first_name} ${profile.last_name}`.trim()
+  const initials = `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`.toUpperCase()
+  const isActive = profile.status.toLowerCase() === "active"
+
+  const handleProfileUpdate = (nextProfile: TeamMeProfile) => {
+    setProfile(nextProfile)
+    setEditForm((prev) => ({
+      ...prev,
+      profile_picture_url: nextProfile.profile_picture_url ?? "",
+    }))
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-5xl space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-grayScale-500">Account</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">My profile</h1>
+          <p className="mt-1 text-sm text-grayScale-500">
+            Your team account details from the admin directory.
+          </p>
+        </div>
+        <Button className="bg-brand-500 text-white hover:bg-brand-600" onClick={startEditing}>
+          Edit profile
+        </Button>
+      </div>
+
+      <Card className="overflow-hidden border-grayScale-100 shadow-soft">
+        <div className="h-28 bg-gradient-to-r from-brand-500/20 via-brand-300/20 to-brand-100/40" />
+        <CardContent className="relative px-6 pb-6 pt-0">
+          <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-end gap-4">
+              <ProfileAvatarUpload
+                avatarUrl={profile.profile_picture_url}
+                initials={initials}
+                onProfileUpdate={handleProfileUpdate}
+              />
+              <div className="pb-1">
+                <h2 className="text-2xl font-semibold text-grayScale-800">{fullName}</h2>
+                <p className="text-sm text-grayScale-500">{displayValue(profile.job_title)}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 pb-1">
+              <Badge variant={isActive ? "default" : "secondary"}>
+                {formatStatusLabel(profile.status)}
+              </Badge>
+              <Badge variant={profile.email_verified ? "default" : "outline"}>
+                {profile.email_verified ? "Email verified" : "Email not verified"}
+              </Badge>
+            </div>
+          </div>
+          {profile.bio?.trim() ? (
+            <p className="mt-4 text-sm leading-relaxed text-grayScale-600">{profile.bio.trim()}</p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="text-base">Work details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <ReadOnlyField label="Team role" value={formatRoleLabel(profile.team_role)} />
+            <ReadOnlyField label="Department" value={displayValue(profile.department)} />
+            <ReadOnlyField label="Job title" value={displayValue(profile.job_title)} />
+            <ReadOnlyField label="Member ID" value={String(profile.id)} />
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="text-base">Contact</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3 text-sm text-grayScale-700">
+              <Mail className="h-4 w-4 text-brand-600" />
+              <span>{displayValue(profile.email)}</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-grayScale-700">
+              <Phone className="h-4 w-4 text-brand-600" />
+              <span>{displayValue(profile.phone_number)}</span>
+            </div>
+            {profile.work_phone?.trim() ? (
+              <div className="flex items-center gap-3 text-sm text-grayScale-700">
+                <Phone className="h-4 w-4 text-brand-600" />
+                <span>
+                  <span className="text-grayScale-500">Work: </span>
+                  {profile.work_phone.trim()}
+                </span>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-soft lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Account activity</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex items-start gap-3">
+              <CalendarDays className="mt-0.5 h-4 w-4 text-brand-600" />
+              <ReadOnlyField label="Joined" value={formatDate(profile.created_at)} />
+            </div>
+            <div className="flex items-start gap-3">
+              <Clock3 className="mt-0.5 h-4 w-4 text-brand-600" />
+              <ReadOnlyField label="Last login" value={formatDateTime(profile.last_login)} />
+            </div>
+            <div className="flex items-start gap-3">
+              <BadgeCheck className="mt-0.5 h-4 w-4 text-brand-600" />
+              <ReadOnlyField
+                label="Email verification"
+                value={profile.email_verified ? "Verified" : "Not verified"}
+              />
+            </div>
+            <div className="flex items-start gap-3">
+              <Shield className="mt-0.5 h-4 w-4 text-brand-600" />
+              <ReadOnlyField label="Last updated" value={formatDate(profile.updated_at)} />
             </div>
           </CardContent>
         </Card>
       </div>
-    );
-  }
 
-  const fullName = `${profile.first_name} ${profile.last_name}`;
-  const initials = `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`.toUpperCase();
-
-  return (
-    <div className="mx-auto w-full max-w-7xl rounded-2xl bg-[#f7f1f8] p-4 pb-8 sm:p-6">
-      <div className="overflow-hidden rounded-2xl border border-[#d9bddb] bg-white">
-        <div className="h-40 w-full bg-gradient-to-r from-[#d6aed6] via-[#e4cce4] to-[#cba0cd]" />
-
-        <div className="grid gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="border-r border-[#eadbea] bg-white px-5 pb-6">
-            <div className="-mt-16">
-              <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-[#d6aed6] text-2xl font-bold text-[#6f2aa8]">
-                {initials}
-              </div>
-              <h2 className="mt-3 text-2xl font-bold text-grayScale-700">{fullName}</h2>
-              <p className="text-sm text-grayScale-400">{profile.job_title || "Team Member"}</p>
-            </div>
-
-            <div className="mt-4">
-              <div className="flex w-full items-center justify-between rounded-lg border border-[#d9bddb] bg-[#f4e8f4] px-3 py-2">
-                <span className="text-sm font-medium text-[#6f2aa8]">Account Status</span>
-                <span className="text-sm font-semibold uppercase text-[#5e2390]">{profile.status}</span>
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-5 text-sm">
-              <section>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">About</p>
-                <div className="space-y-2 text-grayScale-600">
-                  <div className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#6f2aa8]" />{profile.job_title || "Job title not set"}</div>
-                  <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-[#6f2aa8]" />{profile.team_role || "Role not set"}</div>
-                  <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#6f2aa8]" />Hire date: {formatDate(profile.hire_date)}</div>
-                  <div className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-[#6f2aa8]" />{profile.department || "Department not set"}</div>
-                </div>
-              </section>
-
-              <section>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Contact</p>
-                <div className="space-y-2 text-grayScale-600">
-                  <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#6f2aa8]" />{profile.email}</div>
-                  <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-[#6f2aa8]" />{profile.phone_number || "—"}</div>
-                </div>
-              </section>
-
-              <section>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-grayScale-400">Access</p>
-                <p className="text-xs text-grayScale-500">Permissions from `/team/me`</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {(profile.permissions ?? []).length === 0 ? (
-                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">No permissions listed</Badge>
-                  ) : (
-                    profile.permissions.map((permission) => (
-                      <Badge key={permission} className="bg-[#ecd9ec] text-[#6f2aa8]">
-                        {permission}
-                      </Badge>
-                    ))
-                  )}
-                </div>
-              </section>
-            </div>
-          </aside>
-
-          <main className="bg-[#fdf8fd] px-5 py-6 sm:px-7">
-            <div className="space-y-5">
-              <Card className="border-[#d9bddb] bg-white shadow-none">
-                <CardContent className="p-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-grayScale-700">Summary</h3>
-                    <button
-                      type="button"
-                      onClick={startEditing}
-                      className="inline-flex items-center rounded-md border border-[#d9bddb] bg-[#f4e8f4] px-3 py-1.5 text-sm font-medium text-[#6f2aa8] transition-colors hover:bg-[#ecd9ec] hover:text-[#5e2390] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c39bd4]"
-                    >
-                      Edit profile
-                    </button>
-                  </div>
-                  <div className="space-y-2 text-sm text-grayScale-600">
-                    <div className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#6f2aa8]" />{profile.job_title || "Role-focused work item"}</div>
-                    <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-[#6f2aa8]" />{profile.team_role || "Team responsibility"}</div>
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#6f2aa8]" />{profile.email}</div>
-                    <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-[#6f2aa8]" />{profile.phone_number || "No phone number"}</div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-[#d9bddb] bg-white shadow-none">
-                <CardContent className="p-5">
-                  <h3 className="mb-3 text-base font-semibold text-grayScale-700">Employment</h3>
-                  <div className="rounded-lg border border-[#dcc3df] bg-[#f4e8f4] p-3">
-                    <p className="text-sm font-medium text-grayScale-700">{profile.department || "Department not set"}</p>
-                    <p className="text-xs text-grayScale-500">Employment type: {profile.employment_type || "—"}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-[#d9bddb] bg-white shadow-none">
-                <CardContent className="p-5">
-                  <h3 className="mb-3 text-base font-semibold text-grayScale-700">More about me</h3>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Status {profile.status}</Badge>
-                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Email {profile.email_verified ? "verified" : "not verified"}</Badge>
-                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Joined {formatDate(profile.created_at)}</Badge>
-                    <Badge className="bg-[#ecd9ec] text-[#6f2aa8]">Last login {formatDateTime(profile.last_login)}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-[#d9bddb] bg-white shadow-none">
-                <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-grayScale-500">First Name</p>
-                    <p className="text-sm font-medium text-grayScale-700">{profile.first_name}</p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-grayScale-500">Last Name</p>
-                    <p className="text-sm font-medium text-grayScale-700">{profile.last_name}</p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-grayScale-500">Department</p>
-                    <p className="text-sm font-medium text-grayScale-700">{profile.department || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-grayScale-500">Team Role</p>
-                    <p className="text-sm font-medium text-grayScale-700">{profile.team_role || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-grayScale-500">Job Title</p>
-                    <p className="text-sm font-medium text-grayScale-700">{profile.job_title || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-grayScale-500">Hire Date</p>
-                    <p className="text-sm font-medium text-grayScale-700">{formatDate(profile.hire_date) || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-medium text-grayScale-500">Phone Number</p>
-                    <p className="text-sm font-medium text-grayScale-700">{profile.phone_number || "—"}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </main>
-        </div>
-      </div>
-      <Dialog open={editing} onOpenChange={(open) => !saving && setEditing(open)}>
-        <DialogContent className="max-h-[88vh] overflow-y-auto border-[#d9bddb] bg-[#fdf8fd] sm:max-w-3xl">
+      <Dialog open={editing} onOpenChange={(open) => !busy && setEditing(open)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[#6f2aa8]">Edit profile</DialogTitle>
+            <DialogTitle>Edit profile</DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="mb-1 text-xs font-medium text-grayScale-500">First Name</p>
-              <Input value={editForm.first_name ?? ""} onChange={(e) => updateField("first_name", e.target.value)} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-first-name">
+                First name
+              </label>
+              <Input
+                id="profile-first-name"
+                value={editForm.first_name}
+                disabled={busy}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, first_name: e.target.value }))
+                }
+              />
             </div>
-            <div>
-              <p className="mb-1 text-xs font-medium text-grayScale-500">Last Name</p>
-              <Input value={editForm.last_name ?? ""} onChange={(e) => updateField("last_name", e.target.value)} />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-last-name">
+                Last name
+              </label>
+              <Input
+                id="profile-last-name"
+                value={editForm.last_name}
+                disabled={busy}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, last_name: e.target.value }))
+                }
+              />
             </div>
-            <div>
-              <p className="mb-1 text-xs font-medium text-grayScale-500">Phone Number</p>
-              <Input value={editForm.phone_number ?? ""} onChange={(e) => updateField("phone_number", e.target.value)} />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-phone">
+                Phone number
+              </label>
+              <Input
+                id="profile-phone"
+                value={editForm.phone_number}
+                disabled={busy}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, phone_number: e.target.value }))
+                }
+              />
             </div>
-            <div>
-              <p className="mb-1 text-xs font-medium text-grayScale-500">Profile Picture</p>
-              <div className="space-y-2">
-                <FileUpload
-                  accept="image/*"
-                  onFileSelect={setProfilePictureFile}
-                  label="Upload profile picture"
-                  description="JPEG, PNG, WEBP"
-                  className="min-h-[90px] rounded-lg border-2 border-dashed border-grayScale-200 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
-                />
-                <Input
-                  value={editForm.profile_picture_url ?? ""}
-                  onChange={(e) => updateField("profile_picture_url", e.target.value)}
-                  placeholder="Or paste image URL (https://...)"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-work-phone">
+                Work phone
+              </label>
+              <Input
+                id="profile-work-phone"
+                value={editForm.work_phone}
+                disabled={busy}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, work_phone: e.target.value }))
+                }
+              />
             </div>
-            <div className="sm:col-span-2">
-              <p className="mb-1 text-xs font-medium text-grayScale-500">Bio</p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-department">
+                Department
+              </label>
+              <Input
+                id="profile-department"
+                value={editForm.department}
+                disabled={busy}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, department: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-job-title">
+                Job title
+              </label>
+              <Input
+                id="profile-job-title"
+                value={editForm.job_title}
+                disabled={busy}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, job_title: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-sm font-medium text-grayScale-700">Email</label>
+              <Input value={profile.email} disabled />
+              <p className="text-xs text-grayScale-500">Email is managed by your administrator.</p>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-picture">
+                Profile picture
+              </label>
+              <PersonaProfilePictureUploadField
+                value={editForm.profile_picture_url}
+                disabled={busy}
+                onUploadBusyChange={setUploadingPicture}
+                onChange={(profile_picture_url) =>
+                  setEditForm((prev) => ({ ...prev, profile_picture_url }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-sm font-medium text-grayScale-700" htmlFor="profile-bio">
+                Bio
+              </label>
               <Textarea
-                value={editForm.bio ?? ""}
-                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => updateField("bio", e.target.value)}
+                id="profile-bio"
+                value={editForm.bio}
+                disabled={busy}
                 rows={4}
+                placeholder="A short introduction about your role and background."
+                onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))}
               />
             </div>
           </div>
 
-          <DialogFooter className="mt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="border-[#d9bddb] text-[#6f2aa8]"
-              onClick={cancelEditing}
-              disabled={saving}
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditing(false)} disabled={busy}>
               Cancel
             </Button>
             <Button
               type="button"
-              className="bg-[#6f2aa8] text-white hover:bg-[#5e2390]"
-              onClick={handleSave}
-              disabled={saving}
+              className={cn("bg-brand-500 text-white hover:bg-brand-600")}
+              onClick={() => void handleSave()}
+              disabled={busy}
             >
-              {saving ? <SpinnerIcon className="mr-1 h-4 w-4" /> : null}
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? <SpinnerIcon className="mr-2 h-4 w-4" /> : null}
+              {saving ? "Saving…" : "Save changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

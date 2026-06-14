@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useState } from "react"
-import { getPersonas } from "../api/personas.api"
-import {
-  mapPersonaToCard,
-  unwrapPersonasList,
-  type PersonaCardModel,
-} from "../lib/personaDisplay"
+import { listActivePersonasForPicker } from "../api/personas.api"
+import { mapPersonaToCard, type PersonaCardModel } from "../lib/personaDisplay"
 
 type UseActivePersonasOptions = {
   limit?: number
-  offset?: number
 }
 
 export function useActivePersonas(options: UseActivePersonasOptions = {}) {
-  const { limit = 50, offset = 0 } = options
+  const { limit = 200 } = options
   const [personas, setPersonas] = useState<PersonaCardModel[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,8 +16,7 @@ export function useActivePersonas(options: UseActivePersonasOptions = {}) {
     setLoading(true)
     setError(null)
     try {
-      const res = await getPersonas({ limit, offset })
-      const list = unwrapPersonasList(res).filter((p) => p.is_active)
+      const list = await listActivePersonasForPicker(limit)
       setPersonas(list.map(mapPersonaToCard))
     } catch (e: unknown) {
       const msg =
@@ -33,7 +27,7 @@ export function useActivePersonas(options: UseActivePersonasOptions = {}) {
     } finally {
       setLoading(false)
     }
-  }, [limit, offset])
+  }, [limit])
 
   useEffect(() => {
     void load()

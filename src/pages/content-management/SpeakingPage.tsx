@@ -1,6 +1,7 @@
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, ChevronDown, ChevronRight, Image as ImageIcon, Mic, Plus, Trash2, Upload } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Textarea } from "../../components/ui/textarea"
@@ -30,6 +31,7 @@ import {
 } from "../../components/ui/dropdown-menu"
 import type { Course, CourseCategory, QuestionDetail, QuestionSet, SubCourse } from "../../types/course.types"
 import { toast } from "sonner"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 const MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024
@@ -1272,6 +1274,14 @@ export function SpeakingPage() {
     return Array.from(groups.values())
   }, [audioQuestions])
 
+  const clearAudioFilters = () => {
+    setSelectedPracticeId("")
+    setPracticeFilterSearch("")
+    setAudioPage(1)
+  }
+
+  const audioActiveFilterCount = countActiveFilters([{ value: selectedPracticeId }])
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 pb-10 sm:space-y-8 sm:pb-12">
       <div className="flex flex-col gap-4 border-b border-grayScale-100 pb-6 sm:flex-row sm:items-end sm:justify-between sm:pb-8">
@@ -1305,68 +1315,73 @@ export function SpeakingPage() {
             <p className="mt-1 text-xs font-normal text-grayScale-500 sm:text-sm">
               Tap a row to view details. Speaking practices create AUDIO question sets linked to a sub-course.
             </p>
-            <div className="mt-3 max-w-md space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">
-                Filter by practice
-              </label>
-              <DropdownMenu open={practiceFilterOpen} onOpenChange={setPracticeFilterOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 w-full justify-between rounded-md border border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-700 hover:bg-grayScale-50"
-                  >
-                    <span className="truncate">
-                      {selectedPracticeId
-                        ? `${practiceOptions.find((p) => p.id === Number(selectedPracticeId))?.title ?? "Practice"} (#${selectedPracticeId})`
-                        : "All practices"}
-                    </span>
-                    <ChevronDown className="h-4 w-4 text-grayScale-400" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-[420px] max-w-[92vw] p-2">
-                  <Input
-                    value={practiceFilterSearch}
-                    onChange={(e) => setPracticeFilterSearch(e.target.value)}
-                    placeholder="Search practices..."
-                    className="mb-2 h-9"
-                  />
-                  <div className="max-h-64 overflow-auto">
-                    <DropdownMenuRadioGroup
-                      value={selectedPracticeId}
-                      onValueChange={(value) => {
-                        setSelectedPracticeId(value)
-                        setAudioPage(1)
-                        setPracticeFilterOpen(false)
-                      }}
-                    >
-                      <DropdownMenuRadioItem value="">All practices</DropdownMenuRadioItem>
-                      {filteredPracticeOptions.map((practice) => (
-                        <DropdownMenuRadioItem key={practice.id} value={String(practice.id)}>
-                          {practice.title} (#{practice.id})
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="mt-3 max-w-md space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">Search</label>
-              <Input
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  setAudioPage(1)
-                }}
-                placeholder="Search question text, answer text, or practice..."
-                className="h-10"
-              />
-            </div>
-            <p className="mt-1 text-xs font-normal text-grayScale-400 sm:text-sm">
-              Showing page {audioPage} of {Math.max(1, Math.ceil(audioTotalCount / audioPageSize))} ({audioTotalCount} total)
-            </p>
           </CardHeader>
+          <div className="border-b border-grayScale-100 px-5 py-4 sm:px-6">
+            <AdminFiltersPanel
+              className="border-0 shadow-none"
+              activeFilterCount={audioActiveFilterCount}
+              onClearFilters={clearAudioFilters}
+              summary={`Showing page ${audioPage} of ${Math.max(1, Math.ceil(audioTotalCount / audioPageSize))} (${audioTotalCount} total)`}
+              search={
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setAudioPage(1)
+                  }}
+                  placeholder="Search question text, answer text, or practice..."
+                  className="h-10"
+                />
+              }
+            >
+              <div className="max-w-md space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-grayScale-500">
+                  Filter by practice
+                </label>
+                <DropdownMenu open={practiceFilterOpen} onOpenChange={setPracticeFilterOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 w-full justify-between rounded-md border border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-700 hover:bg-grayScale-50"
+                    >
+                      <span className="truncate">
+                        {selectedPracticeId
+                          ? `${practiceOptions.find((p) => p.id === Number(selectedPracticeId))?.title ?? "Practice"} (#${selectedPracticeId})`
+                          : "All practices"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-grayScale-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[420px] max-w-[92vw] p-2">
+                    <Input
+                      value={practiceFilterSearch}
+                      onChange={(e) => setPracticeFilterSearch(e.target.value)}
+                      placeholder="Search practices..."
+                      className="mb-2 h-9"
+                    />
+                    <div className="max-h-64 overflow-auto">
+                      <DropdownMenuRadioGroup
+                        value={selectedPracticeId}
+                        onValueChange={(value) => {
+                          setSelectedPracticeId(value)
+                          setAudioPage(1)
+                          setPracticeFilterOpen(false)
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="">All practices</DropdownMenuRadioItem>
+                        {filteredPracticeOptions.map((practice) => (
+                          <DropdownMenuRadioItem key={practice.id} value={String(practice.id)}>
+                            {practice.title} (#{practice.id})
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </AdminFiltersPanel>
+          </div>
           <CardContent className="px-4 pb-6 pt-5 sm:px-6">
             {loading ? (
               <div className="flex flex-col items-center gap-2 py-14 text-center text-sm text-grayScale-500">

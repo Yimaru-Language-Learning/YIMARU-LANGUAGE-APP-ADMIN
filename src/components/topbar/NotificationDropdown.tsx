@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bell, BellOff, CheckCheck, Mail, MailOpen } from "lucide-react"
+import { Bell, BellOff, CheckCheck, Mail, MailOpen, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "../ui/badge"
 import { cn } from "../../lib/utils"
@@ -8,6 +8,7 @@ import { SpinnerIcon } from "../ui/spinner-icon"
 import { getNotificationById } from "../../api/notifications.api"
 import { useNotifications } from "../../hooks/useNotifications"
 import { NotificationDetailDialog } from "../notifications/NotificationDetailDialog"
+import { NotificationDeleteDialog } from "../notifications/NotificationDeleteDialog"
 import {
   DEFAULT_NOTIFICATION_TYPE_CONFIG,
   formatNotificationTimestamp,
@@ -20,11 +21,13 @@ function NotificationItem({
   onOpen,
   onMarkRead,
   onMarkUnread,
+  onDelete,
 }: {
   notification: Notification
   onOpen: (notification: Notification) => void
   onMarkRead: (id: string) => void
   onMarkUnread: (id: string) => void
+  onDelete: (notification: Notification) => void
 }) {
   const cfg = NOTIFICATION_TYPE_CONFIG[notification.type] ?? DEFAULT_NOTIFICATION_TYPE_CONFIG
   const Icon = cfg.icon
@@ -86,6 +89,17 @@ function NotificationItem({
           <MailOpen className="h-4 w-4" />
         )}
       </button>
+      <button
+        type="button"
+        className="hidden shrink-0 self-center rounded-md p-1.5 text-destructive hover:bg-destructive/10 group-hover:block"
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete(notification)
+        }}
+        aria-label="Delete notification"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
     </button>
   )
 }
@@ -97,6 +111,7 @@ export function NotificationDropdown() {
   const [detailError, setDetailError] = useState(false)
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
   const [selectedNotificationId, setSelectedNotificationId] = useState<string | null>(null)
+  const [notificationPendingDelete, setNotificationPendingDelete] = useState<Notification | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const {
@@ -106,6 +121,7 @@ export function NotificationDropdown() {
     markOneRead,
     markOneUnread,
     markAllAsRead,
+    refresh,
   } = useNotifications()
 
   const loadNotificationDetail = useCallback(async (id: string, markReadIfNeeded: boolean) => {
@@ -141,6 +157,16 @@ export function NotificationDropdown() {
     },
     [loadNotificationDetail],
   )
+
+  const handleNotificationDeleted = useCallback((id: string) => {
+    if (selectedNotificationId === id) {
+      setDetailOpen(false)
+      setSelectedNotification(null)
+      setSelectedNotificationId(null)
+    }
+    setNotificationPendingDelete(null)
+    refresh()
+  }, [selectedNotificationId, refresh])
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
@@ -213,6 +239,10 @@ export function NotificationDropdown() {
                       onOpen={handleOpenNotification}
                       onMarkRead={markOneRead}
                       onMarkUnread={markOneUnread}
+                      onDelete={(notification) => {
+                        setOpen(false)
+                        setNotificationPendingDelete(notification)
+                      }}
                     />
                   ))}
                 </div>
@@ -246,6 +276,20 @@ export function NotificationDropdown() {
             ? () => void loadNotificationDetail(selectedNotificationId, false)
             : undefined
         }
+        onDelete={
+          selectedNotification
+            ? () => setNotificationPendingDelete(selectedNotification)
+            : undefined
+        }
+      />
+
+      <NotificationDeleteDialog
+        notification={notificationPendingDelete}
+        open={notificationPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setNotificationPendingDelete(null)
+        }}
+        onDeleted={handleNotificationDeleted}
       />
     </>
   )

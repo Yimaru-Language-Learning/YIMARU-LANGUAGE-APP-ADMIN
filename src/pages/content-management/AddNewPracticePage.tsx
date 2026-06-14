@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { ToggleSwitch } from "../../components/ui/toggle-switch";
 import { PracticeQuestionEditorFields } from "../../components/content-management/PracticeQuestionEditorFields";
 import { AddNewPracticeReviewStep } from "./components/AddNewPracticeReviewStep";
 import { PersonaStep } from "./components/practice-steps/PersonaStep";
@@ -713,19 +714,12 @@ export function AddNewPracticePage() {
                       <label className="text-sm font-medium text-grayScale-700">
                         Shuffle questions
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => setShuffleQuestions(!shuffleQuestions)}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                          shuffleQuestions ? "bg-brand-500" : "bg-grayScale-300"
-                        }`}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${
-                            shuffleQuestions ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
+                      <ToggleSwitch
+                        variant="plain"
+                        checked={shuffleQuestions}
+                        aria-label="Shuffle questions"
+                        onCheckedChange={() => setShuffleQuestions(!shuffleQuestions)}
+                      />
                     </div>
                   </div>
 

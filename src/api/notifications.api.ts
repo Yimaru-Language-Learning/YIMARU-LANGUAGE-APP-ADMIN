@@ -118,6 +118,13 @@ export const markAllRead = () =>
 export const markAllUnread = () =>
   http.post("/notifications/mark-all-unread")
 
+/** DELETE /notifications/:id — remove an in-app notification. */
+export const deleteNotification = (id: string) =>
+  http.delete<unknown>(`/notifications/${id}`).then((res) => ({
+    ...res,
+    message: isRecord(res.data) ? String(res.data.message ?? "") : undefined,
+  }))
+
 export type BulkSendApiResult =
   | { kind: "immediate"; data: BulkSendResult; message: string }
   | { kind: "scheduled"; data: ScheduledNotification; message: string }

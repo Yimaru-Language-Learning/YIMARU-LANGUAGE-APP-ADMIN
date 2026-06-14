@@ -1814,6 +1814,14 @@ export interface VimeoSampleVideo {
   transcode_status: string
 }
 
+export interface GetVimeoVideoResponse {
+  message: string
+  data: VimeoSampleVideo
+  success: boolean
+  status_code: number
+  metadata: unknown
+}
+
 export interface GetVimeoSampleResponse {
   message: string
   data: {

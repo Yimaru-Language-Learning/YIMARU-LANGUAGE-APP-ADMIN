@@ -20,11 +20,13 @@ import { cn } from "../../../lib/utils";
 import {
   applyShortPreviewToEmbedUrl,
   DEFAULT_PREVIEW_MAX_SECONDS,
+  extractVimeoVideoId,
   formatPreviewLength,
   formatVideoDurationLabel,
   getVideoPreview,
   isDirectVideoFileUrl,
 } from "../../../lib/videoPreview";
+import { fetchVimeoDurationSeconds } from "../../../lib/vimeoVideoCache";
 import { PreviewLimitedFileVideo } from "./PreviewLimitedFileVideo";
 import type {
   ContentAccessTier,
@@ -121,6 +123,9 @@ export function VideoCard({
   const [probedDurationSeconds, setProbedDurationSeconds] = useState<
     number | null
   >(null);
+  const [vimeoDurationSeconds, setVimeoDurationSeconds] = useState<
+    number | null
+  >(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   /** Iframe players ignore URL limits in many cases — unmount after real time. */
   const [iframeSessionDone, setIframeSessionDone] = useState(false);
@@ -194,6 +199,34 @@ export function VideoCard({
     };
   }, [duration, durationSeconds, videoUrl]);
 
+  useEffect(() => {
+    if (duration?.trim()) {
+      setVimeoDurationSeconds(null);
+      return;
+    }
+    if (
+      typeof durationSeconds === "number" &&
+      Number.isFinite(durationSeconds) &&
+      durationSeconds > 0
+    ) {
+      setVimeoDurationSeconds(null);
+      return;
+    }
+    const url = videoUrl?.trim() ?? "";
+    const vimeoId = extractVimeoVideoId(url);
+    if (!vimeoId) {
+      setVimeoDurationSeconds(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchVimeoDurationSeconds(vimeoId).then((seconds) => {
+      if (!cancelled) setVimeoDurationSeconds(seconds);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [duration, durationSeconds, videoUrl]);
+
   const durationLabel = (() => {
     const trimmed = duration?.trim();
     if (trimmed) return trimmed;
@@ -204,6 +237,13 @@ export function VideoCard({
         ? durationSeconds
         : null;
     if (fromApi != null) return formatVideoDurationLabel(fromApi);
+    if (
+      vimeoDurationSeconds != null &&
+      Number.isFinite(vimeoDurationSeconds) &&
+      vimeoDurationSeconds > 0
+    ) {
+      return formatVideoDurationLabel(vimeoDurationSeconds);
+    }
     if (
       probedDurationSeconds != null &&
       Number.isFinite(probedDurationSeconds) &&

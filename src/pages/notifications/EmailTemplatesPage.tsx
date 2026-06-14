@@ -6,10 +6,12 @@ import {
   getEmailTemplates,
   parseEmailTemplatesResponse,
 } from "../../api/emailTemplates.api"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { cn } from "../../lib/utils"
 import {
@@ -69,6 +71,14 @@ export function EmailTemplatesPage() {
     })
   }, [templates, query, statusFilter])
 
+  const activeFilterCount = countActiveFilters([
+    { value: statusFilter, defaultValue: "All" },
+  ])
+
+  const clearFilters = () => {
+    setStatusFilter("All")
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -101,43 +111,44 @@ export function EmailTemplatesPage() {
         </div>
       </div>
 
-      <Card className="border border-grayScale-100 shadow-none">
-        <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-              <Input
-                className="pl-9"
-                placeholder="Search by name, slug, subject, or variable…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {(["All", "ACTIVE", "INACTIVE"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setStatusFilter(tab)}
-                  className={cn(
-                    "h-9 rounded-full px-3 text-xs font-semibold transition-colors",
-                    statusFilter === tab
-                      ? "bg-brand-500 text-white"
-                      : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",
-                  )}
-                >
-                  {tab === "All" ? "All" : tab === "ACTIVE" ? "Active" : "Inactive"}
-                </button>
-              ))}
-            </div>
+      <AdminFiltersPanel
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
+        summary={
+          loading
+            ? "Loading…"
+            : `${filtered.length} shown · ${totalCount} total from API`
+        }
+        search={
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+            <Input
+              className="pl-9"
+              placeholder="Search by name, slug, subject, or variable…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-          <p className="text-xs text-grayScale-500">
-            {loading
-              ? "Loading…"
-              : `${filtered.length} shown · ${totalCount} total from API`}
-          </p>
-        </CardContent>
-      </Card>
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          {(["All", "ACTIVE", "INACTIVE"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setStatusFilter(tab)}
+              className={cn(
+                "h-9 rounded-full px-3 text-xs font-semibold transition-colors",
+                statusFilter === tab
+                  ? "bg-brand-500 text-white"
+                  : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",
+              )}
+            >
+              {tab === "All" ? "All" : tab === "ACTIVE" ? "Active" : "Inactive"}
+            </button>
+          ))}
+        </div>
+      </AdminFiltersPanel>
 
       {loading ? (
         <div className="flex justify-center py-16">

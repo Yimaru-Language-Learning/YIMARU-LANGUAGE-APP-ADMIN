@@ -1,7 +1,7 @@
 import { getTeamMemberById } from "../api/team.api"
 import { getUserById } from "../api/users.api"
 import { TEAM_ROLE_OPTIONS, formatTeamRoleLabel } from "./teamRoles"
-import type { TeamMember } from "../types/team.types"
+import type { TeamMember, TeamMemberDetail } from "../types/team.types"
 import type { UserProfileData } from "../types/user.types"
 
 const TEAM_ROLE_VALUES = new Set(
@@ -51,7 +51,12 @@ export function resolveActorKind(actorRole: string | null | undefined): ActorPro
   return null
 }
 
-function teamMemberToProfile(member: TeamMember): ActorProfile {
+function teamMemberToProfile(
+  member: Pick<
+    TeamMember | TeamMemberDetail,
+    "id" | "first_name" | "last_name" | "email" | "team_role" | "status" | "email_verified" | "created_at"
+  >,
+): ActorProfile {
   return {
     kind: "team",
     id: member.id,

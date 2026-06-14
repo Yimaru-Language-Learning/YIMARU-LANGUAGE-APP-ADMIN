@@ -10,9 +10,9 @@ export function toVimeoEmbedUrl(rawUrl: string): string | null {
     if (host.includes("player.vimeo.com") && parsed.pathname.includes("/video/")) {
       return parsed.toString();
     }
-    const segments = parsed.pathname.split("/").filter(Boolean);
-    const videoId = segments.find((segment) => /^\d+$/.test(segment));
+    const videoId = extractVimeoVideoId(rawUrl);
     if (!videoId) return null;
+    const segments = parsed.pathname.split("/").filter(Boolean);
     // Vimeo private/unlisted links often come as /<videoId>/<hash> instead of ?h=<hash>.
     const hashFromPath = (() => {
       const videoIdx = segments.findIndex((segment) => segment === videoId);
@@ -25,6 +25,23 @@ export function toVimeoEmbedUrl(rawUrl: string): string | null {
     return hash
       ? `https://player.vimeo.com/video/${videoId}?h=${encodeURIComponent(hash)}`
       : `https://player.vimeo.com/video/${videoId}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Numeric Vimeo video id from vimeo.com or player.vimeo.com URLs. */
+export function extractVimeoVideoId(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    const host = parsed.hostname.toLowerCase();
+    if (!host.includes("vimeo.com")) return null;
+    if (host.includes("player.vimeo.com")) {
+      const match = parsed.pathname.match(/\/video\/(\d+)/);
+      return match?.[1] ?? null;
+    }
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    return segments.find((segment) => /^\d+$/.test(segment)) ?? null;
   } catch {
     return null;
   }

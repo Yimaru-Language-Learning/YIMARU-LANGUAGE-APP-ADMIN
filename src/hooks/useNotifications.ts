@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { getNotifications, getUnreadCount, markAsRead, markAsUnread, markAllRead } from "../api/notifications.api"
+import { getNotifications, getUnreadCount, markAsRead, markAsUnread, markAllRead, deleteNotification } from "../api/notifications.api"
 import type { Notification } from "../types/notification.types"
 
 const MAX_DROPDOWN = 5
@@ -167,6 +167,21 @@ export function useNotifications() {
     }
   }, [fetchData])
 
+  const deleteOne = useCallback(async (id: string) => {
+    const removed = notifications.find((n) => n.id === id)
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    if (removed && !removed.is_read) {
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    }
+    dispatchUpdate()
+    try {
+      await deleteNotification(id)
+    } catch {
+      await fetchData()
+      throw new Error("delete failed")
+    }
+  }, [notifications, fetchData])
+
   const refresh = useCallback(() => {
     fetchData()
   }, [fetchData])
@@ -178,6 +193,7 @@ export function useNotifications() {
     markOneRead,
     markOneUnread,
     markAllAsRead,
+    deleteOne,
     refresh,
   }
 }

@@ -10,7 +10,6 @@ import {
   Clock,
   User,
   Trash2,
-  X,
   Info,
   Bug,
   Video,
@@ -22,8 +21,10 @@ import {
   ArrowUpCircle,
   MessageCircle,
 } from "lucide-react";
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { countActiveFilters } from "../../lib/adminFilterUtils";
 import {
   Table,
   TableBody,
@@ -300,10 +301,12 @@ export function IssuesPage() {
     }
   };
 
-  const hasActiveFilters = statusFilter || typeFilter;
+  const activeFilterCount = countActiveFilters([
+    { value: statusFilter },
+    { value: typeFilter },
+  ]);
 
   const clearFilters = () => {
-    setSearchQuery("");
     setStatusFilter("");
     setTypeFilter("");
     setPage(1);
@@ -423,68 +426,66 @@ export function IssuesPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-          <Input
-            placeholder="Search by subject, description, or type..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      <AdminFiltersPanel
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
+        summary={
+          loading
+            ? "Loading…"
+            : `${filteredIssues.length} shown · ${totalCount} total`
+        }
+        search={
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+            <Input
+              placeholder="Search by subject, description, or type..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        }
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-10 appearance-none rounded-lg border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Status: All</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {getStatusConfig(s).label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
+          </div>
 
-        <div className="relative">
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 appearance-none rounded-lg border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Status: All</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {getStatusConfig(s).label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
+          <div className="relative">
+            <select
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-10 appearance-none rounded-lg border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Type: All</option>
+              {ISSUE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {getIssueTypeConfig(t).label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
+          </div>
         </div>
-
-        <div className="relative">
-          <select
-            value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 appearance-none rounded-lg border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Type: All</option>
-            {ISSUE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {getIssueTypeConfig(t).label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-        </div>
-
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="gap-1 text-grayScale-400 hover:text-grayScale-600"
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear
-          </Button>
-        )}
-      </div>
+      </AdminFiltersPanel>
 
       {/* Table */}
       <div className="rounded-xl border bg-white">
@@ -518,7 +519,7 @@ export function IssuesPage() {
                     <div>
                       <p className="text-sm font-medium text-grayScale-500">No issues found</p>
                       <p className="text-xs text-grayScale-400 mt-1">
-                        {hasActiveFilters || searchQuery
+                        {activeFilterCount > 0 || searchQuery
                           ? "Try adjusting your filters or search query"
                           : "Reported issues will appear here"}
                       </p>

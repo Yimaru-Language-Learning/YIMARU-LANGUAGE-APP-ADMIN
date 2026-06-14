@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Plus, RefreshCw, Edit2, ToggleLeft, ToggleRight, BookOpen, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Select } from "../../components/ui/select"
@@ -27,6 +28,7 @@ import {
 } from "../../components/ui/dialog"
 import { Textarea } from "../../components/ui/textarea"
 import { toast } from "sonner"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
@@ -228,6 +230,15 @@ export function AllCoursesPage() {
     }
   }
 
+  const clearFilters = () => {
+    setCategoryFilter("all")
+    setPage(1)
+  }
+
+  const activeFilterCount = countActiveFilters([
+    { value: categoryFilter, defaultValue: "all" },
+  ])
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32">
@@ -275,41 +286,41 @@ export function AllCoursesPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 pt-5">
-          {/* Search / Filters */}
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
-              <Input
-                placeholder="Search by title, description, or category…"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-                className="pl-10 transition-colors focus:border-brand-300 focus:ring-brand-200"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={categoryFilter}
-                onChange={(e) => {
-                  setCategoryFilter(e.target.value as typeof categoryFilter)
-                  setPage(1)
-                }}
-              >
-                <option value="all">All Categories</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={String(cat.id)}>
-                    {cat.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          <div className="text-xs font-medium text-grayScale-400">
-            Showing {filteredCourses.length} of {courses.length} courses
-          </div>
+          <AdminFiltersPanel
+            className="border-0 shadow-none"
+            activeFilterCount={activeFilterCount}
+            onClearFilters={clearFilters}
+            summary={`Showing ${filteredCourses.length} of ${courses.length} courses`}
+            search={
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-300" />
+                <Input
+                  placeholder="Search by title, description, or category…"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setPage(1)
+                  }}
+                  className="pl-10 transition-colors focus:border-brand-300 focus:ring-brand-200"
+                />
+              </div>
+            }
+          >
+            <Select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value as typeof categoryFilter)
+                setPage(1)
+              }}
+            >
+              <option value="all">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={String(cat.id)}>
+                  {cat.name}
+                </option>
+              ))}
+            </Select>
+          </AdminFiltersPanel>
 
           {/* Courses Table */}
           {filteredCourses.length > 0 ? (

@@ -15,6 +15,7 @@ import { Input } from "../../../components/ui/input"
 import { Select } from "../../../components/ui/select"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 import { Textarea } from "../../../components/ui/textarea"
+import { ToggleSwitch } from "../../../components/ui/toggle-switch"
 import { cn } from "../../../lib/utils"
 import {
   SUBSCRIPTION_CURRENCIES,
@@ -257,23 +258,12 @@ export function CreateSubscriptionPlanDialog({
                   Inactive plans stay in the catalog but are hidden from checkout
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={draft.is_active}
-                onClick={() => setDraft((d) => ({ ...d, is_active: !d.is_active }))}
-                className={cn(
-                  "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
-                  draft.is_active ? "bg-brand-500" : "bg-grayScale-200",
-                )}
-              >
-                <span
-                  className={cn(
-                    "inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform",
-                    draft.is_active ? "translate-x-5" : "translate-x-0.5",
-                  )}
-                />
-              </button>
+              <ToggleSwitch
+                variant="plain"
+                checked={draft.is_active}
+                aria-label="Active package"
+                onCheckedChange={() => setDraft((d) => ({ ...d, is_active: !d.is_active }))}
+              />
             </label>
           </div>
 

@@ -37,8 +37,9 @@ import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
 import { getDashboard } from "../api/analytics.api"
 import { getSubscriptionPlans } from "../api/subscription-plans.api"
-import { getRatings } from "../api/courses.api"
+import { getRatingSummary, listRatingsByTarget } from "../api/ratings.api"
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { AnalyticsTimeRangeFilter } from "../components/analytics/AnalyticsTimeRangeFilter"
 import {
   getPrimaryQuestionTypeSummary,
@@ -47,9 +48,10 @@ import {
   getVideoLessonsSummary,
 } from "../lib/analytics"
 import type { DashboardData, DashboardFilters } from "../types/analytics.types"
+import { formatAverageStars } from "../lib/ratingsDisplay"
 import { formatPlanDuration } from "../lib/subscriptionPlans"
 import type { SubscriptionPlan } from "../types/subscription.types"
-import type { Rating } from "../types/course.types"
+import type { Rating, RatingSummary } from "../types/ratings.types"
 
 const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444"]
 
@@ -66,6 +68,10 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [activeStatTab, setActiveStatTab] = useState<"primary" | "secondary">("primary")
   const [appRatings, setAppRatings] = useState<Rating[]>([])
+  const [appRatingsSummary, setAppRatingsSummary] = useState<RatingSummary>({
+    total_count: 0,
+    average_stars: 0,
+  })
   const [appRatingsLoading, setAppRatingsLoading] = useState(true)
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS)
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([])
@@ -93,8 +99,12 @@ export function DashboardPage() {
   useEffect(() => {
     const fetchAppRatings = async () => {
       try {
-        const res = await getRatings({ target_type: "app", target_id: 1, limit: 5 })
-        setAppRatings(res.data.data)
+        const [summary, reviews] = await Promise.all([
+          getRatingSummary({ target_type: "app", target_id: 0 }),
+          listRatingsByTarget({ target_type: "app", target_id: 0, limit: 5, offset: 0 }),
+        ])
+        setAppRatingsSummary(summary)
+        setAppRatings(reviews)
       } catch (err) {
         console.error(err)
       } finally {
@@ -496,9 +506,17 @@ export function DashboardPage() {
             {/* App Ratings */}
             <Card className="shadow-none">
               <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-brand-500" />
-                  <CardTitle>Recent App Reviews</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-brand-500" />
+                    <CardTitle>Recent App Reviews</CardTitle>
+                  </div>
+                  <Link
+                    to="/app-reviews"
+                    className="text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    View all
+                  </Link>
                 </div>
               </CardHeader>
               <CardContent className="p-6 pt-2">
@@ -506,7 +524,7 @@ export function DashboardPage() {
                   <div className="flex items-center justify-center py-10">
                     <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
                   </div>
-                ) : appRatings.length === 0 ? (
+                ) : appRatingsSummary.total_count === 0 ? (
                   <div className="flex items-center justify-center py-10 text-sm text-grayScale-400">
                     No app reviews yet
                   </div>
@@ -519,10 +537,7 @@ export function DashboardPage() {
                             key={i}
                             className={cn(
                               "h-4 w-4",
-                              i <
-                                Math.round(
-                                  appRatings.reduce((sum, r) => sum + r.stars, 0) / appRatings.length,
-                                )
+                              i < Math.round(appRatingsSummary.average_stars)
                                 ? "fill-amber-400 text-amber-400"
                                 : "fill-grayScale-200 text-grayScale-200",
                             )}
@@ -530,10 +545,11 @@ export function DashboardPage() {
                         ))}
                       </div>
                       <span className="text-sm font-semibold text-grayScale-600">
-                        {(appRatings.reduce((sum, r) => sum + r.stars, 0) / appRatings.length).toFixed(1)}
+                        {formatAverageStars(appRatingsSummary.average_stars)}
                       </span>
                       <span className="text-xs text-grayScale-400">
-                        ({appRatings.length} {appRatings.length === 1 ? "review" : "reviews"})
+                        ({appRatingsSummary.total_count}{" "}
+                        {appRatingsSummary.total_count === 1 ? "review" : "reviews"})
                       </span>
                     </div>
 

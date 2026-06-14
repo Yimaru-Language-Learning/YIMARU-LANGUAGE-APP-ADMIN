@@ -5,13 +5,16 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  CircleHelp,
   ClipboardList,
   CreditCard,
   LayoutDashboard,
   LogOut,
   UserCircle2,
   Users,
+  UsersRound,
   Settings,
+  Star,
   X,
 } from "lucide-react";
 import { type ComponentType, useEffect, useState } from "react";
@@ -19,6 +22,10 @@ import { NavLink } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { BrandLogo } from "../brand/BrandLogo";
 import { getUnreadCount } from "../../api/notifications.api";
+import { useTeamPermissions } from "../../hooks/useTeamPermissions";
+import { hasFaqPermission } from "../../lib/faqPermissions";
+import { hasRatingsPermission } from "../../lib/ratingsPermissions";
+import { hasPersonaPermission } from "../../lib/personasPermissions";
 import { SidebarNavGroup } from "./SidebarNavGroup";
 
 type NavLinkItem = {
@@ -26,6 +33,7 @@ type NavLinkItem = {
   label: string;
   to: string;
   icon: ComponentType<{ className?: string }>;
+  permission?: string;
 };
 
 type NavGroupItem = {
@@ -77,6 +85,13 @@ const navEntries: NavEntry[] = [
       { label: "Question types", to: "/new-content/question-types" },
     ],
   },
+  {
+    kind: "link",
+    label: "Personas",
+    to: "/personas",
+    icon: UsersRound,
+    permission: "personas.list",
+  },
 
   { kind: "section", label: "Communications" },
   {
@@ -96,6 +111,20 @@ const navEntries: NavEntry[] = [
   { kind: "link", label: "Payments", to: "/payments", icon: CreditCard },
   { kind: "link", label: "User activity log", to: "/user-log", icon: ClipboardList },
   { kind: "link", label: "Issue reports", to: "/issues", icon: CircleAlert },
+  {
+    kind: "link",
+    label: "FAQs",
+    to: "/help/faqs",
+    icon: CircleHelp,
+    permission: "faqs.list",
+  },
+  {
+    kind: "link",
+    label: "App reviews",
+    to: "/app-reviews",
+    icon: Star,
+    permission: "ratings.list_by_target",
+  },
 
   { kind: "section", label: "Account" },
   { kind: "link", label: "Profile", to: "/profile", icon: UserCircle2 },
@@ -115,6 +144,7 @@ export function Sidebar({
   onToggleCollapse,
   onClose,
 }: SidebarProps) {
+  const { permissions, hasPermission, loading: permissionsLoading } = useTeamPermissions();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -224,6 +254,40 @@ export function Sidebar({
                   {entry.label}
                 </p>
               );
+            }
+
+            if (entry.kind === "link") {
+              if (
+                entry.permission === "faqs.list" &&
+                !permissionsLoading &&
+                !hasFaqPermission("faqs.list", permissions)
+              ) {
+                return null;
+              }
+              if (
+                entry.permission === "ratings.list_by_target" &&
+                !permissionsLoading &&
+                !hasRatingsPermission("ratings.list_by_target", permissions)
+              ) {
+                return null;
+              }
+              if (
+                entry.permission === "personas.list" &&
+                !permissionsLoading &&
+                !hasPersonaPermission("personas.list", permissions)
+              ) {
+                return null;
+              }
+              if (
+                entry.permission &&
+                entry.permission !== "faqs.list" &&
+                entry.permission !== "ratings.list_by_target" &&
+                entry.permission !== "personas.list" &&
+                !permissionsLoading &&
+                !hasPermission(entry.permission)
+              ) {
+                return null;
+              }
             }
 
             if (entry.kind === "group") {

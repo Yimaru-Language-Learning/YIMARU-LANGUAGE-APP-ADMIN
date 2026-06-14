@@ -2,12 +2,15 @@ import { ChevronDown, ChevronLeft, ChevronRight, Search, TrendingUp, UserCheck, 
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Input } from "../../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { ToggleSwitch } from "../../components/ui/toggle-switch"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { getDashboard } from "../../api/analytics.api"
@@ -310,7 +313,19 @@ export function UsersListPage() {
     navigate(`/users/${userId}`)
   }
 
-  const clearExtraFilters = () => {
+  const activeFilterCount = countActiveFilters([
+    { value: roleFilter },
+    { value: statusFilter },
+    { value: createdAfterLocal },
+    { value: createdBeforeLocal },
+    { value: countryFilter },
+    { value: regionFilter },
+    { value: subscriptionStatusFilter },
+  ])
+
+  const clearFilters = () => {
+    setRoleFilter("")
+    setStatusFilter("")
     setCreatedAfterLocal("")
     setCreatedBeforeLocal("")
     setCountryFilter("")
@@ -405,10 +420,13 @@ export function UsersListPage() {
       </div>
 
       <div className="bg-white rounded-xl border">
-        {/* Search & Filters */}
-        <div className="p-4 border-b">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative w-full md:max-w-sm">
+        <AdminFiltersPanel
+          className="border-0 border-b rounded-none shadow-none"
+          activeFilterCount={activeFilterCount}
+          onClearFilters={clearFilters}
+          footer="Dates are sent as RFC3339 (UTC). Country and region filters use the lists above; the API matches case-insensitively."
+          search={
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
               <Input
                 placeholder="Search by name, phone number"
@@ -417,46 +435,44 @@ export function UsersListPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-full sm:w-auto">
-                <select
-                  value={roleFilter}
-                  onChange={(e) => {
-                    setRoleFilter(e.target.value)
-                    setPage(1)
-                  }}
-                  className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                >
-                  <option value="">All roles</option>
-                  <option value="STUDENT">Student</option>
-                  <option value="TEACHER">Teacher</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-              </div>
-
-              <div className="relative w-full sm:w-auto">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value)
-                    setPage(1)
-                  }}
-                  className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                >
-                  <option value="">All statuses</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="DEACTIVATED">Deactivated</option>
-                  <option value="SUSPENDED">Suspended</option>
-                  <option value="PENDING">Pending</option>
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-              </div>
+          }
+        >
+          <div className="flex flex-wrap gap-3">
+            <div className="relative w-full sm:w-auto">
+              <select
+                value={roleFilter}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              >
+                <option value="">All roles</option>
+                <option value="STUDENT">Student</option>
+                <option value="TEACHER">Teacher</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
+            </div>
+            <div className="relative w-full sm:w-auto">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              >
+                <option value="">All statuses</option>
+                <option value="ACTIVE">Active</option>
+                <option value="DEACTIVATED">Deactivated</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="PENDING">Pending</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
             </div>
           </div>
-
-          <div className="mt-4 grid gap-3 border-t border-grayScale-100 pt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <div className="flex flex-col gap-1">
               <label htmlFor="filter-created-after" className="text-xs font-medium text-grayScale-500">
                 Created on or after
@@ -532,20 +548,7 @@ export function UsersListPage() {
               </div>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-grayScale-400">
-              Dates are sent as RFC3339 (UTC). Country and region filters use the lists above; the API matches
-              case-insensitively.
-            </p>
-            <button
-              type="button"
-              onClick={clearExtraFilters}
-              className="shrink-0 text-sm font-medium text-brand-600 hover:text-brand-700"
-            >
-              Clear date, location & subscription filters
-            </button>
-          </div>
-        </div>
+        </AdminFiltersPanel>
 
         {/* Table */}
         <Table>
@@ -642,26 +645,11 @@ export function UsersListPage() {
                       </span>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggle(u.id)}
+                      <ToggleSwitch
+                        checked={isActive}
                         disabled={isUpdatingStatus}
-                        className={cn(
-                          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border p-0.5 transition-all duration-200",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-1",
-                          isActive
-                            ? "border-brand-500 bg-brand-500 shadow-[0_6px_16px_rgba(168,85,247,0.35)]"
-                            : "border-grayScale-300 bg-grayScale-200 hover:bg-grayScale-300/80",
-                          isUpdatingStatus && "cursor-not-allowed opacity-60",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-out",
-                            isActive ? "translate-x-5" : "translate-x-0"
-                          )}
-                        />
-                      </button>
+                        onCheckedChange={() => handleToggle(u.id)}
+                      />
                     </TableCell>
                   </TableRow>
                 )

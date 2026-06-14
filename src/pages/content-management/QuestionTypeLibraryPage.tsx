@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "../../components/ui/button"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Input } from "../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import {
@@ -25,6 +26,7 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { QuestionTypeCard } from "./components/QuestionTypeCard"
@@ -70,6 +72,11 @@ export function QuestionTypeLibraryPage() {
 
   const hasActiveFilters =
     query.trim().length > 0 || statusFilter !== "All" || scopeFilter !== "all"
+
+  const activeFilterCount = countActiveFilters([
+    { value: statusFilter, defaultValue: "All" },
+    { value: scopeFilter, defaultValue: "all" },
+  ])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -236,28 +243,33 @@ export function QuestionTypeLibraryPage() {
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="border-b border-grayScale-100 bg-grayScale-50/60 px-6 py-5 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-              <Input
-                className="h-11 pl-11 pr-10 rounded-[10px] border-grayScale-200 bg-white placeholder:text-grayScale-400 text-sm shadow-sm"
-                placeholder="Search by display name, key, or id on this page…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {query ? (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="border-b border-grayScale-100 bg-grayScale-50/60 px-6 py-5">
+            <AdminFiltersPanel
+              className="border-0 bg-transparent shadow-none"
+              activeFilterCount={activeFilterCount}
+              onClearFilters={clearFilters}
+              search={
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+                  <Input
+                    className="h-11 pl-11 pr-10 rounded-[10px] border-grayScale-200 bg-white placeholder:text-grayScale-400 text-sm shadow-sm"
+                    placeholder="Search by display name, key, or id on this page…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  {query ? (
+                    <button
+                      type="button"
+                      onClick={() => setQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+              }
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
@@ -297,20 +309,7 @@ export function QuestionTypeLibraryPage() {
                   ))}
                 </div>
               </div>
-
-              {hasActiveFilters ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 shrink-0 self-start rounded-[8px] px-3 text-xs font-semibold text-grayScale-500 hover:text-brand-600 lg:self-center"
-                  disabled={loading}
-                  onClick={clearFilters}
-                >
-                  Clear filters
-                </Button>
-              ) : null}
-            </div>
+            </AdminFiltersPanel>
           </div>
 
           {loading ? (

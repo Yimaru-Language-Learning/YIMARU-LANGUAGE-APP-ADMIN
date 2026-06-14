@@ -7,14 +7,72 @@ export interface TeamMember {
   team_role: string
   department: string
   job_title: string
-  employment_type: string
-  hire_date: string
-  bio: string
+  employment_type?: string
+  hire_date?: string
+  bio?: string
   status: string
   email_verified: boolean
-  permissions: string[]
+  permissions?: string[]
   last_login?: string | null
   created_at: string
+}
+
+/** GET /team/members/:id — single team member detail */
+export interface TeamMemberDetail {
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  team_role: string
+  department: string
+  job_title: string
+  bio: string | null
+  status: string
+  email_verified: boolean
+  last_login: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+/** GET /team/me — signed-in team member profile */
+export interface TeamMeProfile {
+  id: number
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  team_role: string
+  department: string
+  job_title: string
+  status: string
+  email_verified: boolean
+  last_login: string | null
+  created_at: string
+  updated_at: string | null
+  profile_picture_url?: string | null
+  bio?: string | null
+  work_phone?: string | null
+}
+
+export interface GetTeamMeResponse {
+  message: string
+  data: TeamMeProfile
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** PUT /team/me — update signed-in team member profile */
+export interface UpdateTeamMeRequest {
+  first_name?: string
+  last_name?: string
+  phone_number?: string
+  department?: string
+  job_title?: string
+  profile_picture_url?: string
+  bio?: string
+  work_phone?: string
 }
 
 export interface CreateTeamMemberRequest {
@@ -63,7 +121,7 @@ export interface GetTeamMembersResponse {
 
 export interface GetTeamMemberResponse {
   message: string
-  data: TeamMember
+  data: TeamMemberDetail
   success: boolean
   status_code: number
   metadata: null

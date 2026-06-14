@@ -14,6 +14,7 @@ import {
   cancelScheduledNotification,
   getScheduledNotifications,
 } from "../../api/notifications.api"
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
@@ -32,6 +33,7 @@ import {
   formatScheduledAtLabel,
   scheduledStatusBadgeVariant,
 } from "../../lib/notificationBulk"
+import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { DEFAULT_TABLE_PAGE_SIZE } from "../../lib/tablePagination"
 import type {
@@ -133,6 +135,16 @@ export function ScheduledNotificationsPage() {
     return "—"
   }
 
+  const activeFilterCount = countActiveFilters([
+    { value: statusFilter },
+    { value: channelFilter },
+  ])
+
+  const clearFilters = () => {
+    setStatusFilter("")
+    setChannelFilter("")
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -160,36 +172,43 @@ export function ScheduledNotificationsPage() {
         </div>
       </div>
 
+      <AdminFiltersPanel
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
+        summary={
+          loading
+            ? "Loading…"
+            : `${totalCount} job${totalCount === 1 ? "" : "s"}`
+        }
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            className="sm:max-w-[180px]"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value || "all"} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={channelFilter}
+            onChange={(e) => setChannelFilter(e.target.value as typeof channelFilter)}
+            className="sm:max-w-[180px]"
+          >
+            {CHANNEL_OPTIONS.map((opt) => (
+              <option key={opt.value || "all"} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </AdminFiltersPanel>
+
       <Card className="border border-grayScale-100 shadow-none">
         <CardContent className="space-y-4 p-4 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="sm:max-w-[180px]"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value || "all"} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={channelFilter}
-              onChange={(e) => setChannelFilter(e.target.value as typeof channelFilter)}
-              className="sm:max-w-[180px]"
-            >
-              {CHANNEL_OPTIONS.map((opt) => (
-                <option key={opt.value || "all"} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-            <Badge variant="secondary" className="w-fit">
-              {totalCount} job{totalCount === 1 ? "" : "s"}
-            </Badge>
-          </div>
-
           {loading && (
             <div className="flex items-center justify-center py-16 text-sm text-grayScale-500">
               <SpinnerIcon className="mr-2 h-5 w-5" alt="" />

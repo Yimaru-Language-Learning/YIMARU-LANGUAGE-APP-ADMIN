@@ -13,10 +13,10 @@ import {
   Globe,
   Monitor,
   FileText,
-  X,
   Info,
   Shield,
 } from "lucide-react";
+import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -35,6 +35,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../../components/ui/dialog";
+import { countActiveFilters } from "../../lib/adminFilterUtils";
 import { cn } from "../../lib/utils";
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination";
 import { getActivityLogs, getActivityLogById } from "../../api/activity-logs.api";
@@ -193,13 +194,18 @@ export function UserLogPage() {
 
   const clearFilters = () => {
     setActionFilter("");
-    setSearchQuery("");
     setDateAfter("");
     setDateBefore("");
     setPage(1);
   };
 
-  const hasActiveFilters = actionFilter || dateAfter || dateBefore;
+  const activeFilterCount = countActiveFilters([
+    { value: actionFilter },
+    { value: dateAfter },
+    { value: dateBefore },
+  ]);
+
+  const hasActiveFilters = activeFilterCount > 0 || Boolean(searchQuery.trim());
 
   // Pagination
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -291,75 +297,66 @@ export function UserLogPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-          <Input
-            placeholder="Search by message, action, or role..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <AdminFiltersPanel
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
+        search={
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+            <Input
+              placeholder="Search by message, action, or role..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        }
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <select
+              value={actionFilter}
+              onChange={(e) => {
+                setActionFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="">Action: All</option>
+              {ACTION_TYPES.map((action) => (
+                <option key={action} value={action}>
+                  {formatActionLabel(action)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-grayScale-400">From</label>
+            <input
+              type="date"
+              value={dateAfter}
+              onChange={(e) => {
+                setDateAfter(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-md border bg-white px-3 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-grayScale-400">To</label>
+            <input
+              type="date"
+              value={dateBefore}
+              onChange={(e) => {
+                setDateBefore(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-md border bg-white px-3 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
         </div>
-
-        <div className="relative">
-          <select
-            value={actionFilter}
-            onChange={(e) => {
-              setActionFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 appearance-none rounded-lg border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Action: All</option>
-            {ACTION_TYPES.map((action) => (
-              <option key={action} value={action}>
-                {formatActionLabel(action)}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-grayScale-400">From</label>
-          <input
-            type="date"
-            value={dateAfter}
-            onChange={(e) => {
-              setDateAfter(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 rounded-lg border bg-white px-3 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-grayScale-400">To</label>
-          <input
-            type="date"
-            value={dateBefore}
-            onChange={(e) => {
-              setDateBefore(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 rounded-lg border bg-white px-3 text-sm text-grayScale-600 focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="gap-1 text-grayScale-400 hover:text-grayScale-600"
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear
-          </Button>
-        )}
-      </div>
+      </AdminFiltersPanel>
 
       {/* Table */}
       <div className="rounded-xl border bg-white">

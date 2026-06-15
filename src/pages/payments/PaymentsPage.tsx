@@ -40,7 +40,7 @@ import {
   paymentCustomerName,
   paymentStatusBadgeVariant,
 } from "../../lib/payments"
-import { SUBSCRIPTION_CURRENCIES } from "../../lib/subscriptionPlans"
+import { SUBSCRIPTION_CURRENCIES, SUBSCRIPTION_PLAN_CATEGORIES } from "../../lib/subscriptionPlans"
 import type {
   Payment,
   PaymentPlanCategory,
@@ -64,11 +64,7 @@ const PROVIDER_FILTERS: { value: PaymentProvider; label: string }[] = [
   { value: "ARIFPAY", label: "Arifpay" },
 ]
 
-const PLAN_CATEGORY_FILTERS: { value: PaymentPlanCategory; label: string }[] = [
-  { value: "LEARN_ENGLISH", label: "Learn English" },
-  { value: "IELTS", label: "IELTS" },
-  { value: "DUOLINGO", label: "Duolingo" },
-]
+const PLAN_CATEGORY_FILTERS = SUBSCRIPTION_PLAN_CATEGORIES
 
 type PaymentListFilters = {
   status: PaymentStatus | ""

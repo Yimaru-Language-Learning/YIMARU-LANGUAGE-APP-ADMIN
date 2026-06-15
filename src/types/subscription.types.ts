@@ -1,6 +1,6 @@
 export type SubscriptionPlanDurationUnit = "MONTH" | "YEAR" | "WEEK" | "DAY" | string
 
-export type SubscriptionPlanCategory = "LEARN_ENGLISH" | "EXAM_PREP" | "SKILLS" | string
+export type SubscriptionPlanCategory = "LEARN_ENGLISH" | "IELTS" | "DUOLINGO"
 
 export interface SubscriptionPlan {
   id: number

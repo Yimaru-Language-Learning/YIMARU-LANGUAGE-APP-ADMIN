@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "../../../components/ui/table";
 import { cn } from "../../../lib/utils";
+import { formatPlanCategory } from "../../../lib/subscriptionPlans";
 import type { UserSubscriptionsData } from "../../../types/userAdmin.types";
 
 function formatStatusLabel(status: string): string {
@@ -24,10 +25,7 @@ function formatStatusLabel(status: string): string {
 }
 
 function formatCategoryLabel(value: string): string {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ");
+  return formatPlanCategory(value);
 }
 
 function formatDateTime(value?: string | null): string {

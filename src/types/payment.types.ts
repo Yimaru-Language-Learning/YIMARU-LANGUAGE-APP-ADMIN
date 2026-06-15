@@ -1,3 +1,5 @@
+import type { SubscriptionPlanCategory } from "./subscription.types"
+
 export type PaymentStatus =
   | "PENDING"
   | "PROCESSING"
@@ -11,7 +13,7 @@ export type PaymentProvider = "CHAPA" | "ARIFPAY" | string
 
 export type PaymentMethod = PaymentProvider | string
 
-export type PaymentPlanCategory = "LEARN_ENGLISH" | "IELTS" | "DUOLINGO" | string
+export type PaymentPlanCategory = SubscriptionPlanCategory
 
 export interface Payment {
   id: number

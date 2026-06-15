@@ -9,8 +9,8 @@ export const SUBSCRIPTION_PLAN_CATEGORIES: {
   label: string
 }[] = [
   { value: "LEARN_ENGLISH", label: "Learn English" },
-  { value: "EXAM_PREP", label: "Exam prep" },
-  { value: "SKILLS", label: "Skills" },
+  { value: "IELTS", label: "IELTS" },
+  { value: "DUOLINGO", label: "Duolingo" },
 ]
 
 export const SUBSCRIPTION_DURATION_UNITS: {

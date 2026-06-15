@@ -10,13 +10,23 @@ import { Select } from "../../components/ui/select"
 import { FileUpload } from "../../components/ui/file-upload"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { NotificationSchedulePicker } from "../../components/notifications/NotificationSchedulePicker"
+import { EmailComposeFields } from "../../components/notifications/EmailComposeFields"
 import { cn } from "../../lib/utils"
+import {
+  getEmailTemplates,
+  parseEmailTemplatesResponse,
+} from "../../api/emailTemplates.api"
 import {
   sendBulkEmail,
   sendBulkInApp,
   sendBulkPush,
   sendBulkSms,
 } from "../../api/notifications.api"
+import {
+  appendBulkEmailContentToForm,
+  filterOutboundEmailTemplates,
+  validateEmailComposeInput,
+} from "../../lib/notificationEmailCompose"
 import {
   extractApiErrorMessage,
   fetchAllPlatformUsers,
@@ -31,6 +41,7 @@ import type {
   NotificationChannel,
   PlatformRole,
 } from "../../types/notification.types"
+import type { EmailTemplate } from "../../types/emailTemplate.types"
 import type { UserApiDTO } from "../../types/user.types"
 
 type AudienceMode = "role" | "selected" | "direct"
@@ -67,6 +78,10 @@ export function CreateNotificationPage() {
   const [scheduledAt, setScheduledAt] = useState("")
   const [attachment, setAttachment] = useState<File | null>(null)
   const [sending, setSending] = useState(false)
+  const [emailTemplateSlug, setEmailTemplateSlug] = useState("")
+  const [emailTemplateVariables, setEmailTemplateVariables] = useState<Record<string, string>>({})
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([])
+  const [emailTemplatesLoading, setEmailTemplatesLoading] = useState(false)
 
   useEffect(() => {
     setRecipientsLoading(true)
@@ -75,6 +90,30 @@ export function CreateNotificationPage() {
       .catch(() => setUsers([]))
       .finally(() => setRecipientsLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (channel !== "email") {
+      setEmailTemplateSlug("")
+      setEmailTemplateVariables({})
+      return
+    }
+    let cancelled = false
+    setEmailTemplatesLoading(true)
+    getEmailTemplates()
+      .then((response) => {
+        if (cancelled) return
+        setEmailTemplates(filterOutboundEmailTemplates(parseEmailTemplatesResponse(response)))
+      })
+      .catch(() => {
+        if (!cancelled) setEmailTemplates([])
+      })
+      .finally(() => {
+        if (!cancelled) setEmailTemplatesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [channel])
 
   const filteredUsers = useMemo(() => {
     const q = userSearchQuery.trim().toLowerCase()
@@ -97,7 +136,7 @@ export function CreateNotificationPage() {
     [filteredUsers, selectedUserIds],
   )
 
-  const needsTitle = channel === "push" || channel === "email" || channel === "in_app"
+  const needsTitle = channel === "push" || channel === "in_app" || (channel === "email" && !emailTemplateSlug)
   const titleLabel =
     channel === "email" ? "Subject" : channel === "sms" ? "Title (optional)" : "Title"
   const supportsDirect = channel === "sms" || channel === "email"
@@ -120,7 +159,35 @@ export function CreateNotificationPage() {
     setChannel("push")
     setInAppType("system_alert")
     setInAppLevel("info")
+    setEmailTemplateSlug("")
+    setEmailTemplateVariables({})
   }
+
+  const selectedEmailTemplate = useMemo(
+    () => emailTemplates.find((t) => t.slug === emailTemplateSlug) ?? null,
+    [emailTemplates, emailTemplateSlug],
+  )
+
+  const emailContentReady = useMemo(() => {
+    if (channel !== "email") return true
+    const error = validateEmailComposeInput({
+      templateSlug: emailTemplateSlug,
+      subject: title,
+      message,
+      htmlBody,
+      template: selectedEmailTemplate,
+      templateVariables: emailTemplateVariables,
+    })
+    return error === null
+  }, [
+    channel,
+    emailTemplateSlug,
+    title,
+    message,
+    htmlBody,
+    selectedEmailTemplate,
+    emailTemplateVariables,
+  ])
 
   const validateTargeting = (): boolean => {
     if (audienceMode === "role") return true
@@ -154,11 +221,25 @@ export function CreateNotificationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (channel !== "sms" && !title.trim()) {
-      toast.error(channel === "email" ? "Subject is required" : "Title is required")
+    if (channel === "email") {
+      const emailError = validateEmailComposeInput({
+        templateSlug: emailTemplateSlug,
+        subject: title,
+        message,
+        htmlBody,
+        template: selectedEmailTemplate,
+        templateVariables: emailTemplateVariables,
+      })
+      if (emailError) {
+        toast.error(emailError)
+        return
+      }
+    } else if (channel !== "sms" && !title.trim()) {
+      toast.error("Title is required")
       return
     }
-    if (!message.trim() && !(channel === "email" && htmlBody.trim())) {
+
+    if (channel !== "email" && !message.trim()) {
       toast.error("Message is required")
       return
     }
@@ -183,9 +264,13 @@ export function CreateNotificationPage() {
         } as Parameters<typeof sendBulkSms>[0])
       } else if (channel === "email") {
         const form = new FormData()
-        form.append("subject", title.trim())
-        if (message.trim()) form.append("message", message.trim())
-        if (htmlBody.trim()) form.append("html", htmlBody.trim())
+        appendBulkEmailContentToForm(form, {
+          templateSlug: emailTemplateSlug,
+          subject: title,
+          message,
+          htmlBody,
+          templateVariables: emailTemplateVariables,
+        })
         if ("role" in targeting) form.append("role", targeting.role)
         if ("user_ids" in targeting) {
           form.append("user_ids", JSON.stringify(targeting.user_ids))
@@ -390,49 +475,55 @@ export function CreateNotificationPage() {
               )}
 
               <div className="space-y-3">
-                {needsTitle && (
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                      {titleLabel}
-                    </label>
-                    <Input
-                      placeholder={
-                        channel === "email"
-                          ? "Email subject line"
-                          : "Short headline for this notification"
-                      }
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                    Message
-                  </label>
-                  <Textarea
-                    rows={4}
-                    placeholder={
-                      channel === "sms"
-                        ? "SMS body text."
-                        : "Notification body shown to recipients."
-                    }
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                {channel === "email" ? (
+                  <EmailComposeFields
+                    templates={emailTemplates}
+                    templatesLoading={emailTemplatesLoading}
+                    subject={title}
+                    message={message}
+                    htmlBody={htmlBody}
+                    templateSlug={emailTemplateSlug}
+                    templateVariables={emailTemplateVariables}
+                    onSubjectChange={setTitle}
+                    onMessageChange={setMessage}
+                    onHtmlBodyChange={setHtmlBody}
+                    onTemplateSlugChange={setEmailTemplateSlug}
+                    onTemplateVariablesChange={setEmailTemplateVariables}
                   />
-                </div>
-                {channel === "email" && (
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                      HTML body (optional)
-                    </label>
-                    <Textarea
-                      rows={3}
-                      placeholder="<p>Rich HTML content</p>"
-                      value={htmlBody}
-                      onChange={(e) => setHtmlBody(e.target.value)}
-                    />
-                  </div>
+                ) : (
+                  <>
+                    {needsTitle && (
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                          {titleLabel}
+                        </label>
+                        <Input
+                          placeholder={
+                            channel === "sms"
+                              ? "Optional headline"
+                              : "Short headline for this notification"
+                          }
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                        Message
+                      </label>
+                      <Textarea
+                        rows={4}
+                        placeholder={
+                          channel === "sms"
+                            ? "SMS body text."
+                            : "Notification body shown to recipients."
+                        }
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                      />
+                    </div>
+                  </>
                 )}
                 {channel === "in_app" && (
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -505,10 +596,7 @@ export function CreateNotificationPage() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={
-                  sending ||
-                  (!message.trim() && !(channel === "email" && htmlBody.trim()))
-                }
+                disabled={sending || (channel === "email" ? !emailContentReady : !message.trim())}
               >
                 {sending ? (
                   <>
@@ -739,7 +827,12 @@ export function CreateNotificationPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-grayScale-800">
-                      {title || (channel === "sms" ? "SMS message" : "Notification title")}
+                      {title ||
+                        (channel === "sms"
+                          ? "SMS message"
+                          : channel === "email" && emailTemplateSlug
+                            ? `Template: ${emailTemplateSlug}`
+                            : "Notification title")}
                     </p>
                     <p className="truncate text-[11px] text-grayScale-500">
                       {message || "Message preview will appear here."}

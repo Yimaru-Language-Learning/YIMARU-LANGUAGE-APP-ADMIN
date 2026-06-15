@@ -6,6 +6,8 @@ import type {
   EmailTemplate,
   GetEmailTemplateBySlugResponse,
   GetEmailTemplatesResponse,
+  PreviewEmailTemplateResponse,
+  PreviewEmailTemplateResult,
   UpdateEmailTemplateRequest,
   UpdateEmailTemplateResponse,
 } from "../types/emailTemplate.types"
@@ -58,6 +60,35 @@ export const createEmailTemplate = (data: CreateEmailTemplateRequest) =>
 /** DELETE /admin/email-templates/:id — delete a custom template. */
 export const deleteEmailTemplate = (id: number) =>
   http.delete<DeleteEmailTemplateResponse>(`/admin/email-templates/${id}`)
+
+/** POST /admin/email-templates/slug/:slug/preview — render without sending. */
+export const previewEmailTemplate = (
+  slug: string,
+  variables: Record<string, string>,
+) =>
+  http.post<PreviewEmailTemplateResponse>(
+    `/admin/email-templates/slug/${encodeURIComponent(slug)}/preview`,
+    { variables },
+  )
+
+function parsePreviewResult(body: unknown): PreviewEmailTemplateResult | null {
+  if (!body || typeof body !== "object") return null
+  const envelope = body as { data?: unknown }
+  const inner = envelope.data ?? body
+  if (!inner || typeof inner !== "object") return null
+  const row = inner as Record<string, unknown>
+  return {
+    subject: String(row.subject ?? ""),
+    text: String(row.text ?? row.body_text ?? ""),
+    html: String(row.html ?? row.body_html ?? ""),
+  }
+}
+
+export function parseEmailTemplatePreviewResponse(
+  response: Awaited<ReturnType<typeof previewEmailTemplate>>,
+): PreviewEmailTemplateResult | null {
+  return parsePreviewResult(response.data)
+}
 
 export function parseEmailTemplateResponse(
   response:

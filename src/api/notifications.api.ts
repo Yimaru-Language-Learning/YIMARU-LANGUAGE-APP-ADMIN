@@ -184,6 +184,13 @@ function normalizeScheduledNotification(raw: unknown): ScheduledNotification | n
     title: raw.title != null ? String(raw.title) : undefined,
     message: String(raw.message ?? ""),
     html: raw.html != null ? String(raw.html) : undefined,
+    email_template_slug:
+      raw.email_template_slug != null ? String(raw.email_template_slug) : undefined,
+    email_template_variables: isRecord(raw.email_template_variables)
+      ? Object.fromEntries(
+          Object.entries(raw.email_template_variables).map(([k, v]) => [k, String(v)]),
+        )
+      : undefined,
     scheduled_at: String(raw.scheduled_at ?? ""),
     status: String(raw.status ?? "pending") as ScheduledNotification["status"],
     target_user_ids: Array.isArray(raw.target_user_ids)

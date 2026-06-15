@@ -96,6 +96,8 @@ export interface ScheduledNotification {
   title?: string
   message: string
   html?: string
+  email_template_slug?: string
+  email_template_variables?: Record<string, string>
   scheduled_at: string
   status: ScheduledNotificationStatus
   target_user_ids?: number[]

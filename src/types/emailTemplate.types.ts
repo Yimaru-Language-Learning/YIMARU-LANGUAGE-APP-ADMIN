@@ -75,6 +75,24 @@ export interface DeleteEmailTemplateResponse {
   metadata: unknown | null
 }
 
+export interface PreviewEmailTemplateRequest {
+  variables: Record<string, string>
+}
+
+export interface PreviewEmailTemplateResult {
+  subject: string
+  text: string
+  html: string
+}
+
+export interface PreviewEmailTemplateResponse {
+  message: string
+  data: PreviewEmailTemplateResult
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
 export type EmailTemplatePreviewSource = Pick<
   EmailTemplate,
   "subject" | "body_text" | "body_html" | "variables"

@@ -31,6 +31,7 @@ import { ProgramDetailPage } from "../pages/content-management/ProgramDetailPage
 import { CourseManagementPage } from "../pages/content-management/CourseManagementPage";
 import { UnitManagementPage } from "../pages/content-management/UnitManagementPage";
 import { QuestionTypeLibraryPage } from "../pages/content-management/QuestionTypeLibraryPage";
+import { QuestionTypeGroupDetailPage } from "../pages/content-management/QuestionTypeGroupDetailPage";
 import { CreateQuestionTypeFlow } from "../pages/content-management/CreateQuestionTypeFlow";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { NotificationsPage } from "../pages/notifications/NotificationsPage";
@@ -182,6 +183,10 @@ export function AppRoutes() {
         <Route
           path="/new-content/question-types"
           element={<QuestionTypeLibraryPage />}
+        />
+        <Route
+          path="/new-content/question-types/groups/:groupId"
+          element={<QuestionTypeGroupDetailPage />}
         />
         <Route
           path="/new-content/question-types/:definitionId/create-practice"

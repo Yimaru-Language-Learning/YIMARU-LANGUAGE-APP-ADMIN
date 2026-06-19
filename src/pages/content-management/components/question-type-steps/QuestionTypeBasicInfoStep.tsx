@@ -1,17 +1,18 @@
-import { ArrowRight } from "lucide-react"
-import { Button } from "../../../../components/ui/button"
 import { Card } from "../../../../components/ui/card"
 import { Input } from "../../../../components/ui/input"
 import { Textarea } from "../../../../components/ui/textarea"
 import { Select } from "../../../../components/ui/select"
 import type { QuestionTypeDefinitionCreatePayload } from "../../../../types/questionTypeDefinition.types"
 import type { FieldErrorMap } from "../../lib/questionTypeDefinitionValidation"
+import { QuestionTypeGroupsMultiSelect } from "../QuestionTypeGroupSelect"
+import { QuestionTypeStepFooter } from "./QuestionTypeStepFooter"
 
 interface QuestionTypeBasicInfoStepProps {
   draft: QuestionTypeDefinitionCreatePayload
   setDraft: React.Dispatch<React.SetStateAction<QuestionTypeDefinitionCreatePayload>>
   errors: FieldErrorMap
   onNext: () => void
+  saving?: boolean
   /** When editing an existing definition, the key is immutable on the server */
   keyReadOnly?: boolean
 }
@@ -21,6 +22,7 @@ export function QuestionTypeBasicInfoStep({
   setDraft,
   errors,
   onNext,
+  saving,
   keyReadOnly,
 }: QuestionTypeBasicInfoStepProps) {
   return (
@@ -80,6 +82,17 @@ export function QuestionTypeBasicInfoStep({
             />
           </div>
 
+          <div className="space-y-2 max-w-md">
+            <label className="text-[14px] font-medium text-grayScale-700">Groups</label>
+            <QuestionTypeGroupsMultiSelect
+              value={draft.group_ids ?? null}
+              onChange={(groupIds) => setDraft((d) => ({ ...d, group_ids: groupIds }))}
+            />
+            <p className="text-grayScale-400 text-[13px] font-medium">
+              Optional catalog groups for organizing this definition in the library.
+            </p>
+          </div>
+
           <div className="space-y-2 max-w-xs">
             <label className="text-[14px] font-medium text-grayScale-700 flex items-center gap-1">
               Status <span className="text-red-500">*</span>
@@ -100,16 +113,11 @@ export function QuestionTypeBasicInfoStep({
           </div>
         </div>
 
-        <div className="px-4 py-4 border border-grayScale-200 flex items-center justify-end bg-[#F8FAFC]">
-          <Button
-            type="button"
-            onClick={onNext}
-            className="h-10 px-10 rounded-[6px] bg-[#9E2891] font-medium text-white shadow-lg shadow-brand-500/10 hover:bg-[#8A237E] transition-all flex items-center gap-3"
-          >
-            Next: Input and answer types
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-        </div>
+        <QuestionTypeStepFooter
+          onNext={onNext}
+          nextLabel="Next: Input and answer types"
+          saving={saving}
+        />
       </Card>
     </div>
   )

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react"
+import { CheckCircle2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "../../../../components/ui/button"
 import { Card } from "../../../../components/ui/card"
@@ -10,17 +10,20 @@ import {
   buildValidateKindsPayload,
 } from "../../lib/questionTypeDefinitionValidation"
 import { DefinitionRuntimeHint } from "./DefinitionRuntimeHint"
+import { QuestionTypeStepFooter } from "./QuestionTypeStepFooter"
 
 interface QuestionTypeValidatePreviewStepProps {
   draft: QuestionTypeDefinitionCreatePayload
   onNext: () => void
   onBack: () => void
+  saving?: boolean
 }
 
 export function QuestionTypeValidatePreviewStep({
   draft,
   onNext,
   onBack,
+  saving,
 }: QuestionTypeValidatePreviewStepProps) {
   const [validating, setValidating] = useState(false)
   const [serverOk, setServerOk] = useState<boolean | null>(null)
@@ -152,26 +155,13 @@ export function QuestionTypeValidatePreviewStep({
           </div>
         </div>
 
-        <div className="px-4 py-4 border border-grayScale-200 flex items-center justify-between bg-[#F8FAFC]">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 px-6 rounded-[6px] border-none shadow-none text-grayScale-600 font-bold hover:bg-grayScale-100"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2 inline" />
-            Back
-          </Button>
-          <Button
-            type="button"
-            onClick={handleNext}
-            disabled={validating || serverOk !== true}
-            className="h-10 px-10 rounded-[6px] bg-[#9E2891] font-medium text-white shadow-lg shadow-brand-500/10 hover:bg-[#8A237E] disabled:opacity-50 transition-all flex items-center gap-3"
-          >
-            Next: Review & publish
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-        </div>
+        <QuestionTypeStepFooter
+          onBack={onBack}
+          onNext={handleNext}
+          nextLabel="Next: Review & publish"
+          saving={saving}
+          nextDisabled={validating || serverOk !== true}
+        />
       </Card>
     </div>
   )

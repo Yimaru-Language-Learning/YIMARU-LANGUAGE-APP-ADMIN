@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
+import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
 import { Button } from "../../../../components/ui/button"
 import { Card } from "../../../../components/ui/card"
 import { Input } from "../../../../components/ui/input"
@@ -20,6 +20,7 @@ import {
   isNoInputComponentKind,
   noInputSchemaRow,
 } from "../../../../lib/questionComponentKinds"
+import { QuestionTypeStepFooter } from "./QuestionTypeStepFooter"
 
 interface QuestionTypeConfigStepProps {
   draft: QuestionTypeDefinitionCreatePayload
@@ -31,6 +32,7 @@ interface QuestionTypeConfigStepProps {
   errors: FieldErrorMap
   onNext: () => void
   onBack: () => void
+  saving?: boolean
 }
 
 function slugFragmentFromKind(kind: string): string {
@@ -88,6 +90,7 @@ export function QuestionTypeConfigStep({
   errors,
   onNext,
   onBack,
+  saving,
 }: QuestionTypeConfigStepProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
@@ -433,25 +436,12 @@ export function QuestionTypeConfigStep({
             </div>
         </div>
 
-        <div className="px-4 py-4 border-t border-grayScale-200 flex items-center justify-between bg-[#F8FAFC]">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 px-6 rounded-[6px] border-none shadow-none text-grayScale-600 font-bold hover:bg-grayScale-100"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2 inline" />
-            Back
-          </Button>
-          <Button
-            type="button"
-            onClick={onNext}
-            className="h-10 px-10 rounded-[6px] bg-[#9E2891] font-medium text-white shadow-lg shadow-brand-500/10 hover:bg-[#8A237E] transition-all flex items-center gap-3"
-          >
-            Next: Validate
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-        </div>
+        <QuestionTypeStepFooter
+          onBack={onBack}
+          onNext={onNext}
+          nextLabel="Next: Validate"
+          saving={saving}
+        />
       </Card>
     </div>
   )

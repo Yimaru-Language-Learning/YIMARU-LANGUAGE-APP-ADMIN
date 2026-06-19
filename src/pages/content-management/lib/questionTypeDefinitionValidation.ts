@@ -10,6 +10,7 @@ import {
   sideIsNoInputOnly,
   noInputSchemaRow,
 } from "../../../lib/questionComponentKinds"
+import { normalizeGroupIds } from "../../../lib/questionTypeGroupIds"
 
 export type FieldErrorMap = Record<string, string>
 
@@ -265,6 +266,7 @@ export function buildCreatePayload(
     key: draft.key.trim(),
     display_name: draft.display_name.trim(),
     description: draft.description?.trim() || null,
+    group_ids: normalizeGroupIds(draft.group_ids),
     stimulus_component_kinds:
       stimulusKindsFromSchema.length > 0 ? stimulusKindsFromSchema : [...draft.stimulus_component_kinds],
     response_component_kinds:
@@ -272,4 +274,57 @@ export function buildCreatePayload(
     stimulus_schema: finalStimulusSchema,
     response_schema: finalResponseSchema,
   }
+}
+
+function seedSchemaFromKinds(kinds: string[]): DynamicElementDefinition[] {
+  return kinds.map((k, i) => ({
+    id: `${(k || "field").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "field"}_${i + 1}`,
+    kind: k,
+    label: defaultLabelForKind(k),
+    required: true,
+  }))
+}
+
+/** Fills empty schema arrays from selected kinds before validation or save. */
+export function seedSchemasFromKindsIfEmpty(
+  draft: QuestionTypeDefinitionCreatePayload,
+): QuestionTypeDefinitionCreatePayload {
+  const next = { ...draft }
+  if (!next.stimulus_schema.length && sideIsNoInputOnly(next.stimulus_component_kinds)) {
+    next.stimulus_schema = [noInputSchemaRow()]
+  } else if (!next.stimulus_schema.length && next.stimulus_component_kinds.length) {
+    next.stimulus_schema = seedSchemaFromKinds(next.stimulus_component_kinds)
+  }
+  if (!next.response_schema.length && sideIsNoInputOnly(next.response_component_kinds)) {
+    next.response_schema = [noInputSchemaRow()]
+  } else if (!next.response_schema.length && next.response_component_kinds.length) {
+    next.response_schema = seedSchemaFromKinds(next.response_component_kinds)
+  }
+  return next
+}
+
+/** Validates fields required through the given wizard step (1 = basics only). */
+export function validateDefinitionThroughStep(
+  step: number,
+  draft: QuestionTypeDefinitionCreatePayload,
+  catalog: QuestionComponentCatalog,
+  catalogForSchema: { stimulus: Set<string>; response: Set<string> },
+): FieldErrorMap {
+  const errors = validateDefinitionBasic(draft)
+  if (step < 2) return errors
+
+  Object.assign(errors, validateDefinitionKinds(draft, catalog))
+  const prepared = seedSchemasFromKindsIfEmpty(draft)
+  Object.assign(errors, validateDefinitionSchemas(prepared, catalogForSchema))
+  return errors
+}
+
+/** Compares drafts by normalized API payload (ignores inconsequential ordering). */
+export function areDefinitionDraftsEqual(
+  a: QuestionTypeDefinitionCreatePayload,
+  b: QuestionTypeDefinitionCreatePayload,
+): boolean {
+  const fingerprint = (draft: QuestionTypeDefinitionCreatePayload) =>
+    JSON.stringify(buildCreatePayload(seedSchemasFromKindsIfEmpty(draft)))
+  return fingerprint(a) === fingerprint(b)
 }

@@ -11,6 +11,7 @@ import type {
   QuestionTypeDefinitionValidatePayload,
   ValidateQuestionTypeDefinitionResult,
 } from "../types/questionTypeDefinition.types"
+import { normalizeGroupIds } from "../lib/questionTypeGroupIds"
 import { normalizePracticeParents, parentsFromPractice } from "../lib/practiceParents"
 
 interface ApiEnvelope<T> {
@@ -230,6 +231,9 @@ export function normalizeTypeDefinitionFromApi(raw: unknown): QuestionTypeDefini
       const s = asStr(d)
       return s === "" ? null : s
     })(),
+    group_ids: normalizeGroupIds(
+      o.group_ids ?? o.GroupIds ?? o.group_id ?? o.GroupId ?? o.groupId,
+    ),
     stimulus_component_kinds: asStringArray(o.StimulusComponentKinds ?? o.stimulus_component_kinds),
     response_component_kinds: asStringArray(o.ResponseComponentKinds ?? o.response_component_kinds),
     stimulus_schema: normalizeSchemaRows(o.StimulusSchema ?? o.stimulus_schema),
@@ -268,6 +272,7 @@ export const extractCreatedDefinitionId = extractDefinitionMutationId
 export interface QuestionTypeDefinitionsListParams {
   include_system?: boolean
   status?: string
+  group_id?: number
   limit?: number
   offset?: number
 }
@@ -407,6 +412,24 @@ export async function updateQuestionTypeDefinition(
   body: QuestionTypeDefinitionUpdatePayload,
 ) {
   return http.put<ApiEnvelope<unknown>>(`/questions/type-definitions/${id}`, body)
+}
+
+/** Assign or replace group memberships (`null` or `[]` clears all). */
+export async function assignQuestionTypeDefinitionGroups(
+  definitionId: number,
+  groupIds: number[] | null,
+) {
+  return updateQuestionTypeDefinition(definitionId, {
+    group_ids: normalizeGroupIds(groupIds),
+  })
+}
+
+/** @deprecated Use assignQuestionTypeDefinitionGroups */
+export async function assignQuestionTypeDefinitionGroup(
+  definitionId: number,
+  groupId: number | null,
+) {
+  return assignQuestionTypeDefinitionGroups(definitionId, groupId == null ? null : [groupId])
 }
 
 export async function deleteQuestionTypeDefinition(id: number) {

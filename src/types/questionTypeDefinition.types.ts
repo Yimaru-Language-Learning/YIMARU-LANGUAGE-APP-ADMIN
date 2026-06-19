@@ -22,6 +22,7 @@ export interface QuestionTypeDefinitionCreatePayload {
   key: string
   display_name: string
   description?: string | null
+  group_ids?: number[] | null
   stimulus_component_kinds: string[]
   response_component_kinds: string[]
   stimulus_schema: DynamicElementDefinition[]
@@ -42,6 +43,7 @@ export type ValidateQuestionTypeDefinitionResult =
 
 export interface QuestionTypeDefinition extends QuestionTypeDefinitionCreatePayload {
   id: number
+  group_ids: number[] | null
   is_system?: boolean
   created_at?: string
   updated_at?: string
@@ -92,6 +94,45 @@ export interface QuestionTypeDefinitionPracticesParams {
 export interface QuestionTypeDefinitionPracticesResult {
   question_type_definition_id: number
   practices: QuestionTypeDefinitionPractice[]
+  total_count: number
+  limit: number
+  offset: number
+}
+
+export type QuestionTypeDefinitionGroupStatus = "ACTIVE" | "INACTIVE"
+
+export interface QuestionTypeDefinitionGroup {
+  id: number
+  name: string
+  description: string | null
+  display_order: number
+  status: QuestionTypeDefinitionGroupStatus
+  created_at: string
+  updated_at?: string
+}
+
+export interface QuestionTypeDefinitionGroupDetail extends QuestionTypeDefinitionGroup {
+  definitions: QuestionTypeDefinition[]
+}
+
+export interface QuestionTypeDefinitionGroupCreatePayload {
+  name: string
+  description?: string | null
+  display_order?: number
+  status?: QuestionTypeDefinitionGroupStatus
+}
+
+export type QuestionTypeDefinitionGroupUpdatePayload =
+  Partial<QuestionTypeDefinitionGroupCreatePayload>
+
+export interface QuestionTypeDefinitionGroupsListParams {
+  status?: QuestionTypeDefinitionGroupStatus
+  limit?: number
+  offset?: number
+}
+
+export interface QuestionTypeDefinitionGroupsListResult {
+  groups: QuestionTypeDefinitionGroup[]
   total_count: number
   limit: number
   offset: number

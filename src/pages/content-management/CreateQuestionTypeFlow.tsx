@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { ArrowLeft, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "../../components/ui/button"
 import { Card } from "../../components/ui/card"
@@ -21,9 +21,12 @@ import type {
 import {
   buildCreatePayload,
   buildValidateKindsPayload,
+  seedSchemasFromKindsIfEmpty,
   validateDefinitionBasic,
   validateDefinitionKinds,
   validateDefinitionSchemas,
+  validateDefinitionThroughStep,
+  areDefinitionDraftsEqual,
   type FieldErrorMap,
 } from "./lib/questionTypeDefinitionValidation"
 import { defaultLabelForKind } from "../../lib/schemaSlotLabel"
@@ -32,16 +35,14 @@ import { QuestionTypeConfigStep } from "./components/question-type-steps/Questio
 import { QuestionTypeValidatePreviewStep } from "./components/question-type-steps/QuestionTypeValidatePreviewStep"
 import { QuestionTypeReviewPublishStep } from "./components/question-type-steps/QuestionTypeReviewPublishStep"
 import {
-  isNoInputComponentKind,
   mergeCatalogWithNoInput,
-  noInputSchemaRow,
-  sideIsNoInputOnly,
 } from "../../lib/questionComponentKinds"
 
-const initialDraft = (): QuestionTypeDefinitionCreatePayload => ({
+const initialDraft = (presetGroupId?: number | null): QuestionTypeDefinitionCreatePayload => ({
   key: "",
   display_name: "",
   description: "",
+  group_ids: presetGroupId ? [presetGroupId] : null,
   status: "ACTIVE",
   stimulus_component_kinds: [],
   response_component_kinds: [],
@@ -49,20 +50,12 @@ const initialDraft = (): QuestionTypeDefinitionCreatePayload => ({
   response_schema: [],
 })
 
-function seedSchemaFromKinds(kinds: string[]) {
-  return kinds.map((k, i) => ({
-    id: `${(k || "field").toLowerCase().replace(/[^a-z0-9]+/g, "_") || "field"}_${i + 1}`,
-    kind: k,
-    label: defaultLabelForKind(k),
-    required: true as boolean,
-  }))
-}
-
 function definitionToDraft(def: QuestionTypeDefinition): QuestionTypeDefinitionCreatePayload {
   return {
     key: def.key,
     display_name: def.display_name,
     description: def.description ?? "",
+    group_ids: def.group_ids ?? null,
     status: def.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
     stimulus_component_kinds: [...(def.stimulus_component_kinds ?? [])],
     response_component_kinds: [...(def.response_component_kinds ?? [])],
@@ -79,6 +72,13 @@ function definitionToDraft(def: QuestionTypeDefinition): QuestionTypeDefinitionC
 
 export function CreateQuestionTypeFlow() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const presetGroupId = useMemo(() => {
+    const raw = searchParams.get("groupId")
+    if (!raw || !/^\d+$/.test(raw)) return null
+    const n = Number(raw)
+    return Number.isFinite(n) && n > 0 ? n : null
+  }, [searchParams])
   const { definitionId: definitionIdParam } = useParams<{ definitionId?: string }>()
   const editDefinitionId = useMemo(() => {
     if (!definitionIdParam || !/^\d+$/.test(definitionIdParam)) return null
@@ -88,7 +88,9 @@ export function CreateQuestionTypeFlow() {
   const isEdit = editDefinitionId != null
 
   const [currentStep, setCurrentStep] = useState(1)
-  const [draft, setDraft] = useState<QuestionTypeDefinitionCreatePayload>(initialDraft)
+  const [draft, setDraft] = useState<QuestionTypeDefinitionCreatePayload>(() =>
+    initialDraft(presetGroupId),
+  )
   const [stepErrors, setStepErrors] = useState<FieldErrorMap>({})
   const [definitionReady, setDefinitionReady] = useState(!isEdit)
   const [isSystemDefinition, setIsSystemDefinition] = useState(false)
@@ -99,6 +101,13 @@ export function CreateQuestionTypeFlow() {
   })
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [savedDraft, setSavedDraft] = useState<QuestionTypeDefinitionCreatePayload | null>(null)
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!isEdit || savedDraft == null) return false
+    return !areDefinitionDraftsEqual(draft, savedDraft)
+  }, [isEdit, draft, savedDraft])
 
   useEffect(() => {
     let cancelled = false
@@ -147,7 +156,9 @@ export function CreateQuestionTypeFlow() {
           navigate("/new-content/question-types")
           return
         }
-        setDraft(definitionToDraft(def))
+        const loaded = definitionToDraft(def)
+        setDraft(loaded)
+        setSavedDraft(loaded)
         setIsSystemDefinition(Boolean(def.is_system))
         setCurrentStep(1)
         setStepErrors({})
@@ -168,12 +179,13 @@ export function CreateQuestionTypeFlow() {
 
   useEffect(() => {
     if (!isEdit) {
-      setDraft(initialDraft())
+      setDraft(initialDraft(presetGroupId))
+      setSavedDraft(null)
       setCurrentStep(1)
       setStepErrors({})
       setDefinitionReady(true)
     }
-  }, [isEdit])
+  }, [isEdit, presetGroupId])
 
   const catalogForSchemaValidation = {
     stimulus: new Set(mergeCatalogWithNoInput(componentCatalog.stimulus_component_kinds)),
@@ -208,29 +220,7 @@ export function CreateQuestionTypeFlow() {
       return
     }
 
-    const nextDraft: QuestionTypeDefinitionCreatePayload = { ...draft }
-    if (
-      !nextDraft.stimulus_schema.length &&
-      sideIsNoInputOnly(nextDraft.stimulus_component_kinds)
-    ) {
-      nextDraft.stimulus_schema = [noInputSchemaRow()]
-    } else if (
-      !nextDraft.stimulus_schema.length &&
-      nextDraft.stimulus_component_kinds.length
-    ) {
-      nextDraft.stimulus_schema = seedSchemaFromKinds(nextDraft.stimulus_component_kinds)
-    }
-    if (
-      !nextDraft.response_schema.length &&
-      sideIsNoInputOnly(nextDraft.response_component_kinds)
-    ) {
-      nextDraft.response_schema = [noInputSchemaRow()]
-    } else if (
-      !nextDraft.response_schema.length &&
-      nextDraft.response_component_kinds.length
-    ) {
-      nextDraft.response_schema = seedSchemaFromKinds(nextDraft.response_component_kinds)
-    }
+    const nextDraft = seedSchemasFromKindsIfEmpty(draft)
     setDraft(nextDraft)
 
     const mergedSchema = validateDefinitionSchemas(nextDraft, catalogForSchemaValidation)
@@ -247,7 +237,58 @@ export function CreateQuestionTypeFlow() {
 
   const handleBack = () => setCurrentStep((prev) => Math.max(prev - 1, 1))
 
+  const handleSaveEdit = async () => {
+    if (!isEdit || editDefinitionId == null || !hasUnsavedChanges) return
+
+    const prepared = currentStep >= 2 ? seedSchemasFromKindsIfEmpty(draft) : draft
+
+    const errors = validateDefinitionThroughStep(
+      currentStep,
+      prepared,
+      componentCatalog,
+      catalogForSchemaValidation,
+    )
+    setStepErrors(errors)
+    if (Object.keys(errors).length) {
+      toast.error("Fix the highlighted fields before saving.")
+      return
+    }
+    setStepErrors({})
+
+    const body = buildCreatePayload(prepared)
+    setSaving(true)
+    try {
+      if (currentStep >= 2) {
+        const validation = await validateQuestionTypeDefinition(buildValidateKindsPayload(prepared))
+        if (!validation.valid) {
+          toast.error(validation.message || "Invalid question type definition", {
+            description: validation.error ? String(validation.error) : undefined,
+          })
+          return
+        }
+      }
+
+      const res = await updateQuestionTypeDefinition(editDefinitionId, body)
+      const id = extractDefinitionMutationId(res) ?? editDefinitionId
+      toast.success(res.data?.message || "Question type definition updated", {
+        description: `Definition id: ${id}`,
+      })
+      navigate(`/new-content/question-types?updated=${id}`)
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string; error?: string } } }
+      toast.error(String(err.response?.data?.message || "Save failed"), {
+        description: err.response?.data?.error ? String(err.response.data.error) : undefined,
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleHeaderSaveDraft = async () => {
+    if (isEdit) {
+      await handleSaveEdit()
+      return
+    }
     setDraft((d) => ({ ...d, status: "INACTIVE" }))
     if (currentStep < 4) {
       toast.message("Status set to Inactive", {
@@ -338,9 +379,19 @@ export function CreateQuestionTypeFlow() {
               </Button>
               <Button
                 className="h-10 px-8 rounded-[6px] bg-[#9E2891] font-medium text-white shadow-lg shadow-brand-500/10 hover:bg-[#8A237E] transition-all"
-                onClick={handleHeaderSaveDraft}
+                onClick={() => void handleHeaderSaveDraft()}
+                disabled={saving || (isEdit && !hasUnsavedChanges)}
               >
-                Save as Draft
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving…
+                  </>
+                ) : isEdit ? (
+                  "Save changes"
+                ) : (
+                  "Save as Draft"
+                )}
               </Button>
             </div>
           </div>
@@ -359,6 +410,7 @@ export function CreateQuestionTypeFlow() {
             errors={stepErrors}
             keyReadOnly={isEdit}
             onNext={handleNextFromStep1}
+            saving={saving}
           />
         )}
         {currentStep === 2 && (
@@ -372,10 +424,16 @@ export function CreateQuestionTypeFlow() {
             errors={stepErrors}
             onNext={handleNextFromStep2}
             onBack={handleBack}
+            saving={saving}
           />
         )}
         {currentStep === 3 && (
-          <QuestionTypeValidatePreviewStep draft={draft} onNext={() => setCurrentStep(4)} onBack={handleBack} />
+          <QuestionTypeValidatePreviewStep
+            draft={draft}
+            onNext={() => setCurrentStep(4)}
+            onBack={handleBack}
+            saving={saving}
+          />
         )}
         {currentStep === 4 && (
           <QuestionTypeReviewPublishStep
@@ -383,6 +441,7 @@ export function CreateQuestionTypeFlow() {
             onBack={handleBack}
             editDefinitionId={editDefinitionId}
             isSystem={isSystemDefinition}
+            saveDisabled={isEdit && !hasUnsavedChanges}
           />
         )}
       </div>

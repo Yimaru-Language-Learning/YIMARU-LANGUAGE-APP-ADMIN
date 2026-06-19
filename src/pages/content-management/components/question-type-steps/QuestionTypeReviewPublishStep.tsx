@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -10,6 +10,7 @@ import {
   updateQuestionTypeDefinition,
   validateQuestionTypeDefinition,
 } from "../../../../api/questionTypeDefinitions.api"
+import { getQuestionTypeDefinitionGroups } from "../../../../api/questionTypeDefinitionGroups.api"
 import type { QuestionTypeDefinitionCreatePayload } from "../../../../types/questionTypeDefinition.types"
 import {
   buildCreatePayload,
@@ -17,6 +18,7 @@ import {
   inferRuntimeQuestionType,
 } from "../../lib/questionTypeDefinitionValidation"
 import { slotLabel } from "./componentKindUi"
+import { questionTypeGroupLabels } from "../../../../lib/questionTypeGroupIds"
 
 interface QuestionTypeReviewPublishStepProps {
   draft: QuestionTypeDefinitionCreatePayload
@@ -24,6 +26,7 @@ interface QuestionTypeReviewPublishStepProps {
   /** When set, saves via PUT /questions/type-definitions/:id */
   editDefinitionId?: number | null
   isSystem?: boolean
+  saveDisabled?: boolean
 }
 
 export function QuestionTypeReviewPublishStep({
@@ -31,15 +34,32 @@ export function QuestionTypeReviewPublishStep({
   onBack,
   editDefinitionId,
   isSystem,
+  saveDisabled = false,
 }: QuestionTypeReviewPublishStepProps) {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
+  const [groupName, setGroupName] = useState<string>("")
   const isEdit = editDefinitionId != null && editDefinitionId > 0
 
   const payload = buildCreatePayload(draft)
   const runtime = inferRuntimeQuestionType(payload.key, payload.response_component_kinds)
 
+  useEffect(() => {
+    if (!payload.group_ids?.length) {
+      setGroupName("Ungrouped")
+      return
+    }
+    getQuestionTypeDefinitionGroups()
+      .then((res) => {
+        setGroupName(questionTypeGroupLabels(payload.group_ids, res.groups))
+      })
+      .catch(() => {
+        setGroupName(payload.group_ids!.map((id) => `Group #${id}`).join(", "))
+      })
+  }, [payload.group_ids])
+
   const submit = async (status: "ACTIVE" | "INACTIVE") => {
+    if (isEdit && saveDisabled) return
     const body = { ...payload, status }
     setSubmitting(true)
     try {
@@ -118,6 +138,10 @@ export function QuestionTypeReviewPublishStep({
               <dd className="font-medium text-grayScale-800 mt-1">{payload.description || "—"}</dd>
             </div>
             <div>
+              <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Groups</dt>
+              <dd className="font-medium text-grayScale-900 mt-1">{groupName || "—"}</dd>
+            </div>
+            <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Status</dt>
               <dd className="font-medium text-grayScale-900 mt-1">{draft.status}</dd>
             </div>
@@ -145,7 +169,7 @@ export function QuestionTypeReviewPublishStep({
               type="button"
               variant="outline"
               className="h-11"
-              disabled={submitting}
+              disabled={submitting || (isEdit && saveDisabled)}
               onClick={() => void submit("INACTIVE")}
             >
               {submitting ? (
@@ -159,7 +183,7 @@ export function QuestionTypeReviewPublishStep({
             <Button
               type="button"
               className="h-11 bg-[#9E2891] hover:bg-[#8A237E] text-white"
-              disabled={submitting}
+              disabled={submitting || (isEdit && saveDisabled)}
               onClick={() => void submit("ACTIVE")}
             >
               {submitting ? (

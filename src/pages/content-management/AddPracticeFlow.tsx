@@ -19,6 +19,12 @@ import {
   validateLearnEnglishQuestionsWithDefinitions,
 } from "../../lib/learnEnglishPracticePublish";
 import { executePracticeCreation } from "../../lib/practiceCreationOrchestrator";
+import {
+  buildCreatePracticeParentsPayload,
+  dedupeParents,
+  formatPracticeParentsSummary,
+  validatePracticeParents,
+} from "../../lib/practiceParents";
 
 import { ContextStep } from "./components/practice-steps/ContextStep";
 import { ScenarioStep } from "./components/practice-steps/ScenarioStep";
@@ -41,19 +47,25 @@ export function AddPracticeFlow() {
     courseId: routeCourseId,
     unitId: routeUnitId,
     moduleId: routeModuleId,
+    definitionId: routeDefinitionId,
   } = useParams<{
     level?: string;
     programType?: string;
     courseId?: string;
     unitId?: string;
     moduleId?: string;
+    definitionId?: string;
   }>();
   const [searchParams] = useSearchParams();
   const backToParam = searchParams.get("backTo");
   const lessonId = searchParams.get("lessonId");
   const lessonTitleRaw = searchParams.get("lessonTitle");
 
-  const isExamPrep = Boolean(programType?.trim());
+  const seedDefinitionId = routeDefinitionId ? Number(routeDefinitionId) : NaN;
+  const isFromQuestionType =
+    Number.isFinite(seedDefinitionId) && seedDefinitionId > 0;
+
+  const isExamPrep = Boolean(programType?.trim()) && !isFromQuestionType;
 
   const effectiveBackTo = useMemo(() => {
     if (backToParam?.trim()) return backToParam.trim();
@@ -128,8 +140,9 @@ export function AddPracticeFlow() {
       ? `Program ${level}`
       : null;
 
-  const backLabel =
-    effectiveBackTo === "module"
+  const backLabel = isFromQuestionType
+    ? "Back to Question Types"
+    : effectiveBackTo === "module"
       ? "Back to Module"
       : effectiveBackTo === "modules"
         ? "Back to Modules"
@@ -140,6 +153,7 @@ export function AddPracticeFlow() {
             : "Back to Courses";
 
   const backPath = useMemo(() => {
+    if (isFromQuestionType) return "/new-content/question-types";
     if (isExamPrep) {
       if (
         effectiveBackTo === "module" &&
@@ -173,6 +187,7 @@ export function AddPracticeFlow() {
     unitId,
     moduleId,
     level,
+    isFromQuestionType,
   ]);
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -193,10 +208,15 @@ export function AddPracticeFlow() {
     storyImageUrl: "",
     shuffleQuestions: false,
     tips: "",
+    parents: [] as { parent_kind: PracticeParentKind; parent_id: number }[],
     questions: [
       {
         id: "q1",
         displayOrder: 1,
+        serverQuestionId: null as number | null,
+        associatedQuestionId: null as number | null,
+        associatedAnchorRowId: null as string | null,
+        prerequisiteQuestionIds: [] as number[],
         questionTypeDefinitionId: null as number | null,
         text: "",
         difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
@@ -251,7 +271,9 @@ export function AddPracticeFlow() {
       ...fd,
       questions: fd.questions.map((q) => {
         if (q.questionTypeDefinitionId != null) return q;
-        const def = typeDefinitions[0];
+        const def = isFromQuestionType
+          ? typeDefinitions.find((d) => d.id === seedDefinitionId) ?? typeDefinitions[0]
+          : typeDefinitions[0];
         return {
           ...q,
           questionTypeDefinitionId: def.id,
@@ -259,16 +281,58 @@ export function AddPracticeFlow() {
         };
       }),
     }));
-  }, [typeDefinitions]);
+  }, [typeDefinitions, isFromQuestionType, seedDefinitionId]);
+
+  useEffect(() => {
+    if (!isFromQuestionType || typeDefinitions.length === 0) return;
+    const def = typeDefinitions.find((d) => d.id === seedDefinitionId);
+    if (!def) return;
+    setFormData((fd) => ({
+      ...fd,
+      questions: fd.questions.map((q, index) =>
+        index === 0
+          ? {
+              ...q,
+              questionTypeDefinitionId: def.id,
+              dynamicFieldValues: emptyDynamicFieldValuesForDefinition(def),
+            }
+          : q,
+      ),
+    }));
+  }, [isFromQuestionType, seedDefinitionId, typeDefinitions]);
+
+  useEffect(() => {
+    if (!parentContext || isExamPrep) return;
+    setFormData((fd) => {
+      const seeded = dedupeParents([
+        { parent_kind: parentContext.kind, parent_id: parentContext.id },
+        ...(fd.parents ?? []),
+      ]);
+      return { ...fd, parents: seeded };
+    });
+  }, [parentContext, isExamPrep]);
 
   const submitPractice = async (status: "DRAFT" | "PUBLISHED") => {
-    if (!parentContext) {
+    if (!parentContext && !isExamPrep && !isFromQuestionType) {
       toast.error("Missing practice parent", {
         description:
-          "Open this screen from a course, module, or lesson so the API receives parent_kind and parent_id.",
+          "Open this screen from a course, module, or lesson so the API receives at least one parent location.",
       });
       return;
     }
+    const parents = dedupeParents(
+      isExamPrep && parentContext
+        ? [{ parent_kind: parentContext.kind, parent_id: parentContext.id }]
+        : formData.parents,
+    );
+    const parentsErr = validatePracticeParents(parents, {
+      required: !isFromQuestionType,
+    });
+    if (parentsErr) {
+      toast.error("Check practice locations", { description: parentsErr });
+      return;
+    }
+    const createParents = buildCreatePracticeParentsPayload(parents);
     if (
       !isLearnEnglishLessonPractice &&
       (!formData.title.trim() || !formData.description.trim())
@@ -293,6 +357,7 @@ export function AddPracticeFlow() {
     }
     const persona = personaFromId(selectedPersona, personas);
     const mappedQuestions = formData.questions.map((q, index) => ({
+        clientRowId: q.id,
         questionText: String(q.text ?? "").trim(),
         questionTypeDefinitionId: Number(q.questionTypeDefinitionId),
         difficultyLevel: (q.difficultyLevel ?? "EASY") as
@@ -304,6 +369,8 @@ export function AddPracticeFlow() {
           Number.isFinite(Number(q.displayOrder)) && Number(q.displayOrder) > 0
             ? Number(q.displayOrder)
             : index + 1,
+        associatedQuestionId: q.associatedQuestionId ?? null,
+        associatedAnchorRowId: q.associatedAnchorRowId ?? null,
         dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
         mcqOptions: (q.mcqOptions ?? []).map(
           (o: { text?: string; isCorrect?: boolean }) => ({
@@ -331,15 +398,17 @@ export function AddPracticeFlow() {
     const useExamPrepLessonApi =
       isExamPrep &&
       isLessonPractice &&
-      parentContext.kind === "LESSON" &&
+      parentContext?.kind === "LESSON" &&
+      parentContext != null &&
       Number.isFinite(parentContext.id);
 
     setSubmitting(true);
     try {
       await executePracticeCreation({
-        parentKind: parentContext.kind,
-        parentId: parentContext.id,
-        examPrepLessonId: useExamPrepLessonApi ? parentContext.id : undefined,
+        parents: createParents,
+        parentKind: parentContext?.kind,
+        parentId: parentContext?.id,
+        examPrepLessonId: useExamPrepLessonApi ? parentContext!.id : undefined,
         status,
         questionSetTitle: isLearnEnglishLessonPractice
           ? lessonDefaultTitle
@@ -393,9 +462,13 @@ export function AddPracticeFlow() {
           Practice Published Successfully!
         </h1>
         <p className="text-grayScale-600 text-md mb-14 max-w-lg font-medium leading-relaxed">
-          {lessonId
-            ? "Your speaking practice is saved and linked to this lesson’s question set."
-            : "Your speaking practice is saved for the linked course or module."}
+          {isFromQuestionType
+            ? dedupeParents(formData.parents).length > 0
+              ? "Your practice is saved with the selected locations. You can edit questions or attach more locations anytime."
+              : "Your practice is saved as a draft shell. Attach it to courses, modules, or lessons when you are ready."
+            : lessonId
+              ? "Your speaking practice is saved and linked to this lesson’s question set."
+              : "Your speaking practice is saved for the linked course or module."}
         </p>
         <div className="flex flex-col gap-4 w-full max-w-[400px]">
           <Button
@@ -419,6 +492,10 @@ export function AddPracticeFlow() {
                   {
                     id: "q1",
                     displayOrder: 1,
+                    serverQuestionId: null as number | null,
+                    associatedQuestionId: null as number | null,
+                    associatedAnchorRowId: null as string | null,
+                    prerequisiteQuestionIds: [] as number[],
                     questionTypeDefinitionId:
                       typeDefinitions[0]?.id ?? (null as number | null),
                     text: "",
@@ -449,8 +526,20 @@ export function AddPracticeFlow() {
     );
   }
 
+  const useLearnEnglishContextStep =
+    (Boolean(parentContext) && !isExamPrep) || isFromQuestionType;
+
+  const reviewParentSummary =
+    formData.parents.length > 0
+      ? formatPracticeParentsSummary(formData.parents)
+      : isFromQuestionType
+        ? formatPracticeParentsSummary([])
+        : parentSummary;
+
+  const seededQuestionType = typeDefinitions.find((d) => d.id === seedDefinitionId);
+
   const renderStep = () => {
-    if (isModuleContext) {
+    if (useLearnEnglishContextStep) {
       switch (currentStep) {
         case 1:
           return (
@@ -503,9 +592,14 @@ export function AddPracticeFlow() {
               prevStep={prevStep}
               onEditContext={() => setCurrentStep(1)}
               onEditQuestions={() => setCurrentStep(3)}
-              parentSummary={parentSummary}
+              parentSummary={reviewParentSummary}
               typeDefinitions={typeDefinitions}
-              canPublish={parentContext !== null}
+              canPublish={
+                isFromQuestionType ||
+                formData.parents.length > 0 ||
+                parentContext !== null
+              }
+              allowUnlinkedParents={isFromQuestionType}
               submitting={submitting}
               onSaveDraft={() => void submitPractice("DRAFT")}
               onPublish={() => void submitPractice("PUBLISHED")}
@@ -594,7 +688,7 @@ export function AddPracticeFlow() {
         <div className=" mb-10">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-[#0F172A]">
-              Add New Practice
+              {isFromQuestionType ? "Create Practice from Question Type" : "Add New Practice"}
             </h1>
             <Button
               variant="outline"
@@ -605,8 +699,20 @@ export function AddPracticeFlow() {
             </Button>
           </div>
           <p className="text-grayScale-400 text-base">
-            Create a practice with story details, a persona, and questions from your question type library.
+            {isFromQuestionType
+              ? `Build a practice using ${seededQuestionType?.display_name ?? "the selected question type"}. Locations are optional — attach courses, modules, or lessons later.`
+              : "Create a practice with story details, a persona, and questions from your question type library."}
           </p>
+          {isFromQuestionType && seededQuestionType ? (
+            <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950">
+              <p className="font-semibold text-violet-900">Question type</p>
+              <p className="mt-1 text-violet-800/90">
+                <span className="font-medium">{seededQuestionType.display_name}</span>
+                <span className="mx-1.5 text-violet-400">·</span>
+                <span className="font-mono text-xs">#{seededQuestionType.id}</span>
+              </p>
+            </div>
+          ) : null}
           {lessonId ? (
             <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950">
               <p className="font-semibold text-violet-900">Lesson practice</p>

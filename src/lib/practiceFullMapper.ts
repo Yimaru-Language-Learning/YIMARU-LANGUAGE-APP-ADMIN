@@ -4,6 +4,7 @@ import type {
   PracticeFullPractice,
   PracticeFullQuestionItem,
   PracticeFullQuestionSet,
+  PracticeParent,
   PracticePublishStatus,
   QuestionOption,
   QuestionShortAnswer,
@@ -24,12 +25,20 @@ import {
   type LearnEnglishDefinitionQuestionInput,
 } from "./learnEnglishDefinitionQuestion"
 import { serializeMultipleChoiceSlotValue } from "./multipleChoiceSlotValue"
+import { normalizePracticeParents, parentsFromPractice } from "./practiceParents"
 import { validatePracticeQuestionsWithDefinitions } from "./practiceCreationOrchestrator"
+import {
+  resolveAssociatedQuestionId,
+  validateQuestionAssociations,
+} from "./questionAssociations"
 
 export interface PracticeFormQuestionRow {
   id: string
   serverQuestionId?: number | null
   displayOrder: number
+  associatedQuestionId: number | null
+  associatedAnchorRowId: string | null
+  prerequisiteQuestionIds?: number[]
   questionTypeDefinitionId: number | null
   text: string
   difficultyLevel: "EASY" | "MEDIUM" | "HARD"
@@ -46,6 +55,7 @@ export interface PracticeFormState {
   storyImageUrl: string
   shuffleQuestions: boolean
   tips: string
+  parents: PracticeParent[]
   questions: PracticeFormQuestionRow[]
 }
 
@@ -197,6 +207,19 @@ export function normalizePracticeFullQuestion(
   return {
     ...(id != null ? { id } : {}),
     display_order: displayOrder,
+    associated_question_id:
+      record.associated_question_id != null
+        ? Number(record.associated_question_id)
+        : record.AssociatedQuestionId != null
+          ? Number(record.AssociatedQuestionId)
+          : null,
+    prerequisite_question_ids: Array.isArray(record.prerequisite_question_ids)
+      ? record.prerequisite_question_ids.map((v) => Number(v)).filter((n) => Number.isFinite(n))
+      : Array.isArray(record.PrerequisiteQuestionIds)
+        ? record.PrerequisiteQuestionIds.map((v) => Number(v)).filter((n) =>
+            Number.isFinite(n),
+          )
+        : undefined,
     question_text: pickStr(record, "question_text", "QuestionText", "questionText") || undefined,
     question_type: questionType,
     question_type_definition_id:
@@ -283,6 +306,12 @@ function normalizePracticeFullPractice(raw: unknown): PracticeFullPractice | nul
     "questionSetId",
   )
   if (id == null || questionSetId == null) return null
+  const parents = parentsFromPractice({
+    parents: normalizePracticeParents(record),
+    parent_kind: pickStr(record, "parent_kind", "ParentKind", "parentKind") || undefined,
+    parent_id: pickNum(record, "parent_id", "ParentId", "parentId") ?? undefined,
+  })
+  const lessonParent = parents.find((p) => p.parent_kind === "LESSON")
   return {
     id,
     title: pickStr(record, "title", "Title"),
@@ -296,9 +325,13 @@ function normalizePracticeFullPractice(raw: unknown): PracticeFullPractice | nul
     publish_status:
       pickStr(record, "publish_status", "PublishStatus", "publishStatus") || null,
     quick_tips: pickStr(record, "quick_tips", "QuickTips", "quickTips") || undefined,
-    lesson_id: pickNum(record, "lesson_id", "LessonId", "lessonId") ?? undefined,
-    parent_kind: pickStr(record, "parent_kind", "ParentKind", "parentKind") || undefined,
-    parent_id: pickNum(record, "parent_id", "ParentId", "parentId") ?? undefined,
+    parents,
+    lesson_id:
+      lessonParent?.parent_id ??
+      pickNum(record, "lesson_id", "LessonId", "lessonId") ??
+      undefined,
+    parent_kind: parents[0]?.parent_kind,
+    parent_id: parents[0]?.parent_id,
     created_at: pickStr(record, "created_at", "CreatedAt", "createdAt") || undefined,
   }
 }
@@ -495,6 +528,9 @@ function mapFullQuestionToFormRow(
     id: q.id != null ? `existing-${q.id}` : `q-${q.display_order}`,
     serverQuestionId: q.id ?? null,
     displayOrder: q.display_order,
+    associatedQuestionId: q.associated_question_id ?? null,
+    associatedAnchorRowId: null,
+    prerequisiteQuestionIds: q.prerequisite_question_ids,
     questionTypeDefinitionId: defId,
     text,
     difficultyLevel,
@@ -515,6 +551,7 @@ export function mapPracticeFullToFormState(
   formData: PracticeFormState
   personaId: number | null
   preservedQuestionSet: PreservedQuestionSetFields
+  parents: PracticeParent[]
 } {
   const { practice, question_set, questions } = data
   const sorted = [...questions].sort(
@@ -529,6 +566,8 @@ export function mapPracticeFullToFormState(
             id: "q1",
             displayOrder: 1,
             serverQuestionId: null,
+            associatedQuestionId: null,
+            associatedAnchorRowId: null,
             questionTypeDefinitionId: typeDefinitions[0]?.id ?? null,
             text: "",
             difficultyLevel: "EASY" as const,
@@ -552,6 +591,7 @@ export function mapPracticeFullToFormState(
       storyImageUrl: practice.story_image?.trim() || "",
       shuffleQuestions: Boolean(question_set.shuffle_questions),
       tips: practice.quick_tips?.trim() || "",
+      parents: parentsFromPractice(practice),
       questions: formQuestions,
     },
     personaId:
@@ -567,6 +607,7 @@ export function mapPracticeFullToFormState(
           ? "DRAFT"
           : "PUBLISHED",
     },
+    parents: parentsFromPractice(practice),
   }
 }
 
@@ -579,10 +620,12 @@ function buildFullUpdateQuestion(
   q: PracticeEditQuestionInput,
   status: PracticePublishStatus,
   displayOrder: number,
+  associatedQuestionId: number | null,
 ): PracticeFullQuestionItem {
   const created = buildCreateQuestionFromDefinition(def, q, status)
   const item: PracticeFullQuestionItem = {
     display_order: displayOrder,
+    associated_question_id: associatedQuestionId,
     question_type: created.question_type,
     difficulty_level: created.difficulty_level,
     points: created.points,
@@ -663,14 +706,37 @@ export function buildPracticeFullUpdateRequest(
     })
     .sort((a, b) => a.sortOrder - b.sortOrder)
 
+  const associationRows = toUpdate.map(({ q, sortOrder }) => ({
+    id: q.clientRowId ?? `update-${sortOrder}`,
+    serverQuestionId: q.serverQuestionId ?? null,
+    displayOrder: sortOrder,
+    associatedQuestionId: q.associatedQuestionId ?? null,
+    associatedAnchorRowId: q.associatedAnchorRowId ?? null,
+  }))
+  const associationErr = validateQuestionAssociations(associationRows)
+  if (associationErr) throw new Error(associationErr)
+
   let displayOrder = 0
   const questions: PracticeFullQuestionItem[] = []
-  for (const { q } of toUpdate) {
+  for (const { q, sortOrder } of toUpdate) {
     const def = byId.get(q.questionTypeDefinitionId)
     if (!def) continue
     displayOrder += 1
+    const associationRow = {
+      id: q.clientRowId ?? `update-${sortOrder}`,
+      serverQuestionId: q.serverQuestionId ?? null,
+      displayOrder: sortOrder,
+      associatedQuestionId: q.associatedQuestionId ?? null,
+      associatedAnchorRowId: q.associatedAnchorRowId ?? null,
+    }
     questions.push(
-      buildFullUpdateQuestion(def, q, opts.status, displayOrder),
+      buildFullUpdateQuestion(
+        def,
+        q,
+        opts.status,
+        displayOrder,
+        resolveAssociatedQuestionId(associationRow, associationRows),
+      ),
     )
   }
 

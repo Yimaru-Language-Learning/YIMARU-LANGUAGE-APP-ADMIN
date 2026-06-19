@@ -4,10 +4,14 @@ import type {
   QuestionComponentCatalog,
   QuestionTypeDefinition,
   QuestionTypeDefinitionCreatePayload,
+  QuestionTypeDefinitionPractice,
+  QuestionTypeDefinitionPracticesParams,
+  QuestionTypeDefinitionPracticesResult,
   QuestionTypeDefinitionUpdatePayload,
   QuestionTypeDefinitionValidatePayload,
   ValidateQuestionTypeDefinitionResult,
 } from "../types/questionTypeDefinition.types"
+import { normalizePracticeParents, parentsFromPractice } from "../lib/practiceParents"
 
 interface ApiEnvelope<T> {
   message?: string
@@ -407,4 +411,173 @@ export async function updateQuestionTypeDefinition(
 
 export async function deleteQuestionTypeDefinition(id: number) {
   return http.delete<ApiEnvelope<unknown>>(`/questions/type-definitions/${id}`)
+}
+
+function normalizePracticeFromApi(row: unknown): QuestionTypeDefinitionPractice | null {
+  if (!row || typeof row !== "object") return null
+  const o = row as Record<string, unknown>
+  const practice_id = Number(o.practice_id ?? o.PracticeId ?? o.practiceId ?? o.id ?? o.ID)
+  const question_set_id = Number(o.question_set_id ?? o.QuestionSetId ?? o.questionSetId)
+  if (!Number.isFinite(practice_id) || practice_id <= 0) return null
+  if (!Number.isFinite(question_set_id) || question_set_id <= 0) return null
+
+  const matching_question_count = Number(
+    o.matching_question_count ?? o.MatchingQuestionCount ?? o.matchingQuestionCount ?? 0,
+  )
+  const parentObj =
+    o.parent != null && typeof o.parent === "object" && !Array.isArray(o.parent)
+      ? (o.parent as Record<string, unknown>)
+      : o.Parent != null && typeof o.Parent === "object" && !Array.isArray(o.Parent)
+        ? (o.Parent as Record<string, unknown>)
+        : null
+
+  const parent_idRaw =
+    o.parent_id ??
+    o.ParentId ??
+    o.parentId ??
+    parentObj?.id ??
+    parentObj?.Id ??
+    parentObj?.ID
+  const parent_id =
+    parent_idRaw != null && Number.isFinite(Number(parent_idRaw)) ? Number(parent_idRaw) : undefined
+
+  const parent_kind =
+    asStr(o.parent_kind ?? o.ParentKind ?? o.parentKind) ||
+    (parentObj ? asStr(parentObj.kind ?? parentObj.Kind) : "") ||
+    undefined
+
+  const program_id = Number(o.program_id ?? o.ProgramId ?? o.programId)
+  const course_id = Number(o.course_id ?? o.CourseId ?? o.courseId)
+  const module_id = Number(o.module_id ?? o.ModuleId ?? o.moduleId)
+  const lesson_id = Number(o.lesson_id ?? o.LessonId ?? o.lessonId)
+  const parents = parentsFromPractice({
+    parents: normalizePracticeParents(row),
+    parent_kind,
+    parent_id,
+  })
+
+  return {
+    practice_kind: asStr(o.practice_kind ?? o.PracticeKind ?? o.practiceKind ?? "LMS"),
+    practice_id,
+    question_set_id,
+    title: asStr(o.title ?? o.Title) || `Practice #${practice_id}`,
+    story_description:
+      o.story_description != null
+        ? asStr(o.story_description)
+        : o.StoryDescription != null
+          ? asStr(o.StoryDescription)
+          : undefined,
+    story_image:
+      o.story_image != null
+        ? asStr(o.story_image)
+        : o.StoryImage != null
+          ? asStr(o.StoryImage)
+          : undefined,
+    quick_tips:
+      o.quick_tips != null
+        ? asStr(o.quick_tips)
+        : o.QuickTips != null
+          ? asStr(o.QuickTips)
+          : undefined,
+    publish_status: asStr(o.publish_status ?? o.PublishStatus ?? o.publishStatus) || undefined,
+    parents,
+    parent_kind: parents[0]?.parent_kind,
+    parent_id: parents[0]?.parent_id,
+    program_id: Number.isFinite(program_id) && program_id > 0 ? program_id : undefined,
+    course_id: Number.isFinite(course_id) && course_id > 0 ? course_id : undefined,
+    module_id: Number.isFinite(module_id) && module_id > 0 ? module_id : undefined,
+    lesson_id: Number.isFinite(lesson_id) && lesson_id > 0 ? lesson_id : undefined,
+    matching_question_count: Number.isFinite(matching_question_count) ? matching_question_count : 0,
+    created_at:
+      o.created_at != null
+        ? asStr(o.created_at)
+        : o.CreatedAt != null
+          ? asStr(o.CreatedAt)
+          : undefined,
+    updated_at:
+      o.updated_at != null
+        ? asStr(o.updated_at)
+        : o.UpdatedAt != null
+          ? asStr(o.UpdatedAt)
+          : undefined,
+  }
+}
+
+function parsePracticesList(payload: unknown): QuestionTypeDefinitionPractice[] {
+  if (!payload) return []
+  if (Array.isArray(payload)) {
+    return payload
+      .map((item) => normalizePracticeFromApi(item))
+      .filter((x): x is QuestionTypeDefinitionPractice => x != null)
+  }
+  if (typeof payload === "object" && payload !== null) {
+    const o = payload as Record<string, unknown>
+    const inner = o.practices ?? o.Practices
+    if (Array.isArray(inner)) return parsePracticesList(inner)
+    const data = o.data ?? o.Data
+    if (data && typeof data === "object") return parsePracticesList(data)
+  }
+  return []
+}
+
+function parsePracticesPage(
+  payload: unknown,
+  definitionId: number,
+  params?: QuestionTypeDefinitionPracticesParams,
+): QuestionTypeDefinitionPracticesResult {
+  const practices = parsePracticesList(payload)
+  const limit = params?.limit ?? 20
+  const offset = params?.offset ?? 0
+
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return {
+      question_type_definition_id: definitionId,
+      practices,
+      total_count: practices.length,
+      limit,
+      offset,
+    }
+  }
+
+  const o = payload as Record<string, unknown>
+  const data =
+    o.data != null && typeof o.data === "object" && !Array.isArray(o.data)
+      ? (o.data as Record<string, unknown>)
+      : o
+
+  const question_type_definition_id = Number(
+    data.question_type_definition_id ??
+      data.QuestionTypeDefinitionId ??
+      data.questionTypeDefinitionId ??
+      definitionId,
+  )
+  const total_count = parseListTotalCount(data) ?? parseListTotalCount(payload) ?? practices.length
+  const parsedLimit = Number(data.limit ?? data.Limit ?? limit)
+  const parsedOffset = Number(data.offset ?? data.Offset ?? offset)
+
+  return {
+    question_type_definition_id:
+      Number.isFinite(question_type_definition_id) && question_type_definition_id > 0
+        ? question_type_definition_id
+        : definitionId,
+    practices,
+    total_count,
+    limit: Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : limit,
+    offset: Number.isFinite(parsedOffset) && parsedOffset >= 0 ? parsedOffset : offset,
+  }
+}
+
+/**
+ * GET /questions/type-definitions/:id/practices
+ * Lists LMS practices that contain questions using this definition.
+ */
+export async function getQuestionTypeDefinitionPractices(
+  definitionId: number,
+  params?: QuestionTypeDefinitionPracticesParams,
+): Promise<QuestionTypeDefinitionPracticesResult> {
+  const res = await http.get<ApiEnvelope<unknown>>(`/questions/type-definitions/${definitionId}/practices`, {
+    params,
+  })
+  const raw = unwrapApiPayload(res) ?? res.data
+  return parsePracticesPage(raw, definitionId, params)
 }

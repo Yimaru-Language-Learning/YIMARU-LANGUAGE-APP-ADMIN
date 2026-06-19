@@ -216,7 +216,7 @@ export function LoginPage() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden">
+    <div className="relative flex h-dvh overflow-y-auto">
       {/* Decorative left panel */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] items-center justify-center bg-gradient-to-br from-brand-600 via-brand-500 to-brand-400 relative">
         {/* Abstract decorative shapes */}

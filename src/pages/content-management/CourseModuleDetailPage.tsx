@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Plus, FileText, Video } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
+import { PracticeActionButton } from "./components/PracticeActionButton";
+import { PracticeActionChoiceDialog } from "./components/PracticeActionChoiceDialog";
+import {
+  buildPracticeContentPaths,
+  type PracticeContentPathOptions,
+} from "../../lib/practiceContentPaths";
 import { cn } from "../../lib/utils";
 import { Card } from "../../components/ui/card";
 import {
@@ -78,6 +84,25 @@ export function CourseModuleDetailPage() {
   const parsedUnitId = Number(unitId);
 
   const [activeTab, setActiveTab] = useState<"video" | "practice">("video");
+  const [lessonPracticeChoice, setLessonPracticeChoice] =
+    useState<PracticeContentPathOptions | null>(null);
+  const lessonPracticeChoicePaths = useMemo(
+    () =>
+      lessonPracticeChoice
+        ? buildPracticeContentPaths(lessonPracticeChoice)
+        : null,
+    [lessonPracticeChoice],
+  );
+  const modulePracticePathOptions = useMemo(
+    (): PracticeContentPathOptions => ({
+      isExamPrep: true,
+      programType,
+      courseId,
+      unitId,
+      moduleId,
+    }),
+    [programType, courseId, unitId, moduleId],
+  );
   const [moduleTitle, setModuleTitle] = useState("Module");
   const [moduleDescription, setModuleDescription] = useState("—");
   const [modulePublishStatus, setModulePublishStatus] = useState<
@@ -631,9 +656,6 @@ export function CourseModuleDetailPage() {
     }
   };
 
-  const lessonAttachPracticePath = (lesson: (typeof lessons)[number]) =>
-    `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}`;
-
   const lessonPracticesPath = (lesson: (typeof lessons)[number]) =>
     `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/lessons/${lesson.id}/practices?lessonTitle=${encodeURIComponent(lesson.title)}`;
 
@@ -668,18 +690,15 @@ export function CourseModuleDetailPage() {
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <Button
+          <PracticeActionButton
             variant="outline"
             className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2 shadow-sm"
-            onClick={() =>
-              navigate(
-                `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice`,
-              )
-            }
+            pathOptions={modulePracticePathOptions}
+            parentLabel={moduleTitle}
           >
             <FileText className="h-5 w-5" />
             Add Practice
-          </Button>
+          </PracticeActionButton>
           <Dialog
             open={createLessonOpen}
             onOpenChange={(open) => {
@@ -947,7 +966,17 @@ export function CourseModuleDetailPage() {
                   onEdit={() => openEditLesson(lesson)}
                   onDelete={() => setDeletingLessonId(lesson.id)}
                   description={lesson.description}
-                  onAddPractice={() => navigate(lessonAttachPracticePath(lesson))}
+                  onAddPractice={() =>
+                    setLessonPracticeChoice({
+                      isExamPrep: true,
+                      programType,
+                      courseId,
+                      unitId,
+                      moduleId,
+                      lessonId: String(lesson.id),
+                      lessonTitle: lesson.title,
+                    })
+                  }
                   onViewPractices={() => navigate(lessonPracticesPath(lesson))}
                   onTogglePublishStatus={(nextStatus) =>
                     void handleToggleLessonPublishStatus(lesson.id, nextStatus)
@@ -1197,6 +1226,23 @@ export function CourseModuleDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {lessonPracticeChoice && lessonPracticeChoicePaths ? (
+        <PracticeActionChoiceDialog
+          open={lessonPracticeChoice != null}
+          onOpenChange={(open) => {
+            if (!open) setLessonPracticeChoice(null)
+          }}
+          createHref={lessonPracticeChoicePaths.create}
+          attachHref={lessonPracticeChoicePaths.attach}
+          pathOptions={lessonPracticeChoice}
+          parentLabel={
+            lessonPracticeChoice.lessonTitle
+              ? `Lesson — ${lessonPracticeChoice.lessonTitle}`
+              : null
+          }
+        />
+      ) : null}
     </div>
   );
 }

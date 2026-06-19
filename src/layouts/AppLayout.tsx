@@ -60,7 +60,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex h-dvh min-h-screen overflow-hidden bg-grayScale-100">
+    <div className="flex h-dvh overflow-hidden bg-grayScale-100">
       <Sidebar
         isOpen={sidebarOpen}
         isCollapsed={sidebarCollapsed}

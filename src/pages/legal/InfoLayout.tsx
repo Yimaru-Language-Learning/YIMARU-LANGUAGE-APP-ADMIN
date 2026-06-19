@@ -25,7 +25,7 @@ export function InfoLayout({
   const location = useLocation()
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#fefcff] px-4 py-10 sm:px-6">
+    <div className="relative h-dvh overflow-y-auto bg-[#fefcff] px-4 py-10 sm:px-6">
       <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[#f3e8ff]" />
       <div className="pointer-events-none absolute -right-20 top-24 h-64 w-64 rounded-full bg-[#f5ecff]" />
       <div className="mx-auto w-full max-w-5xl rounded-2xl border border-[#eadff7] bg-white px-6 py-6 shadow-[0_20px_60px_rgba(83,33,120,0.08)] sm:px-10 sm:py-8">

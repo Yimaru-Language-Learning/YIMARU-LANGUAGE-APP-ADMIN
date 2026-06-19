@@ -547,8 +547,11 @@ export interface GetTopLevelModuleLessonsResponse {
 /** Practice returned by GET /courses|modules|lessons/.../practices (Learn English parent-linked practice). */
 export interface ParentContextPractice {
   id: number
-  parent_kind: string
-  parent_id: number
+  parents: PracticeParent[] | null
+  /** @deprecated use parents[] */
+  parent_kind?: string
+  /** @deprecated use parents[] */
+  parent_id?: number
   title: string
   story_description: string
   story_image: string
@@ -572,7 +575,23 @@ export interface GetPracticesByParentContextResponse {
   metadata: unknown | null
 }
 
+/** GET /practices — paginated list of all Learn English practices. */
+export type GetPracticesListResponse = GetPracticesByParentContextResponse
+
+export interface GetPracticesListParams {
+  limit?: number
+  offset?: number
+  search?: string
+  /** `true` → `parents: null` only; `false` → practices with parent links. */
+  unlinked_only?: boolean
+}
+
 export type PracticeParentKind = "COURSE" | "MODULE" | "LESSON"
+
+export interface PracticeParent {
+  parent_kind: PracticeParentKind
+  parent_id: number
+}
 
 export type PracticePublishStatus = "DRAFT" | "PUBLISHED"
 
@@ -588,10 +607,12 @@ export interface PublishStatusOnlyRequest {
   publish_status: PracticePublishStatus
 }
 
-/** POST /practices — create practice linked to a course, module, or lesson (Learn English). */
+/** POST /practices — create practice linked to one or more hierarchy nodes (Learn English). */
 export interface CreateParentLinkedPracticeRequest {
-  parent_kind: PracticeParentKind
-  parent_id: number
+  parents?: PracticeParent[] | null
+  /** Legacy single-parent create; used when parents is omitted. */
+  parent_kind?: PracticeParentKind
+  parent_id?: number
   title: string
   story_description: string
   story_image: string
@@ -609,8 +630,9 @@ export interface CreateParentLinkedPracticeResponse {
   metadata: unknown | null
 }
 
-/** Body for PUT /practices/:id (Learn English parent-linked practice). */
+/** Body for PUT /practices/:id (Learn English practice shell — includes parent links). */
 export interface UpdateParentLinkedPracticeRequest {
+  parents?: PracticeParent[]
   title?: string
   story_description?: string
   story_image?: string
@@ -633,10 +655,25 @@ export interface UpdateParentLinkedPracticeResponse {
   metadata: unknown | null
 }
 
+/** PUT /practices/:id/parents — replace all parent links on a practice. */
+export interface UpdatePracticeParentsRequest {
+  parents: PracticeParent[]
+}
+
+export interface UpdatePracticeParentsResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
 /** Question row in GET/PUT /practices/:id/full and /exam-prep/practices/:id/full. */
 export interface PracticeFullQuestionItem {
   id?: number | null
   display_order: number
+  associated_question_id?: number | null
+  prerequisite_question_ids?: number[]
   question_text?: string
   question_type: string
   question_type_definition_id?: number | null
@@ -681,8 +718,12 @@ export interface PracticeFullPractice {
   question_set_id: number
   publish_status?: PracticePublishStatus | string | null
   quick_tips?: string
+  parents?: PracticeParent[]
+  /** @deprecated use parents[] */
   lesson_id?: number
+  /** @deprecated use parents[] */
   parent_kind?: string
+  /** @deprecated use parents[] */
   parent_id?: number
   created_at?: string
 }
@@ -1236,6 +1277,7 @@ export interface CreateQuestionSetRequest {
 export interface AddQuestionToSetRequest {
   display_order?: number
   question_id: number
+  associated_question_id?: number | null
 }
 
 export interface QuestionOption {

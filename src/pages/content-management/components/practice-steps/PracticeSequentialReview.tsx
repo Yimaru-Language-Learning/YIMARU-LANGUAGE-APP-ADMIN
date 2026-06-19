@@ -30,6 +30,7 @@ export type PracticeSequentialReviewProps = {
   saveError?: string | null;
   canPublish?: boolean;
   showMissingParentWarning?: boolean;
+  showUnlinkedBanner?: boolean;
   onEditContext?: () => void;
   onEditQuestions?: () => void;
   onBack: () => void;
@@ -133,6 +134,7 @@ export function PracticeSequentialReview({
   saveError = null,
   canPublish = true,
   showMissingParentWarning = false,
+  showUnlinkedBanner = false,
   onEditContext,
   onEditQuestions,
   onBack,
@@ -143,7 +145,12 @@ export function PracticeSequentialReview({
   sectionTitle = "Create Practice Questions",
   sectionSubtitle = "Define the dialogue flow and interactions for this scenario.",
 }: PracticeSequentialReviewProps) {
-  const filledQuestions = questions.filter((q) => q.questionText.trim());
+  const filledQuestions = questions.filter(
+    (q) =>
+      q.questionText.trim() ||
+      q.voicePrompt.trim() ||
+      q.sampleAnswerVoicePrompt.trim(),
+  );
 
   return (
     <div className="w-full space-y-6">
@@ -157,6 +164,16 @@ export function PracticeSequentialReview({
               {sectionSubtitle}
             </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {showUnlinkedBanner && parentLink === "Not attached to any course, module, or lesson" ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">Not attached yet</p>
+          <p className="mt-1 text-amber-900/90">
+            This practice will be saved without course, module, or lesson links. Attach locations
+            later from the practice editor.
+          </p>
         </div>
       ) : null}
 
@@ -284,7 +301,7 @@ export function PracticeSequentialReview({
                 {filledQuestions.length}
               </span>
             </div>
-            <div className="max-h-[min(70vh,40rem)] space-y-6 overflow-y-auto overscroll-y-contain px-6 py-5">
+            <div className="space-y-6 px-6 py-5">
               {filledQuestions.map((question, index) => (
                 <div key={question.id} className="space-y-3">
                   <span className="text-sm font-bold text-grayScale-400">
@@ -333,7 +350,7 @@ export function PracticeSequentialReview({
                 </button>
               ) : null}
             </div>
-            <div className="max-h-[min(70vh,40rem)] space-y-6 overflow-y-auto overscroll-y-contain px-6 py-5">
+            <div className="space-y-6 px-6 py-5">
               {filledQuestions.map((question, index) => (
                 <div key={question.id} className="space-y-3">
                   <span className="text-sm font-bold text-grayScale-400">

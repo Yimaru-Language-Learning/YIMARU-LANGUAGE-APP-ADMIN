@@ -190,8 +190,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
     setSaving(true)
     try {
       await createParentLinkedPractice({
-        parent_kind: parent.kind,
-        parent_id: parent.id,
+        parents: [{ parent_kind: parent.kind, parent_id: parent.id }],
         title: practiceTitle.trim(),
         story_description: storyDescription.trim(),
         story_image: storyImage.trim(),

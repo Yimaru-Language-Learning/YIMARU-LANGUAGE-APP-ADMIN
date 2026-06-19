@@ -1,9 +1,11 @@
 import {
   updateExamPrepPracticeFull,
   updateLearnEnglishPracticeFull,
+  updatePracticeParents,
 } from "../api/courses.api"
-import type { PracticePublishStatus } from "../types/course.types"
+import type { PracticeParent, PracticePublishStatus } from "../types/course.types"
 import type { QuestionTypeDefinition } from "../types/questionTypeDefinition.types"
+import { dedupeParents } from "./practiceParents"
 import {
   buildPracticeFullUpdateRequest,
   type PracticeFormState,
@@ -22,6 +24,8 @@ export interface PracticeEditInput {
   definitions: QuestionTypeDefinition[]
   isLearnEnglishLessonPractice: boolean
   lessonDefaultTitle?: string
+  parents?: PracticeParent[]
+  parentsChanged?: boolean
 }
 
 export async function executePracticeUpdate(
@@ -42,5 +46,12 @@ export async function executePracticeUpdate(
     await updateExamPrepPracticeFull(opts.practiceId, payload)
     return
   }
+
   await updateLearnEnglishPracticeFull(opts.practiceId, payload)
+
+  if (opts.parentsChanged && opts.parents) {
+    await updatePracticeParents(opts.practiceId, {
+      parents: dedupeParents(opts.parents),
+    })
+  }
 }

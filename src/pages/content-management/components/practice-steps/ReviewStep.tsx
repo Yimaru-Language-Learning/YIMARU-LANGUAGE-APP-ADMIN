@@ -40,6 +40,7 @@ interface ReviewStepProps {
   onPublish: () => void;
   publishLabel?: string;
   publishingLabel?: string;
+  allowUnlinkedParents?: boolean;
 }
 
 export function ReviewStep({
@@ -62,6 +63,7 @@ export function ReviewStep({
   onPublish,
   publishLabel,
   publishingLabel,
+  allowUnlinkedParents = false,
 }: ReviewStepProps) {
   const persona = personaFromId(selectedPersona, personas);
 
@@ -112,7 +114,8 @@ export function ReviewStep({
       questions={reviewQuestions}
       saving={submitting}
       canPublish={canPublish}
-      showMissingParentWarning
+      showMissingParentWarning={!allowUnlinkedParents}
+      showUnlinkedBanner={allowUnlinkedParents}
       onEditContext={onEditContext}
       onEditQuestions={onEditQuestions}
       onBack={prevStep}

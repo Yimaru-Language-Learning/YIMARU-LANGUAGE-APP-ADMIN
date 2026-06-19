@@ -6,20 +6,30 @@ import {
   createQuestion,
   createQuestionSet,
 } from "../api/courses.api"
-import type { PracticeParentKind } from "../types/course.types"
+import type { PracticeParent, PracticeParentKind } from "../types/course.types"
 import type { QuestionTypeDefinition } from "../types/questionTypeDefinition.types"
+import {
+  buildCreatePracticeParentsPayload,
+  dedupeParents,
+} from "./practiceParents"
 import {
   buildCreateQuestionFromDefinition,
   questionRowHasContent,
   validateDefinitionQuestion,
   type LearnEnglishDefinitionQuestionInput,
 } from "./learnEnglishDefinitionQuestion"
+import {
+  resolveAssociatedQuestionId,
+  validateQuestionAssociations,
+} from "./questionAssociations"
 
 export type { LearnEnglishDefinitionQuestionInput } from "./learnEnglishDefinitionQuestion"
 
 export interface PracticeCreationInput {
-  parentKind: PracticeParentKind
-  parentId: number
+  parents?: PracticeParent[] | null
+  /** @deprecated use parents — kept for exam-prep lesson API */
+  parentKind?: PracticeParentKind
+  parentId?: number
   status: "DRAFT" | "PUBLISHED"
   questionSetTitle: string
   questionSetDescription?: string | null
@@ -91,13 +101,18 @@ export async function executePracticeCreation(
 
   const byId = new Map(opts.definitions.map((d) => [d.id, d]))
 
+  const linkedParents = dedupeParents(opts.parents ?? [])
+  const createParents = buildCreatePracticeParentsPayload(linkedParents)
+  const primaryParent = linkedParents[0] ?? null
+
   // Step 1 — create question set
   const setRes = await createQuestionSet({
     title: opts.questionSetTitle.trim() || "Practice question set",
     description: opts.questionSetDescription?.trim() || null,
     set_type: "PRACTICE",
-    owner_type: opts.parentKind,
-    owner_id: opts.parentId,
+    ...(primaryParent
+      ? { owner_type: primaryParent.parent_kind, owner_id: primaryParent.parent_id }
+      : {}),
     shuffle_questions: opts.shuffleQuestions,
     status: opts.status,
     ...(opts.personaName?.trim() ? { persona: opts.personaName.trim() } : {}),
@@ -118,18 +133,49 @@ export async function executePracticeCreation(
     })
     .sort((a, b) => a.sortOrder - b.sortOrder)
 
+  const associationRows = toCreate.map(({ q, sortOrder }) => ({
+    id: q.clientRowId ?? `row-${sortOrder}`,
+    serverQuestionId: null as number | null,
+    displayOrder: sortOrder,
+    associatedQuestionId: q.associatedQuestionId ?? null,
+    associatedAnchorRowId: q.associatedAnchorRowId ?? null,
+  }))
+  const associationErr = validateQuestionAssociations(associationRows)
+  if (associationErr) throw new Error(associationErr)
+
   // Steps 2 & 3 — create questions and attach to set (order from step 3 drag-and-drop)
   let displayOrder = 0
-  for (const { q } of toCreate) {
+  const rowIdToServerId = new Map<string, number>()
+  for (const { q, sortOrder } of toCreate) {
     const def = byId.get(q.questionTypeDefinitionId)
     if (!def) throw new Error(`Missing definition #${q.questionTypeDefinitionId}`)
     displayOrder += 1
     const payload = buildCreateQuestionFromDefinition(def, q, opts.status)
     const qRes = await createQuestion(payload)
     const questionId = extractCreatedResourceId(qRes, "Could not create question")
+    const rowKey = q.clientRowId ?? `row-${sortOrder}`
+    rowIdToServerId.set(rowKey, questionId)
+
+    const associationRow = {
+      id: rowKey,
+      serverQuestionId: questionId,
+      displayOrder: sortOrder,
+      associatedQuestionId: q.associatedQuestionId ?? null,
+      associatedAnchorRowId: q.associatedAnchorRowId ?? null,
+    }
+    const resolvedAssociationRows = associationRows.map((row) => ({
+      ...row,
+      serverQuestionId: rowIdToServerId.get(row.id) ?? row.serverQuestionId,
+    }))
+
     await addQuestionToSet(setId, {
       question_id: questionId,
       display_order: displayOrder,
+      associated_question_id: resolveAssociatedQuestionId(
+        associationRow,
+        resolvedAssociationRows,
+        rowIdToServerId,
+      ),
     })
   }
 
@@ -145,8 +191,7 @@ export async function executePracticeCreation(
         publish_status: opts.status,
       })
     : await createParentLinkedPractice({
-        parent_kind: opts.parentKind,
-        parent_id: opts.parentId,
+        parents: createParents,
         title: opts.practiceTitle.trim(),
         story_description: opts.storyDescription.trim(),
         story_image: opts.storyImage.trim(),

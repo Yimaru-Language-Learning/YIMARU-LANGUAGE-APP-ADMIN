@@ -11,6 +11,7 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
+import { PracticeActionButton } from "./components/PracticeActionButton";
 import { Card } from "../../components/ui/card";
 import {
   Dialog,
@@ -552,18 +553,20 @@ export function CourseDetailPage() {
               </ContentPageDescription>
             </div>
             <div className="flex items-center gap-4">
-              <Button
+              <PracticeActionButton
                 variant="outline"
                 className="rounded-[6px] border-brand-500 text-brand-500 "
-                onClick={() =>
-                  navigate(
-                    `/new-content/learn-english/${programIdParam}/courses/add-practice?backTo=modules&courseId=${courseIdParam}`,
-                  )
-                }
+                pathOptions={{
+                  isExamPrep: false,
+                  level: programIdParam,
+                  courseId: courseIdParam,
+                  backTo: "modules",
+                }}
+                parentLabel={displayTitle}
               >
                 <Calendar className="h-4 w-4" />
                 Add Practice
-              </Button>
+              </PracticeActionButton>
               <Button
                 className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
                 onClick={() => setIsAddModuleOpen(true)}
@@ -901,18 +904,20 @@ export function CourseDetailPage() {
                       : "Try another status filter or add a new practice."}
                   </p>
                   {practices.length === 0 ? (
-                    <Button
+                    <PracticeActionButton
                       variant="outline"
                       className="flex h-12 items-center gap-2 rounded-xl border-brand-500 px-8 font-bold text-brand-500 transition-all hover:bg-brand-50"
-                      onClick={() =>
-                        navigate(
-                          `/new-content/learn-english/${programIdParam}/courses/add-practice?backTo=modules&courseId=${courseIdParam}`,
-                        )
-                      }
+                      pathOptions={{
+                        isExamPrep: false,
+                        level: programIdParam,
+                        courseId: courseIdParam,
+                        backTo: "modules",
+                      }}
+                      parentLabel={displayTitle}
                     >
                       <Calendar className="h-5 w-5" />
                       Add Practice
-                    </Button>
+                    </PracticeActionButton>
                   ) : null}
                 </div>
               )}

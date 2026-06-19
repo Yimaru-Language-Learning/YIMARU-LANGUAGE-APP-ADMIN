@@ -1,4 +1,4 @@
-import { Edit2, Sparkles, Trash2, Layers, Shield } from "lucide-react"
+import { Edit2, GraduationCap, Plus, Sparkles, Trash2, Layers, Shield } from "lucide-react"
 import { Badge } from "../../../components/ui/badge"
 import { Card } from "../../../components/ui/card"
 import { Button } from "../../../components/ui/button"
@@ -14,6 +14,8 @@ export interface QuestionTypeDefinitionCardModel {
   responseKindsCount: number
   onEdit?: () => void
   onDelete?: () => void
+  onViewPractices?: () => void
+  onCreatePractice?: () => void
   deleteDisabled?: boolean
 }
 
@@ -27,6 +29,8 @@ export function QuestionTypeCard({
   responseKindsCount,
   onEdit,
   onDelete,
+  onViewPractices,
+  onCreatePractice,
   deleteDisabled,
 }: QuestionTypeDefinitionCardModel) {
   const statusLabel = (status || "—").toString()
@@ -69,6 +73,32 @@ export function QuestionTypeCard({
             {statusLabel}
           </Badge>
           <div className="flex items-center gap-1">
+            {onCreatePractice ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={onCreatePractice}
+                aria-label="Create practice"
+                title="Create practice"
+              >
+                <Plus className="h-4 w-4 text-brand-600" />
+              </Button>
+            ) : null}
+            {onViewPractices ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={onViewPractices}
+                aria-label="View practices"
+                title="View practices"
+              >
+                <GraduationCap className="h-4 w-4 text-grayScale-500" />
+              </Button>
+            ) : null}
             {onEdit ? (
               <Button type="button" variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={onEdit} aria-label="Edit">
                 <Edit2 className="h-4 w-4 text-grayScale-500" />

@@ -38,13 +38,23 @@ import {
   legacyQuestionTypeFromDefinition,
 } from "../../../../lib/learnEnglishDefinitionQuestion";
 import { validateLearnEnglishQuestionsWithDefinitions } from "../../../../lib/learnEnglishPracticePublish";
+import {
+  fixAssociationsAfterReorder,
+  findLastSectionAnchor,
+  sectionBadgeLabel,
+  setQuestionSectionAnchorRef,
+  validateQuestionAssociations,
+} from "../../../../lib/questionAssociations";
 import { cn } from "../../../../lib/utils";
 import { toast } from "sonner";
+import { QuestionAssociationField } from "./QuestionAssociationField";
 
 function syncQuestionDisplayOrders<T extends { displayOrder?: number }>(
   questions: T[],
 ): T[] {
-  return questions.map((q, index) => ({ ...q, displayOrder: index + 1 }));
+  return fixAssociationsAfterReorder(
+    questions.map((q, index) => ({ ...q, displayOrder: index + 1 })),
+  );
 }
 
 function truncateText(value: string, max = 100): string {
@@ -152,11 +162,17 @@ function defaultMcqOptions() {
   ];
 }
 
-function createEmptyQuestionRow(id: string, displayOrder = 1) {
+function createEmptyQuestionRow(id: string, displayOrder = 1, inheritAnchor?: {
+  associatedQuestionId: number | null
+  associatedAnchorRowId: string | null
+}) {
   return {
     id,
     displayOrder,
     serverQuestionId: null as number | null,
+    associatedQuestionId: inheritAnchor?.associatedQuestionId ?? null,
+    associatedAnchorRowId: inheritAnchor?.associatedAnchorRowId ?? null,
+    prerequisiteQuestionIds: [] as number[],
     questionTypeDefinitionId: null as number | null,
     text: "",
     difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
@@ -273,9 +289,22 @@ export function QuestionsStep({
     setFormData({ ...formData, questions: newQuestions });
   };
 
-  const addQuestion = () => {
+  const addQuestion = (startNewSection = false) => {
     const id = `q${Date.now()}`;
-    const row = createEmptyQuestionRow(id);
+    const lastAnchor = startNewSection ? undefined : findLastSectionAnchor(formData.questions);
+    const inheritAnchor = lastAnchor
+      ? (() => {
+          const linked = setQuestionSectionAnchorRef(
+            { id, associatedQuestionId: null, associatedAnchorRowId: null },
+            lastAnchor,
+          );
+          return {
+            associatedQuestionId: linked.associatedQuestionId ?? null,
+            associatedAnchorRowId: linked.associatedAnchorRowId ?? null,
+          };
+        })()
+      : undefined;
+    const row = createEmptyQuestionRow(id, formData.questions.length + 1, inheritAnchor);
     if (typeDefinitions[0]) {
       row.questionTypeDefinitionId = typeDefinitions[0].id;
       row.dynamicFieldValues = emptyDynamicFieldValuesForDefinition(
@@ -511,8 +540,9 @@ export function QuestionsStep({
       <div className="space-y-1 px-2">
         <h2 className="text-2xl font-bold text-grayScale-700">Questions</h2>
         <p className="text-grayScale-400 text-lg">
-          Choose a question type for each item, then fill in the fields that type requires. Collapse cards to
-          compare and drag them into order. Questions are saved when you publish or save the practice.
+          Choose a question type for each item, then fill in the fields that type requires.
+          Group questions into sections so learners complete earlier blocks before later ones unlock.
+          Collapse cards to compare and drag them into order.
         </p>
       </div>
 
@@ -618,6 +648,9 @@ export function QuestionsStep({
                                 <span className="rounded-full bg-grayScale-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-600">
                                   {q.difficultyLevel ?? "EASY"}
                                 </span>
+                                <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-semibold text-sky-800">
+                                  {sectionBadgeLabel(q, formData.questions)}
+                                </span>
                                 <span className="text-xs font-medium text-grayScale-500">
                                   {q.points ?? 1} pt{(q.points ?? 1) === 1 ? "" : "s"}
                                 </span>
@@ -679,6 +712,16 @@ export function QuestionsStep({
 
                         <QuestionCollapsibleBody expanded={isExpanded}>
                           <div className="space-y-6 px-4 pb-6 pt-4 sm:px-5 sm:pb-7">
+                <QuestionAssociationField
+                  question={q}
+                  allQuestions={formData.questions}
+                  onChange={(patch) => {
+                    const newQuestions = [...formData.questions];
+                    newQuestions[i] = { ...newQuestions[i], ...patch };
+                    setFormData({ ...formData, questions: newQuestions });
+                  }}
+                />
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
@@ -830,10 +873,10 @@ export function QuestionsStep({
         </DragOverlay>
       </DndContext>
 
-      <div className="flex items-center gap-8 pt-4">
+      <div className="flex flex-wrap items-center gap-6 pt-4">
         <button
           type="button"
-          onClick={addQuestion}
+          onClick={() => addQuestion(false)}
           disabled={definitionsLoading || typeDefinitions.length === 0}
           className="flex items-center gap-3 text-base font-bold text-brand-500 transition-all hover:opacity-80 disabled:opacity-40"
         >
@@ -841,6 +884,17 @@ export function QuestionsStep({
             <Plus className="h-3 w-3 stroke-[4]" />
           </div>
           Add question
+        </button>
+        <button
+          type="button"
+          onClick={() => addQuestion(true)}
+          disabled={definitionsLoading || typeDefinitions.length === 0}
+          className="flex items-center gap-3 text-base font-bold text-sky-700 transition-all hover:opacity-80 disabled:opacity-40"
+        >
+          <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-sky-600">
+            <Plus className="h-3 w-3 stroke-[4]" />
+          </div>
+          Start new section
         </button>
       </div>
 
@@ -857,9 +911,13 @@ export function QuestionsStep({
           type="button"
           onClick={() => {
             const mapped = formData.questions.map((row: typeof formData.questions[0]) => ({
+              clientRowId: row.id,
               questionText: String(row.text ?? "").trim(),
               questionTypeDefinitionId: Number(row.questionTypeDefinitionId),
               dynamicFieldValues: { ...(row.dynamicFieldValues ?? {}) },
+              displayOrder: row.displayOrder,
+              associatedQuestionId: row.associatedQuestionId ?? null,
+              associatedAnchorRowId: row.associatedAnchorRowId ?? null,
               mcqOptions: (row.mcqOptions ?? []).map(
                 (o: { text?: string; isCorrect?: boolean }) => ({
                   option_text: String(o.text ?? ""),
@@ -869,6 +927,19 @@ export function QuestionsStep({
               trueFalseAnswerIsTrue: row.trueFalseCorrect !== false,
               shortAnswers: (row.shortAnswers ?? []).map((s: string) => String(s)),
             }));
+            const associationErr = validateQuestionAssociations(
+              formData.questions.map((row: typeof formData.questions[0]) => ({
+                id: row.id,
+                serverQuestionId: row.serverQuestionId ?? null,
+                displayOrder: row.displayOrder,
+                associatedQuestionId: row.associatedQuestionId ?? null,
+                associatedAnchorRowId: row.associatedAnchorRowId ?? null,
+              })),
+            );
+            if (associationErr) {
+              toast.error("Check question sections", { description: associationErr });
+              return;
+            }
             const msg = validateLearnEnglishQuestionsWithDefinitions(
               mapped,
               typeDefinitions,

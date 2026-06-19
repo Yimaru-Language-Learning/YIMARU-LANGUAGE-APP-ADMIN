@@ -23,6 +23,7 @@ import {
 } from "../../api/courses.api";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import { PracticeActionButton } from "./components/PracticeActionButton";
 import { Card, CardContent } from "../../components/ui/card";
 import {
   Dialog,
@@ -68,6 +69,7 @@ function mapExamPrepPracticeToCard(
 ): ParentContextPractice {
   return {
     id: practice.id,
+    parents: [{ parent_kind: "LESSON", parent_id: practice.lesson_id }],
     parent_kind: "LESSON",
     parent_id: practice.lesson_id,
     title: practice.title,
@@ -332,9 +334,31 @@ export function LessonPracticesPage() {
   const displayTitle =
     lessonTitle || (validLesson ? `Lesson #${lid}` : "Lesson practices");
 
-  const addPracticeHref = isExamPrep
-    ? `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/add-practice?lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`
-    : `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lid}&lessonTitle=${encodeURIComponent(lessonTitle || displayTitle)}`;
+  const practicePathOptions = useMemo(
+    () => ({
+      isExamPrep,
+      level,
+      programType,
+      courseId,
+      unitId,
+      moduleId,
+      lessonId: validLesson ? String(lid) : null,
+      lessonTitle: lessonTitle || displayTitle,
+      backTo: isExamPrep ? "lesson" : "module",
+    }),
+    [
+      isExamPrep,
+      level,
+      programType,
+      courseId,
+      unitId,
+      moduleId,
+      validLesson,
+      lid,
+      lessonTitle,
+      displayTitle,
+    ],
+  );
 
   const editPracticeHref = (practiceId: number) => {
     const titleQuery = lessonTitle
@@ -449,14 +473,15 @@ export function LessonPracticesPage() {
                 </div>
 
                 <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
-                  <Button
+                  <PracticeActionButton
                     type="button"
                     className="h-11 rounded-xl bg-brand-500 px-6 font-semibold shadow-md shadow-brand-500/20 hover:bg-brand-600"
-                    onClick={() => void navigate(addPracticeHref)}
+                    pathOptions={practicePathOptions}
+                    parentLabel={displayTitle}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     Add practice
-                  </Button>
+                  </PracticeActionButton>
                   <Button
                     type="button"
                     variant="outline"
@@ -528,14 +553,15 @@ export function LessonPracticesPage() {
                   give learners a structured speaking activity after the video.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <Button
+                  <PracticeActionButton
                     type="button"
                     className="h-11 rounded-xl bg-brand-500 px-8 font-semibold shadow-md shadow-brand-500/15 hover:bg-brand-600"
-                    onClick={() => void navigate(addPracticeHref)}
+                    pathOptions={practicePathOptions}
+                    parentLabel={displayTitle}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     Create practice
-                  </Button>
+                  </PracticeActionButton>
                   <Button
                     type="button"
                     variant="outline"

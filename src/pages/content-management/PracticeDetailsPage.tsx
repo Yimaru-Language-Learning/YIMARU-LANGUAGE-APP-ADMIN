@@ -26,6 +26,7 @@ import {
 } from "../../components/ui/dialog"
 import { Input } from "../../components/ui/input"
 import { Textarea } from "../../components/ui/textarea"
+import { formatPracticeParentsSummary, parentsFromPractice } from "../../lib/practiceParents"
 import type {
   LearningProgramListItem,
   ParentContextPractice,
@@ -598,6 +599,7 @@ export function PracticeDetailsPage() {
           ...practice,
           ...payload,
           id: practice.id,
+          parents: parentsFromPractice({ ...practice, ...payload }),
           parent_kind: practice.parent_kind,
           parent_id: practice.parent_id,
           created_at: practice.created_at,
@@ -952,10 +954,10 @@ export function PracticeDetailsPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
-                      {practice.parent_kind}
+                      {formatPracticeParentsSummary(parentsFromPractice(practice))}
                     </Badge>
                     <span className="text-xs text-grayScale-500">
-                      parent #{practice.parent_id} · practice #{practice.id}
+                      practice #{practice.id}
                     </span>
                   </div>
                   {flowMode === "view" && (

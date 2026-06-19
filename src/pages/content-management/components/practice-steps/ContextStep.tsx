@@ -1,21 +1,37 @@
 import { useRef, useState, type ChangeEvent } from "react";
-import { ArrowRight, Loader2, Upload } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Loader2, Upload } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { Input } from "../../../../components/ui/input";
 import { Textarea } from "../../../../components/ui/textarea";
 import { toast } from "sonner";
 import { uploadImageFile } from "../../../../api/files.api";
+import type { PracticeParent } from "../../../../types/course.types";
+import { PracticeParentsField } from "./PracticeParentsField";
+import { formatPracticeParentsSummary } from "../../../../lib/practiceParents";
 
 interface ContextStepProps {
-  formData: any;
-  setFormData: (data: any) => void;
+  formData: {
+    title?: string;
+    description?: string;
+    storyImageUrl?: string;
+    shuffleQuestions?: boolean;
+    tips?: string;
+    parents?: PracticeParent[];
+  };
+  setFormData: (data: ContextStepProps["formData"]) => void;
   nextStep: () => void;
   onCancel: () => void;
   /** Lesson-linked practice: no title, story description, or story image on step 1. */
   isLessonPractice?: boolean;
   lessonTitle?: string | null;
   parentSummary?: string | null;
+  /** Learn English LMS — show multi-parent picker. */
+  showParentsEditor?: boolean;
+  lockedParentKey?: string | null;
+  /** When true, locations are optional and the picker can stay collapsed. */
+  parentsOptional?: boolean;
+  parentsCollapsedDefault?: boolean;
 }
 
 /**
@@ -29,9 +45,14 @@ export function ContextStep({
   isLessonPractice = false,
   lessonTitle = null,
   parentSummary = null,
+  showParentsEditor = false,
+  lockedParentKey = null,
+  parentsOptional = false,
+  parentsCollapsedDefault = false,
 }: ContextStepProps) {
   const storyFileRef = useRef<HTMLInputElement>(null);
   const [uploadingStory, setUploadingStory] = useState(false);
+  const [parentsExpanded, setParentsExpanded] = useState(!parentsCollapsedDefault);
 
   const handleStoryImageFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -54,6 +75,11 @@ export function ContextStep({
   const canContinue = isLessonPractice
     ? true
     : Boolean(formData.title?.trim()) && Boolean(formData.description?.trim());
+
+  const parentsSummary =
+    formData.parents && formData.parents.length > 0
+      ? formatPracticeParentsSummary(formData.parents)
+      : parentSummary;
 
   return (
     <Card className="overflow-hidden border-grayScale-300 rounded-2xl bg-white animate-in fade-in duration-500">
@@ -91,14 +117,62 @@ export function ContextStep({
       </div>
 
       <div className="space-y-8 p-10">
-        {parentSummary ? (
+        {parentsSummary && !showParentsEditor ? (
           <div className="rounded-xl border border-brand-100 bg-brand-50/50 px-4 py-3 text-sm text-grayScale-800">
             <p className="font-semibold text-brand-700">LMS parent</p>
-            <p className="mt-1">{parentSummary}</p>
+            <p className="mt-1">{parentsSummary}</p>
             <p className="mt-1 text-xs text-grayScale-500">
-              The question set and practice will be linked to this course, module, or lesson.
+              The question set and practice will be linked to these locations.
             </p>
           </div>
+        ) : null}
+
+        {showParentsEditor ? (
+          parentsOptional ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+                <p className="font-semibold text-amber-900">Locations optional</p>
+                <p className="mt-1 text-amber-900/90">
+                  You can create this practice now and attach it to courses, modules, or lessons
+                  later from the practice editor.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setParentsExpanded((open) => !open)}
+                className="flex w-full items-center justify-between rounded-xl border border-grayScale-200 bg-grayScale-50/60 px-4 py-3 text-left transition-colors hover:bg-grayScale-50"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-grayScale-800">Locations (optional)</p>
+                  <p className="mt-0.5 text-xs text-grayScale-500">
+                    {parentsSummary &&
+                    parentsSummary !== "Not attached to any course, module, or lesson"
+                      ? parentsSummary
+                      : "Skip for now — attach later"}
+                  </p>
+                </div>
+                {parentsExpanded ? (
+                  <ChevronUp className="h-4 w-4 shrink-0 text-grayScale-500" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-500" />
+                )}
+              </button>
+              {parentsExpanded ? (
+                <PracticeParentsField
+                  parents={formData.parents ?? []}
+                  lockedParentKey={lockedParentKey}
+                  optional
+                  onChange={(parents) => setFormData({ ...formData, parents })}
+                />
+              ) : null}
+            </div>
+          ) : (
+            <PracticeParentsField
+              parents={formData.parents ?? []}
+              lockedParentKey={lockedParentKey}
+              onChange={(parents) => setFormData({ ...formData, parents })}
+            />
+          )
         ) : null}
 
         {!isLessonPractice ? (

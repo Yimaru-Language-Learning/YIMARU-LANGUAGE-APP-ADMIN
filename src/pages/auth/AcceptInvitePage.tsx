@@ -148,7 +148,7 @@ export function AcceptInvitePage() {
   }
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden">
+    <div className="relative flex h-dvh overflow-hidden">
       <div className="relative hidden items-center justify-center bg-gradient-to-br from-brand-600 via-brand-500 to-brand-400 lg:flex lg:w-1/2 xl:w-[55%]">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-white/5" />

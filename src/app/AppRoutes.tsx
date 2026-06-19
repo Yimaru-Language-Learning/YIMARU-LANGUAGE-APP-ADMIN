@@ -23,6 +23,7 @@ import { LessonPracticesPage } from "../pages/content-management/LessonPractices
 import { ModuleDetailPage } from "../pages/content-management/ModuleDetailPage";
 import { AddVideoFlow } from "../pages/content-management/AddVideoFlow";
 import { AddPracticeFlow } from "../pages/content-management/AddPracticeFlow";
+import { LinkExistingPracticeFlow } from "../pages/content-management/LinkExistingPracticeFlow";
 import { EditPracticeFlow } from "../pages/content-management/EditPracticeFlow";
 import { CourseModuleDetailPage } from "../pages/content-management/CourseModuleDetailPage";
 import { ProgramTypeSelectionPage } from "../pages/content-management/ProgramTypeSelectionPage";
@@ -183,6 +184,10 @@ export function AppRoutes() {
           element={<QuestionTypeLibraryPage />}
         />
         <Route
+          path="/new-content/question-types/:definitionId/create-practice"
+          element={<AddPracticeFlow />}
+        />
+        <Route
           path="/new-content/question-types/:definitionId/edit"
           element={<CreateQuestionTypeFlow />}
         />
@@ -199,12 +204,24 @@ export function AppRoutes() {
           element={<AddPracticeFlow />}
         />
         <Route
+          path="/new-content/courses/:programType/attach-practice"
+          element={<LinkExistingPracticeFlow />}
+        />
+        <Route
           path="/new-content/courses/:programType/:courseId/add-practice"
           element={<AddPracticeFlow />}
         />
         <Route
+          path="/new-content/courses/:programType/:courseId/attach-practice"
+          element={<LinkExistingPracticeFlow />}
+        />
+        <Route
           path="/new-content/courses/:programType/:courseId/:unitId/:moduleId/add-practice"
           element={<AddPracticeFlow />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/:moduleId/attach-practice"
+          element={<LinkExistingPracticeFlow />}
         />
         <Route
           path="/new-content/courses/:programType/:courseId"
@@ -265,6 +282,10 @@ export function AppRoutes() {
         <Route
           path="/new-content/learn-english/:level/courses/add-practice"
           element={<AddPracticeFlow />}
+        />
+        <Route
+          path="/new-content/learn-english/:level/courses/attach-practice"
+          element={<LinkExistingPracticeFlow />}
         />
 
         <Route path="/notifications" element={<NotificationsPage />} />

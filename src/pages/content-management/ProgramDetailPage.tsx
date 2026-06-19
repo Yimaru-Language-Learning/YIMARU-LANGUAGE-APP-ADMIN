@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { PracticeActionButton } from "./components/PracticeActionButton";
 import { Card } from "../../components/ui/card";
 import {
   Dialog,
@@ -648,16 +649,14 @@ export function ProgramDetailPage() {
             </DialogContent>
           </Dialog>
 
-          <Button
+          <PracticeActionButton
             variant="outline"
             className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold  flex items-center gap-2"
-            onClick={() =>
-              navigate(`/new-content/courses/${programType}/add-practice`)
-            }
+            pathOptions={{ isExamPrep: true, programType }}
           >
             <FileText className="h-5 w-5" />
             Add Practice
-          </Button>
+          </PracticeActionButton>
         </div>
       </div>
 

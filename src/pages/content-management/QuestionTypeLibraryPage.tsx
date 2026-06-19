@@ -30,6 +30,7 @@ import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { QuestionTypeCard } from "./components/QuestionTypeCard"
+import { QuestionTypeDefinitionPracticesDialog } from "./components/QuestionTypeDefinitionPracticesDialog"
 import {
   deleteQuestionTypeDefinition,
   getQuestionTypeDefinitions,
@@ -69,6 +70,7 @@ export function QuestionTypeLibraryPage() {
   const [offset, setOffset] = useState(0)
   const [definitionPendingDelete, setDefinitionPendingDelete] = useState<QuestionTypeDefinition | null>(null)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+  const [definitionForPractices, setDefinitionForPractices] = useState<QuestionTypeDefinition | null>(null)
 
   const hasActiveFilters =
     query.trim().length > 0 || statusFilter !== "All" || scopeFilter !== "all"
@@ -363,6 +365,10 @@ export function QuestionTypeLibraryPage() {
                   responseKindsCount={d.response_component_kinds?.length ?? 0}
                   deleteDisabled={!!d.is_system}
                   onEdit={() => navigate(`/new-content/question-types/${d.id}/edit`)}
+                  onCreatePractice={() =>
+                    navigate(`/new-content/question-types/${d.id}/create-practice`)
+                  }
+                  onViewPractices={() => setDefinitionForPractices(d)}
                   onDelete={() => openDeleteConfirm(d)}
                 />
               ))}
@@ -440,6 +446,14 @@ export function QuestionTypeLibraryPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <QuestionTypeDefinitionPracticesDialog
+        definition={definitionForPractices}
+        open={definitionForPractices !== null}
+        onOpenChange={(open) => {
+          if (!open) setDefinitionForPractices(null)
+        }}
+      />
 
       <Dialog open={definitionPendingDelete !== null} onOpenChange={handleDeleteDialogOpenChange}>
         <DialogContent className="max-w-md rounded-2xl border-grayScale-200 sm:max-w-md">

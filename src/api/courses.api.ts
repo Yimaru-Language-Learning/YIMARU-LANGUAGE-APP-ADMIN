@@ -105,6 +105,8 @@ import type {
   GetExamPrepModuleLessonsResponse,
   GetTopLevelModuleLessonsResponse,
   GetPracticesByParentContextResponse,
+  GetPracticesListParams,
+  GetPracticesListResponse,
   CreateParentLinkedPracticeRequest,
   CreateParentLinkedPracticeResponse,
   UpdateParentLinkedPracticeRequest,
@@ -112,6 +114,8 @@ import type {
   UpdatePracticeFullRequest,
   UpdatePracticeFullResponse,
   UpdateParentLinkedPracticeResponse,
+  UpdatePracticeParentsRequest,
+  UpdatePracticeParentsResponse,
   PublishParentLinkedPracticeRequest,
   PublishStatusOnlyRequest,
   AccessTierOnlyRequest,
@@ -839,9 +843,19 @@ export const getPracticesByParentLesson = (
 ) =>
   http.get<GetPracticesByParentContextResponse>(`/lessons/${lessonId}/practices`, { params })
 
+/** GET /practices — list all practices (for attach-existing flow). */
+export const getPractices = (params?: GetPracticesListParams) =>
+  http.get<GetPracticesListResponse>("/practices", { params })
+
 /** POST /practices — create a practice (story + question set) for course / module / lesson. */
 export const createParentLinkedPractice = (data: CreateParentLinkedPracticeRequest) =>
   http.post<CreateParentLinkedPracticeResponse>("/practices", data)
+
+/** PUT /practices/:id/parents — replace all parent links on a practice. */
+export const updatePracticeParents = (
+  practiceId: number,
+  data: UpdatePracticeParentsRequest,
+) => http.put<UpdatePracticeParentsResponse>(`/practices/${practiceId}/parents`, data)
 
 /** PUT /practices/:id */
 export const updateParentLinkedPractice = (

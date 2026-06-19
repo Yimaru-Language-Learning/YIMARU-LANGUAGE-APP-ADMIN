@@ -20,6 +20,9 @@ import type {
 } from "../../types/course.types";
 import { unwrapPracticesList } from "../../lib/parentContextPractice";
 import { Button } from "../../components/ui/button";
+import { PracticeActionButton } from "./components/PracticeActionButton";
+import { PracticeActionChoiceDialog } from "./components/PracticeActionChoiceDialog";
+import { buildPracticeContentPaths, type PracticeContentPathOptions } from "../../lib/practiceContentPaths";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +73,25 @@ export function ModuleDetailPage() {
   const [practiceSearch, setPracticeSearch] = useState("");
   const [practicePublishStatusFilter, setPracticePublishStatusFilter] =
     useState<PublishStatusFilter>("all");
+  const [lessonPracticeChoice, setLessonPracticeChoice] =
+    useState<PracticeContentPathOptions | null>(null);
+  const lessonPracticeChoicePaths = useMemo(
+    () =>
+      lessonPracticeChoice
+        ? buildPracticeContentPaths(lessonPracticeChoice)
+        : null,
+    [lessonPracticeChoice],
+  );
+  const modulePracticePathOptions = useMemo(
+    (): PracticeContentPathOptions => ({
+      isExamPrep: false,
+      level,
+      courseId,
+      moduleId,
+      backTo: "module",
+    }),
+    [level, courseId, moduleId],
+  );
   const [lessons, setLessons] = useState<TopLevelModuleLessonItem[]>([]);
   const [lessonsLoading, setLessonsLoading] = useState(true);
   const [lessonsLoadError, setLessonsLoadError] = useState<string | null>(null);
@@ -472,18 +494,15 @@ export function ModuleDetailPage() {
           </ContentPageDescription>
         </div>
         <div className="flex items-center gap-3">
-          <Button
+          <PracticeActionButton
             variant="outline"
             className="rounded-[6px] border-brand-500 text-brand-500 "
-            onClick={() =>
-              navigate(
-                `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}`,
-              )
-            }
+            pathOptions={modulePracticePathOptions}
+            parentLabel={displayModuleName}
           >
             <Calendar className="h-4 w-4" />
             Add Practice
-          </Button>
+          </PracticeActionButton>
           <Button
             className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
             onClick={() =>
@@ -578,9 +597,15 @@ export function ModuleDetailPage() {
                   onDelete={() => setDeletingLesson(lesson)}
                   description={lesson.description}
                   onAddPractice={() =>
-                    navigate(
-                      `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}&lessonId=${lesson.id}&lessonTitle=${encodeURIComponent(lesson.title)}`,
-                    )
+                    setLessonPracticeChoice({
+                      isExamPrep: false,
+                      level,
+                      courseId,
+                      moduleId,
+                      lessonId: String(lesson.id),
+                      lessonTitle: lesson.title,
+                      backTo: "module",
+                    })
                   }
                   onViewPractices={() =>
                     navigate(
@@ -690,18 +715,15 @@ export function ModuleDetailPage() {
                     : "Try different keywords or clear the publish status filter."}
                 </p>
                 {practices.length === 0 ? (
-                  <Button
+                  <PracticeActionButton
                     variant="outline"
                     className="h-12 px-8 rounded-xl border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
-                    onClick={() =>
-                      navigate(
-                        `/new-content/learn-english/${level}/courses/add-practice?backTo=module&courseId=${courseId}&moduleId=${moduleId}`,
-                      )
-                    }
+                    pathOptions={modulePracticePathOptions}
+                    parentLabel={displayModuleName}
                   >
                     <Calendar className="h-5 w-5" />
                     Add Practice
-                  </Button>
+                  </PracticeActionButton>
                 ) : null}
               </div>
             )}
@@ -865,6 +887,23 @@ export function ModuleDetailPage() {
           </div>
         </div>
       )}
+
+      {lessonPracticeChoice && lessonPracticeChoicePaths ? (
+        <PracticeActionChoiceDialog
+          open={lessonPracticeChoice != null}
+          onOpenChange={(open) => {
+            if (!open) setLessonPracticeChoice(null)
+          }}
+          createHref={lessonPracticeChoicePaths.create}
+          attachHref={lessonPracticeChoicePaths.attach}
+          pathOptions={lessonPracticeChoice}
+          parentLabel={
+            lessonPracticeChoice.lessonTitle
+              ? `Lesson — ${lessonPracticeChoice.lessonTitle}`
+              : null
+          }
+        />
+      ) : null}
     </div>
   );
 }

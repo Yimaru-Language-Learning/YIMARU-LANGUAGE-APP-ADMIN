@@ -163,11 +163,15 @@ export function legacyQuestionTypeFromDefinition(
 export type QuestionDifficultyLevel = "EASY" | "MEDIUM" | "HARD"
 
 export interface LearnEnglishDefinitionQuestionInput {
+  clientRowId?: string
   questionText: string
   questionTypeDefinitionId: number
   dynamicFieldValues: Record<string, string>
   difficultyLevel?: QuestionDifficultyLevel
   points?: number
+  associatedQuestionId?: number | null
+  associatedAnchorRowId?: string | null
+  prerequisiteQuestionIds?: number[]
   displayOrder?: number
   mcqOptions?: { option_text: string; is_correct: boolean }[]
   trueFalseAnswerIsTrue?: boolean

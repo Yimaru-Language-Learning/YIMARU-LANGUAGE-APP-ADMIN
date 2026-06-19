@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -21,6 +21,13 @@ import {
   validateLearnEnglishQuestionsWithDefinitions,
 } from "../../lib/learnEnglishPracticePublish";
 import { executePracticeUpdate } from "../../lib/practiceEditOrchestrator";
+import {
+  dedupeParents,
+  formatPracticeParentsSummary,
+  practiceParentsEqual,
+  validatePracticeParents,
+} from "../../lib/practiceParents";
+import type { PracticeParent } from "../../types/course.types";
 import {
   mapPracticeFullToFormState,
   unwrapPracticeFullData,
@@ -223,6 +230,7 @@ export function EditPracticeFlow() {
     storyImageUrl: "",
     shuffleQuestions: false,
     tips: "",
+    parents: [] as PracticeParent[],
     questions: [
       {
         id: "q1",
@@ -250,6 +258,7 @@ export function EditPracticeFlow() {
   );
   const [definitionsLoading, setDefinitionsLoading] = useState(true);
   const [definitionsError, setDefinitionsError] = useState<string | null>(null);
+  const initialParentsRef = useRef<PracticeParent[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,6 +301,7 @@ export function EditPracticeFlow() {
         if (cancelled) return;
         setFormData(mapped.formData);
         setPreservedQuestionSet(mapped.preservedQuestionSet);
+        initialParentsRef.current = mapped.parents;
         if (mapped.personaId != null) {
           setSelectedPersona(String(mapped.personaId));
         }
@@ -337,6 +347,7 @@ export function EditPracticeFlow() {
     }
 
     const mappedQuestions = formData.questions.map((q, index) => ({
+      clientRowId: q.id,
       questionText: String(q.text ?? "").trim(),
       questionTypeDefinitionId: Number(q.questionTypeDefinitionId),
       difficultyLevel: (q.difficultyLevel ?? "EASY") as "EASY" | "MEDIUM" | "HARD",
@@ -346,6 +357,8 @@ export function EditPracticeFlow() {
           ? Number(q.displayOrder)
           : index + 1,
       serverQuestionId: q.serverQuestionId ?? null,
+      associatedQuestionId: q.associatedQuestionId ?? null,
+      associatedAnchorRowId: q.associatedAnchorRowId ?? null,
       dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
       mcqOptions: (q.mcqOptions ?? []).map(
         (o: { text?: string; isCorrect?: boolean }) => ({
@@ -370,6 +383,14 @@ export function EditPracticeFlow() {
       lessonTitleDisplay?.trim() ||
       (lessonId ? `Lesson ${lessonId} practice` : "Lesson practice");
 
+    if (!isExamPrep) {
+      const parentsErr = validatePracticeParents(formData.parents);
+      if (parentsErr) {
+        toast.error("Check practice locations", { description: parentsErr });
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       await executePracticeUpdate({
@@ -386,10 +407,17 @@ export function EditPracticeFlow() {
         definitions: typeDefinitions,
         isLearnEnglishLessonPractice,
         lessonDefaultTitle,
+        parents: dedupeParents(formData.parents),
+        parentsChanged:
+          !isExamPrep &&
+          !practiceParentsEqual(formData.parents, initialParentsRef.current),
       });
       toast.success(
         status === "PUBLISHED" ? "Practice updated and published" : "Practice saved as draft",
       );
+      if (!isExamPrep) {
+        initialParentsRef.current = dedupeParents(formData.parents);
+      }
       setIsSaved(true);
     } catch (e) {
       toast.error("Could not update practice", {
@@ -466,6 +494,11 @@ export function EditPracticeFlow() {
     );
   }
 
+  const reviewParentSummary =
+    formData.parents.length > 0
+      ? formatPracticeParentsSummary(formData.parents)
+      : parentSummary;
+
   const renderStep = () => {
     const useContextStep =
       isModuleContext || isCourseContext || isLessonContext;
@@ -481,7 +514,8 @@ export function EditPracticeFlow() {
               onCancel={() => navigate(backPath)}
               isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
-              parentSummary={parentSummary}
+              parentSummary={reviewParentSummary}
+              showParentsEditor={!isExamPrep}
             />
           );
         case 2:
@@ -523,7 +557,7 @@ export function EditPracticeFlow() {
               prevStep={prevStep}
               onEditContext={() => setCurrentStep(1)}
               onEditQuestions={() => setCurrentStep(3)}
-              parentSummary={parentSummary}
+              parentSummary={reviewParentSummary}
               typeDefinitions={typeDefinitions}
               canPublish
               submitting={submitting}

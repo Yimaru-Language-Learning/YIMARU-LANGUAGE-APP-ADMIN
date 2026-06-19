@@ -1,5 +1,7 @@
 /** Dynamic question type definition builder (admin) — aligns with POST /questions/type-definitions */
 
+import type { PracticeParent } from "./course.types"
+
 /** GET /questions/component-catalog — `data` object shape */
 export interface QuestionComponentCatalog {
   stimulus_component_kinds: string[]
@@ -55,4 +57,42 @@ export interface DynamicElementInstance {
 export interface DynamicQuestionPayload {
   stimulus: DynamicElementInstance[]
   response: DynamicElementInstance[]
+}
+
+/** Row from GET /questions/type-definitions/:id/practices */
+export interface QuestionTypeDefinitionPractice {
+  practice_kind: string
+  practice_id: number
+  question_set_id: number
+  title: string
+  story_description?: string
+  story_image?: string
+  quick_tips?: string
+  publish_status?: string
+  parents: PracticeParent[] | null
+  /** @deprecated use parents[] */
+  parent_kind?: string
+  /** @deprecated use parents[] */
+  parent_id?: number
+  /** When returned by the API, used to build edit routes without hierarchy search. */
+  program_id?: number
+  course_id?: number
+  module_id?: number
+  lesson_id?: number
+  matching_question_count: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface QuestionTypeDefinitionPracticesParams {
+  limit?: number
+  offset?: number
+}
+
+export interface QuestionTypeDefinitionPracticesResult {
+  question_type_definition_id: number
+  practices: QuestionTypeDefinitionPractice[]
+  total_count: number
+  limit: number
+  offset: number
 }

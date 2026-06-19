@@ -25,6 +25,7 @@ import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { countActiveFilters } from "../../lib/adminFilterUtils";
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages";
 import {
   Table,
   TableBody,
@@ -51,7 +52,7 @@ import {
   deleteIssue,
   createIssue,
 } from "../../api/issues.api";
-import type { Issue, IssueFilters } from "../../types/issue.types";
+import type { Issue } from "../../types/issue.types";
 
 // ── Status configuration ───────────────────────────────────────────
 const STATUSES = ["pending", "in_progress", "resolved", "closed"] as const;
@@ -188,7 +189,6 @@ function formatRoleLabel(role: string | null | undefined): string {
 // ── Main Component ─────────────────────────────────────────────────
 export function IssuesPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -221,26 +221,30 @@ export function IssuesPage() {
   const fetchIssues = useCallback(async () => {
     setLoading(true);
     try {
-      const filters: IssueFilters = {
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-      };
-      const res = await getIssues(filters);
-      const payload = res.data?.data;
-      setIssues(Array.isArray(payload?.issues) ? payload.issues : []);
-      setTotalCount(typeof payload?.total_count === "number" ? payload.total_count : 0);
+      const allIssues = await fetchAllOffsetPages(async (offset, limit) => {
+        const res = await getIssues({ limit, offset });
+        const payload = res.data?.data;
+        return {
+          items: Array.isArray(payload?.issues) ? payload.issues : [],
+          total_count: typeof payload?.total_count === "number" ? payload.total_count : undefined,
+        };
+      });
+      setIssues(allIssues);
     } catch (error) {
       console.error("Failed to fetch issues:", error);
       setIssues([]);
-      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, []);
 
   useEffect(() => {
     fetchIssues();
   }, [fetchIssues]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, typeFilter, pageSize]);
 
   const handleViewDetail = async (issueId: number) => {
     setDialogOpen(true);
@@ -326,9 +330,12 @@ export function IssuesPage() {
     return true;
   });
 
+  const totalCount = filteredIssues.length;
+
   // Pagination
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, pageCount);
+  const paginatedIssues = filteredIssues.slice((safePage - 1) * pageSize, safePage * pageSize);
   const handlePrev = () => safePage > 1 && setPage(safePage - 1);
   const handleNext = () => safePage < pageCount && setPage(safePage + 1);
 
@@ -528,7 +535,7 @@ export function IssuesPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredIssues.map((issue) => {
+              paginatedIssues.map((issue) => {
                 const typeConfig = getIssueTypeConfig(issue.issue_type);
                 const statusConfig = getStatusConfig(issue.status);
                 const TypeIcon = typeConfig.icon;

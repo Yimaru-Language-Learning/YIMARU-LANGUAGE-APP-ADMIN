@@ -52,8 +52,6 @@ const SCOPE_OPTIONS: { value: ScopeFilter; label: string }[] = [
   { value: "custom", label: "Custom only" },
 ]
 
-const SYSTEM_SCOPE_FETCH_LIMIT = 100
-
 export function QuestionTypeLibraryPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -62,7 +60,6 @@ export function QuestionTypeLibraryPage() {
 
   const [loading, setLoading] = useState(true)
   const [definitions, setDefinitions] = useState<QuestionTypeDefinition[]>([])
-  const [totalCount, setTotalCount] = useState<number | undefined>(undefined)
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All")
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all")
@@ -83,37 +80,29 @@ export function QuestionTypeLibraryPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const isSystemScope = scopeFilter === "system"
-      const { definitions: rows, total_count } = await getQuestionTypeDefinitions({
+      const { definitions: rows } = await getQuestionTypeDefinitions({
         include_system: scopeFilter !== "custom",
         ...(statusFilter !== "All" ? { status: statusFilter } : {}),
-        limit: isSystemScope ? SYSTEM_SCOPE_FETCH_LIMIT : pageSize,
-        offset: isSystemScope ? 0 : offset,
       })
-      const visibleRows = isSystemScope ? rows.filter((d) => d.is_system) : rows
+      const visibleRows =
+        scopeFilter === "system" ? rows.filter((d) => d.is_system) : rows
       setDefinitions(visibleRows)
-      if (isSystemScope) {
-        setTotalCount(visibleRows.length)
-      } else if (total_count != null) {
-        setTotalCount(total_count)
-      } else if (rows.length < pageSize) {
-        setTotalCount(offset + rows.length)
-      } else {
-        setTotalCount(undefined)
-      }
     } catch (e) {
       console.error(e)
       toast.error("Failed to load question type definitions")
       setDefinitions([])
-      setTotalCount(0)
     } finally {
       setLoading(false)
     }
-  }, [offset, pageSize, scopeFilter, statusFilter])
+  }, [scopeFilter, statusFilter])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    setOffset(0)
+  }, [query, pageSize, scopeFilter, statusFilter])
 
   useEffect(() => {
     if (createdId) {
@@ -127,6 +116,8 @@ export function QuestionTypeLibraryPage() {
     }
   }, [updatedId])
 
+  const isSystemScope = scopeFilter === "system"
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return definitions
@@ -137,19 +128,17 @@ export function QuestionTypeLibraryPage() {
     })
   }, [definitions, query])
 
-  const isSystemScope = scopeFilter === "system"
+  const paginated = useMemo(() => {
+    if (isSystemScope) return filtered
+    return filtered.slice(offset, offset + pageSize)
+  }, [filtered, isSystemScope, offset, pageSize])
+
+  const totalCount = filtered.length
   const canPrev = !isSystemScope && offset > 0
-  const canNext =
-    !isSystemScope &&
-    (totalCount != null ? offset + pageSize < totalCount : definitions.length === pageSize)
+  const canNext = !isSystemScope && offset + pageSize < totalCount
 
   const pageStart = totalCount === 0 ? 0 : isSystemScope ? 1 : offset + 1
-  const pageEnd =
-    isSystemScope
-      ? filtered.length
-      : totalCount != null
-        ? Math.min(offset + definitions.length, totalCount)
-        : offset + definitions.length
+  const pageEnd = isSystemScope ? filtered.length : Math.min(offset + paginated.length, totalCount)
 
   const resetPagination = () => setOffset(0)
 
@@ -255,7 +244,7 @@ export function QuestionTypeLibraryPage() {
                   <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
                   <Input
                     className="h-11 pl-11 pr-10 rounded-[10px] border-grayScale-200 bg-white placeholder:text-grayScale-400 text-sm shadow-sm"
-                    placeholder="Search by display name, key, or id on this page…"
+                    placeholder="Search by display name, key, or id…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
@@ -353,7 +342,7 @@ export function QuestionTypeLibraryPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 px-6 py-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filtered.map((d) => (
+              {paginated.map((d) => (
                 <QuestionTypeCard
                   key={d.id}
                   id={d.id}
@@ -379,13 +368,13 @@ export function QuestionTypeLibraryPage() {
             <div className="flex flex-wrap items-center justify-between gap-4 border-t border-grayScale-100 bg-white px-6 py-4">
               <div className="flex flex-wrap items-center gap-3 text-xs text-grayScale-500">
                 <span>
-                  {totalCount != null
-                    ? `Showing ${pageStart}–${pageEnd} of ${totalCount}`
-                    : `Showing ${pageStart}–${pageEnd}`}
+                  {totalCount === 0
+                    ? "No results"
+                    : `Showing ${pageStart}–${pageEnd} of ${totalCount}`}
                 </span>
                 {query.trim() && filtered.length !== definitions.length ? (
                   <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand-600">
-                    {filtered.length} match{filtered.length === 1 ? "" : "es"} on this page
+                    {filtered.length} match{filtered.length === 1 ? "" : "es"} total
                   </span>
                 ) : null}
                 {!isSystemScope ? (

@@ -39,6 +39,7 @@ import {
 } from "../../lib/faqDisplay"
 import { getFaqApiErrorMessage, isFaqForbiddenError } from "../../lib/faqErrors"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { cn } from "../../lib/utils"
 import type { FAQ, FAQStatus } from "../../types/faq.types"
@@ -57,7 +58,6 @@ export function FaqsPage() {
   const [error, setError] = useState(false)
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [faqs, setFaqs] = useState<FAQ[]>([])
-  const [totalCount, setTotalCount] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [query, setQuery] = useState("")
@@ -70,8 +70,6 @@ export function FaqsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [suggestedDisplayOrder, setSuggestedDisplayOrder] = useState(1)
 
-  const offset = (page - 1) * pageSize
-
   const load = useCallback(async () => {
     if (!canList) {
       setLoading(false)
@@ -82,14 +80,19 @@ export function FaqsPage() {
     setError(false)
     setPermissionDenied(false)
     try {
-      const res = await getFAQs({
-        status: statusFilter === "all" ? undefined : statusFilter,
-        category: categoryFilter || undefined,
-        limit: pageSize,
-        offset,
+      const allFaqs = await fetchAllOffsetPages(async (batchOffset, limit) => {
+        const res = await getFAQs({
+          status: statusFilter === "all" ? undefined : statusFilter,
+          category: categoryFilter || undefined,
+          limit,
+          offset: batchOffset,
+        })
+        return {
+          items: res.data.faqs,
+          total_count: res.data.total_count,
+        }
       })
-      setFaqs(res.data.faqs)
-      setTotalCount(res.data.total_count)
+      setFaqs(allFaqs)
 
       const categoryRes = await getFAQs({ limit: 200, offset: 0 })
       setAllCategories(deriveFaqCategories(categoryRes.data.faqs))
@@ -98,7 +101,6 @@ export function FaqsPage() {
       console.error(e)
       setError(true)
       setFaqs([])
-      setTotalCount(0)
       if (isFaqForbiddenError(e)) {
         setPermissionDenied(true)
         toast.error(getFaqApiErrorMessage(e, "You do not have permission to view FAQs"))
@@ -108,7 +110,7 @@ export function FaqsPage() {
     } finally {
       setLoading(false)
     }
-  }, [canList, statusFilter, categoryFilter, pageSize, offset])
+  }, [canList, statusFilter, categoryFilter])
 
   useEffect(() => {
     void load()
@@ -116,7 +118,7 @@ export function FaqsPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter, categoryFilter, pageSize])
+  }, [statusFilter, categoryFilter, pageSize, query])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -129,9 +131,12 @@ export function FaqsPage() {
     })
   }, [faqs, query])
 
+  const totalCount = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
-  const pageStart = totalCount === 0 ? 0 : offset + 1
-  const pageEnd = Math.min(offset + faqs.length, totalCount)
+  const safePage = Math.min(page, totalPages)
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const pageStart = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const pageEnd = Math.min(safePage * pageSize, totalCount)
   const canPrev = page > 1
   const canNext = page < totalPages
 
@@ -222,7 +227,7 @@ export function FaqsPage() {
         summary={
           loading
             ? "Loading…"
-            : `${filtered.length} shown on page · ${totalCount} total`
+            : `${totalCount} shown · ${faqs.length} loaded`
         }
         search={
           <div className="relative w-full">
@@ -323,7 +328,7 @@ export function FaqsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((faq) => (
+                {paginated.map((faq) => (
                   <TableRow key={faq.id}>
                     <TableCell className="max-w-xs">
                       <p className="line-clamp-2 font-medium text-grayScale-900">

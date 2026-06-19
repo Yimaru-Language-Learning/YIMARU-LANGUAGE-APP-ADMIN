@@ -14,6 +14,7 @@ import {
   ListOrdered,
   ListTodo,
   Mic2,
+  Minus,
   MousePointer2,
   Table as TableIcon,
   Type,
@@ -35,6 +36,7 @@ const STIMULUS_LABELS: Record<string, string> = {
   SELECT_MISSING_WORDS: defaultLabelForKind("SELECT_MISSING_WORDS"),
   TABLE: defaultLabelForKind("TABLE"),
   PDF_ATTACHMENT: defaultLabelForKind("PDF_ATTACHMENT"),
+  NO_INPUT: defaultLabelForKind("NO_INPUT"),
 }
 
 const RESPONSE_LABELS: Record<string, string> = {
@@ -49,6 +51,7 @@ const RESPONSE_LABELS: Record<string, string> = {
   MATCHING_ANSWER: defaultLabelForKind("MATCHING_ANSWER"),
   LABEL_SELECTION: defaultLabelForKind("LABEL_SELECTION"),
   SEQUENCE_ORDER: defaultLabelForKind("SEQUENCE_ORDER"),
+  NO_INPUT: defaultLabelForKind("NO_INPUT"),
 }
 
 /** Legacy screenshot labels → map to closest API kind for display only (same code path). */
@@ -64,6 +67,7 @@ const STIMULUS_ICONS: Record<string, LucideIcon> = {
   SELECT_MISSING_WORDS: ListTodo,
   TABLE: TableIcon,
   PDF_ATTACHMENT: FileUp,
+  NO_INPUT: Minus,
 }
 
 const RESPONSE_ICONS: Record<string, LucideIcon> = {
@@ -78,6 +82,7 @@ const RESPONSE_ICONS: Record<string, LucideIcon> = {
   MATCHING_ANSWER: GitCompare,
   LABEL_SELECTION: MousePointer2,
   SEQUENCE_ORDER: ListOrdered,
+  NO_INPUT: Minus,
 }
 
 const DEFAULT_ICON = FileText

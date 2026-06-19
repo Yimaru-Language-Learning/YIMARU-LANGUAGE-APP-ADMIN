@@ -20,6 +20,7 @@ const KIND_DEFAULT_LABELS: Record<string, string> = {
   MATCHING_ANSWER: "Matching answer",
   LABEL_SELECTION: "Label selection",
   SEQUENCE_ORDER: "Sequence order",
+  NO_INPUT: "No input",
 }
 
 export function humanizeKind(kind: string): string {

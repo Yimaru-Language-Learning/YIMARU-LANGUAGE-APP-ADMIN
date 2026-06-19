@@ -23,6 +23,7 @@ import {
   normalizeMultipleChoiceValue,
   parseMultipleChoiceSlotValue,
 } from "./multipleChoiceSlotValue"
+import { isNoInputComponentKind } from "./questionComponentKinds"
 
 /** Parse a single slot value: plain string/URL, or JSON object/array when input looks like JSON. */
 export function parseDynamicSlotValue(raw: string | undefined): unknown {
@@ -154,7 +155,9 @@ export function buildDynamicQuestionPayload(input: {
   const mcqOptionsConsumed = { current: false }
 
   return {
-    stimulus: input.stimulusRows.map((row) => ({
+    stimulus: input.stimulusRows
+      .filter((row) => !isNoInputComponentKind(row.kind))
+      .map((row) => ({
       id: row.id,
       kind: row.kind,
       value: slotValueForRow(
@@ -167,7 +170,9 @@ export function buildDynamicQuestionPayload(input: {
         input.responseRows,
       ),
     })),
-    response: input.responseRows.map((row) => ({
+    response: input.responseRows
+      .filter((row) => !isNoInputComponentKind(row.kind))
+      .map((row) => ({
       id: row.id,
       kind: row.kind,
       value: slotValueForRow(

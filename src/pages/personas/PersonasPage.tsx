@@ -29,6 +29,7 @@ import {
 } from "../../components/ui/table"
 import { usePersonaPermissions } from "../../hooks/usePersonaPermissions"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import {
   formatPersonaDate,
   personaAvatarUrl,
@@ -61,7 +62,6 @@ export function PersonasPage() {
   const [error, setError] = useState(false)
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [personas, setPersonas] = useState<LmsPersona[]>([])
-  const [totalCount, setTotalCount] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [query, setQuery] = useState("")
@@ -70,8 +70,6 @@ export function PersonasPage() {
   const [personaPendingEdit, setPersonaPendingEdit] = useState<LmsPersona | null>(null)
   const [personaPendingDelete, setPersonaPendingDelete] = useState<LmsPersona | null>(null)
   const [togglingId, setTogglingId] = useState<number | null>(null)
-
-  const offset = (page - 1) * pageSize
 
   const load = useCallback(async () => {
     if (!canList) {
@@ -84,18 +82,22 @@ export function PersonasPage() {
     setPermissionDenied(false)
 
     try {
-      const res = await listPersonas({
-        active_only: statusFilter === "active",
-        limit: pageSize,
-        offset,
+      const allPersonas = await fetchAllOffsetPages(async (batchOffset, limit) => {
+        const res = await listPersonas({
+          active_only: statusFilter === "active",
+          limit,
+          offset: batchOffset,
+        })
+        return {
+          items: res.data.personas,
+          total_count: res.data.total_count,
+        }
       })
-      setPersonas(res.data.personas)
-      setTotalCount(res.data.total_count)
+      setPersonas(allPersonas)
     } catch (e) {
       console.error(e)
       setError(true)
       setPersonas([])
-      setTotalCount(0)
       if (isPersonaForbiddenError(e)) {
         setPermissionDenied(true)
         toast.error(getPersonaApiErrorMessage(e, "You do not have permission to view personas"))
@@ -105,7 +107,7 @@ export function PersonasPage() {
     } finally {
       setLoading(false)
     }
-  }, [canList, statusFilter, pageSize, offset])
+  }, [canList, statusFilter])
 
   useEffect(() => {
     void load()
@@ -113,7 +115,7 @@ export function PersonasPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter, pageSize])
+  }, [statusFilter, pageSize, query])
 
   const filtered = useMemo(() => {
     let rows = personas
@@ -142,13 +144,16 @@ export function PersonasPage() {
 
   const clearFilters = () => {
     setStatusFilter("all")
+    setQuery("")
     setPage(1)
   }
 
+  const totalCount = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage = Math.min(page, totalPages)
-  const startEntry = totalCount === 0 ? 0 : offset + 1
-  const endEntry = Math.min(offset + personas.length, totalCount)
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
+  const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const endEntry = Math.min(safePage * pageSize, totalCount)
 
   const handleToggleActive = async (persona: LmsPersona) => {
     if (!canUpdate) {
@@ -291,7 +296,7 @@ export function PersonasPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((persona) => (
+                  paginated.map((persona) => (
                     <TableRow key={persona.id}>
                       <TableCell className="py-3.5">
                         <img

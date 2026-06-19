@@ -26,11 +26,17 @@ import {
   validateDefinitionSchemas,
   type FieldErrorMap,
 } from "./lib/questionTypeDefinitionValidation"
+import { defaultLabelForKind } from "../../lib/schemaSlotLabel"
 import { QuestionTypeBasicInfoStep } from "./components/question-type-steps/QuestionTypeBasicInfoStep"
 import { QuestionTypeConfigStep } from "./components/question-type-steps/QuestionTypeConfigStep"
 import { QuestionTypeValidatePreviewStep } from "./components/question-type-steps/QuestionTypeValidatePreviewStep"
 import { QuestionTypeReviewPublishStep } from "./components/question-type-steps/QuestionTypeReviewPublishStep"
-import { defaultLabelForKind } from "../../lib/schemaSlotLabel"
+import {
+  isNoInputComponentKind,
+  mergeCatalogWithNoInput,
+  noInputSchemaRow,
+  sideIsNoInputOnly,
+} from "../../lib/questionComponentKinds"
 
 const initialDraft = (): QuestionTypeDefinitionCreatePayload => ({
   key: "",
@@ -170,9 +176,18 @@ export function CreateQuestionTypeFlow() {
   }, [isEdit])
 
   const catalogForSchemaValidation = {
-    stimulus: new Set(componentCatalog.stimulus_component_kinds),
-    response: new Set(componentCatalog.response_component_kinds),
+    stimulus: new Set(mergeCatalogWithNoInput(componentCatalog.stimulus_component_kinds)),
+    response: new Set(mergeCatalogWithNoInput(componentCatalog.response_component_kinds)),
   }
+
+  const stimulusCatalogKinds = useMemo(
+    () => mergeCatalogWithNoInput(componentCatalog.stimulus_component_kinds),
+    [componentCatalog.stimulus_component_kinds],
+  )
+  const responseCatalogKinds = useMemo(
+    () => mergeCatalogWithNoInput(componentCatalog.response_component_kinds),
+    [componentCatalog.response_component_kinds],
+  )
 
   const handleNextFromStep1 = () => {
     const e1 = validateDefinitionBasic(draft)
@@ -194,10 +209,26 @@ export function CreateQuestionTypeFlow() {
     }
 
     const nextDraft: QuestionTypeDefinitionCreatePayload = { ...draft }
-    if (!nextDraft.stimulus_schema.length && nextDraft.stimulus_component_kinds.length) {
+    if (
+      !nextDraft.stimulus_schema.length &&
+      sideIsNoInputOnly(nextDraft.stimulus_component_kinds)
+    ) {
+      nextDraft.stimulus_schema = [noInputSchemaRow()]
+    } else if (
+      !nextDraft.stimulus_schema.length &&
+      nextDraft.stimulus_component_kinds.length
+    ) {
       nextDraft.stimulus_schema = seedSchemaFromKinds(nextDraft.stimulus_component_kinds)
     }
-    if (!nextDraft.response_schema.length && nextDraft.response_component_kinds.length) {
+    if (
+      !nextDraft.response_schema.length &&
+      sideIsNoInputOnly(nextDraft.response_component_kinds)
+    ) {
+      nextDraft.response_schema = [noInputSchemaRow()]
+    } else if (
+      !nextDraft.response_schema.length &&
+      nextDraft.response_component_kinds.length
+    ) {
       nextDraft.response_schema = seedSchemaFromKinds(nextDraft.response_component_kinds)
     }
     setDraft(nextDraft)
@@ -334,8 +365,8 @@ export function CreateQuestionTypeFlow() {
           <QuestionTypeConfigStep
             draft={draft}
             setDraft={setDraft}
-            stimulusCatalogKinds={componentCatalog.stimulus_component_kinds}
-            responseCatalogKinds={componentCatalog.response_component_kinds}
+            stimulusCatalogKinds={stimulusCatalogKinds}
+            responseCatalogKinds={responseCatalogKinds}
             catalogLoading={catalogLoading}
             catalogError={catalogError}
             errors={stepErrors}

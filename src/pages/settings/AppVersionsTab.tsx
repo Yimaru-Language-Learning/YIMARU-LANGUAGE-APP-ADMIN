@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Input } from "../../components/ui/input"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import { cn } from "../../lib/utils"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import {
@@ -64,7 +65,6 @@ export function AppVersionsTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [versions, setVersions] = useState<AppVersion[]>([])
-  const [totalCount, setTotalCount] = useState(0)
   const [offset, setOffset] = useState(0)
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [query, setQuery] = useState("")
@@ -78,23 +78,31 @@ export function AppVersionsTab() {
     setLoading(true)
     setError(false)
     try {
-      const res = await getAppVersions({ limit: pageSize, offset })
-      setVersions(res.data.versions)
-      setTotalCount(res.data.total_count)
+      const allVersions = await fetchAllOffsetPages(async (batchOffset, limit) => {
+        const res = await getAppVersions({ limit, offset: batchOffset })
+        return {
+          items: res.data.versions,
+          total_count: res.data.total_count,
+        }
+      })
+      setVersions(allVersions)
     } catch (e) {
       console.error(e)
       setError(true)
       setVersions([])
-      setTotalCount(0)
       toast.error("Failed to load app versions")
     } finally {
       setLoading(false)
     }
-  }, [offset, pageSize])
+  }, [])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    setOffset(0)
+  }, [query, platformFilter, statusFilter, pageSize])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -123,8 +131,10 @@ export function AppVersionsTab() {
   const activeCount = versions.filter((v) => v.status.toUpperCase() === "ACTIVE").length
   const forceCount = versions.filter((v) => v.update_type.toUpperCase() === "FORCE").length
 
+  const totalCount = filtered.length
+  const paginated = filtered.slice(offset, offset + pageSize)
   const pageStart = totalCount === 0 ? 0 : offset + 1
-  const pageEnd = Math.min(offset + versions.length, totalCount)
+  const pageEnd = Math.min(offset + paginated.length, totalCount)
   const canPrev = offset > 0
   const canNext = offset + pageSize < totalCount
 
@@ -364,7 +374,7 @@ export function AppVersionsTab() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-grayScale-50">
-                  {filtered.map((version) => (
+                  {paginated.map((version) => (
                     <tr key={version.id} className="group transition-colors hover:bg-grayScale-50/60">
                       <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4">
                         <p className="font-semibold text-grayScale-900">

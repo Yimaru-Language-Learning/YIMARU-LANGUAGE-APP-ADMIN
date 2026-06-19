@@ -36,6 +36,7 @@ import {
   DialogDescription,
 } from "../../components/ui/dialog";
 import { countActiveFilters } from "../../lib/adminFilterUtils";
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages";
 import { cn } from "../../lib/utils";
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination";
 import { getActivityLogs, getActivityLogById } from "../../api/activity-logs.api";
@@ -133,7 +134,6 @@ function formatRoleLabel(role: string): string {
 // ── Main Component ─────────────────────────────────────────────────
 export function UserLogPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -150,29 +150,34 @@ export function UserLogPage() {
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const filters: ActivityLogFilters = {
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-      };
-      if (actionFilter) filters.action = actionFilter;
-      if (dateAfter) filters.after = new Date(dateAfter).toISOString();
-      if (dateBefore) filters.before = new Date(dateBefore).toISOString();
+      const allLogs = await fetchAllOffsetPages(async (offset, limit) => {
+        const filters: ActivityLogFilters = { limit, offset };
+        if (actionFilter) filters.action = actionFilter;
+        if (dateAfter) filters.after = new Date(dateAfter).toISOString();
+        if (dateBefore) filters.before = new Date(dateBefore).toISOString();
 
-      const res = await getActivityLogs(filters);
-      setLogs(res.data.data.logs);
-      setTotalCount(res.data.data.total_count);
+        const res = await getActivityLogs(filters);
+        return {
+          items: res.data.data.logs,
+          total_count: res.data.data.total_count,
+        };
+      });
+      setLogs(allLogs);
     } catch (error) {
       console.error("Failed to fetch activity logs:", error);
       setLogs([]);
-      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, actionFilter, dateAfter, dateBefore]);
+  }, [actionFilter, dateAfter, dateBefore]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, pageSize]);
 
   const handleViewDetail = async (logId: number) => {
     setDialogOpen(true);
@@ -207,9 +212,24 @@ export function UserLogPage() {
 
   const hasActiveFilters = activeFilterCount > 0 || Boolean(searchQuery.trim());
 
+  // Filter logs by search (client-side on the message field)
+  const filteredLogs = searchQuery
+    ? logs.filter(
+        (log) =>
+          log.message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          log.actor_role?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : logs;
+
+  const totalCount = filteredLogs.length;
+
   // Pagination
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, pageCount);
+  const paginatedLogs = filteredLogs.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endEntry = Math.min(safePage * pageSize, totalCount);
 
   const handlePrev = () => safePage > 1 && setPage(safePage - 1);
   const handleNext = () => safePage < pageCount && setPage(safePage + 1);
@@ -227,19 +247,6 @@ export function UserLogPage() {
     }
     return pages;
   };
-
-  // Filter logs by search (client-side on the message field)
-  const filteredLogs = searchQuery
-    ? logs.filter(
-        (log) =>
-          log.message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          log.actor_role?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : logs;
-
-  const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const endEntry = Math.min(safePage * pageSize, totalCount);
 
   return (
     <div className="space-y-6">
@@ -399,7 +406,7 @@ export function UserLogPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLogs.map((log) => {
+              paginatedLogs.map((log) => {
                 const ActionIcon = getActionIcon(log.action);
                 return (
                   <TableRow key={log.id} className="group">

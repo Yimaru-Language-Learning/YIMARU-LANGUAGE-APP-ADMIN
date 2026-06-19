@@ -4,6 +4,12 @@ import type {
   QuestionTypeDefinitionCreatePayload,
 } from "../../../types/questionTypeDefinition.types"
 import { defaultLabelForKind } from "../../../lib/schemaSlotLabel"
+import {
+  effectiveComponentKinds,
+  isNoInputComponentKind,
+  sideIsNoInputOnly,
+  noInputSchemaRow,
+} from "../../../lib/questionComponentKinds"
 
 export type FieldErrorMap = Record<string, string>
 
@@ -32,13 +38,24 @@ export function validateDefinitionKinds(
   const errors: FieldErrorMap = {}
   const { stimulus_component_kinds: sk, response_component_kinds: rk } = payload
 
-  if (!sk.length) errors.stimulus_kinds = "Select at least one stimulus component kind."
-  if (!rk.length) errors.response_kinds = "Select at least one response component kind."
+  if (sk.length === 0 && rk.length === 0) {
+    errors.stimulus_kinds =
+      "Select at least one stimulus or response component kind (including No input)."
+    errors.response_kinds = errors.stimulus_kinds
+    return errors
+  }
 
   if (sk.length && !uniqueStrings(sk)) errors.stimulus_kinds = "Stimulus kinds must be unique (no duplicates)."
   if (rk.length && !uniqueStrings(rk)) errors.response_kinds = "Response kinds must be unique (no duplicates)."
 
-  if (rk.length === 1 && rk[0] === "ANSWER_TIMER") {
+  const responseEffective = effectiveComponentKinds(rk)
+  const responseTimers = rk.filter((k) => k === "ANSWER_TIMER")
+  if (
+    rk.length > 0 &&
+    responseEffective.length === 0 &&
+    responseTimers.length === 1 &&
+    rk.length === 1
+  ) {
     errors.response_kinds = "ANSWER_TIMER cannot be the only response kind."
   }
 
@@ -58,14 +75,14 @@ export function validateDefinitionKinds(
     const sCat = new Set(catalog.stimulus_component_kinds)
     const rCat = new Set(catalog.response_component_kinds)
     if (sCat.size > 0 && sk.length) {
-      const invalid = sk.filter((k) => !sCat.has(k))
+      const invalid = sk.filter((k) => !sCat.has(k) && !isNoInputComponentKind(k))
       if (invalid.length) {
         const msg = `Not in stimulus catalog: ${invalid.join(", ")}.`
         errors.stimulus_kinds = errors.stimulus_kinds ? `${errors.stimulus_kinds} ${msg}` : msg
       }
     }
     if (rCat.size > 0 && rk.length) {
-      const invalid = rk.filter((k) => !rCat.has(k))
+      const invalid = rk.filter((k) => !rCat.has(k) && !isNoInputComponentKind(k))
       if (invalid.length) {
         const msg = `Not in response catalog: ${invalid.join(", ")}.`
         errors.response_kinds = errors.response_kinds ? `${errors.response_kinds} ${msg}` : msg
@@ -91,8 +108,28 @@ export function validateDefinitionSchemas(
     side: "stimulus" | "response",
   ) => {
     const prefix = side
+    if (allowed.length === 0) return
+
+    if (sideIsNoInputOnly(allowed)) {
+      if (rows.length > 1) {
+        errors[`${prefix}_schema`] = "At most one no-input slot is allowed for this section."
+        return
+      }
+      if (rows.length === 1) {
+        const row = rows[0]
+        if (!isNoInputComponentKind(row.kind)) {
+          errors[`${prefix}_schema`] = "This section only allows the No input component."
+          return
+        }
+        if (!row.id?.trim()) {
+          errors[`${prefix}_0`] = "Element id is required."
+        }
+      }
+      return
+    }
+
     if (!rows.length) {
-      errors[`${prefix}_schema`] = `Add at least one ${side} schema row.`
+      errors[`${prefix}_schema`] = `Add at least one ${side} schema row, or choose No input for this section.`
       return
     }
     idsUniqueAndNonEmpty(rows, prefix, errors)
@@ -101,14 +138,17 @@ export function validateDefinitionSchemas(
     const catalogSet = side === "stimulus" ? catalog.stimulus : catalog.response
     rows.forEach((row, i) => {
       const rowMessages: string[] = []
+      if (isNoInputComponentKind(row.kind)) {
+        rowMessages.push("Remove No input rows or switch this section to No input only.")
+      }
       if (!row.kind) rowMessages.push("Kind is required.")
       else if (allowedSet.size && !allowedSet.has(row.kind)) {
         rowMessages.push(`Kind "${row.kind}" is not in selected ${side} kinds.`)
       }
-      if (catalogSet.size && row.kind && !catalogSet.has(row.kind)) {
+      if (catalogSet.size && row.kind && !catalogSet.has(row.kind) && !isNoInputComponentKind(row.kind)) {
         rowMessages.push(`Kind "${row.kind}" is not in the ${side} component catalog.`)
       }
-      if (!row.label?.trim()) {
+      if (!isNoInputComponentKind(row.kind) && !row.label?.trim()) {
         rowMessages.push("Label is required — this is the field title authors see when creating questions.")
       }
       if (rowMessages.length) errors[`${prefix}_${i}`] = rowMessages.join(" ")
@@ -144,7 +184,7 @@ function uniqueKindsFromSchemaRows(rows: DynamicElementDefinition[]): string[] {
   return [...set].sort((a, b) => a.localeCompare(b))
 }
 
-const AUXILIARY_RESPONSE_KINDS = new Set(["ANSWER_TIMER"])
+const AUXILIARY_RESPONSE_KINDS = new Set(["ANSWER_TIMER", "NO_INPUT"])
 const SHORT_ANSWER_RESPONSE_KINDS = new Set([
   "SHORT_ANSWER",
   "TEXT_INPUT",
@@ -183,23 +223,42 @@ export function buildValidateKindsPayload(
 export function buildCreatePayload(
   draft: QuestionTypeDefinitionCreatePayload,
 ): QuestionTypeDefinitionCreatePayload {
-  const stimulus_schema = draft.stimulus_schema.map((r) => ({
+  const stimulus_schema = draft.stimulus_schema
+    .filter((r) => !isNoInputComponentKind(r.kind) || sideIsNoInputOnly(draft.stimulus_component_kinds))
+    .map((r) => ({
     ...r,
     id: r.id.trim(),
     kind: r.kind.trim(),
-    label: r.label?.trim() || defaultLabelForKind(r.kind),
+    label: isNoInputComponentKind(r.kind)
+      ? r.label?.trim() || defaultLabelForKind(r.kind)
+      : r.label?.trim() || defaultLabelForKind(r.kind),
+    required: isNoInputComponentKind(r.kind) ? false : r.required,
     config: r.config && Object.keys(r.config).length ? r.config : undefined,
   }))
-  const response_schema = draft.response_schema.map((r) => ({
+  const response_schema = draft.response_schema
+    .filter((r) => !isNoInputComponentKind(r.kind) || sideIsNoInputOnly(draft.response_component_kinds))
+    .map((r) => ({
     ...r,
     id: r.id.trim(),
     kind: r.kind.trim(),
-    label: r.label?.trim() || defaultLabelForKind(r.kind),
+    label: isNoInputComponentKind(r.kind)
+      ? r.label?.trim() || defaultLabelForKind(r.kind)
+      : r.label?.trim() || defaultLabelForKind(r.kind),
+    required: isNoInputComponentKind(r.kind) ? false : r.required,
     config: r.config && Object.keys(r.config).length ? r.config : undefined,
   }))
 
   const stimulusKindsFromSchema = uniqueKindsFromSchemaRows(stimulus_schema)
   const responseKindsFromSchema = uniqueKindsFromSchemaRows(response_schema)
+
+  const finalStimulusSchema =
+    sideIsNoInputOnly(draft.stimulus_component_kinds) && stimulus_schema.length === 0
+      ? [noInputSchemaRow()]
+      : stimulus_schema
+  const finalResponseSchema =
+    sideIsNoInputOnly(draft.response_component_kinds) && response_schema.length === 0
+      ? [noInputSchemaRow()]
+      : response_schema
 
   return {
     ...draft,
@@ -210,7 +269,7 @@ export function buildCreatePayload(
       stimulusKindsFromSchema.length > 0 ? stimulusKindsFromSchema : [...draft.stimulus_component_kinds],
     response_component_kinds:
       responseKindsFromSchema.length > 0 ? responseKindsFromSchema : [...draft.response_component_kinds],
-    stimulus_schema,
-    response_schema,
+    stimulus_schema: finalStimulusSchema,
+    response_schema: finalResponseSchema,
   }
 }

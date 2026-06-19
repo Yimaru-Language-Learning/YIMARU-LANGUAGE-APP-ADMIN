@@ -9,6 +9,7 @@ import {
   getResponseKindPresentation,
   getStimulusKindPresentation,
 } from "./componentKindUi"
+import { isNoInputComponentKind } from "../../../../lib/questionComponentKinds"
 
 type Side = "stimulus" | "response"
 
@@ -119,7 +120,9 @@ export function SchemaBuilderSection({
       ) : null}
 
       <div className="space-y-3">
-        {rows.map((row, index) => (
+        {rows.map((row, index) => {
+          const noInput = isNoInputComponentKind(row.kind)
+          return (
           <div
             key={`${side}-${index}`}
             className="rounded-xl border border-grayScale-200 bg-[#F8FAFC] p-4 space-y-3"
@@ -135,6 +138,7 @@ export function SchemaBuilderSection({
                 className="h-8 w-8 p-0 text-grayScale-500 hover:text-red-600"
                 onClick={() => removeRow(index)}
                 aria-label="Remove row"
+                disabled={noInput}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -170,6 +174,13 @@ export function SchemaBuilderSection({
               </div>
             </div>
 
+            {noInput ? (
+              <p className="text-[12px] text-grayScale-500">
+                No author input is collected for this side. Deselect No input in the component picker to use
+                other kinds.
+              </p>
+            ) : (
+              <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-[12px] font-semibold text-grayScale-600">
@@ -204,10 +215,12 @@ export function SchemaBuilderSection({
               />
               <p className="text-[11px] text-grayScale-400">Tab out of the field to apply JSON config.</p>
             </div>
+              </>
+            )}
 
             {rowErrors?.[index] ? <p className="text-sm text-red-600">{rowErrors[index]}</p> : null}
           </div>
-        ))}
+        )})}
       </div>
     </div>
   )

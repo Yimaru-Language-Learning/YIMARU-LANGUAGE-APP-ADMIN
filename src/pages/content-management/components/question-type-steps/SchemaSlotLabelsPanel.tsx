@@ -7,6 +7,7 @@ import {
   getResponseKindPresentation,
   getStimulusKindPresentation,
 } from "./componentKindUi"
+import { isNoInputComponentKind } from "../../../../lib/questionComponentKinds"
 
 interface SchemaSlotLabelsPanelProps {
   stimulusRows: DynamicElementDefinition[]
@@ -71,23 +72,32 @@ function SlotLabelGroup({
                   className="h-8 w-8 shrink-0 p-0 text-grayScale-500 hover:text-red-600"
                   onClick={() => onChange(removeRow(rows, index))}
                   aria-label={`Remove ${presentation.label} slot`}
+                  disabled={isNoInputComponentKind(row.kind)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
               <div className="space-y-1">
-                <label className="text-[12px] font-semibold text-grayScale-600">
-                  Field label <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  value={row.label ?? ""}
-                  onChange={(e) => onChange(updateRowLabel(rows, index, e.target.value))}
-                  placeholder={defaultLabelForKind(row.kind)}
-                  className="h-10 bg-white"
-                />
-                <p className="text-[11px] text-grayScale-400">
-                  Shown to authors when they create questions from this type.
-                </p>
+                {isNoInputComponentKind(row.kind) ? (
+                  <p className="text-[12px] text-grayScale-500">
+                    No author input is collected for this side.
+                  </p>
+                ) : (
+                  <>
+                    <label className="text-[12px] font-semibold text-grayScale-600">
+                      Field label <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      value={row.label ?? ""}
+                      onChange={(e) => onChange(updateRowLabel(rows, index, e.target.value))}
+                      placeholder={defaultLabelForKind(row.kind)}
+                      className="h-10 bg-white"
+                    />
+                    <p className="text-[11px] text-grayScale-400">
+                      Shown to authors when they create questions from this type.
+                    </p>
+                  </>
+                )}
               </div>
               {rowError ? <p className="text-sm text-red-600">{rowError}</p> : null}
             </div>

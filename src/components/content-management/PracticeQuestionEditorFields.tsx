@@ -21,6 +21,7 @@ import { Select } from "../ui/select"
 import { Button } from "../ui/button"
 import { SpinnerIcon } from "../ui/spinner-icon"
 import { cn } from "../../lib/utils"
+import { isNoInputComponentKind } from "../../lib/questionComponentKinds"
 import { ResolvedAudio } from "../media/ResolvedAudio"
 import { ResolvedImage } from "../media/ResolvedImage"
 import { DynamicSchemaSlotField } from "./DynamicSchemaSlotField"
@@ -670,13 +671,17 @@ export function PracticeQuestionEditorFields({
         return
       }
       const fieldValues: Record<string, string> = { ...value.dynamicFieldValues }
-      const dynamicStimulusRows: PracticeQuestionDynamicRow[] = def.stimulus_schema.map((r) => ({
+      const dynamicStimulusRows: PracticeQuestionDynamicRow[] = def.stimulus_schema
+        .filter((r) => !isNoInputComponentKind(r.kind))
+        .map((r) => ({
         id: r.id,
         kind: r.kind,
         label: r.label,
         required: r.required,
       }))
-      const dynamicResponseRows: PracticeQuestionDynamicRow[] = def.response_schema.map((r) => ({
+      const dynamicResponseRows: PracticeQuestionDynamicRow[] = def.response_schema
+        .filter((r) => !isNoInputComponentKind(r.kind))
+        .map((r) => ({
         id: r.id,
         kind: r.kind,
         label: r.label,

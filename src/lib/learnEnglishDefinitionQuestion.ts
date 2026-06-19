@@ -33,6 +33,7 @@ import {
   validateSelectMissingWordsResponseSlotValue,
   validateSelectMissingWordsStimulusSlotValue,
 } from "./selectMissingWordsSlotValue"
+import { isNoInputComponentKind } from "./questionComponentKinds"
 
 function isMultipleChoiceKind(kind: string): boolean {
   const u = kind.trim().toUpperCase()
@@ -64,6 +65,7 @@ function defaultValueForSchemaSlot(
   kind: string,
   side: "stimulus" | "response",
 ): string {
+  if (isNoInputComponentKind(kind)) return ""
   const u = kind.trim().toUpperCase()
   if (u === "TABLE") {
     return serializeTableSlotValue(createEmptyTable(2, 1))
@@ -89,7 +91,9 @@ function defaultValueForSchemaSlot(
 }
 
 export function definitionUsesDynamicPayload(def: QuestionTypeDefinition): boolean {
-  return def.stimulus_schema.length > 0 || def.response_schema.length > 0
+  const stimulus = def.stimulus_schema.filter((r) => !isNoInputComponentKind(r.kind))
+  const response = def.response_schema.filter((r) => !isNoInputComponentKind(r.kind))
+  return stimulus.length > 0 || response.length > 0
 }
 
 export function emptyDynamicFieldValuesForDefinition(
@@ -97,9 +101,11 @@ export function emptyDynamicFieldValuesForDefinition(
 ): Record<string, string> {
   const o: Record<string, string> = {}
   for (const r of def.stimulus_schema) {
+    if (isNoInputComponentKind(r.kind)) continue
     o[`stimulus:${r.id}`] = defaultValueForSchemaSlot(r.kind, "stimulus")
   }
   for (const r of def.response_schema) {
+    if (isNoInputComponentKind(r.kind)) continue
     o[`response:${r.id}`] = defaultValueForSchemaSlot(r.kind, "response")
   }
   return o
@@ -190,6 +196,7 @@ export function questionRowHasContent(
   if (q.questionText.trim()) return true
   const fv = q.dynamicFieldValues ?? {}
   for (const row of def.stimulus_schema) {
+    if (isNoInputComponentKind(row.kind)) continue
     if (isMultipleChoiceKind(row.kind)) {
       if (
         multipleChoiceSlotHasContent(
@@ -233,6 +240,7 @@ export function questionRowHasContent(
     if (fv[`stimulus:${row.id}`]?.trim()) return true
   }
   for (const row of def.response_schema) {
+    if (isNoInputComponentKind(row.kind)) continue
     if (isMultipleChoiceKind(row.kind)) {
       if (
         multipleChoiceSlotHasContent(
@@ -404,6 +412,7 @@ export function validateDefinitionQuestion(
       return `Question ${n}: enter prompt text (${promptRow.label || promptRow.id}).`
     }
     for (const row of def.stimulus_schema) {
+      if (isNoInputComponentKind(row.kind)) continue
       if (isStructuredDynamicSlotKind(row.kind)) continue
       if (!row.required) continue
       const v = fieldValues[`stimulus:${row.id}`]?.trim()
@@ -411,6 +420,7 @@ export function validateDefinitionQuestion(
         return `Question ${n}: fill required stimulus "${row.label || row.id}" (${row.kind}).`
     }
     for (const row of def.response_schema) {
+      if (isNoInputComponentKind(row.kind)) continue
       if (isStructuredDynamicSlotKind(row.kind)) continue
       if (!row.required) continue
       const v = fieldValues[`response:${row.id}`]?.trim()
@@ -427,6 +437,7 @@ export function validateDefinitionQuestion(
       def.stimulus_schema,
     )
     for (const row of def.stimulus_schema) {
+      if (isNoInputComponentKind(row.kind)) continue
       if (isMultipleChoiceKind(row.kind)) {
         const val = parseMultipleChoiceSlotValue(fieldValues[`stimulus:${row.id}`])
         if (!multipleChoiceSlotHasContent(val)) {
@@ -486,6 +497,7 @@ export function validateDefinitionQuestion(
       }
     }
     for (const row of def.response_schema) {
+      if (isNoInputComponentKind(row.kind)) continue
       if (isMultipleChoiceKind(row.kind)) {
         const val = parseMultipleChoiceSlotValue(fieldValues[`response:${row.id}`])
         if (!multipleChoiceSlotHasContent(val)) {

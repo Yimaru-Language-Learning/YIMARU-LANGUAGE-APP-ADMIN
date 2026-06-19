@@ -10,7 +10,7 @@ import {
   Star,
 } from "lucide-react"
 import { toast } from "sonner"
-import { loadRatingsPage } from "../../api/ratings.api"
+import { fetchAllRatingsByTarget } from "../../api/ratings.api"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -77,7 +77,7 @@ export function AppReviewsPage() {
     setPermissionDenied(false)
 
     try {
-      const data = await loadRatingsPage(APP_TARGET_TYPE, page, pageSize, APP_TARGET_ID)
+      const data = await fetchAllRatingsByTarget(APP_TARGET_TYPE, APP_TARGET_ID)
       setSummary(data.summary)
       setReviews(data.reviews)
 
@@ -98,7 +98,7 @@ export function AppReviewsPage() {
     } finally {
       setLoading(false)
     }
-  }, [canList, page, pageSize])
+  }, [canList])
 
   useEffect(() => {
     void load()
@@ -106,7 +106,7 @@ export function AppReviewsPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [pageSize, starsFilter])
+  }, [pageSize, starsFilter, query])
 
   const filteredReviews = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -134,13 +134,14 @@ export function AppReviewsPage() {
     setPage(1)
   }
 
-  const totalCount = summary.total_count
+  const totalCount = filteredReviews.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage = Math.min(page, totalPages)
+  const paginatedReviews = filteredReviews.slice((safePage - 1) * pageSize, safePage * pageSize)
   const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
   const endEntry = Math.min(safePage * pageSize, totalCount)
 
-  const writtenOnPage = reviews.filter((r) => r.review?.trim()).length
+  const writtenOnPage = paginatedReviews.filter((r) => r.review?.trim()).length
 
   if (!permissionsLoading && !canList) {
     return <RatingsAccessDenied />
@@ -211,7 +212,7 @@ export function AppReviewsPage() {
             className="border-0 shadow-none"
             activeFilterCount={activeFilterCount}
             onClearFilters={clearFilters}
-            footer="Star and text filters apply to the current page only. Server-side search is not available yet."
+            footer="Star and text filters apply across all reviews."
             summary={
               totalCount > 0
                 ? `Showing ${startEntry}–${endEntry} of ${totalCount}`
@@ -279,18 +280,18 @@ export function AppReviewsPage() {
                         <p className="text-sm font-medium text-grayScale-500">
                           {totalCount === 0
                             ? "No reviews yet"
-                            : "No reviews match your filters on this page"}
+                            : "No reviews match your filters"}
                         </p>
                         <p className="text-xs text-grayScale-400">
-                          {totalCount === 0
+                          {summary.total_count === 0
                             ? "Learners can submit ratings from the mobile or web app."
-                            : "Try different filters or go to another page."}
+                            : "Try different filters or search terms."}
                         </p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredReviews.map((rating) => {
+                  paginatedReviews.map((rating) => {
                     const profile = reviewerProfiles.get(rating.user_id)
                     return (
                       <TableRow key={rating.id}>

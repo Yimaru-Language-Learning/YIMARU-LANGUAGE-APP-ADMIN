@@ -1,4 +1,5 @@
 import http from "./http"
+import { fetchAllOffsetPages } from "../lib/fetchAllOffsetPages"
 import { DEFAULT_TABLE_PAGE_SIZE } from "../lib/tablePagination"
 import type {
   AppReviewsPageData,
@@ -117,6 +118,30 @@ export async function loadRatingsPage(
       offset,
     }),
   ])
+
+  return { summary, reviews }
+}
+
+/** Fetch every review for a target (for client-side search across pagination). */
+export async function fetchAllRatingsByTarget(
+  targetType: RatingTargetType,
+  targetId?: number,
+): Promise<{ summary: RatingSummary; reviews: Rating[] }> {
+  const normalizedTargetId = normalizeTargetId(targetType, targetId)
+  const summary = await getRatingSummary({
+    target_type: targetType,
+    target_id: normalizedTargetId,
+  })
+
+  const reviews = await fetchAllOffsetPages(async (offset, limit) => ({
+    items: await listRatingsByTarget({
+      target_type: targetType,
+      target_id: normalizedTargetId,
+      limit,
+      offset,
+    }),
+    total_count: summary.total_count,
+  }))
 
   return { summary, reviews }
 }

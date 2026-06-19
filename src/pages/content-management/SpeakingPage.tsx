@@ -32,6 +32,7 @@ import {
 import type { Course, CourseCategory, QuestionDetail, QuestionSet, SubCourse } from "../../types/course.types"
 import { toast } from "sonner"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 const MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024
@@ -250,31 +251,38 @@ export function SpeakingPage() {
       let total = 0
 
       if (selectedPracticeId) {
-        const offset = (safePage - 1) * audioPageSize
-        const practiceRes = await getPracticeQuestionsByPractice(Number(selectedPracticeId), {
-          limit: audioPageSize,
-          offset,
-          question_type: "AUDIO",
-        })
-        const practiceData = practiceRes.data?.data
         const selectedPractice = practiceOptions.find((p) => p.id === Number(selectedPracticeId))
-        rows = (practiceData?.questions ?? []).map((q) => ({
-          id: q.question_id || q.id,
-          question_text: q.question_text,
-          question_type: q.question_type,
-          difficulty_level: q.difficulty_level ?? undefined,
-          points: q.points ?? 0,
-          explanation: q.explanation ?? undefined,
-          tips: q.tips ?? undefined,
-          voice_prompt: q.voice_prompt ?? undefined,
-          sample_answer_voice_prompt: q.sample_answer_voice_prompt ?? undefined,
-          image_url: q.image_url ?? undefined,
-          status: q.question_status ?? "DRAFT",
-          created_at: "",
-          audio_correct_answer_text: q.audio_correct_answer_text ?? undefined,
-          practice_id: Number(selectedPracticeId),
-          practice_title: selectedPractice?.title ?? `Practice #${selectedPracticeId}`,
-        }))
+        const practiceId = Number(selectedPracticeId)
+        const allRows = await fetchAllOffsetPages(async (batchOffset, limit) => {
+          const practiceRes = await getPracticeQuestionsByPractice(practiceId, {
+            limit,
+            offset: batchOffset,
+            question_type: "AUDIO",
+          })
+          const practiceData = practiceRes.data?.data
+          const questions = practiceData?.questions ?? []
+          return {
+            items: questions.map((q) => ({
+              id: q.question_id || q.id,
+              question_text: q.question_text,
+              question_type: q.question_type,
+              difficulty_level: q.difficulty_level ?? undefined,
+              points: q.points ?? 0,
+              explanation: q.explanation ?? undefined,
+              tips: q.tips ?? undefined,
+              voice_prompt: q.voice_prompt ?? undefined,
+              sample_answer_voice_prompt: q.sample_answer_voice_prompt ?? undefined,
+              image_url: q.image_url ?? undefined,
+              status: q.question_status ?? "DRAFT",
+              created_at: "",
+              audio_correct_answer_text: q.audio_correct_answer_text ?? undefined,
+              practice_id: practiceId,
+              practice_title: selectedPractice?.title ?? `Practice #${selectedPracticeId}`,
+            })),
+            total_count: practiceData?.total_count,
+          }
+        })
+        rows = allRows
         const q = searchQuery.trim().toLowerCase()
         if (q) {
           rows = rows.filter((question) => {
@@ -283,17 +291,25 @@ export function SpeakingPage() {
             return haystack.includes(q)
           })
         }
-        total = searchQuery.trim() ? rows.length : (practiceData?.total_count ?? rows.length)
+        total = rows.length
+        const offset = (safePage - 1) * audioPageSize
+        rows = rows.slice(offset, offset + audioPageSize)
       } else {
         const groupedRows = await Promise.all(
           practiceOptions.map(async (practice) => {
             try {
-              const res = await getPracticeQuestionsByPractice(practice.id, {
-                limit: 100,
-                offset: 0,
-                question_type: "AUDIO",
+              const questions = await fetchAllOffsetPages(async (batchOffset, limit) => {
+                const res = await getPracticeQuestionsByPractice(practice.id, {
+                  limit,
+                  offset: batchOffset,
+                  question_type: "AUDIO",
+                })
+                const data = res.data?.data
+                return {
+                  items: data?.questions ?? [],
+                  total_count: data?.total_count,
+                }
               })
-              const questions = res.data?.data?.questions ?? []
               return questions.map((q) => ({
                 id: q.question_id || q.id,
                 question_text: q.question_text,

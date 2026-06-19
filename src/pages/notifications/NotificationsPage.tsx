@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { useNavigate } from "react-router-dom"
@@ -174,7 +175,7 @@ function NotificationItem({
 export function NotificationsPage() {
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [totalCount, setTotalCount] = useState(0)
+  const [allCount, setAllCount] = useState(0)
   const [globalUnread, setGlobalUnread] = useState(0)
   const [offset, setOffset] = useState(0)
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
@@ -195,27 +196,37 @@ export function NotificationsPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | string>("all")
   const [levelFilter, setLevelFilter] = useState<"all" | string>("all")
 
-  const fetchData = useCallback(async (currentOffset: number) => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     setError(false)
     try {
-      const [notifRes, unreadRes] = await Promise.all([
-        getNotifications(pageSize, currentOffset),
+      const [allNotifications, unreadRes] = await Promise.all([
+        fetchAllOffsetPages(async (batchOffset, limit) => {
+          const notifRes = await getNotifications(limit, batchOffset)
+          return {
+            items: notifRes.data.notifications ?? [],
+            total_count: notifRes.data.total_count,
+          }
+        }),
         getUnreadCount(),
       ])
-      setNotifications(notifRes.data.notifications ?? [])
-      setTotalCount(notifRes.data.total_count)
+      setNotifications(allNotifications)
+      setAllCount(allNotifications.length)
       setGlobalUnread(unreadRes.data.unread)
     } catch {
       setError(true)
     } finally {
       setLoading(false)
     }
-  }, [pageSize])
+  }, [])
 
   useEffect(() => {
-    fetchData(offset)
-  }, [offset, pageSize, fetchData])
+    void fetchData()
+  }, [fetchData])
+
+  useEffect(() => {
+    setOffset(0)
+  }, [searchTerm, channelFilter, activeStatusTab, typeFilter, levelFilter, pageSize])
 
   const handleToggleRead = useCallback(async (id: string, currentlyRead: boolean) => {
     setTogglingIds((prev) => new Set(prev).add(id))
@@ -258,32 +269,13 @@ export function NotificationsPage() {
     try {
       await markAllUnread()
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: false })))
-      setGlobalUnread(totalCount)
+      setGlobalUnread(allCount)
     } catch {
       // silently fail
     } finally {
       setBulkLoading(false)
     }
-  }, [totalCount])
-
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
-  const currentPage = Math.floor(offset / pageSize) + 1
-  const startEntry = totalCount === 0 ? 0 : offset + 1
-  const endEntry = Math.min(offset + pageSize, totalCount)
-
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = []
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i)
-    } else {
-      pages.push(1, 2, 3)
-      if (currentPage > 4) pages.push("...")
-      if (currentPage > 3 && currentPage < totalPages - 2) pages.push(currentPage)
-      if (currentPage < totalPages - 3) pages.push("...")
-      pages.push(totalPages)
-    }
-    return pages
-  }
+  }, [allCount])
 
   const filteredNotifications = notifications.filter((n) => {
     if (channelFilter !== "all" && n.delivery_channel !== channelFilter) return false
@@ -307,6 +299,27 @@ export function NotificationsPage() {
     }
     return true
   })
+
+  const totalCount = filteredNotifications.length
+  const paginatedNotifications = filteredNotifications.slice(offset, offset + pageSize)
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const currentPage = Math.floor(offset / pageSize) + 1
+  const startEntry = totalCount === 0 ? 0 : offset + 1
+  const endEntry = Math.min(offset + paginatedNotifications.length, totalCount)
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1, 2, 3)
+      if (currentPage > 4) pages.push("...")
+      if (currentPage > 3 && currentPage < totalPages - 2) pages.push(currentPage)
+      if (currentPage < totalPages - 3) pages.push("...")
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   const activeFilterCount = countActiveFilters([
     { value: activeStatusTab, defaultValue: "all" },
@@ -524,7 +537,7 @@ export function NotificationsPage() {
             className="mb-3"
             activeFilterCount={activeFilterCount}
             onClearFilters={clearFilters}
-            summary={`${filteredNotifications.length} shown · ${totalCount} total`}
+            summary={`${totalCount} shown · ${allCount} total`}
             search={
               <div className="relative w-full">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
@@ -665,7 +678,7 @@ export function NotificationsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredNotifications.map((n) => {
+                    paginatedNotifications.map((n) => {
                       const config = NOTIFICATION_TYPE_CONFIG[n.type] ?? DEFAULT_NOTIFICATION_TYPE_CONFIG
                       const Icon = config.icon
                       const isToggling = togglingIds.has(n.id)

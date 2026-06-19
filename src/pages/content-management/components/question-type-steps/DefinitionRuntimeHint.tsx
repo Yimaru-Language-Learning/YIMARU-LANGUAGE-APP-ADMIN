@@ -17,8 +17,9 @@ export function DefinitionRuntimeHint({
         <div>
           <p className="font-semibold">May not be publishable</p>
           <p className="mt-0.5 text-amber-800/90">
-            The server requires a mappable runtime question type. Add at least one non-timer response
-            kind (e.g. OPTION, TEXT_INPUT). Timer-only definitions are rejected.
+            The server requires a mappable runtime question type. Add at least one non-timer
+            response kind (e.g. OPTION, TEXT_INPUT), or use No input only when the definition is
+            intentionally display-only.
           </p>
         </div>
       </div>

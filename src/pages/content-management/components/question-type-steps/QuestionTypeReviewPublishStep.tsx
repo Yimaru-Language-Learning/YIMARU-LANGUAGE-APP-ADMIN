@@ -16,7 +16,6 @@ import {
   buildValidateKindsPayload,
   inferRuntimeQuestionType,
 } from "../../lib/questionTypeDefinitionValidation"
-import { DefinitionRuntimeHint } from "./DefinitionRuntimeHint"
 import { slotLabel } from "./componentKindUi"
 
 interface QuestionTypeReviewPublishStepProps {
@@ -41,13 +40,6 @@ export function QuestionTypeReviewPublishStep({
   const runtime = inferRuntimeQuestionType(payload.key, payload.response_component_kinds)
 
   const submit = async (status: "ACTIVE" | "INACTIVE") => {
-    if (runtime == null) {
-      toast.error("Definition cannot be saved", {
-        description: "Add at least one non-timer response kind so the server can map a runtime question type.",
-      })
-      return
-    }
-
     const body = { ...payload, status }
     setSubmitting(true)
     try {
@@ -112,11 +104,6 @@ export function QuestionTypeReviewPublishStep({
             </p>
           ) : null}
 
-          <DefinitionRuntimeHint
-            definitionKey={payload.key}
-            responseKinds={payload.response_component_kinds}
-          />
-
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Key</dt>
@@ -136,7 +123,7 @@ export function QuestionTypeReviewPublishStep({
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Runtime type</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{runtime ?? "Unmappable"}</dd>
+              <dd className="font-medium text-grayScale-900 mt-1">{runtime ?? "—"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Stimulus kinds</dt>
@@ -158,7 +145,7 @@ export function QuestionTypeReviewPublishStep({
               type="button"
               variant="outline"
               className="h-11"
-              disabled={submitting || runtime == null}
+              disabled={submitting}
               onClick={() => void submit("INACTIVE")}
             >
               {submitting ? (
@@ -172,7 +159,7 @@ export function QuestionTypeReviewPublishStep({
             <Button
               type="button"
               className="h-11 bg-[#9E2891] hover:bg-[#8A237E] text-white"
-              disabled={submitting || runtime == null}
+              disabled={submitting}
               onClick={() => void submit("ACTIVE")}
             >
               {submitting ? (

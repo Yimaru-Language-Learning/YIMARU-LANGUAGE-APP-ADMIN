@@ -16,6 +16,10 @@ import {
   getResponseKindPresentation,
   getStimulusKindPresentation,
 } from "./componentKindUi"
+import {
+  isNoInputComponentKind,
+  noInputSchemaRow,
+} from "../../../../lib/questionComponentKinds"
 
 interface QuestionTypeConfigStepProps {
   draft: QuestionTypeDefinitionCreatePayload
@@ -27,10 +31,6 @@ interface QuestionTypeConfigStepProps {
   errors: FieldErrorMap
   onNext: () => void
   onBack: () => void
-}
-
-function toggleKind(list: string[], kind: string): string[] {
-  return list.includes(kind) ? list.filter((k) => k !== kind) : [...list, kind]
 }
 
 function slugFragmentFromKind(kind: string): string {
@@ -93,10 +93,26 @@ export function QuestionTypeConfigStep({
 
   const handleStimulusKindClick = (kind: string) => {
     setDraft((d) => {
+      if (isNoInputComponentKind(kind)) {
+        const wasSelected = d.stimulus_component_kinds.includes(kind)
+        if (wasSelected) {
+          return { ...d, stimulus_component_kinds: [], stimulus_schema: [] }
+        }
+        return {
+          ...d,
+          stimulus_component_kinds: [kind],
+          stimulus_schema: [noInputSchemaRow()],
+        }
+      }
+
       const wasSelected = d.stimulus_component_kinds.includes(kind)
-      const stimulus_component_kinds = toggleKind(d.stimulus_component_kinds, kind)
+      const baseKinds = d.stimulus_component_kinds.filter((k) => !isNoInputComponentKind(k))
+      const stimulus_component_kinds = wasSelected
+        ? baseKinds.filter((k) => k !== kind)
+        : [...baseKinds, kind]
+
       if (!wasSelected) {
-        const stimulus_schema = [...d.stimulus_schema]
+        const stimulus_schema = d.stimulus_schema.filter((r) => !isNoInputComponentKind(r.kind))
         if (!stimulus_schema.some((r) => r.kind === kind)) {
           stimulus_schema.push({
             id: nextUniqueSchemaElementId(stimulus_schema, kind),
@@ -117,10 +133,26 @@ export function QuestionTypeConfigStep({
 
   const handleResponseKindClick = (kind: string) => {
     setDraft((d) => {
+      if (isNoInputComponentKind(kind)) {
+        const wasSelected = d.response_component_kinds.includes(kind)
+        if (wasSelected) {
+          return { ...d, response_component_kinds: [], response_schema: [] }
+        }
+        return {
+          ...d,
+          response_component_kinds: [kind],
+          response_schema: [noInputSchemaRow()],
+        }
+      }
+
       const wasSelected = d.response_component_kinds.includes(kind)
-      const response_component_kinds = toggleKind(d.response_component_kinds, kind)
+      const baseKinds = d.response_component_kinds.filter((k) => !isNoInputComponentKind(k))
+      const response_component_kinds = wasSelected
+        ? baseKinds.filter((k) => k !== kind)
+        : [...baseKinds, kind]
+
       if (!wasSelected) {
-        const response_schema = [...d.response_schema]
+        const response_schema = d.response_schema.filter((r) => !isNoInputComponentKind(r.kind))
         if (!response_schema.some((r) => r.kind === kind)) {
           response_schema.push({
             id: nextUniqueSchemaElementId(response_schema, kind),
@@ -246,7 +278,7 @@ export function QuestionTypeConfigStep({
                             selected={selected}
                             onClick={() => handleStimulusKindClick(kind)}
                           />
-                          {selected ? (
+                          {selected && !isNoInputComponentKind(kind) ? (
                             <div className="flex items-center justify-between gap-2 px-0.5 min-h-[32px]">
                               <span className="text-[12px] text-grayScale-500 font-medium">
                                 {slotCount} slot{slotCount === 1 ? "" : "s"}
@@ -310,7 +342,7 @@ export function QuestionTypeConfigStep({
                             selected={selected}
                             onClick={() => handleResponseKindClick(kind)}
                           />
-                          {selected ? (
+                          {selected && !isNoInputComponentKind(kind) ? (
                             <div className="flex items-center justify-between gap-2 px-0.5 min-h-[32px]">
                               <span className="text-[12px] text-grayScale-500 font-medium">
                                 {slotCount} slot{slotCount === 1 ? "" : "s"}

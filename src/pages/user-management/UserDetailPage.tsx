@@ -28,7 +28,9 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import type { UserProfileData, UserRecentActivityItem } from "../../types/user.types";
 import type { UserLearningActivityData, UserSubscriptionsData } from "../../types/userAdmin.types";
 import { UserLearningActivitySection } from "./components/UserLearningActivitySection";
+import { UserAccountActivitySection } from "./components/UserAccountActivitySection";
 import { UserSubscriptionsSection } from "./components/UserSubscriptionsSection";
+import { displayValue, NOT_ASSIGNED_LABEL } from "../../lib/displayValue";
 
 const activityIcons = {
   completed: CheckCircle2,
@@ -45,14 +47,9 @@ function visualActivityKind(kind: string): keyof typeof activityIcons {
   return "default";
 }
 
-function displayValue(value: string | null | undefined): string {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : "—";
-}
-
 function formatRoleLabel(role: string): string {
   const value = role.trim();
-  if (!value) return "—";
+  if (!value) return NOT_ASSIGNED_LABEL;
   return value
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -61,7 +58,7 @@ function formatRoleLabel(role: string): string {
 
 function formatStatusLabel(status: string): string {
   const value = status.trim();
-  if (!value) return "—";
+  if (!value) return NOT_ASSIGNED_LABEL;
   return value
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -70,12 +67,12 @@ function formatStatusLabel(status: string): string {
 
 function formatAgeGroup(ageGroup: string): string {
   const value = ageGroup.trim();
-  if (!value) return "—";
+  if (!value) return NOT_ASSIGNED_LABEL;
   return value.replace(/_/g, "-");
 }
 
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr?.trim()) return "—";
+  if (!dateStr?.trim()) return NOT_ASSIGNED_LABEL;
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleDateString(undefined, {
@@ -85,10 +82,10 @@ function formatDate(dateStr: string | null | undefined): string {
   });
 }
 
-function formatDateTime(value?: string | null): string {
-  if (!value?.trim()) return "—";
+function formatDateTime(value?: string | null, emptyLabel = NOT_ASSIGNED_LABEL): string {
+  if (!value?.trim()) return emptyLabel;
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "—";
+  if (Number.isNaN(parsed.getTime())) return NOT_ASSIGNED_LABEL;
   return parsed.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -375,7 +372,7 @@ export function UserDetailPage() {
 
               <div className="grid gap-3 text-sm">
                 <InfoRow label="Joined" value={formatDate(user.created_at)} />
-                <InfoRow label="Last login" value={formatDateTime(user.last_login)} />
+                <InfoRow label="Last login" value={formatDateTime(user.last_login, "Never")} />
                 <InfoRow label="Gender" value={displayValue(user.gender)} />
                 <InfoRow label="Birthday" value={formatDate(user.birth_day)} />
                 <InfoRow label="Occupation" value={displayValue(user.occupation)} />
@@ -414,7 +411,7 @@ export function UserDetailPage() {
           />
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card className="shadow-soft">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
@@ -455,6 +452,8 @@ export function UserDetailPage() {
             loading={learningActivityLoading}
             error={learningActivityError}
           />
+
+          <UserAccountActivitySection userId={user.id} />
 
           <Card className="shadow-soft">
             <CardHeader className="pb-3">

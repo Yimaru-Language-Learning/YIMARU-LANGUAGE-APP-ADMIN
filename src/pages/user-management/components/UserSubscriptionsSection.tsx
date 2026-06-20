@@ -1,4 +1,5 @@
-import { CreditCard, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronRight, CreditCard, RefreshCw } from "lucide-react";
 import { Badge } from "../../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Separator } from "../../../components/ui/separator";
@@ -13,11 +14,12 @@ import {
 } from "../../../components/ui/table";
 import { cn } from "../../../lib/utils";
 import { formatPlanCategory } from "../../../lib/subscriptionPlans";
+import { displayValue, NOT_ASSIGNED_LABEL } from "../../../lib/displayValue";
 import type { UserSubscriptionsData } from "../../../types/userAdmin.types";
 
 function formatStatusLabel(status: string): string {
   const value = status.trim();
-  if (!value) return "—";
+  if (!value) return NOT_ASSIGNED_LABEL;
   return value
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -29,9 +31,9 @@ function formatCategoryLabel(value: string): string {
 }
 
 function formatDateTime(value?: string | null): string {
-  if (!value?.trim()) return "—";
+  if (!value?.trim()) return NOT_ASSIGNED_LABEL;
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "—";
+  if (Number.isNaN(parsed.getTime())) return NOT_ASSIGNED_LABEL;
   return parsed.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -56,14 +58,14 @@ function getSubscriptionStatusClasses(status: string): string {
 }
 
 function formatDuration(value: number, unit: string): string {
-  if (!value) return "—";
+  if (!value) return NOT_ASSIGNED_LABEL;
   const label = unit.trim().toLowerCase();
   const plural = value === 1 ? label.replace(/s$/, "") : label.endsWith("s") ? label : `${label}s`;
   return `${value} ${plural}`;
 }
 
 function formatMoney(amount: number, currency: string): string {
-  if (!Number.isFinite(amount)) return "—";
+  if (!Number.isFinite(amount)) return NOT_ASSIGNED_LABEL;
   const code = currency.trim() || "ETB";
   return `${amount.toLocaleString()} ${code}`;
 }
@@ -77,26 +79,45 @@ export function UserSubscriptionsSection({
   loading: boolean;
   error: string | null;
 }) {
+  const [open, setOpen] = useState(false);
   const recentPayments = subscriptions?.payments.slice(0, 8) ?? [];
 
   return (
     <Card className="shadow-soft">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100/50">
+        <button
+          type="button"
+          className="flex w-full items-start justify-between gap-3 text-left"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-expanded={open}
+        >
+          <div className="flex items-start gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100/50">
               <CreditCard className="h-4 w-4 text-brand-600" />
             </div>
-            <CardTitle className="text-base">Subscriptions</CardTitle>
+            <div>
+              <CardTitle className="text-base">Subscriptions</CardTitle>
+              <p className="mt-0.5 text-xs text-grayScale-500">
+                Active plans, billing history, and payment records for this user.
+              </p>
+            </div>
           </div>
-          {subscriptions ? (
-            <Badge className={cn(getSubscriptionStatusClasses(subscriptions.display_status))}>
-              {formatStatusLabel(subscriptions.display_status)}
-            </Badge>
-          ) : null}
-        </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {!open && subscriptions ? (
+              <Badge className={cn(getSubscriptionStatusClasses(subscriptions.display_status))}>
+                {formatStatusLabel(subscriptions.display_status)}
+              </Badge>
+            ) : null}
+            {open ? (
+              <ChevronDown className="mt-1 h-4 w-4 text-grayScale-400" />
+            ) : (
+              <ChevronRight className="mt-1 h-4 w-4 text-grayScale-400" />
+            )}
+          </div>
+        </button>
       </CardHeader>
-      <CardContent className="space-y-4">
+      {open ? (
+        <CardContent className="space-y-4">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-grayScale-400">
             <SpinnerIcon className="h-4 w-4" />
@@ -108,6 +129,13 @@ export function UserSubscriptionsSection({
 
         {!loading && !error && subscriptions ? (
           <>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-grayScale-500">Overall status</span>
+              <Badge className={cn(getSubscriptionStatusClasses(subscriptions.display_status))}>
+                {formatStatusLabel(subscriptions.display_status)}
+              </Badge>
+            </div>
+
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-grayScale-500">Active subscription</span>
               <span className="font-medium text-grayScale-700">
@@ -182,7 +210,7 @@ export function UserSubscriptionsSection({
                         </p>
                         <p>
                           <span className="text-grayScale-400">Payment: </span>
-                          {subscription.payment_method || "—"}
+                          {displayValue(subscription.payment_method)}
                         </p>
                         <p className="inline-flex items-center gap-1">
                           <RefreshCw className="h-3 w-3 text-grayScale-400" />
@@ -217,7 +245,7 @@ export function UserSubscriptionsSection({
                         {recentPayments.map((payment) => (
                           <TableRow key={payment.id}>
                             <TableCell className="text-sm text-grayScale-700">
-                              {payment.plan_name || "—"}
+                              {displayValue(payment.plan_name)}
                             </TableCell>
                             <TableCell className="text-sm text-grayScale-700">
                               {formatMoney(payment.amount, payment.currency)}
@@ -228,7 +256,7 @@ export function UserSubscriptionsSection({
                               </Badge>
                             </TableCell>
                             <TableCell className="text-xs text-grayScale-500">
-                              {payment.payment_method || "—"}
+                              {displayValue(payment.payment_method)}
                             </TableCell>
                             <TableCell className="text-xs text-grayScale-500">
                               {formatDateTime(payment.paid_at || payment.created_at)}
@@ -247,7 +275,8 @@ export function UserSubscriptionsSection({
         {!loading && !error && !subscriptions ? (
           <p className="text-sm text-grayScale-400">No subscription data available.</p>
         ) : null}
-      </CardContent>
+        </CardContent>
+      ) : null}
     </Card>
   );
 }

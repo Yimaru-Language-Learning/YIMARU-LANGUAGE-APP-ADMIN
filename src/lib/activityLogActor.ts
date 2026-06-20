@@ -8,7 +8,15 @@ const TEAM_ROLE_VALUES = new Set(
   TEAM_ROLE_OPTIONS.map((o) => o.value.toUpperCase()),
 )
 
-const APP_USER_ROLES = new Set(["STUDENT", "LEARNER", "USER", "SUBSCRIBER"])
+const APP_USER_ROLES = new Set([
+  "STUDENT",
+  "OPEN_LEARNER",
+  "ADMIN",
+  "SUPER_ADMIN",
+  "USER",
+  "SUBSCRIBER",
+  "LEARNER",
+])
 
 export type ActorProfileKind = "team" | "user"
 
@@ -46,8 +54,8 @@ function normalizeRole(role: string): string {
 export function resolveActorKind(actorRole: string | null | undefined): ActorProfileKind | null {
   if (!actorRole?.trim()) return null
   const upper = normalizeRole(actorRole)
-  if (TEAM_ROLE_VALUES.has(upper)) return "team"
   if (APP_USER_ROLES.has(upper)) return "user"
+  if (TEAM_ROLE_VALUES.has(upper)) return "team"
   return null
 }
 
@@ -107,8 +115,11 @@ async function fetchUserProfile(actorId: number): Promise<ActorProfile> {
 export async function fetchActorProfile(
   actorId: number,
   actorRole: string | null | undefined,
+  actorKind?: "user" | "team_member" | null,
 ): Promise<ActorProfile> {
-  const kind = resolveActorKind(actorRole)
+  const kindFromApi =
+    actorKind === "team_member" ? "team" : actorKind === "user" ? "user" : null
+  const kind = kindFromApi ?? resolveActorKind(actorRole)
 
   const load = async (target: ActorProfileKind): Promise<ActorProfile> => {
     const key = cacheKey(actorId, target)

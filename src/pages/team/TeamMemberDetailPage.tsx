@@ -2,43 +2,37 @@ import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import {
   ArrowLeft,
-  BadgeCheck,
-  Briefcase,
-  Building2,
-  CalendarDays,
   Clock3,
-  Hash,
+  ClipboardList,
   Mail,
   Phone,
   Shield,
   User,
-  UserCircle2,
+  UsersRound,
 } from "lucide-react"
 import { Badge } from "../../components/ui/badge"
+import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Avatar, AvatarFallback } from "../../components/ui/avatar"
 import { Separator } from "../../components/ui/separator"
 import { cn } from "../../lib/utils"
+import { formatTeamRoleLabel } from "../../lib/teamRoles"
+import { displayValue, NOT_ASSIGNED_LABEL } from "../../lib/displayValue"
 import { getTeamMemberById } from "../../api/team.api"
 import type { TeamMemberDetail } from "../../types/team.types"
+import { ActivityLogListPanel } from "../user-log/components/ActivityLogListPanel"
 
-function formatRoleLabel(role: string): string {
-  const value = role.trim()
-  if (!value) return "—"
+function formatStatusLabel(status: string): string {
+  const value = status.trim()
+  if (!value) return NOT_ASSIGNED_LABEL
   return value
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ")
 }
 
-function formatStatusLabel(status: string): string {
-  const value = status.trim()
-  if (!value) return "—"
-  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
-}
-
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr?.trim()) return "—"
+  if (!dateStr?.trim()) return NOT_ASSIGNED_LABEL
   const date = new Date(dateStr)
   if (Number.isNaN(date.getTime())) return dateStr
   return date.toLocaleDateString(undefined, {
@@ -48,8 +42,11 @@ function formatDate(dateStr: string | null | undefined): string {
   })
 }
 
-function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr?.trim()) return "—"
+function formatDateTime(
+  dateStr: string | null | undefined,
+  emptyLabel: string = NOT_ASSIGNED_LABEL,
+): string {
+  if (!dateStr?.trim()) return emptyLabel
   const date = new Date(dateStr)
   if (Number.isNaN(date.getTime())) return dateStr
   return date.toLocaleString(undefined, {
@@ -61,9 +58,32 @@ function formatDateTime(dateStr: string | null | undefined): string {
   })
 }
 
-function displayValue(value: string | null | undefined): string {
-  const trimmed = value?.trim()
-  return trimmed ? trimmed : "—"
+function getRelativeTime(dateStr: string | null | undefined): string {
+  if (!dateStr?.trim()) return "Never"
+  const now = new Date()
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return NOT_ASSIGNED_LABEL
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return "Just now"
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return formatDate(dateStr)
+}
+
+function getStatusClasses(status: string): string {
+  const normalized = status.trim().toLowerCase()
+  if (normalized === "active") {
+    return "bg-mint-500/15 text-mint-500 border border-mint-500/25"
+  }
+  if (normalized === "invited" || normalized === "pending") {
+    return "bg-gold-100 text-gold-600 border border-gold-300/40"
+  }
+  return "bg-destructive/15 text-destructive border border-destructive/25"
 }
 
 function getRoleBadgeClasses(role: string): string {
@@ -90,60 +110,65 @@ function getRoleBadgeClasses(role: string): string {
   }
 }
 
-function DetailRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-}) {
-  return (
-    <div className="flex items-start gap-3 py-3.5">
-      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-grayScale-50">
-        <Icon className="h-4 w-4 text-grayScale-500" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-grayScale-400">{label}</p>
-        <p className="mt-0.5 break-words text-sm font-medium text-grayScale-800">{value}</p>
-      </div>
-    </div>
-  )
-}
-
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-}) {
-  return (
-    <div className="rounded-xl border border-grayScale-100 bg-white px-4 py-3.5 shadow-soft">
-      <div className="flex items-center gap-2 text-grayScale-500">
-        <Icon className="h-3.5 w-3.5" />
-        <span className="text-xs font-medium">{label}</span>
-      </div>
-      <p className="mt-1.5 text-sm font-semibold text-grayScale-800">{value}</p>
-    </div>
-  )
-}
-
 function LoadingSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5">
+    <div className="space-y-6">
       <div className="h-5 w-32 animate-pulse rounded bg-grayScale-100" />
       <div className="h-8 w-56 animate-pulse rounded-lg bg-grayScale-100" />
-      <div className="h-24 animate-pulse rounded-xl bg-grayScale-100" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((item) => (
-          <div key={item} className="h-20 animate-pulse rounded-xl bg-grayScale-100" />
-        ))}
+      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        <div className="space-y-6">
+          <div className="h-80 animate-pulse rounded-2xl bg-grayScale-100" />
+          <div className="h-48 animate-pulse rounded-2xl bg-grayScale-100" />
+        </div>
+        <div className="space-y-6">
+          <div className="h-56 animate-pulse rounded-2xl bg-grayScale-100" />
+          <div className="h-72 animate-pulse rounded-2xl bg-grayScale-100" />
+        </div>
       </div>
-      <div className="h-72 animate-pulse rounded-xl bg-grayScale-100" />
+    </div>
+  )
+}
+
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
+        {label}
+      </p>
+      <p className="text-sm text-grayScale-700">{value}</p>
+    </div>
+  )
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm text-grayScale-500">{label}</span>
+      <span className="text-right text-sm font-medium text-grayScale-700">{value}</span>
+    </div>
+  )
+}
+
+function ContactField({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-grayScale-100">
+        <Icon className="h-4 w-4 text-grayScale-400" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
+          {label}
+        </p>
+        <p className="truncate text-sm text-grayScale-700">{value}</p>
+      </div>
     </div>
   )
 }
@@ -184,7 +209,7 @@ export function TeamMemberDetailPage() {
 
   if (error || !member) {
     return (
-      <div className="mx-auto w-full max-w-4xl space-y-5">
+      <div className="mx-auto w-full max-w-3xl space-y-4 py-12">
         <Link
           to="/team"
           className="inline-flex items-center gap-2 text-sm font-medium text-grayScale-500 transition-colors hover:text-brand-600"
@@ -192,7 +217,7 @@ export function TeamMemberDetailPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to Team
         </Link>
-        <Card>
+        <Card className="shadow-soft">
           <CardContent className="flex flex-col items-center gap-4 p-10">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-grayScale-100">
               <User className="h-8 w-8 text-grayScale-300" />
@@ -200,6 +225,9 @@ export function TeamMemberDetailPage() {
             <p className="text-lg font-semibold text-grayScale-600">
               {error || "Member not found"}
             </p>
+            <Button asChild variant="outline" className="mt-2">
+              <Link to="/team">Back to Team</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -208,10 +236,10 @@ export function TeamMemberDetailPage() {
 
   const fullName = `${member.first_name} ${member.last_name}`.trim()
   const initials = `${member.first_name?.[0] ?? ""}${member.last_name?.[0] ?? ""}`.toUpperCase()
-  const isActive = member.status.trim().toLowerCase() === "active"
+  const roleLabel = formatTeamRoleLabel(member.team_role)
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5">
+    <div className="space-y-6">
       <Link
         to="/team"
         className="inline-flex items-center gap-2 text-sm font-medium text-grayScale-500 transition-colors hover:text-brand-600"
@@ -221,101 +249,144 @@ export function TeamMemberDetailPage() {
       </Link>
 
       <div>
-        <p className="text-sm font-semibold text-grayScale-500">Team directory</p>
+        <p className="text-sm font-semibold text-grayScale-500">Team members</p>
         <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">{fullName}</h1>
         <p className="mt-1 text-sm text-grayScale-500">
-          Member #{member.id} · {displayValue(member.department)}
+          Member #{member.id}
+          {member.department?.trim() ? ` · ${member.department.trim()}` : ""}
         </p>
       </div>
 
-      <Card className="border-grayScale-100 shadow-soft">
-        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-          <Avatar className="h-14 w-14 shrink-0">
-            <AvatarFallback className="bg-grayScale-100 text-base font-semibold text-grayScale-600">
-              {initials || "?"}
-            </AvatarFallback>
-          </Avatar>
+      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        <div className="space-y-6">
+          <Card className="overflow-hidden shadow-soft">
+            <CardContent className="space-y-5 p-5">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 shrink-0">
+                  <AvatarFallback className="bg-brand-100 text-lg font-semibold text-brand-600">
+                    {initials || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <h2 className="truncate text-lg font-semibold text-grayScale-800">{fullName}</h2>
+                  <p className="truncate text-sm text-grayScale-500">
+                    {displayValue(member.job_title)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                        getRoleBadgeClasses(member.team_role),
+                      )}
+                    >
+                      <Shield className="mr-1 h-3 w-3" />
+                      {roleLabel}
+                    </span>
+                    <Badge className={cn(getStatusClasses(member.status))}>
+                      {formatStatusLabel(member.status)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-          <div className="min-w-0 flex-1">
-            <p className="text-lg font-semibold text-grayScale-800">{fullName}</p>
-            <p className="text-sm text-grayScale-500">{displayValue(member.job_title)}</p>
-          </div>
+              <Separator />
 
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                getRoleBadgeClasses(member.team_role),
-              )}
-            >
-              <Shield className="mr-1 h-3 w-3" />
-              {formatRoleLabel(member.team_role)}
-            </span>
-            <Badge variant={isActive ? "default" : "secondary"}>
-              {formatStatusLabel(member.status)}
-            </Badge>
-            <Badge variant={member.email_verified ? "default" : "outline"}>
-              {member.email_verified ? "Verified" : "Unverified"}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-3">
+                <ContactField icon={Mail} label="Email" value={displayValue(member.email)} />
+                <ContactField icon={Phone} label="Phone" value={displayValue(member.phone_number)} />
+              </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile icon={CalendarDays} label="Joined" value={formatDate(member.created_at)} />
-        <StatTile icon={Clock3} label="Last login" value={formatDateTime(member.last_login)} />
-        <StatTile
-          icon={BadgeCheck}
-          label="Email status"
-          value={member.email_verified ? "Verified" : "Not verified"}
-        />
-        <StatTile icon={Clock3} label="Last updated" value={formatDateTime(member.updated_at)} />
+              <Separator />
+
+              <div className="grid gap-3 text-sm">
+                <InfoRow label="Email verified" value={member.email_verified ? "Yes" : "No"} />
+                <InfoRow label="Joined" value={formatDate(member.created_at)} />
+                <InfoRow label="Last login" value={formatDateTime(member.last_login, "Never")} />
+                <InfoRow label="Last updated" value={formatDateTime(member.updated_at)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-soft">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100/50">
+                  <Clock3 className="h-4 w-4 text-brand-600" />
+                </div>
+                <CardTitle className="text-base">Activity summary</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <InfoRow label="Member ID" value={`#${member.id}`} />
+              <InfoRow label="Last seen" value={getRelativeTime(member.last_login)} />
+              <InfoRow
+                label="Verification"
+                value={member.email_verified ? "Verified" : "Pending verification"}
+              />
+              <InfoRow label="Account status" value={formatStatusLabel(member.status)} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="shadow-soft">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mint-100/60">
+                  <UsersRound className="h-4 w-4 text-mint-600" />
+                </div>
+                <CardTitle className="text-base">Role & organization</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                <InfoItem label="Team role" value={roleLabel} />
+                <InfoItem label="Department" value={displayValue(member.department)} />
+                <InfoItem label="Job title" value={displayValue(member.job_title)} />
+                <InfoItem label="Member ID" value={String(member.id)} />
+                <InfoItem label="Joined" value={formatDate(member.created_at)} />
+                <InfoItem
+                  label="Email status"
+                  value={member.email_verified ? "Verified" : "Not verified"}
+                />
+              </div>
+
+              {member.bio?.trim() ? (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
+                      Bio
+                    </p>
+                    <div className="rounded-xl bg-grayScale-100 p-4 text-sm leading-relaxed text-grayScale-700">
+                      {member.bio.trim()}
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-soft">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100/80">
+                  <ClipboardList className="h-4 w-4 text-slate-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Account activity</CardTitle>
+                  <p className="mt-0.5 text-xs text-grayScale-500">
+                    Platform audit trail for actions performed by this team member.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ActivityLogListPanel fixedActorId={member.id} compact showStats={false} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <Card className="border-grayScale-100 shadow-soft">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Member record</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {member.bio ? (
-            <div className="mb-4 rounded-lg border border-grayScale-100 bg-grayScale-50/60 px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-grayScale-400">Bio</p>
-              <p className="mt-1 text-sm leading-relaxed text-grayScale-700">{member.bio}</p>
-            </div>
-          ) : null}
-
-          <div className="grid gap-0 md:grid-cols-2 md:gap-x-8">
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-grayScale-400">
-                Contact
-              </p>
-              <DetailRow icon={Mail} label="Email" value={displayValue(member.email)} />
-              <Separator />
-              <DetailRow icon={Phone} label="Phone" value={displayValue(member.phone_number)} />
-            </div>
-
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-grayScale-400">
-                Role & organization
-              </p>
-              <DetailRow icon={Shield} label="Team role" value={formatRoleLabel(member.team_role)} />
-              <Separator />
-              <DetailRow icon={Building2} label="Department" value={displayValue(member.department)} />
-              <Separator />
-              <DetailRow icon={Briefcase} label="Job title" value={displayValue(member.job_title)} />
-              <Separator />
-              <DetailRow icon={Hash} label="Member ID" value={String(member.id)} />
-            </div>
-          </div>
-
-          <Separator className="my-4" />
-
-          <div className="flex items-center gap-2 text-xs text-grayScale-400">
-            <UserCircle2 className="h-3.5 w-3.5" />
-            <span>Read-only team directory record</span>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -1,12 +1,19 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 
-export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
+type TableProps = React.HTMLAttributes<HTMLTableElement> & {
+  /** Render only the `<table>` element (for use inside an external scroll container). */
+  noWrapper?: boolean
+}
+
+export const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, noWrapper = false, ...props }, ref) => {
+    const table = (
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
-    </div>
-  ),
+    )
+    if (noWrapper) return table
+    return <div className="relative w-full overflow-auto">{table}</div>
+  },
 )
 Table.displayName = "Table"
 

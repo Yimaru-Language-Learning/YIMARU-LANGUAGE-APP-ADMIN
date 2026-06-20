@@ -213,6 +213,7 @@ export function UserLearningActivitySection({
   loading: boolean;
   error: string | null;
 }) {
+  const [open, setOpen] = useState(false);
   const [track, setTrack] = useState<Track>("lms");
   const programs = activity?.lms.progress.programs ?? [];
   const catalogCourses = activity?.exam_prep.progress.catalog_courses ?? [];
@@ -258,40 +259,58 @@ export function UserLearningActivitySection({
   return (
     <Card className="shadow-soft">
       <CardHeader className="pb-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100/70">
+        <button
+          type="button"
+          className="flex w-full items-start justify-between gap-3 text-left"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-expanded={open}
+        >
+          <div className="flex items-start gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-100/70">
               <BarChart3 className="h-4 w-4 text-sky-600" />
             </div>
-            <CardTitle className="text-base">Learning activity</CardTitle>
+            <div>
+              <CardTitle className="text-base">Learning activity</CardTitle>
+              <p className="mt-0.5 text-xs text-grayScale-500">
+                LMS and exam prep progress trees for this learner.
+              </p>
+            </div>
           </div>
-          <div className="flex rounded-lg border border-grayScale-200 p-1">
-            <button
-              type="button"
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                track === "lms" ? "bg-brand-500 text-white" : "text-grayScale-500 hover:text-grayScale-700",
-              )}
-              onClick={() => setTrack("lms")}
-            >
-              Learn English
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                track === "exam_prep"
-                  ? "bg-brand-500 text-white"
-                  : "text-grayScale-500 hover:text-grayScale-700",
-              )}
-              onClick={() => setTrack("exam_prep")}
-            >
-              Exam prep
-            </button>
-          </div>
-        </div>
+          {open ? (
+            <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-grayScale-400" />
+          ) : (
+            <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-grayScale-400" />
+          )}
+        </button>
       </CardHeader>
-      <CardContent className="space-y-4">
+      {open ? (
+        <CardContent className="space-y-4">
+          <div className="flex justify-end">
+            <div className="flex rounded-lg border border-grayScale-200 p-1">
+              <button
+                type="button"
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  track === "lms" ? "bg-brand-500 text-white" : "text-grayScale-500 hover:text-grayScale-700",
+                )}
+                onClick={() => setTrack("lms")}
+              >
+                Learn English
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  track === "exam_prep"
+                    ? "bg-brand-500 text-white"
+                    : "text-grayScale-500 hover:text-grayScale-700",
+                )}
+                onClick={() => setTrack("exam_prep")}
+              >
+                Exam prep
+              </button>
+            </div>
+          </div>
         {loading ? (
           <div className="flex items-center gap-2 rounded-lg border border-grayScale-200 bg-grayScale-100 px-3 py-2 text-xs text-grayScale-500">
             <SpinnerIcon className="h-3.5 w-3.5" />
@@ -395,7 +414,8 @@ export function UserLearningActivitySection({
         {!loading && !error && !activity ? (
           <p className="py-6 text-center text-sm text-grayScale-400">No learning activity available.</p>
         ) : null}
-      </CardContent>
+        </CardContent>
+      ) : null}
     </Card>
   );
 }

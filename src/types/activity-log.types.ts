@@ -1,14 +1,19 @@
+export type ActivityLogActorKind = "user" | "team_member"
+
 export interface ActivityLog {
   id: number
-  actor_id: number | null
-  actor_role: string | null
+  actor_id?: number | null
+  actor_role?: string | null
+  actor_name?: string | null
+  actor_email?: string | null
+  actor_kind?: ActivityLogActorKind | null
   action: string
   resource_type: string
-  resource_id: number | null
-  message: string | null
-  metadata: Record<string, unknown> | null
-  ip_address: string | null
-  user_agent: string | null
+  resource_id?: number | null
+  message?: string | null
+  metadata: Record<string, unknown>
+  ip_address?: string | null
+  user_agent?: string | null
   created_at: string
 }
 

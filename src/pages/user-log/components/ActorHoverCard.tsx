@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { Link } from "react-router-dom"
 import { Mail, Shield, User } from "lucide-react"
 import { cn } from "../../../lib/utils"
 import {
@@ -7,18 +8,30 @@ import {
   formatActorDate,
   type ActorProfile,
 } from "../../../lib/activityLogActor"
+import {
+  activityLogActorPath,
+  formatActorDisplay,
+  type ActivityLogActorFields,
+} from "../../../lib/activityLogDisplay"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 
 const HOVER_DELAY_MS = 280
 const HIDE_DELAY_MS = 120
 
 type ActorHoverCardProps = {
-  actorId: number | null
-  actorRole: string | null
+  log: ActivityLogActorFields
   children: ReactNode
 }
 
-export function ActorHoverCard({ actorId, actorRole, children }: ActorHoverCardProps) {
+function hasApiEnrichment(log: ActivityLogActorFields): boolean {
+  return Boolean(log.actor_name?.trim() || log.actor_email?.trim())
+}
+
+function needsProfileFetch(log: ActivityLogActorFields): boolean {
+  return log.actor_id != null && !hasApiEnrichment(log)
+}
+
+export function ActorHoverCard({ log, children }: ActorHoverCardProps) {
   const tooltipId = useId()
   const triggerRef = useRef<HTMLDivElement>(null)
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -31,6 +44,9 @@ export function ActorHoverCard({ actorId, actorRole, children }: ActorHoverCardP
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<ActorProfile | null>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
+
+  const display = formatActorDisplay(log)
+  const profilePath = activityLogActorPath(log)
 
   const updatePosition = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect()
@@ -65,12 +81,12 @@ export function ActorHoverCard({ actorId, actorRole, children }: ActorHoverCardP
   }, [clearTimers])
 
   const loadProfile = useCallback(async () => {
-    if (actorId == null) return
+    if (log.actor_id == null || !needsProfileFetch(log)) return
     const requestId = ++requestRef.current
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchActorProfile(actorId, actorRole)
+      const data = await fetchActorProfile(log.actor_id, log.actor_role, log.actor_kind)
       if (requestId !== requestRef.current) return
       setProfile(data)
     } catch {
@@ -80,18 +96,18 @@ export function ActorHoverCard({ actorId, actorRole, children }: ActorHoverCardP
     } finally {
       if (requestId === requestRef.current) setLoading(false)
     }
-  }, [actorId, actorRole])
+  }, [log])
 
   const handleEnter = useCallback(() => {
-    if (actorId == null) return
+    if (log.actor_id == null) return
     clearTimers()
     hideTimerRef.current = setTimeout(() => {
       updatePosition()
       setOpen(true)
       requestAnimationFrame(() => setVisible(true))
-      void loadProfile()
+      if (needsProfileFetch(log)) void loadProfile()
     }, HOVER_DELAY_MS)
-  }, [actorId, clearTimers, loadProfile, updatePosition])
+  }, [log, clearTimers, loadProfile, updatePosition])
 
   const handleLeave = useCallback(() => {
     clearTimers()
@@ -118,7 +134,7 @@ export function ActorHoverCard({ actorId, actorRole, children }: ActorHoverCardP
 
   useEffect(() => () => clearTimers(), [clearTimers])
 
-  if (actorId == null) {
+  if (log.actor_id == null) {
     return <>{children}</>
   }
 
@@ -157,8 +173,10 @@ export function ActorHoverCard({ actorId, actorRole, children }: ActorHoverCardP
             ) : error ? (
               <p className="py-4 text-center text-sm text-grayScale-500">{error}</p>
             ) : profile ? (
-              <ActorProfileContent profile={profile} />
-            ) : null}
+              <ActorProfileContent profile={profile} profilePath={profilePath} />
+            ) : (
+              <EnrichedActorContent log={log} display={display} profilePath={profilePath} />
+            )}
           </div>,
           document.body,
         )}
@@ -166,7 +184,63 @@ export function ActorHoverCard({ actorId, actorRole, children }: ActorHoverCardP
   )
 }
 
-function ActorProfileContent({ profile }: { profile: ActorProfile }) {
+function EnrichedActorContent({
+  log,
+  display,
+  profilePath,
+}: {
+  log: ActivityLogActorFields
+  display: ReturnType<typeof formatActorDisplay>
+  profilePath: string | null
+}) {
+  const isTeam = log.actor_kind === "team_member"
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "grid h-10 w-10 shrink-0 place-items-center rounded-lg",
+            isTeam ? "bg-brand-50 text-brand-600" : "bg-mint-50 text-mint-700",
+          )}
+        >
+          {isTeam ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          {profilePath ? (
+            <Link
+              to={profilePath}
+              className="truncate text-sm font-semibold text-brand-600 hover:text-brand-700"
+            >
+              {display.name}
+            </Link>
+          ) : (
+            <p className="truncate text-sm font-semibold text-grayScale-900">{display.name}</p>
+          )}
+          <p className="text-[11px] font-medium uppercase tracking-wide text-grayScale-400">
+            {isTeam ? "Team member" : log.actor_kind === "user" ? "User" : "Actor"}
+            {log.actor_id != null ? ` · #${log.actor_id}` : ""}
+          </p>
+        </div>
+      </div>
+
+      <dl className="space-y-2 text-sm">
+        {display.email ? (
+          <DetailRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={display.email} />
+        ) : null}
+        {display.role ? <DetailRow label="Role" value={display.role.replace(/_/g, " ")} capitalize /> : null}
+      </dl>
+    </div>
+  )
+}
+
+function ActorProfileContent({
+  profile,
+  profilePath,
+}: {
+  profile: ActorProfile
+  profilePath: string | null
+}) {
   const isTeam = profile.kind === "team"
 
   return (
@@ -181,7 +255,16 @@ function ActorProfileContent({ profile }: { profile: ActorProfile }) {
           {isTeam ? <Shield className="h-5 w-5" /> : <User className="h-5 w-5" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-grayScale-900">{profile.name}</p>
+          {profilePath ? (
+            <Link
+              to={profilePath}
+              className="truncate text-sm font-semibold text-brand-600 hover:text-brand-700"
+            >
+              {profile.name}
+            </Link>
+          ) : (
+            <p className="truncate text-sm font-semibold text-grayScale-900">{profile.name}</p>
+          )}
           <p className="text-[11px] font-medium uppercase tracking-wide text-grayScale-400">
             {isTeam ? "Team member" : "Learner"} · #{profile.id}
           </p>
@@ -192,18 +275,13 @@ function ActorProfileContent({ profile }: { profile: ActorProfile }) {
         <DetailRow icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={profile.email} />
         <DetailRow label="Role" value={profile.roleLabel} />
         <DetailRow label="Status" value={profile.status} capitalize />
-        <DetailRow
-          label="Email verified"
-          value={profile.emailVerified ? "Yes" : "No"}
-        />
+        <DetailRow label="Email verified" value={profile.emailVerified ? "Yes" : "No"} />
         {profile.kind === "user" ? (
           <>
             <DetailRow label="Location" value={`${profile.region}, ${profile.country}`} />
             <DetailRow
               label="Last login"
-              value={
-                profile.lastLogin ? formatActorDate(profile.lastLogin) : "Never"
-              }
+              value={profile.lastLogin ? formatActorDate(profile.lastLogin) : "Never"}
             />
             <DetailRow label="Subscription" value={profile.subscriptionStatus} />
           </>
@@ -233,14 +311,9 @@ function DetailRow({
         <span className="w-3.5 shrink-0" />
       )}
       <div className="min-w-0 flex-1">
-        <dt className="text-[10px] font-bold uppercase tracking-wider text-grayScale-400">
-          {label}
-        </dt>
+        <dt className="text-[10px] font-bold uppercase tracking-wider text-grayScale-400">{label}</dt>
         <dd
-          className={cn(
-            "truncate font-medium text-grayScale-700",
-            capitalize && "capitalize",
-          )}
+          className={cn("truncate font-medium text-grayScale-700", capitalize && "capitalize")}
           title={value}
         >
           {value}

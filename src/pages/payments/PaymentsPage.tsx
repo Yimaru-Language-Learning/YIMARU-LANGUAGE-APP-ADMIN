@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { getPayments } from "../../api/payments.api"
+import { getAllPayments, getPayments, paymentsFilterParams } from "../../api/payments.api"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -37,8 +37,10 @@ import {
   formatPaymentMethod,
   formatPaymentPlanCategory,
   formatPaymentStatus,
+  computePaymentAggregateStats,
   paymentCustomerName,
   paymentStatusBadgeVariant,
+  type PaymentAggregateStats,
 } from "../../lib/payments"
 import { SUBSCRIPTION_CURRENCIES, SUBSCRIPTION_PLAN_CATEGORIES } from "../../lib/subscriptionPlans"
 import type {
@@ -82,11 +84,19 @@ function copyText(value: string, label: string) {
   toast.success(`${label} copied`)
 }
 
+const EMPTY_PAYMENT_STATS: PaymentAggregateStats = {
+  successfulCount: 0,
+  totalRevenue: 0,
+  pendingCount: 0,
+}
+
 export function PaymentsPage() {
   const [loading, setLoading] = useState(true)
+  const [statsLoading, setStatsLoading] = useState(true)
   const [error, setError] = useState(false)
   const [payments, setPayments] = useState<Payment[]>([])
   const [totalCount, setTotalCount] = useState(0)
+  const [paymentStats, setPaymentStats] = useState<PaymentAggregateStats>(EMPTY_PAYMENT_STATS)
   const [offset, setOffset] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "">("")
@@ -134,11 +144,13 @@ export function PaymentsPage() {
         const res = await getPayments({
           limit,
           offset: nextOffset,
-          ...(filters.status ? { status: filters.status } : {}),
-          ...(filters.provider ? { provider: filters.provider } : {}),
-          ...(filters.planCategory ? { plan_category: filters.planCategory } : {}),
-          ...(filters.currency ? { currency: filters.currency } : {}),
-          ...(filters.reference ? { reference: filters.reference } : {}),
+          ...paymentsFilterParams({
+            ...(filters.status ? { status: filters.status } : {}),
+            ...(filters.provider ? { provider: filters.provider } : {}),
+            ...(filters.planCategory ? { plan_category: filters.planCategory } : {}),
+            ...(filters.currency ? { currency: filters.currency } : {}),
+            ...(filters.reference ? { reference: filters.reference } : {}),
+          }),
         })
         setPayments(res.data.payments)
         setTotalCount(res.data.total_count)
@@ -155,6 +167,26 @@ export function PaymentsPage() {
     [],
   )
 
+  const fetchPaymentStats = useCallback(async (filters: PaymentListFilters) => {
+    setStatsLoading(true)
+    try {
+      const all = await getAllPayments({
+        ...(filters.status ? { status: filters.status } : {}),
+        ...(filters.provider ? { provider: filters.provider } : {}),
+        ...(filters.planCategory ? { plan_category: filters.planCategory } : {}),
+        ...(filters.currency ? { currency: filters.currency } : {}),
+        ...(filters.reference ? { reference: filters.reference } : {}),
+      })
+      setPaymentStats(computePaymentAggregateStats(all))
+    } catch (e) {
+      console.error(e)
+      setPaymentStats(EMPTY_PAYMENT_STATS)
+      toast.error("Failed to load payment summary")
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     void fetchPayments(offset, pageSize, listFilters)
   }, [
@@ -166,6 +198,17 @@ export function PaymentsPage() {
     currencyFilter,
     referenceFilter,
     fetchPayments,
+  ])
+
+  useEffect(() => {
+    void fetchPaymentStats(listFilters)
+  }, [
+    statusFilter,
+    providerFilter,
+    planCategoryFilter,
+    currencyFilter,
+    referenceFilter,
+    fetchPaymentStats,
   ])
 
   const toggleStatus = (value: PaymentStatus) => {
@@ -193,12 +236,12 @@ export function PaymentsPage() {
     setOffset(0)
   }
 
-  const successfulOnPage = payments.filter((p) => p.status.toUpperCase() === "SUCCESS")
-  const pageRevenue = successfulOnPage.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
-  const pendingOnPage = payments.filter((p) => {
-    const s = p.status.toUpperCase()
-    return s === "PENDING" || s === "PROCESSING"
-  }).length
+  const refreshAll = () => {
+    void fetchPayments(offset, pageSize, listFilters)
+    void fetchPaymentStats(listFilters)
+  }
+
+  const { successfulCount, totalRevenue, pendingCount } = paymentStats
 
   const pageStart = totalCount === 0 ? 0 : offset + 1
   const pageEnd = Math.min(offset + payments.length, totalCount)
@@ -220,8 +263,8 @@ export function PaymentsPage() {
         <Button
           variant="outline"
           className="shrink-0 rounded-[6px]"
-          disabled={loading}
-          onClick={() => void fetchPayments(offset, pageSize, listFilters)}
+          disabled={loading || statsLoading}
+          onClick={refreshAll}
         >
           <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
           Refresh
@@ -248,8 +291,10 @@ export function PaymentsPage() {
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-grayScale-500">Successful (this page)</p>
-              <p className="text-2xl font-bold text-grayScale-900">{successfulOnPage.length}</p>
+              <p className="text-xs font-medium text-grayScale-500">Successful payments</p>
+              <p className="text-2xl font-bold text-grayScale-900">
+                {statsLoading ? "…" : successfulCount.toLocaleString()}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -260,11 +305,13 @@ export function PaymentsPage() {
               <Wallet className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-grayScale-500">Revenue (this page)</p>
+              <p className="text-xs font-medium text-grayScale-500">Revenue</p>
               <p className="text-2xl font-bold text-grayScale-900">
-                {pageRevenue.toLocaleString()} ETB
+                {statsLoading ? "…" : `${totalRevenue.toLocaleString()} ETB`}
               </p>
-              <p className="text-[11px] text-grayScale-400">{pendingOnPage} pending on page</p>
+              <p className="text-[11px] text-grayScale-400">
+                {statsLoading ? "Loading summary…" : `${pendingCount.toLocaleString()} pending`}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -395,7 +442,7 @@ export function PaymentsPage() {
                 variant="outline"
                 size="sm"
                 className="rounded-[6px]"
-                onClick={() => void fetchPayments(offset, pageSize, listFilters)}
+                onClick={refreshAll}
               >
                 Try again
               </Button>

@@ -1,4 +1,5 @@
 import http from "./http"
+import { fetchAllOffsetPages } from "../lib/fetchAllOffsetPages"
 import type { GetPaymentsParams, Payment, PaymentsListData, PaymentsListResponse } from "../types/payment.types"
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,6 +92,33 @@ function buildQueryParams(params: GetPaymentsParams): Record<string, string | nu
   if (params.currency?.trim()) query.currency = params.currency.trim()
   if (params.reference?.trim()) query.reference = params.reference.trim()
   return query
+}
+
+export function paymentsFilterParams(
+  params: Omit<GetPaymentsParams, "limit" | "offset">,
+): Omit<GetPaymentsParams, "limit" | "offset"> {
+  const next: Omit<GetPaymentsParams, "limit" | "offset"> = {}
+  if (params.status?.trim()) next.status = params.status.trim()
+  if (params.provider?.trim()) {
+    next.provider = params.provider.trim()
+  } else if (params.payment_method?.trim()) {
+    next.payment_method = params.payment_method.trim()
+  }
+  if (params.plan_category?.trim()) next.plan_category = params.plan_category.trim()
+  if (params.currency?.trim()) next.currency = params.currency.trim()
+  if (params.reference?.trim()) next.reference = params.reference.trim()
+  return next
+}
+
+/** Fetches every payment matching filters (paginates through the API). */
+export async function getAllPayments(
+  params: Omit<GetPaymentsParams, "limit" | "offset"> = {},
+): Promise<Payment[]> {
+  const filters = paymentsFilterParams(params)
+  return fetchAllOffsetPages(async (offset, limit) => {
+    const res = await getPayments({ ...filters, limit, offset })
+    return { items: res.data.payments, total_count: res.data.total_count }
+  })
 }
 
 export const getPayments = (params: GetPaymentsParams = {}) =>

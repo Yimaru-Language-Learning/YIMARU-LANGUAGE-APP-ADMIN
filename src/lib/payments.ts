@@ -49,3 +49,27 @@ export function paymentStatusBadgeVariant(
   if (s === "FAILED" || s === "CANCELLED" || s === "EXPIRED") return "destructive"
   return "secondary"
 }
+
+export interface PaymentAggregateStats {
+  successfulCount: number
+  totalRevenue: number
+  pendingCount: number
+}
+
+export function computePaymentAggregateStats(payments: Payment[]): PaymentAggregateStats {
+  let successfulCount = 0
+  let totalRevenue = 0
+  let pendingCount = 0
+
+  for (const payment of payments) {
+    const status = payment.status.toUpperCase()
+    if (status === "SUCCESS") {
+      successfulCount += 1
+      totalRevenue += Number(payment.amount) || 0
+    } else if (status === "PENDING" || status === "PROCESSING") {
+      pendingCount += 1
+    }
+  }
+
+  return { successfulCount, totalRevenue, pendingCount }
+}

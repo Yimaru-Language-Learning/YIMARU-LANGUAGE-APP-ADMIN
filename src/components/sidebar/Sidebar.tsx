@@ -75,12 +75,11 @@ const navEntries: NavEntry[] = [
   {
     kind: "group",
     label: "Content",
-    basePath: "/content",
-    activePaths: ["/content", "/new-content"],
+    basePath: "/new-content",
+    activePaths: ["/new-content"],
     icon: BookOpen,
     children: [
-      { label: "Manage practices", to: "/content", end: true },
-      { label: "New content", to: "/new-content", end: true },
+      { label: "Learning content", to: "/new-content", end: true },
       { label: "Reorder structure", to: "/new-content/reorder" },
       { label: "Question types", to: "/new-content/question-types" },
     ],

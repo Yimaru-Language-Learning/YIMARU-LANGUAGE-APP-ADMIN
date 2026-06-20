@@ -82,7 +82,7 @@ function LessonRow({ lesson }: { lesson: LearningActivityLesson }) {
 }
 
 function ModuleBlock({ module }: { module: LearningActivityModule }) {
-  const [open, setOpen] = useState(module.access.is_accessible || module.access.is_completed);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-xl border border-grayScale-100 bg-grayScale-50/60">
@@ -120,7 +120,7 @@ function ModuleBlock({ module }: { module: LearningActivityModule }) {
 }
 
 function UnitBlock({ unit }: { unit: LearningActivityUnit }) {
-  const [open, setOpen] = useState(unit.access.is_accessible || unit.access.is_completed);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-xl border border-grayScale-100">
@@ -155,7 +155,7 @@ function UnitBlock({ unit }: { unit: LearningActivityUnit }) {
 }
 
 function CourseBlock({ course, examPrep }: { course: LearningActivityCourse; examPrep?: boolean }) {
-  const [open, setOpen] = useState(course.access.is_accessible || course.access.is_completed);
+  const [open, setOpen] = useState(false);
   const children = examPrep ? (course.units ?? []) : (course.modules ?? []);
 
   return (

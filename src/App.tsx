@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { AppRoutes } from './app/AppRoutes'
 import { useTheme } from './contexts/ThemeContext'
+import { clearTeamSession } from './lib/teamAuthStorage'
 
 const SESSION_KEY = 'yimaru_session_active'
 
@@ -27,10 +28,7 @@ function AppToaster() {
 export default function App() {
   useEffect(() => {
     if (!sessionStorage.getItem(SESSION_KEY)) {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-      localStorage.removeItem('member_id')
-      localStorage.removeItem('role')
+      clearTeamSession()
       sessionStorage.setItem(SESSION_KEY, '1')
     }
   }, [])

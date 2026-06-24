@@ -241,8 +241,8 @@ export function DynamicSelectMissingWordsAnswerSlot({
             key={`blank-answer-${blank.blank_id}`}
             className="flex flex-wrap items-center gap-2 rounded-lg border border-grayScale-200 bg-grayScale-50/50 p-3"
           >
-            <span className="w-10 text-xs font-medium text-grayScale-500">
-              {blank.blank_id}
+            <span className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wide text-grayScale-400">
+              Blank {blank.blank_id}
             </span>
             <select
               value={blank.word_id}

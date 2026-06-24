@@ -12,7 +12,7 @@ export const Table = React.forwardRef<HTMLTableElement, TableProps>(
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     )
     if (noWrapper) return table
-    return <div className="relative w-full overflow-auto">{table}</div>
+    return <div className="relative w-full min-w-0 overflow-auto">{table}</div>
   },
 )
 Table.displayName = "Table"

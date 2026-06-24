@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 
 export function ContentManagementLayout() {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full min-w-0 max-w-7xl px-0 py-4 sm:px-4 sm:py-6 lg:px-6">
       <div className="mb-8">
         <div className="mb-8 flex items-center gap-3">
           <div className="h-9 w-1 rounded-full bg-gradient-to-b from-brand-500 to-brand-600" />

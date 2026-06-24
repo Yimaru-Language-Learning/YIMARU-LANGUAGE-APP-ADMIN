@@ -354,7 +354,7 @@ export function ActivityLogListPanel({
         </div>
       </AdminFiltersPanel>
 
-      <div className="rounded-xl border bg-white">
+      <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
         <div
           className={cn(
             scrollable && "min-w-0 w-full max-w-full overflow-x-auto",
@@ -545,7 +545,7 @@ export function ActivityLogListPanel({
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <DetailItem
                   icon={<User className="h-4 w-4" />}
                   label="Actor"

@@ -37,20 +37,13 @@ export const SELECT_MISSING_WORDS_MIN_BLANKS = 1
 const DEFAULT_BLANK_COUNT = 2
 const DEFAULT_WORD_BANK_COUNT = 4
 
-function reindexBlankSegments(segments: ClozeSegment[]): ClozeSegment[] {
-  let blankIndex = 0
-  return segments.map((segment) => {
-    if (segment.type !== "blank") return segment
-    blankIndex += 1
-    return { type: "blank", id: `b${blankIndex}` }
-  })
-}
-
-function reindexWordBank(items: WordBankItem[]): WordBankItem[] {
-  return items.map((item, index) => ({
-    id: `w${index + 1}`,
-    text: item.text,
-  }))
+function nextStableId(prefix: string, existingIds: string[]): string {
+  let max = 0
+  for (const id of existingIds) {
+    const match = id.match(new RegExp(`^${prefix}(\\d+)$`))
+    if (match) max = Math.max(max, Number.parseInt(match[1], 10))
+  }
+  return `${prefix}${max + 1}`
 }
 
 function normalizeTextSegment(raw: unknown, index: number): ClozeTextSegment {
@@ -158,16 +151,19 @@ function ensureMinWordBank(
   value: SelectMissingWordsStimulusValue,
 ): SelectMissingWordsStimulusValue {
   const wordBank = [...value.word_bank]
+  const wordIds = wordBank.map((item) => item.id)
   while (wordBank.length < SELECT_MISSING_WORDS_MIN_BANK) {
-    wordBank.push({ id: `w${wordBank.length + 1}`, text: "" })
+    const id = nextStableId("w", wordIds)
+    wordIds.push(id)
+    wordBank.push({ id, text: "" })
   }
   return {
     ...value,
     segments:
       value.segments.length > 0
-        ? reindexBlankSegments(value.segments)
+        ? value.segments
         : defaultSelectMissingWordsStimulusSlotValue().segments,
-    word_bank: reindexWordBank(wordBank),
+    word_bank: wordBank,
   }
 }
 
@@ -340,12 +336,13 @@ export function addWordBankItem(
   value: SelectMissingWordsStimulusValue,
 ): SelectMissingWordsStimulusValue {
   const next = ensureMinWordBank(value)
+  const id = nextStableId(
+    "w",
+    next.word_bank.map((item) => item.id),
+  )
   return {
     ...next,
-    word_bank: reindexWordBank([
-      ...next.word_bank,
-      { id: `w${next.word_bank.length + 1}`, text: "" },
-    ]),
+    word_bank: [...next.word_bank, { id, text: "" }],
   }
 }
 
@@ -372,13 +369,10 @@ export function addTextSegment(
 export function addBlankSegment(
   value: SelectMissingWordsStimulusValue,
 ): SelectMissingWordsStimulusValue {
-  const blankCount = blankIdsFromStimulus(value).length
+  const id = nextStableId("b", blankIdsFromStimulus(value))
   return ensureMinWordBank({
     ...value,
-    segments: [
-      ...value.segments,
-      { type: "blank", id: `b${blankCount + 1}` },
-    ],
+    segments: [...value.segments, { type: "blank", id }],
   })
 }
 

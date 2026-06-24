@@ -349,7 +349,7 @@ export function CoursesPage() {
       </div>
 
       {subCategories.length === 0 ? (
-        <div className="rounded-xl border bg-white">
+        <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <img src={practiceSrc} alt="" className="h-16 w-16" />
             <h3 className="mt-4 text-base font-semibold text-grayScale-600">No sub-categories yet</h3>
@@ -365,7 +365,7 @@ export function CoursesPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border bg-white">
+        <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
           <Table>
             <TableHeader>
               <TableRow>
@@ -577,7 +577,7 @@ export function CoursesPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-2xl animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-bold text-grayScale-700">Add New Sub-category</h2>
               <button
                 onClick={handleCloseModal}
@@ -666,7 +666,7 @@ export function CoursesPage() {
       {showEditModal && subCategoryToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-bold text-grayScale-700">Edit Sub-category</h2>
               <button
                 onClick={handleCloseEditModal}
@@ -750,7 +750,7 @@ export function CoursesPage() {
       {showDeleteModal && subCategoryToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-bold text-grayScale-700">Delete Sub-category</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}

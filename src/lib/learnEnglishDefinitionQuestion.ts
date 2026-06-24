@@ -33,6 +33,13 @@ import {
   validateSelectMissingWordsResponseSlotValue,
   validateSelectMissingWordsStimulusSlotValue,
 } from "./selectMissingWordsSlotValue"
+import {
+  defaultSequenceOrderSlotValue,
+  parseSequenceOrderSlotValue,
+  sequenceOrderSlotHasContent,
+  serializeSequenceOrderSlotValue,
+  validateSequenceOrderSlotValue,
+} from "./sequenceOrderSlotValue"
 import { isNoInputComponentKind } from "./questionComponentKinds"
 
 function isMultipleChoiceKind(kind: string): boolean {
@@ -52,12 +59,17 @@ function isSelectMissingWordsKind(kind: string): boolean {
   return kind.trim().toUpperCase() === "SELECT_MISSING_WORDS"
 }
 
+function isSequenceOrderKind(kind: string): boolean {
+  return kind.trim().toUpperCase() === "SEQUENCE_ORDER"
+}
+
 function isStructuredDynamicSlotKind(kind: string): boolean {
   return (
     isMultipleChoiceKind(kind) ||
     isMatchingInputsKind(kind) ||
     isMatchingAnswerKind(kind) ||
-    isSelectMissingWordsKind(kind)
+    isSelectMissingWordsKind(kind) ||
+    isSequenceOrderKind(kind)
   )
 }
 
@@ -86,6 +98,9 @@ function defaultValueForSchemaSlot(
       )
     }
     return serializeSelectMissingWordsResponseSlotValue({ blanks: [] })
+  }
+  if (isSequenceOrderKind(kind)) {
+    return serializeSequenceOrderSlotValue(defaultSequenceOrderSlotValue())
   }
   return ""
 }
@@ -275,6 +290,16 @@ export function questionRowHasContent(
       if (
         selectMissingWordsResponseHasContent(
           parseSelectMissingWordsResponseSlotValue(fv[`response:${row.id}`]),
+        )
+      ) {
+        return true
+      }
+      continue
+    }
+    if (isSequenceOrderKind(row.kind)) {
+      if (
+        sequenceOrderSlotHasContent(
+          parseSequenceOrderSlotValue(fv[`response:${row.id}`]),
         )
       ) {
         return true
@@ -552,6 +577,19 @@ export function validateDefinitionQuestion(
           continue
         }
         const err = validateSelectMissingWordsResponseSlotValue(val, clozeStimulus)
+        if (err) {
+          return `Question ${n} (response "${row.label || row.id}"): ${err}`
+        }
+      }
+      if (isSequenceOrderKind(row.kind)) {
+        const val = parseSequenceOrderSlotValue(fieldValues[`response:${row.id}`])
+        if (!sequenceOrderSlotHasContent(val)) {
+          if (row.required) {
+            return `Question ${n}: add sequence items for response "${row.label || row.id}".`
+          }
+          continue
+        }
+        const err = validateSequenceOrderSlotValue(val, row.config)
         if (err) {
           return `Question ${n} (response "${row.label || row.id}"): ${err}`
         }

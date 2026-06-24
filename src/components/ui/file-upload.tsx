@@ -2,7 +2,9 @@ import * as React from "react"
 import { Upload } from "lucide-react"
 import { cn } from "../../lib/utils"
 
-export interface FileUploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
+export interface FileUploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "value"> {
+  /** Controlled selected file; when set, internal state follows this value. */
+  value?: File | null
   onFileSelect?: (file: File | null) => void
   accept?: string
   label?: string
@@ -12,15 +14,26 @@ export interface FileUploadProps extends Omit<React.InputHTMLAttributes<HTMLInpu
 }
 
 export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
-  ({ className, onFileSelect, accept, label, description, variant = "default", ...props }, ref) => {
-    const [file, setFile] = React.useState<File | null>(null)
+  (
+    { className, value, onFileSelect, accept, label, description, variant = "default", ...props },
+    ref,
+  ) => {
+    const [internalFile, setInternalFile] = React.useState<File | null>(null)
     const [dragActive, setDragActive] = React.useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
+    const isControlled = value !== undefined
+    const file = isControlled ? value : internalFile
 
     React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement)
 
+    React.useEffect(() => {
+      if (!file && inputRef.current) {
+        inputRef.current.value = ""
+      }
+    }, [file])
+
     const handleFile = (selectedFile: File | null) => {
-      setFile(selectedFile)
+      if (!isControlled) setInternalFile(selectedFile)
       onFileSelect?.(selectedFile)
     }
 

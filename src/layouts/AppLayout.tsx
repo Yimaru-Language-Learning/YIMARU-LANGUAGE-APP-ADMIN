@@ -2,6 +2,11 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { Sidebar } from "../components/sidebar/Sidebar"
 import { Topbar } from "../components/topbar/Topbar"
+import { getAccessToken } from "../lib/teamAuthStorage"
+import {
+  connectNotificationsWebSocket,
+  disconnectNotificationsWebSocket,
+} from "../lib/notificationsWebSocket"
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -12,7 +17,13 @@ export function AppLayout() {
   const scrollStoragePrefix = "app:scroll:"
   const routeKey = useMemo(() => `${location.pathname}${location.search}`, [location.pathname, location.search])
 
-  const token = localStorage.getItem("access_token")
+  const token = getAccessToken()
+
+  useEffect(() => {
+    if (!token) return
+    connectNotificationsWebSocket()
+    return () => disconnectNotificationsWebSocket()
+  }, [token])
 
   const handleSidebarToggle = useCallback(() => {
     setSidebarOpen((prev) => !prev)

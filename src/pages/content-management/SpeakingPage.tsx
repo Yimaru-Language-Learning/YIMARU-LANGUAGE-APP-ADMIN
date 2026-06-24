@@ -1657,7 +1657,7 @@ export function SpeakingPage() {
                       rows={2}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-grayScale-500">Difficulty</label>
                       <select
@@ -1790,7 +1790,7 @@ export function SpeakingPage() {
                     <p className="text-xs font-medium text-grayScale-500">Question Text</p>
                     <p className="mt-1 text-sm text-grayScale-700">{selectedQuestionDetail.question_text}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <div>
                       <p className="text-xs font-medium text-grayScale-500">Status</p>
                       <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.status || "—"}</p>

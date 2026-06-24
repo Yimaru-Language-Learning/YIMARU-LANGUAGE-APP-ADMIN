@@ -419,7 +419,7 @@ export function UsersListPage() {
         </Card>
       </div>
 
-      <div className="bg-white rounded-xl border">
+      <div className="min-w-0 overflow-hidden bg-white rounded-xl border">
         <AdminFiltersPanel
           className="border-0 border-b rounded-none shadow-none"
           activeFilterCount={activeFilterCount}
@@ -739,7 +739,7 @@ export function UsersListPage() {
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Confirm Status Change</h2>
               <button
                 onClick={() => setConfirmDialog(null)}

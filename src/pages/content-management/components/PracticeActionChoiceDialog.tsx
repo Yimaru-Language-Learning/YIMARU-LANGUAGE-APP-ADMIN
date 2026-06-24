@@ -48,7 +48,7 @@ export function PracticeActionChoiceDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg rounded-2xl border-grayScale-200 p-0 sm:max-w-lg">
-        <DialogHeader className="border-b border-grayScale-100 px-6 py-5 text-left">
+        <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6 text-left">
           <DialogTitle className="text-lg font-bold text-grayScale-900">
             Add practice
           </DialogTitle>

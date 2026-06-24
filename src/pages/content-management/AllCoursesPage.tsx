@@ -324,7 +324,7 @@ export function AllCoursesPage() {
 
           {/* Courses Table */}
           {filteredCourses.length > 0 ? (
-            <div className="rounded-xl border bg-white">
+            <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
               <Table>
                 <TableHeader>
                   <TableRow>

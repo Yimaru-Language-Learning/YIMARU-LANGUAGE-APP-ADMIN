@@ -38,6 +38,7 @@ import {
   DynamicSelectMissingWordsAnswerSlot,
   DynamicSelectMissingWordsStimulusSlot,
 } from "./DynamicSelectMissingWordsSlotField"
+import { DynamicSequenceOrderSlot } from "./DynamicSequenceOrderSlotField"
 import {
   findSelectMissingWordsStimulusInFieldValues,
   type SelectMissingWordsStimulusValue,
@@ -53,6 +54,7 @@ export interface DynamicSchemaSlotRow {
   kind: string
   label?: string
   required?: boolean
+  config?: Record<string, unknown>
 }
 
 function isMultipleChoiceKind(kind: string): boolean {
@@ -72,6 +74,10 @@ function isSelectMissingWordsKind(kind: string): boolean {
   return kind.trim().toUpperCase() === "SELECT_MISSING_WORDS"
 }
 
+function isSequenceOrderKind(kind: string): boolean {
+  return kind.trim().toUpperCase() === "SEQUENCE_ORDER"
+}
+
 function slotMediaMode(
   kind: string,
   side: "stimulus" | "response",
@@ -86,7 +92,8 @@ function slotMediaMode(
   | "matching_inputs"
   | "matching_answer"
   | "select_missing_words_stimulus"
-  | "select_missing_words_answer" {
+  | "select_missing_words_answer"
+  | "sequence_order" {
   const u = kind.trim().toUpperCase()
   if (u === "IMAGE") return "image"
   if (u === "TABLE") return "table"
@@ -98,6 +105,7 @@ function slotMediaMode(
       ? "select_missing_words_answer"
       : "select_missing_words_stimulus"
   }
+  if (isSequenceOrderKind(kind)) return "sequence_order"
   if (u === "PDF_ATTACHMENT" || u === "PDF_UPLOAD") return "pdf"
   if (u === "PREP_TIME" || u === "ANSWER_TIMER") return "seconds"
   if (u === "AUDIO_PROMPT" || u === "AUDIO_CLIP" || u === "AUDIO_RESPONSE") return "audio"
@@ -949,6 +957,18 @@ export function DynamicSchemaSlotField({
         disabled={disabled}
         slotLabel={fieldLabel}
         stimulus={clozeStimulus}
+      />
+    )
+  }
+
+  if (mode === "sequence_order") {
+    return (
+      <DynamicSequenceOrderSlot
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        slotLabel={fieldLabel}
+        config={row.config}
       />
     )
   }

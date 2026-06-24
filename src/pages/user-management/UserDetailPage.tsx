@@ -422,7 +422,7 @@ export function UserDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
                 <InfoItem label="Education level" value={displayValue(user.education_level)} />
                 <InfoItem label="Age group" value={formatAgeGroup(user.age_group)} />
                 <InfoItem label="Favorite topic" value={displayValue(user.favoutite_topic)} />

@@ -251,7 +251,7 @@ export function PersonasPage() {
             }
           />
 
-          <div className="rounded-xl border bg-white">
+          <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
             <Table>
               <TableHeader>
                 <TableRow>

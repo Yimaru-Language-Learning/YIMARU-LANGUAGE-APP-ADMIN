@@ -432,7 +432,7 @@ export function QuestionTypeLibraryPage() {
       </Card>
 
       <Card className="overflow-hidden rounded-2xl border border-grayScale-200 bg-white shadow-none">
-        <CardHeader className="border-b border-grayScale-100 px-6 py-5">
+        <CardHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">

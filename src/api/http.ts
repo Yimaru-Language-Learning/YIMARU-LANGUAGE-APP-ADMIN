@@ -1,9 +1,15 @@
 import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { teamRefresh } from "./teamRefresh.api";
+import { TeamAuthError } from "../types/auth.types";
+import {
+  clearTeamSession,
+  getAccessToken,
+  getRefreshToken,
+  saveTeamSession,
+} from "../lib/teamAuthStorage";
 
 const http: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  // Do not force a Content-Type globally.
-  // Axios will set the correct header based on the request body (JSON vs multipart FormData).
   headers: {},
 });
 
@@ -12,7 +18,7 @@ let failedQueue: Array<{
   resolve: (token: string) => void;
   reject: (error: Error) => void;
 }> = [];
-const TOKEN_REFRESH_BUFFER_SECONDS = 120;
+const TOKEN_REFRESH_BUFFER_SECONDS = 60;
 
 const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -25,12 +31,10 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue = [];
 };
 
-const clearAuthAndRedirect = () => {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  localStorage.removeItem("member_id");
-  localStorage.removeItem("role");
-  window.location.href = "/login";
+const clearAuthAndRedirect = (reason?: "inactive") => {
+  clearTeamSession();
+  const suffix = reason === "inactive" ? "?account_inactive=1" : "";
+  window.location.href = `/login${suffix}`;
 };
 
 const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
@@ -86,35 +90,38 @@ const shouldAttachApiAuth = (url?: string): boolean => {
   return requestOrigin === API_BASE_ORIGIN;
 };
 
-const refreshAccessToken = async (): Promise<string> => {
-  const refreshToken = localStorage.getItem("refresh_token");
+function readErrorMessage(data: unknown): string {
+  if (typeof data === "string") return data;
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    if (typeof record.error === "string") return record.error;
+    if (typeof record.message === "string") return record.message;
+  }
+  return "";
+}
 
+function isRefreshableAccessTokenError(error: AxiosError): boolean {
+  if (error.response?.status !== 401) return false;
+  const message = readErrorMessage(error.response.data).toLowerCase();
+  return (
+    message.includes("access token expired") ||
+    message.includes("invalid access token")
+  );
+}
+
+const refreshAccessToken = async (): Promise<string> => {
+  const refreshToken = getRefreshToken();
   if (!refreshToken) {
     throw new Error("No refresh token available");
   }
 
-  const response = await axios.post(
-    `${import.meta.env.VITE_API_BASE_URL}/team/refresh`,
-    {
-      refresh_token: refreshToken,
-    }
-  );
-
-  const newAccessToken = response.data?.data?.access_token;
-  const newRefreshToken = response.data?.data?.refresh_token;
-
-  if (newAccessToken) {
-    localStorage.setItem("access_token", newAccessToken);
-  }
-  if (newRefreshToken) {
-    localStorage.setItem("refresh_token", newRefreshToken);
-  }
-
-  return newAccessToken;
+  const session = await teamRefresh(refreshToken);
+  saveTeamSession(session);
+  return session.access_token;
 };
 
 const getValidAccessToken = async (forceRefresh = false): Promise<string> => {
-  const currentToken = localStorage.getItem("access_token");
+  const currentToken = getAccessToken();
   if (!forceRefresh && currentToken && !isAccessTokenExpiringSoon(currentToken)) {
     return currentToken;
   }
@@ -128,18 +135,30 @@ const getValidAccessToken = async (forceRefresh = false): Promise<string> => {
   isRefreshing = true;
   try {
     const newToken = await refreshAccessToken();
+    if (!newToken) {
+      throw new Error("Refresh response did not include an access token");
+    }
     processQueue(null, newToken);
     return newToken;
   } catch (refreshError) {
     processQueue(refreshError as Error, null);
-    clearAuthAndRedirect();
+    const status =
+      refreshError instanceof TeamAuthError
+        ? refreshError.status
+        : axios.isAxiosError(refreshError)
+          ? refreshError.response?.status
+          : undefined;
+    if (status === 403) {
+      clearAuthAndRedirect("inactive");
+    } else {
+      clearAuthAndRedirect();
+    }
     throw refreshError;
   } finally {
     isRefreshing = false;
   }
 };
 
-// Attach access token to every request
 http.interceptors.request.use(async (config) => {
   if (!shouldAttachApiAuth(config.url)) {
     return config;
@@ -149,7 +168,7 @@ http.interceptors.request.use(async (config) => {
     return config;
   }
 
-  let token = localStorage.getItem("access_token");
+  let token = getAccessToken();
   if (token && isAccessTokenExpiringSoon(token)) {
     token = await getValidAccessToken();
   }
@@ -160,7 +179,6 @@ http.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Handle 401 globally with token refresh
 http.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -170,7 +188,8 @@ http.interceptors.response.use(
       error.response?.status === 401 &&
       !originalRequest._retry &&
       shouldAttachApiAuth(originalRequest.url) &&
-      !isAuthEndpointRequest(originalRequest.url)
+      !isAuthEndpointRequest(originalRequest.url) &&
+      isRefreshableAccessTokenError(error)
     ) {
       originalRequest._retry = true;
 
@@ -183,14 +202,8 @@ http.interceptors.response.use(
       }
     }
 
-    // Backend is down (network error, timeout, connection refused)
-    if (!error.response && shouldAttachApiAuth(originalRequest.url)) {
-      clearAuthAndRedirect();
-      return Promise.reject(error);
-    }
-
     return Promise.reject(error);
-  }
+  },
 );
 
 export default http;

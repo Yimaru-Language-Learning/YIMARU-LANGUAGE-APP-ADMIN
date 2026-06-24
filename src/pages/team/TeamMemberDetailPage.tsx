@@ -339,7 +339,7 @@ export function TeamMemberDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
                 <InfoItem label="Team role" value={roleLabel} />
                 <InfoItem label="Department" value={displayValue(member.department)} />
                 <InfoItem label="Job title" value={displayValue(member.job_title)} />

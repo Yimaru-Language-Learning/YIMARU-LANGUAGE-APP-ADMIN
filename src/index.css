@@ -157,4 +157,20 @@
   html.dark .bg-white {
     background-color: var(--gs-50);
   }
+
+  .admin-page-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4;
+  }
+
+  .admin-page-actions {
+    @apply flex w-full flex-wrap items-stretch gap-2 sm:w-auto sm:justify-end;
+  }
+
+  .admin-responsive-grid-2 {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2;
+  }
+
+  .admin-responsive-grid-3 {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-3;
+  }
 }

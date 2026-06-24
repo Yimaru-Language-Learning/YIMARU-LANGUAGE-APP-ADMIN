@@ -501,7 +501,7 @@ export function DeletionRequestsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-5">
-          <div className="rounded-xl border bg-white">
+          <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
             <Table>
               <TableHeader>
                 <TableRow>

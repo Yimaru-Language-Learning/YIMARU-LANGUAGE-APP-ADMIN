@@ -188,7 +188,7 @@ export function PracticeSequentialReview({
       ) : null}
 
       <Card className="overflow-hidden border-grayScale-200/80 p-0 shadow-sm">
-        <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
           <h3 className="font-semibold text-grayScale-900">Basic Information</h3>
           {onEditContext ? (
             <button
@@ -295,7 +295,7 @@ export function PracticeSequentialReview({
       <Card className="overflow-hidden border-grayScale-200/80 p-0 shadow-sm">
         <div className="grid md:grid-cols-2 md:divide-x md:divide-grayScale-100">
           <div className="flex flex-col">
-            <div className="flex items-center gap-2.5 border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center gap-2.5 border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h3 className="font-semibold text-grayScale-900">Questions</h3>
               <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-grayScale-100 px-2 text-xs font-semibold text-grayScale-500">
                 {filledQuestions.length}
@@ -332,7 +332,7 @@ export function PracticeSequentialReview({
           </div>
 
           <div className="flex flex-col border-t border-grayScale-100 md:border-t-0">
-            <div className="flex items-center justify-between gap-2 border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between gap-2 border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <div className="flex items-center gap-2.5">
                 <h3 className="font-semibold text-grayScale-900">Answers</h3>
                 <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-grayScale-100 px-2 text-xs font-semibold text-grayScale-500">

@@ -796,7 +796,7 @@ export function PracticeQuestionsPage() {
       {showDeleteModal && questionToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Question</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -826,7 +826,7 @@ export function PracticeQuestionsPage() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Add New Question</h2>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -1042,7 +1042,7 @@ export function PracticeQuestionsPage() {
       {showEditModal && questionToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Question</h2>
               <button
                 onClick={() => setShowEditModal(false)}

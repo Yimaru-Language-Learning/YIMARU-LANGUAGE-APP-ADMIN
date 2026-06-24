@@ -432,7 +432,7 @@ export function QuestionsPage() {
             </div>
           </AdminFiltersPanel>
 
-          <div className="rounded-xl border bg-white">
+          <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -638,7 +638,7 @@ export function QuestionsPage() {
       {deleteDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">
                 Delete {pendingDeleteIds.length > 1 ? "Questions" : "Question"}
               </h2>
@@ -673,7 +673,7 @@ export function QuestionsPage() {
       {detailsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-2xl rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Question Details</h2>
               <button
                 onClick={() => setDetailsOpen(false)}
@@ -691,7 +691,7 @@ export function QuestionsPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">Question</p>
                     <p className="mt-1 text-sm text-grayScale-700">{detailData.question_text}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <p><span className="font-medium">ID:</span> {detailData.id}</p>
                     <p><span className="font-medium">Type:</span> {typeLabels[detailData.question_type] || detailData.question_type}</p>
                     <p><span className="font-medium">Difficulty:</span> {detailData.difficulty_level || "—"}</p>
@@ -790,7 +790,7 @@ export function QuestionsPage() {
       {editOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Question</h2>
               <button
                 onClick={() => setEditOpen(false)}

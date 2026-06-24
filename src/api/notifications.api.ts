@@ -3,14 +3,18 @@ import type {
   BulkInAppRequest,
   BulkSendResult,
   BulkSmsRequest,
+  GetAllNotificationsParams,
   GetNotificationsResponse,
   GetScheduledNotificationsParams,
+  ListAllNotificationsResponse,
   ListScheduledNotificationsResponse,
   Notification,
   ScheduledNotification,
   UnreadCountResponse,
 } from "../types/notification.types"
+import { isNumericNotificationId } from "../types/notification.types"
 import { isScheduledNotification, parseBulkResponseData } from "../lib/notificationBulk"
+import { DEFAULT_TABLE_PAGE_SIZE } from "../lib/tablePagination"
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -24,30 +28,118 @@ function unwrapEnvelopeData(body: unknown): unknown {
   return body
 }
 
-function normalizePayload(raw: unknown): Notification["payload"] {
-  if (!isRecord(raw)) {
-    return { tags: null }
+function pickNotificationText(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (value != null && String(value).trim()) return String(value)
   }
-  const tags = Array.isArray(raw.tags)
-    ? raw.tags.filter((tag): tag is string => typeof tag === "string" && tag.length > 0)
-    : null
+  return undefined
+}
+
+function normalizePayload(
+  raw: unknown,
+  fallback?: Record<string, unknown>,
+): Notification["payload"] {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim()
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      try {
+        return normalizePayload(JSON.parse(trimmed), fallback)
+      } catch {
+        return { tags: null }
+      }
+    }
+    return { message: trimmed, tags: null }
+  }
+
+  const record = isRecord(raw) ? raw : {}
+  const content = isRecord(record.content) ? record.content : record
+  const fb = fallback ?? {}
+  const fbContent = isRecord(fb.content) ? fb.content : fb
+
+  const tags = Array.isArray(content.tags)
+    ? content.tags.filter((tag): tag is string => typeof tag === "string" && tag.length > 0)
+    : Array.isArray(fb.tags)
+      ? fb.tags.filter((tag): tag is string => typeof tag === "string" && tag.length > 0)
+      : null
+
   return {
-    headline: raw.headline != null ? String(raw.headline) : undefined,
-    title: raw.title != null ? String(raw.title) : undefined,
-    message: raw.message != null ? String(raw.message) : undefined,
-    body: raw.body != null ? String(raw.body) : undefined,
+    headline: pickNotificationText(
+      content.headline,
+      content.title,
+      fb.headline,
+      fb.title,
+      fbContent.headline,
+      fbContent.title,
+    ),
+    title: pickNotificationText(
+      content.title,
+      content.headline,
+      fb.title,
+      fb.headline,
+      fbContent.title,
+      fbContent.headline,
+    ),
+    message: pickNotificationText(
+      content.message,
+      content.body,
+      content.text,
+      fb.message,
+      fb.body,
+      fb.text,
+      fbContent.message,
+      fbContent.body,
+      fbContent.text,
+    ),
+    body: pickNotificationText(
+      content.body,
+      content.message,
+      fb.body,
+      fb.message,
+      fbContent.body,
+      fbContent.message,
+    ),
     tags,
   }
 }
 
+export function unwrapRealtimeNotification(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw
+
+  // Already a notification row (list API or inner CREATED_NOTIFICATION payload).
+  if (raw.id != null || raw.notification_id != null) {
+    return raw
+  }
+
+  if ("notification" in raw && isRecord(raw.notification)) {
+    return raw.notification
+  }
+
+  const envelopeType = String(raw.type ?? raw.event ?? "")
+  const isCreatedEvent =
+    envelopeType === "CREATED_NOTIFICATION" ||
+    envelopeType === "NOTIFICATION_CREATED" ||
+    envelopeType === "notification"
+
+  // Backend WS broadcast: { type: "CREATED_NOTIFICATION", payload: { id, ... } }
+  if (isCreatedEvent && isRecord(raw.payload)) {
+    return raw.payload
+  }
+
+  if (isRecord(raw.data)) {
+    return raw.data
+  }
+
+  return raw
+}
+
 export function normalizeNotification(raw: unknown): Notification | null {
   if (!isRecord(raw)) return null
-  const id = String(raw.id ?? "")
+  const id = String(raw.id ?? raw.notification_id ?? "")
   if (!id) return null
 
   return {
     id,
-    recipient_id: Number(raw.recipient_id ?? 0),
+    recipient_id: Number(raw.recipient_id ?? raw.user_id ?? 0),
     receiver_type: raw.receiver_type != null ? String(raw.receiver_type) : undefined,
     type: String(raw.type ?? ""),
     level: String(raw.level ?? ""),
@@ -56,10 +148,46 @@ export function normalizeNotification(raw: unknown): Notification | null {
     is_read: Boolean(raw.is_read),
     delivery_status: String(raw.delivery_status ?? ""),
     delivery_channel: String(raw.delivery_channel ?? ""),
-    payload: normalizePayload(raw.payload),
-    timestamp: String(raw.timestamp ?? ""),
+    payload: normalizePayload(raw.payload, raw),
+    timestamp: String(raw.timestamp ?? raw.created_at ?? ""),
     expires: String(raw.expires ?? ""),
     image: String(raw.image ?? ""),
+  }
+}
+
+/** Parse a WebSocket payload into a notification, with fallbacks for partial events. */
+export function parseRealtimeNotification(raw: unknown): Notification | null {
+  const unwrapped = unwrapRealtimeNotification(raw)
+  const normalized = normalizeNotification(unwrapped)
+  if (normalized) return normalized
+  if (!isRecord(unwrapped)) return null
+
+  const payload = normalizePayload(unwrapped.payload, unwrapped)
+  const hasContent = Boolean(
+    payload.title || payload.headline || payload.message || payload.body,
+  )
+  if (!hasContent && unwrapped.id == null && unwrapped.notification_id == null) {
+    return null
+  }
+
+  return {
+    id: String(unwrapped.id ?? unwrapped.notification_id ?? crypto.randomUUID()),
+    recipient_id: Number(unwrapped.recipient_id ?? 0),
+    receiver_type:
+      unwrapped.receiver_type != null ? String(unwrapped.receiver_type) : undefined,
+    type: String(unwrapped.type ?? ""),
+    level: String(unwrapped.level ?? ""),
+    error_severity: String(unwrapped.error_severity ?? ""),
+    reciever: String(unwrapped.reciever ?? ""),
+    is_read: Boolean(unwrapped.is_read),
+    delivery_status: String(unwrapped.delivery_status ?? ""),
+    delivery_channel: String(unwrapped.delivery_channel ?? "in_app"),
+    payload,
+    timestamp: String(
+      unwrapped.timestamp ?? unwrapped.created_at ?? new Date().toISOString(),
+    ),
+    expires: String(unwrapped.expires ?? ""),
+    image: String(unwrapped.image ?? ""),
   }
 }
 
@@ -88,17 +216,86 @@ function parseUnreadCount(body: unknown): UnreadCountResponse {
   return { unread: Number(inner.unread ?? 0) }
 }
 
+function extractNotificationsPagePayload(body: unknown): Record<string, unknown> | null {
+  const candidates: unknown[] = [body]
+  if (isRecord(body)) {
+    if ("data" in body || "Data" in body) {
+      candidates.push(body.data ?? body.Data)
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (!isRecord(candidate)) continue
+    if (Array.isArray(candidate.notifications)) return candidate
+    if (isRecord(candidate.data) && Array.isArray(candidate.data.notifications)) {
+      return candidate.data
+    }
+  }
+
+  return null
+}
+
+function parseAllNotificationsListData(
+  body: unknown,
+  page: number,
+  limit: number,
+): ListAllNotificationsResponse {
+  const inner = extractNotificationsPagePayload(body)
+  if (!inner) {
+    return { notifications: [], total_count: 0, page, limit }
+  }
+
+  const rows = inner.notifications as unknown[]
+  const notifications = rows
+    .map(normalizeNotification)
+    .filter((n): n is Notification => n !== null)
+
+  return {
+    notifications,
+    total_count: Number(inner.total_count ?? notifications.length),
+    page: Number(inner.page ?? page),
+    limit: Number(inner.limit ?? limit),
+  }
+}
+
 export const getNotifications = (limit = 10, offset = 0) =>
   http.get<unknown>("/notifications", { params: { limit, offset } }).then((res) => ({
     ...res,
     data: parseNotificationsListData(res.data, limit, offset),
   }))
 
+export const getAllNotifications = (params: GetAllNotificationsParams = {}) => {
+  const page = params.page ?? 1
+  const limit = params.limit ?? DEFAULT_TABLE_PAGE_SIZE
+  const query: Record<string, string | number | boolean> = { page, limit }
+  if (params.channel) query.channel = params.channel
+  if (params.type?.trim()) query.type = params.type.trim()
+  if (params.user_id != null && Number.isFinite(params.user_id)) query.user_id = params.user_id
+  if (params.is_read != null) query.is_read = params.is_read
+  if (params.after) query.after = params.after
+  if (params.before) query.before = params.before
+
+  return http.get<unknown>("/notifications/all", { params: query }).then((res) => ({
+    ...res,
+    data: parseAllNotificationsListData(res.data, page, limit),
+  }))
+}
+
 export const getNotificationById = (id: string) =>
   http.get<unknown>(`/notifications/${id}`).then((res) => ({
     ...res,
     data: normalizeNotification(unwrapEnvelopeData(res.data)),
   }))
+
+export async function resolveNotificationDetail(
+  notification: Notification,
+): Promise<Notification> {
+  if (!isNumericNotificationId(notification.id)) {
+    return notification
+  }
+  const res = await getNotificationById(notification.id)
+  return res.data ?? notification
+}
 
 export const getUnreadCount = () =>
   http.get<unknown>("/notifications/unread").then((res) => ({
@@ -197,6 +394,19 @@ function normalizeScheduledNotification(raw: unknown): ScheduledNotification | n
       ? raw.target_user_ids.map((v) => Number(v))
       : undefined,
     target_role: raw.target_role != null ? String(raw.target_role) : undefined,
+    target_team_member_ids: Array.isArray(raw.target_team_member_ids)
+      ? raw.target_team_member_ids.map((v) => Number(v))
+      : Array.isArray(raw.target_raw?.team_member_ids)
+        ? (raw.target_raw as { team_member_ids: unknown[] }).team_member_ids.map((v) =>
+            Number(v),
+          )
+        : undefined,
+    target_team_role:
+      raw.target_team_role != null
+        ? String(raw.target_team_role)
+        : raw.target_raw?.team_role != null
+          ? String((raw.target_raw as { team_role: unknown }).team_role)
+          : undefined,
     target_raw: isRecord(raw.target_raw)
       ? {
           phones: Array.isArray(raw.target_raw.phones)
@@ -207,6 +417,11 @@ function normalizeScheduledNotification(raw: unknown): ScheduledNotification | n
             : undefined,
           type: raw.target_raw.type != null ? String(raw.target_raw.type) : undefined,
           level: raw.target_raw.level != null ? String(raw.target_raw.level) : undefined,
+          team_member_ids: Array.isArray(raw.target_raw.team_member_ids)
+            ? raw.target_raw.team_member_ids.map((v) => Number(v))
+            : undefined,
+          team_role:
+            raw.target_raw.team_role != null ? String(raw.target_raw.team_role) : undefined,
         }
       : undefined,
     attempt_count: raw.attempt_count != null ? Number(raw.attempt_count) : undefined,

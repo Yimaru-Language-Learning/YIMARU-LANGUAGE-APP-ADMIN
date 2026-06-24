@@ -427,7 +427,7 @@ export function HumanLanguageSubModulePage() {
 
     if (setsLoading) {
       return (
-        <div className="rounded-xl border bg-white">
+        <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
           <Table>
             <TableHeader>
               <TableRow>
@@ -468,7 +468,7 @@ export function HumanLanguageSubModulePage() {
     }
 
     return (
-      <div className="rounded-xl border bg-white">
+      <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -572,7 +572,7 @@ export function HumanLanguageSubModulePage() {
 
     if (lessonsLoading) {
       return (
-        <div className="rounded-xl border bg-white">
+        <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
           <Table>
             <TableHeader>
               <TableRow>
@@ -612,7 +612,7 @@ export function HumanLanguageSubModulePage() {
     }
 
     return (
-      <div className="rounded-xl border bg-white">
+      <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -925,7 +925,7 @@ export function HumanLanguageSubModulePage() {
 
       {activeTab === "videos" ? (
         videosLoading ? (
-          <div className="rounded-xl border bg-white">
+          <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -955,7 +955,7 @@ export function HumanLanguageSubModulePage() {
             No intro videos on this sub-module yet.
           </div>
         ) : (
-          <div className="rounded-xl border bg-white">
+          <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
             <Table>
               <TableHeader>
                 <TableRow>

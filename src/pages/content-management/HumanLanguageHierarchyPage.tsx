@@ -1039,7 +1039,7 @@ export function HumanLanguageHierarchyPage() {
           <div className="space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-grayScale-600">Module naming</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant={!createModuleUseDefaultNaming ? "default" : "outline"}
@@ -1076,7 +1076,7 @@ export function HumanLanguageHierarchyPage() {
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-grayScale-600">Icon URL (optional)</label>
-              <div className="mb-2 grid grid-cols-2 gap-2">
+              <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant={createModuleIconSource === "url" ? "default" : "outline"}
@@ -1181,7 +1181,7 @@ export function HumanLanguageHierarchyPage() {
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-grayScale-600">Icon URL (optional)</label>
-              <div className="mb-2 grid grid-cols-2 gap-2">
+              <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant={editModuleIconSource === "url" ? "default" : "outline"}

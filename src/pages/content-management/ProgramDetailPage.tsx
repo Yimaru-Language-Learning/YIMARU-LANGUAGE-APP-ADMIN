@@ -949,7 +949,7 @@ export function ProgramDetailPage() {
       >
         <DialogContent className="max-w-md rounded-[16px] border-none p-0 overflow-hidden">
           <div className="bg-white">
-            <DialogHeader className="border-b border-grayScale-100 px-6 py-5">
+            <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <DialogTitle className="text-lg font-bold text-grayScale-900">
                 Delete Course
               </DialogTitle>

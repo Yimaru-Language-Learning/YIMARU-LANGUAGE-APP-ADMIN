@@ -68,7 +68,7 @@ export function AddVideoPage() {
         {/* Preview Card */}
         {videoFile && (
           <Card className="border-grayScale-200 overflow-hidden p-0 shadow-sm">
-            <div className="border-b border-grayScale-100 px-6 py-4 sm:px-8">
+            <div className="border-b border-grayScale-100 px-4 py-4 sm:px-6 sm:px-8">
               <h2 className="text-lg font-semibold tracking-tight text-grayScale-600">
                 Video Preview
               </h2>

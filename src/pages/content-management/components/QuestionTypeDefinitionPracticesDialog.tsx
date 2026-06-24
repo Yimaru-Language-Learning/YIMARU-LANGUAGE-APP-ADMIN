@@ -123,7 +123,7 @@ export function QuestionTypeDefinitionPracticesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-hidden rounded-2xl border-grayScale-200 p-0 sm:max-w-3xl">
-        <DialogHeader className="border-b border-grayScale-100 px-6 py-5 text-left">
+        <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6 text-left">
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-grayScale-900">
             <GraduationCap className="h-5 w-5 text-brand-600 shrink-0" aria-hidden />
             Practices using this definition

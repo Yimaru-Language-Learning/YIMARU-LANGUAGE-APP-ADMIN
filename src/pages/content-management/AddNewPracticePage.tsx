@@ -677,7 +677,7 @@ export function AddNewPracticePage() {
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-grayScale-500">
                       Scoring & behavior
                     </h3>
-                    <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-grayScale-700">
                           Passing score

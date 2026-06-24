@@ -37,6 +37,7 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 import { NotificationsPage } from "../pages/notifications/NotificationsPage";
 import { CreateNotificationPage } from "../pages/notifications/CreateNotificationPage";
 import { ScheduledNotificationsPage } from "../pages/notifications/ScheduledNotificationsPage";
+import { AllNotificationsPage } from "../pages/notifications/AllNotificationsPage";
 import { EmailTemplatesPage } from "../pages/notifications/EmailTemplatesPage";
 import { EmailTemplateDetailPage } from "../pages/notifications/EmailTemplateDetailPage";
 import { CreateEmailTemplatePage } from "../pages/notifications/CreateEmailTemplatePage";
@@ -314,6 +315,7 @@ export function AppRoutes() {
           path="/notifications/scheduled"
           element={<ScheduledNotificationsPage />}
         />
+        <Route path="/notifications/all" element={<AllNotificationsPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/user-log" element={<UserLogPage />} />
         <Route path="/issues" element={<IssuesPage />} />

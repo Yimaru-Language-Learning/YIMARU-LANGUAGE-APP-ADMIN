@@ -11,6 +11,7 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import { login, loginWithGoogle } from "../../api/auth.api";
 import type { LoginRequest } from "../../types/auth.types";
 import type { LoginResult } from "../../api/auth.api";
+import { saveTeamSessionFromLoginResult, getAccessToken } from "../../lib/teamAuthStorage";
 import { toast } from "sonner";
 
 declare global {
@@ -67,12 +68,20 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const token = localStorage.getItem("access_token");
+  const token = getAccessToken();
 
   useEffect(() => {
     if (searchParams.get("password_changed") !== "1") return;
     toast.success("Password updated", {
       description: "Sign in with your new password.",
+    });
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("account_inactive") !== "1") return;
+    toast.error("Account inactive", {
+      description: "Your team account is no longer active. Contact an administrator.",
     });
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
@@ -90,10 +99,7 @@ export function LoginPage() {
 
   const storeTokensAndRedirect = useCallback(
     (result: LoginResult) => {
-      localStorage.setItem("access_token", result.accessToken);
-      localStorage.setItem("refresh_token", result.refreshToken);
-      localStorage.setItem("role", result.role);
-      localStorage.setItem("member_id", result.memberId.toString());
+      saveTeamSessionFromLoginResult(result);
       toast.success("Welcome back!", {
         description: "You have signed in successfully.",
       });

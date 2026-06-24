@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Search,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   Eye,
   RefreshCw,
@@ -43,7 +41,7 @@ import {
   DialogDescription,
 } from "../../components/ui/dialog";
 import { cn } from "../../lib/utils";
-import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination";
+import { TablePagination } from "../../components/admin/TablePagination";
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import {
   getIssues,
@@ -336,22 +334,6 @@ export function IssuesPage() {
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, pageCount);
   const paginatedIssues = filteredIssues.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const handlePrev = () => safePage > 1 && setPage(safePage - 1);
-  const handleNext = () => safePage < pageCount && setPage(safePage + 1);
-
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    if (pageCount <= 7) {
-      for (let i = 1; i <= pageCount; i++) pages.push(i);
-    } else {
-      pages.push(1, 2, 3);
-      if (safePage > 4) pages.push("...");
-      if (safePage > 3 && safePage < pageCount - 2) pages.push(safePage);
-      if (safePage < pageCount - 3) pages.push("...");
-      pages.push(pageCount);
-    }
-    return pages;
-  };
 
   const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const endEntry = Math.min(safePage * pageSize, totalCount);
@@ -364,14 +346,14 @@ export function IssuesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="admin-page-header">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-grayScale-600">Issue Reports</h1>
           <p className="text-sm text-grayScale-400">
             Review and manage user-reported issues across the platform.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="admin-page-actions">
           <Button
             variant="outline"
             className="gap-2"
@@ -495,15 +477,15 @@ export function IssuesPage() {
       </AdminFiltersPanel>
 
       {/* Table */}
-      <div className="rounded-xl border bg-white">
+      <div className="min-w-0 overflow-hidden rounded-xl border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>SUBJECT</TableHead>
-              <TableHead>TYPE</TableHead>
+              <TableHead className="hidden md:table-cell">TYPE</TableHead>
               <TableHead>STATUS</TableHead>
-              <TableHead>REPORTER</TableHead>
-              <TableHead>CREATED</TableHead>
+              <TableHead className="hidden lg:table-cell">REPORTER</TableHead>
+              <TableHead className="hidden sm:table-cell">CREATED</TableHead>
               <TableHead className="text-right">ACTIONS</TableHead>
             </TableRow>
           </TableHeader>
@@ -557,7 +539,7 @@ export function IssuesPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <span
                         className={cn(
                           "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
@@ -591,7 +573,7 @@ export function IssuesPage() {
                         <ChevronDown className="absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 pointer-events-none opacity-50" />
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-grayScale-100 text-grayScale-500">
                           <User className="h-3.5 w-3.5" />
@@ -606,7 +588,7 @@ export function IssuesPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div>
                         <p className="text-sm text-grayScale-600">
                           {formatDate(issue.created_at)}
@@ -643,82 +625,19 @@ export function IssuesPage() {
           </TableBody>
         </Table>
 
-        {/* Pagination */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
-          <div className="flex items-center gap-2">
-            <span>Showing</span>
-            <span className="font-medium text-grayScale-600">
-              {startEntry}–{endEntry}
-            </span>
-            <span>of</span>
-            <span className="font-medium text-grayScale-600">{totalCount}</span>
-            <span className="mr-4">entries</span>
-            <span className="border-l pl-4">Rows per page</span>
-            <div className="relative">
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
-              >
-                {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handlePrev}
-              disabled={safePage === 1}
-              className={cn(
-                "h-8 w-8 flex items-center justify-center rounded-md border bg-white text-grayScale-500",
-                safePage === 1 && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            {getPageNumbers().map((n, idx) =>
-              typeof n === "string" ? (
-                <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
-                  ...
-                </span>
-              ) : (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setPage(n)}
-                  className={cn(
-                    "h-8 w-8 rounded-md border text-sm font-medium",
-                    n === safePage
-                      ? "border-brand-500 bg-brand-500 text-white"
-                      : "bg-white text-grayScale-600 hover:bg-grayScale-50"
-                  )}
-                >
-                  {n}
-                </button>
-              )
-            )}
-
-            <button
-              onClick={handleNext}
-              disabled={safePage === pageCount}
-              className={cn(
-                "h-8 w-8 flex items-center justify-center rounded-md border bg-white text-grayScale-500",
-                safePage === pageCount && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          startEntry={startEntry}
+          endEntry={endEntry}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          currentPage={safePage}
+          totalPages={pageCount}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Detail Dialog */}
@@ -779,7 +698,7 @@ export function IssuesPage() {
               </div>
 
               {/* Detail grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <DetailItem
                   icon={<User className="h-4 w-4" />}
                   label="Reporter"

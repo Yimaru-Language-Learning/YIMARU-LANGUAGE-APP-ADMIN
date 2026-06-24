@@ -18,6 +18,11 @@ import {
   selectMissingWordsStimulusHasContent,
 } from "./selectMissingWordsSlotValue"
 import {
+  finalizeSequenceOrderPayload,
+  parseSequenceOrderSlotValue,
+  sequenceOrderSlotHasContent,
+} from "./sequenceOrderSlotValue"
+import {
   multipleChoiceOptionHasValue,
   multipleChoiceSlotHasContent,
   normalizeMultipleChoiceValue,
@@ -62,6 +67,10 @@ function isMatchingAnswerKind(kind: string): boolean {
 
 function isSelectMissingWordsKind(kind: string): boolean {
   return kind.trim().toUpperCase() === "SELECT_MISSING_WORDS"
+}
+
+function isSequenceOrderKind(kind: string): boolean {
+  return kind.trim().toUpperCase() === "SEQUENCE_ORDER"
 }
 
 function slotValueForRow(
@@ -137,6 +146,14 @@ function slotValueForRow(
       return finalizeSelectMissingWordsResponsePayload(fromField)
     }
     return { blanks: [] }
+  }
+
+  if (isSequenceOrderKind(row.kind)) {
+    const fromField = parseSequenceOrderSlotValue(rawField)
+    if (sequenceOrderSlotHasContent(fromField)) {
+      return finalizeSequenceOrderPayload(fromField)
+    }
+    return { items: [], correct_order: [] }
   }
 
   if (side === "stimulus" && PLAIN_TEXT_STIMULUS_KINDS.has(row.kind.trim().toUpperCase())) {

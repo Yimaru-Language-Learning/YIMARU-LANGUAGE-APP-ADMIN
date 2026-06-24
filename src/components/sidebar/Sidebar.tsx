@@ -101,6 +101,7 @@ const navEntries: NavEntry[] = [
     icon: Bell,
     children: [
       { label: "Inbox", to: "/notifications", end: true },
+      { label: "All notifications", to: "/notifications/all" },
       { label: "Email templates", to: "/notifications/email-templates" },
       { label: "Send notification", to: "/notifications/create" },
       { label: "Scheduled", to: "/notifications/scheduled" },

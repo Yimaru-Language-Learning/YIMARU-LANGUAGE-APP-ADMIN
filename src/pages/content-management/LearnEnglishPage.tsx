@@ -886,7 +886,7 @@ export function LearnEnglishPage() {
       {deletingProgram && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-bold text-grayScale-700">Delete program</h2>
               <button
                 type="button"

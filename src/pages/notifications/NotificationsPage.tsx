@@ -3,8 +3,6 @@ import {
   Bell,
   BellOff,
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   MailOpen,
   Mail,
   CheckCheck,
@@ -32,13 +30,13 @@ import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { useNavigate } from "react-router-dom"
 import {
-  getNotificationById,
   getNotifications,
   getUnreadCount,
   markAsRead,
   markAsUnread,
   markAllRead,
   markAllUnread,
+  resolveNotificationDetail,
 } from "../../api/notifications.api"
 import { NotificationDetailDialog } from "../../components/notifications/NotificationDetailDialog"
 import { NotificationDeleteDialog } from "../../components/notifications/NotificationDeleteDialog"
@@ -49,9 +47,11 @@ import {
   getNotificationLevelBadge,
   NOTIFICATION_TYPE_CONFIG,
 } from "../../lib/notificationDisplay"
-import { getNotificationMessage, getNotificationTitle, type Notification } from "../../types/notification.types"
+import { getNotificationMessage, getNotificationTitle, hasNotificationContent, type Notification } from "../../types/notification.types"
+import { NOTIFICATION_REALTIME_EVENT } from "../../lib/notificationsWebSocket"
 import { toast } from "sonner"
-import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
+import { TablePagination } from "../../components/admin/TablePagination"
+import { DEFAULT_TABLE_PAGE_SIZE } from "../../lib/tablePagination"
 
 function NotificationItem({
   notification,
@@ -225,6 +225,39 @@ export function NotificationsPage() {
   }, [fetchData])
 
   useEffect(() => {
+    const processedRealtimeIds = new Set<string>()
+
+    const onRealtime = (event: Event) => {
+      const notification = (event as CustomEvent<Notification>).detail
+      if (!notification || processedRealtimeIds.has(notification.id)) return
+      processedRealtimeIds.add(notification.id)
+
+      setNotifications((prev) => {
+        const withoutDuplicate = prev.filter((n) => n.id !== notification.id)
+        return [notification, ...withoutDuplicate]
+      })
+      setAllCount((count) => count + 1)
+    }
+
+    const onNotificationsUpdated = async () => {
+      try {
+        const res = await getUnreadCount()
+        setGlobalUnread(res.data.unread)
+      } catch {
+        // silently fail
+      }
+    }
+
+    window.addEventListener(NOTIFICATION_REALTIME_EVENT, onRealtime)
+    window.addEventListener("notifications-updated", onNotificationsUpdated)
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_REALTIME_EVENT, onRealtime)
+      window.removeEventListener("notifications-updated", onNotificationsUpdated)
+    }
+  }, [])
+
+  useEffect(() => {
     setOffset(0)
   }, [searchTerm, channelFilter, activeStatusTab, typeFilter, levelFilter, pageSize])
 
@@ -307,20 +340,6 @@ export function NotificationsPage() {
   const startEntry = totalCount === 0 ? 0 : offset + 1
   const endEntry = Math.min(offset + paginatedNotifications.length, totalCount)
 
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = []
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i)
-    } else {
-      pages.push(1, 2, 3)
-      if (currentPage > 4) pages.push("...")
-      if (currentPage > 3 && currentPage < totalPages - 2) pages.push(currentPage)
-      if (currentPage < totalPages - 3) pages.push("...")
-      pages.push(totalPages)
-    }
-    return pages
-  }
-
   const activeFilterCount = countActiveFilters([
     { value: activeStatusTab, defaultValue: "all" },
     { value: channelFilter, defaultValue: "all" },
@@ -335,42 +354,57 @@ export function NotificationsPage() {
     setLevelFilter("all")
   }
 
-  const loadNotificationDetail = useCallback(async (id: string) => {
+  const loadNotificationDetail = useCallback(async (notification: Notification) => {
     setDetailLoading(true)
     setDetailError(false)
-    setSelectedNotification(null)
-    setSelectedNotificationId(id)
+    setSelectedNotification(notification)
+    setSelectedNotificationId(notification.id)
     setDetailOpen(true)
 
     try {
-      const res = await getNotificationById(id)
-      if (!res.data) {
+      const resolved = await resolveNotificationDetail(notification)
+      if (!hasNotificationContent(resolved)) {
         setDetailError(true)
         toast.error("Notification not found")
         return
       }
-      setSelectedNotification(res.data)
-      if (!res.data.is_read) {
+      setSelectedNotification(resolved)
+      if (!resolved.is_read) {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
+          prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)),
         )
         setGlobalUnread((prev) => Math.max(0, prev - 1))
         try {
-          await markAsRead(id)
+          await markAsRead(notification.id)
         } catch {
           // list refresh on next load will reconcile
         }
       }
     } catch {
-      setDetailError(true)
-      toast.error("Failed to load notification details")
+      if (hasNotificationContent(notification)) {
+        setSelectedNotification(notification)
+        if (!notification.is_read) {
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)),
+          )
+          setGlobalUnread((prev) => Math.max(0, prev - 1))
+          try {
+            await markAsRead(notification.id)
+          } catch {
+            // list refresh on next load will reconcile
+          }
+        }
+      } else {
+        setDetailError(true)
+        toast.error("Failed to load notification details")
+      }
     } finally {
       setDetailLoading(false)
     }
   }, [])
 
   const handleOpenDetail = (notification: Notification) => {
-    void loadNotificationDetail(notification.id)
+    void loadNotificationDetail(notification)
   }
 
   const handleNotificationDeleted = useCallback((id: string) => {
@@ -394,8 +428,8 @@ export function NotificationsPage() {
       {/* Header */}
       <div className="mb-5">
         <div className="mb-1 text-sm font-semibold text-grayScale-500">Notifications</div>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">My Notifications</h1>
             {totalCount > 0 && <Badge variant="secondary">{totalCount}</Badge>}
             {globalUnread > 0 && <Badge variant="default">{globalUnread} unread</Badge>}
@@ -403,7 +437,7 @@ export function NotificationsPage() {
 
           {/* Bulk actions */}
           {!loading && !error && (
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Button
                 size="sm"
                 className="bg-brand-500 text-white hover:bg-brand-600"
@@ -787,78 +821,19 @@ export function NotificationsPage() {
                 </TableBody>
               </Table>
             </CardContent>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-grayScale-500">
-              <div className="flex items-center gap-2">
-                <span>Showing</span>
-                <span className="font-medium text-grayScale-600">
-                  {startEntry}-{endEntry}
-                </span>
-                <span>of</span>
-                <span className="font-medium text-grayScale-600">{totalCount}</span>
-                <span className="mr-4">entries</span>
-                <span className="border-l pl-4">Rows per page</span>
-                <div className="relative">
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value))
-                      setOffset(0)
-                    }}
-                    className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
-                  >
-                    {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => currentPage > 1 && setOffset(Math.max(0, offset - pageSize))}
-                  disabled={currentPage <= 1}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
-                    currentPage <= 1 && "cursor-not-allowed opacity-50",
-                  )}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                {getPageNumbers().map((n, idx) =>
-                  typeof n === "string" ? (
-                    <span key={`ellipsis-${idx}`} className="px-2 text-grayScale-400">
-                      ...
-                    </span>
-                  ) : (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setOffset((n - 1) * pageSize)}
-                      className={cn(
-                        "h-8 w-8 rounded-md border text-sm font-medium",
-                        n === currentPage
-                          ? "border-brand-500 bg-brand-500 text-white"
-                          : "bg-white text-grayScale-600 hover:bg-grayScale-50",
-                      )}
-                    >
-                      {n}
-                    </button>
-                  ),
-                )}
-                <button
-                  onClick={() => currentPage < totalPages && setOffset(offset + pageSize)}
-                  disabled={currentPage >= totalPages}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
-                    currentPage >= totalPages && "cursor-not-allowed opacity-50",
-                  )}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              startEntry={startEntry}
+              endEntry={endEntry}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size)
+                setOffset(0)
+              }}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setOffset((page - 1) * pageSize)}
+            />
           </Card>
         </>
       )}
@@ -870,8 +845,8 @@ export function NotificationsPage() {
         loading={detailLoading}
         error={detailError}
         onRetry={
-          selectedNotificationId
-            ? () => void loadNotificationDetail(selectedNotificationId)
+          selectedNotification
+            ? () => void loadNotificationDetail(selectedNotification)
             : undefined
         }
         onDelete={

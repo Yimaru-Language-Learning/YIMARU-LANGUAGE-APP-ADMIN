@@ -910,7 +910,7 @@ export function SubModuleContentPage() {
       {showDeleteModal && practiceToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Practice</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}
@@ -941,7 +941,7 @@ export function SubModuleContentPage() {
       {showEditPracticeModal && practiceToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Practice</h2>
               <button
                 onClick={() => setShowEditPracticeModal(false)}
@@ -999,7 +999,7 @@ export function SubModuleContentPage() {
       {showAddVideoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Add Video</h2>
               <button
                 onClick={() => { setShowAddVideoModal(false); setVideoFile(null) }}
@@ -1040,7 +1040,7 @@ export function SubModuleContentPage() {
                   </p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-grayScale-700">File Size (bytes)</label>
                   <Input
@@ -1062,7 +1062,7 @@ export function SubModuleContentPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-grayScale-700">Resolution</label>
                   <Input
@@ -1081,7 +1081,7 @@ export function SubModuleContentPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-grayScale-700">Visibility</label>
                   <select
@@ -1130,7 +1130,7 @@ export function SubModuleContentPage() {
       {showEditVideoModal && videoToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Video</h2>
               <button
                 onClick={() => setShowEditVideoModal(false)}
@@ -1188,7 +1188,7 @@ export function SubModuleContentPage() {
       {showDeleteVideoModal && videoToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Video</h2>
               <button
                 onClick={() => setShowDeleteVideoModal(false)}
@@ -1219,7 +1219,7 @@ export function SubModuleContentPage() {
       {showPreviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-grayScale-100 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <div>
                 <h2 className="text-lg font-semibold text-grayScale-900">
                   {previewVideo?.name ?? "Video Preview"}

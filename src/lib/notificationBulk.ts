@@ -1,10 +1,14 @@
 import type { UserApiDTO } from "../types/user.types"
+import type { TeamMember } from "../types/team.types"
 import type {
   BulkSendResult,
   PlatformRole,
   ScheduledNotification,
+  TeamRole,
 } from "../types/notification.types"
 import { getUsers } from "../api/users.api"
+import { getTeamMembers } from "../api/team.api"
+import { TEAM_ROLE_OPTIONS } from "./teamRoles"
 
 export const PLATFORM_ROLES: { value: PlatformRole; label: string }[] = [
   { value: "STUDENT", label: "Students" },
@@ -14,6 +18,20 @@ export const PLATFORM_ROLES: { value: PlatformRole; label: string }[] = [
   { value: "SUPER_ADMIN", label: "Super admins" },
   { value: "SUPPORT", label: "Support" },
 ]
+
+export const TEAM_ROLES: { value: TeamRole; label: string }[] = TEAM_ROLE_OPTIONS.map(
+  (option) => ({
+    value: option.value as TeamRole,
+    label: option.label,
+  }),
+)
+
+export type NotificationAudienceMode =
+  | "platform_role"
+  | "platform_selected"
+  | "team_role"
+  | "team_selected"
+  | "direct"
 
 export const IN_APP_TYPES = [
   { value: "system_alert", label: "System alert" },
@@ -49,6 +67,8 @@ export function parseBulkResponseData(data: unknown): BulkSendResult | Scheduled
     sent: Number(data.sent ?? 0),
     failed: Number(data.failed ?? 0),
     target_users: data.target_users != null ? Number(data.target_users) : undefined,
+    devices_targeted:
+      data.devices_targeted != null ? Number(data.devices_targeted) : undefined,
     image: data.image != null ? String(data.image) : undefined,
   }
 }
@@ -161,6 +181,39 @@ export async function fetchAllPlatformUsers(): Promise<UserApiDTO[]> {
   )
   const rest = remaining.flatMap((r) => r.data?.data?.users ?? [])
   return [...firstBatch, ...rest]
+}
+
+export async function fetchAllTeamMembers(): Promise<TeamMember[]> {
+  const pageSize = 50
+  const firstRes = await getTeamMembers(1, pageSize)
+  const firstBatch = firstRes.data?.data ?? []
+  const total = firstRes.data?.metadata?.total ?? firstBatch.length
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  if (totalPages <= 1) return firstBatch
+
+  const remaining = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, i) =>
+      getTeamMembers(i + 2, pageSize),
+    ),
+  )
+  const rest = remaining.flatMap((r) => r.data?.data ?? [])
+  return [...firstBatch, ...rest]
+}
+
+export function channelSupportsTeamTargeting(channel: string): boolean {
+  return channel === "email" || channel === "in_app"
+}
+
+export function isAudienceModeValidForChannel(
+  mode: NotificationAudienceMode,
+  channel: string,
+): boolean {
+  if (mode === "direct") return channel === "sms" || channel === "email"
+  if (mode === "team_role" || mode === "team_selected") {
+    return channelSupportsTeamTargeting(channel)
+  }
+  return true
 }
 
 export function extractApiErrorMessage(err: unknown, fallback: string): string {

@@ -1,26 +1,26 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { getNotifications, getUnreadCount, markAsRead, markAsUnread, markAllRead, deleteNotification } from "../api/notifications.api"
+import {
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAsUnread,
+  markAllRead,
+  deleteNotification,
+} from "../api/notifications.api"
 import type { Notification } from "../types/notification.types"
+import {
+  NOTIFICATION_REALTIME_EVENT,
+} from "../lib/notificationsWebSocket"
 
 const MAX_DROPDOWN = 5
-const RECONNECT_MS = 5000
-
-function getWsUrl() {
-  const base = import.meta.env.VITE_API_BASE_URL as string
-  const wsBase = base.replace(/^https/, "wss").replace(/^http/, "ws")
-  const token = localStorage.getItem("access_token") ?? ""
-  return `${wsBase}/ws/connect?token=${encodeURIComponent(token)}`
-}
+const ENRICH_REFRESH_MS = 2000
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const enrichRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
-  const intentionalCloseRef = useRef(false)
-  const connectAttemptRef = useRef(0)
 
   const dispatchUpdate = () => {
     window.dispatchEvent(new Event("notifications-updated"))
@@ -43,92 +43,84 @@ export function useNotifications() {
     }
   }, [])
 
-  const clearReconnectTimer = useCallback(() => {
-    if (reconnectTimer.current) {
-      clearTimeout(reconnectTimer.current)
-      reconnectTimer.current = null
+  const syncUnreadCount = useCallback(async () => {
+    try {
+      const countRes = await getUnreadCount()
+      if (mountedRef.current) setUnreadCount(countRes.data.unread)
+    } catch {
+      // silently fail
     }
   }, [])
 
-  const disconnectWs = useCallback(
-    (intentional: boolean) => {
-      intentionalCloseRef.current = intentional
-      clearReconnectTimer()
-      const ws = wsRef.current
-      wsRef.current = null
-      if (!ws) return
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.close()
-      }
+  const refreshQuietly = useCallback(async () => {
+    try {
+      const [notifRes, countRes] = await Promise.all([
+        getNotifications(5, 0),
+        getUnreadCount(),
+      ])
+      if (!mountedRef.current) return
+      setNotifications((prev) => {
+        const fromApi = notifRes.data.notifications ?? []
+        const apiIds = new Set(fromApi.map((n) => n.id))
+        const pending = prev.filter((n) => !apiIds.has(n.id))
+        return [...pending, ...fromApi].slice(0, MAX_DROPDOWN)
+      })
+      setUnreadCount(countRes.data.unread)
+    } catch {
+      // silently fail
+    }
+  }, [])
+
+  const clearEnrichRefreshTimer = useCallback(() => {
+    if (enrichRefreshTimer.current) {
+      clearTimeout(enrichRefreshTimer.current)
+      enrichRefreshTimer.current = null
+    }
+  }, [])
+
+  const scheduleEnrichRefresh = useCallback(() => {
+    clearEnrichRefreshTimer()
+    enrichRefreshTimer.current = setTimeout(() => {
+      enrichRefreshTimer.current = null
+      void refreshQuietly()
+    }, ENRICH_REFRESH_MS)
+  }, [clearEnrichRefreshTimer, refreshQuietly])
+
+  const applyRealtimeNotification = useCallback(
+    (notif: Notification) => {
+      setNotifications((prev) => {
+        const withoutDuplicate = prev.filter((n) => n.id !== notif.id)
+        return [notif, ...withoutDuplicate].slice(0, MAX_DROPDOWN)
+      })
+      scheduleEnrichRefresh()
     },
-    [clearReconnectTimer],
+    [scheduleEnrichRefresh],
   )
-
-  const connectWs = useCallback(() => {
-    if (!mountedRef.current) return
-
-    const token = localStorage.getItem("access_token")?.trim()
-    if (!token) return
-
-    disconnectWs(true)
-    intentionalCloseRef.current = false
-
-    const attempt = ++connectAttemptRef.current
-    const ws = new WebSocket(getWsUrl())
-    wsRef.current = ws
-
-    ws.onmessage = (event) => {
-      try {
-        const raw = JSON.parse(event.data)
-        const notif: Notification = {
-          id: raw.id ?? crypto.randomUUID(),
-          recipient_id: raw.recipient_id ?? 0,
-          type: raw.type ?? "",
-          level: raw.level ?? "",
-          error_severity: raw.error_severity ?? "",
-          reciever: raw.reciever ?? "",
-          is_read: raw.is_read ?? false,
-          delivery_status: raw.delivery_status ?? "",
-          delivery_channel: raw.delivery_channel ?? "",
-          payload: {
-            headline: raw.payload?.headline ?? raw.payload?.title ?? raw.headline ?? raw.title ?? "",
-            message: raw.payload?.message ?? raw.payload?.body ?? raw.message ?? raw.body ?? "",
-            tags: raw.payload?.tags ?? raw.tags ?? null,
-          },
-          timestamp: raw.timestamp ?? raw.created_at ?? new Date().toISOString(),
-          expires: raw.expires ?? "",
-          image: raw.image ?? "",
-        }
-        setNotifications((prev) => [notif, ...prev].slice(0, MAX_DROPDOWN))
-        setUnreadCount((prev) => prev + 1)
-        dispatchUpdate()
-      } catch {
-        // ignore malformed messages
-      }
-    }
-
-    ws.onclose = () => {
-      if (connectAttemptRef.current !== attempt) return
-      if (wsRef.current === ws) wsRef.current = null
-      if (!mountedRef.current || intentionalCloseRef.current) return
-      clearReconnectTimer()
-      reconnectTimer.current = setTimeout(() => {
-        if (mountedRef.current) connectWs()
-      }, RECONNECT_MS)
-    }
-  }, [clearReconnectTimer, disconnectWs])
 
   useEffect(() => {
     mountedRef.current = true
-    intentionalCloseRef.current = false
     fetchData()
-    connectWs()
+
+    const onRealtime = (event: Event) => {
+      const detail = (event as CustomEvent<Notification>).detail
+      if (!detail) return
+      applyRealtimeNotification(detail)
+    }
+
+    const onNotificationsUpdated = () => {
+      void syncUnreadCount()
+    }
+
+    window.addEventListener(NOTIFICATION_REALTIME_EVENT, onRealtime)
+    window.addEventListener("notifications-updated", onNotificationsUpdated)
 
     return () => {
       mountedRef.current = false
-      disconnectWs(true)
+      window.removeEventListener(NOTIFICATION_REALTIME_EVENT, onRealtime)
+      window.removeEventListener("notifications-updated", onNotificationsUpdated)
+      clearEnrichRefreshTimer()
     }
-  }, [fetchData, connectWs, disconnectWs])
+  }, [fetchData, applyRealtimeNotification, clearEnrichRefreshTimer, syncUnreadCount])
 
   const markOneRead = useCallback(async (id: string) => {
     setNotifications((prev) =>
@@ -182,6 +174,27 @@ export function useNotifications() {
     }
   }, [notifications, fetchData])
 
+  const commitDeleteNotification = useCallback(async (notification: Notification) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id))
+    if (!notification.is_read) {
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+    }
+    dispatchUpdate()
+    try {
+      await deleteNotification(notification.id)
+    } catch {
+      await fetchData()
+      throw new Error("delete failed")
+    }
+  }, [fetchData])
+
+  const restoreNotification = useCallback((notification: Notification) => {
+    setNotifications((prev) => {
+      if (prev.some((n) => n.id === notification.id)) return prev
+      return [notification, ...prev].slice(0, MAX_DROPDOWN)
+    })
+  }, [])
+
   const refresh = useCallback(() => {
     fetchData()
   }, [fetchData])
@@ -194,6 +207,8 @@ export function useNotifications() {
     markOneUnread,
     markAllAsRead,
     deleteOne,
+    commitDeleteNotification,
+    restoreNotification,
     refresh,
   }
 }

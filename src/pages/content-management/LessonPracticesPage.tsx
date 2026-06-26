@@ -24,6 +24,7 @@ import {
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { PracticeActionButton } from "./components/PracticeActionButton";
+import { ModulePracticeCard } from "./components/ModulePracticeCard";
 import { Card, CardContent } from "../../components/ui/card";
 import {
   Dialog,
@@ -426,7 +427,12 @@ export function LessonPracticesPage() {
         <div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-violet-500/[0.05] blur-3xl" />
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 pb-24 pt-8 sm:px-6 lg:px-8">
+      <div
+        className={cn(
+          "mx-auto px-4 pb-24 pt-8 sm:px-6 lg:px-8",
+          isExamPrep ? "max-w-7xl" : "max-w-4xl",
+        )}
+      >
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
           <Link
             to={backHref}
@@ -591,6 +597,24 @@ export function LessonPracticesPage() {
                     </p>
                   </CardContent>
                 </Card>
+              ) : isExamPrep ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  {filteredPractices.map((p) => (
+                    <ModulePracticeCard
+                      key={p.id}
+                      practice={p}
+                      statusUpdating={publishStatusUpdatingId === p.id}
+                      onEdit={() => void navigate(editPracticeHref(p.id))}
+                      onPublish={() =>
+                        void handlePracticePublishStatus(p.id, "PUBLISHED")
+                      }
+                      onSaveAsDraft={() =>
+                        void handlePracticePublishStatus(p.id, "DRAFT")
+                      }
+                      onDelete={() => setPracticeToDelete(p)}
+                    />
+                  ))}
+                </div>
               ) : (
               filteredPractices.map((p, i) => (
                 <PracticeCard

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { BookOpen, Clock, Edit2, Hash, Loader2, RefreshCw, Trash2 } from "lucide-react"
+import { BookOpen, Loader2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import {
   deleteExamPrepPractice,
@@ -8,9 +8,7 @@ import {
   setExamPrepPracticePublishStatus,
 } from "../../../api/courses.api"
 import { unwrapPracticesList } from "../../../lib/parentContextPractice"
-import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
-import { Card, CardContent } from "../../../components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -19,13 +17,11 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog"
 import { ContentListSearchFilterBar } from "./ContentListSearchFilterBar"
-import { ContentPublishStatusChip } from "./ContentPublishStatusChip"
+import { ModulePracticeCard } from "./ModulePracticeCard"
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
 } from "../../../lib/contentListFilters"
-import { resolveThumbnailForPreview } from "../../../lib/videoPreview"
-import { cn } from "../../../lib/utils"
 import type {
   ParentContextPractice,
   PracticePublishStatus,
@@ -43,150 +39,6 @@ function extractPracticesPage(
   const totalCount =
     typeof data?.total_count === "number" ? data.total_count : practices.length
   return { practices, totalCount }
-}
-
-function formatPracticeDate(iso: string): string {
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
-}
-
-function PracticeCard({
-  practice,
-  index,
-  total,
-  onEdit,
-  onDelete,
-  onTogglePublishStatus,
-  publishStatusUpdating,
-}: {
-  practice: ParentContextPractice
-  index: number
-  total: number
-  onEdit?: () => void
-  onDelete?: () => void
-  onTogglePublishStatus?: (nextStatus: PracticePublishStatus) => void
-  publishStatusUpdating?: boolean
-}) {
-  const [imgFailed, setImgFailed] = useState(false)
-  const thumb = resolveThumbnailForPreview(practice.story_image)
-  const showThumb = Boolean(thumb) && !imgFailed
-
-  return (
-    <Card
-      className={cn(
-        "overflow-hidden border-grayScale-100/90 bg-white shadow-sm transition-all duration-300",
-        "hover:border-brand-200/60 hover:shadow-md hover:shadow-brand-500/5",
-      )}
-    >
-      <CardContent className="p-0">
-        <div className="flex flex-col lg:flex-row lg:items-stretch">
-          <div className="relative shrink-0 lg:w-[280px]">
-            <div
-              className={cn(
-                "relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-grayScale-100 to-grayScale-50 lg:aspect-auto lg:h-full lg:min-h-[220px]",
-                !showThumb && "grid min-h-[180px] place-items-center lg:min-h-[220px]",
-              )}
-            >
-              {showThumb ? (
-                <>
-                  <img
-                    src={thumb!}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    onError={() => setImgFailed(true)}
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-grayScale-400">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 shadow-inner ring-1 ring-grayScale-200/80">
-                    <BookOpen className="h-7 w-7" />
-                  </div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider">
-                    No cover image
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-grayScale-600 shadow-sm ring-1 ring-black/5">
-              {index + 1} / {total}
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col p-5 sm:p-6">
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-bold tracking-tight text-grayScale-900">
-                  {practice.title || "Untitled practice"}
-                </h3>
-                {practice.story_description ? (
-                  <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-grayScale-500">
-                    {practice.story_description}
-                  </p>
-                ) : null}
-              </div>
-              {onTogglePublishStatus ? (
-                <ContentPublishStatusChip
-                  publishStatus={practice.publish_status}
-                  updating={publishStatusUpdating}
-                  contentLabel="practice"
-                  onToggle={onTogglePublishStatus}
-                />
-              ) : null}
-            </div>
-
-            {practice.quick_tips?.trim() ? (
-              <div className="rounded-xl border border-amber-100/80 bg-amber-50/60 px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-900/75">
-                  Quick tips
-                </p>
-                <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-grayScale-800">
-                  {practice.quick_tips}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-grayScale-100 pt-5">
-              <Badge variant="secondary" className="gap-1.5 py-1 pl-2 pr-2.5 font-medium normal-case">
-                <Hash className="h-3 w-3 opacity-70" aria-hidden />
-                Question set {practice.question_set_id}
-              </Badge>
-              <Badge variant="secondary" className="gap-1.5 py-1 pl-2 pr-2.5 font-medium normal-case">
-                <Clock className="h-3 w-3 opacity-70" aria-hidden />
-                {formatPracticeDate(practice.created_at)}
-              </Badge>
-              {onEdit ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="ml-auto h-9 rounded-[10px] border-brand-500 text-xs font-bold text-brand-500 hover:bg-brand-50"
-                  onClick={onEdit}
-                >
-                  <Edit2 className="mr-1.5 h-3.5 w-3.5" />
-                  Edit
-                </Button>
-              ) : null}
-              {onDelete ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={onDelete}
-                >
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                  Delete
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
 }
 
 type CatalogCoursePracticesPanelProps = {
@@ -353,19 +205,16 @@ export function CatalogCoursePracticesPanel({
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {filteredPractices.map((practice, index) => (
-            <PracticeCard
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {filteredPractices.map((practice) => (
+            <ModulePracticeCard
               key={practice.id}
               practice={practice}
-              index={index}
-              total={filteredPractices.length}
+              statusUpdating={publishStatusUpdatingId === practice.id}
               onEdit={() => navigate(editPracticeHref(practice.id))}
+              onPublish={() => void handlePracticePublishStatus(practice.id, "PUBLISHED")}
+              onSaveAsDraft={() => void handlePracticePublishStatus(practice.id, "DRAFT")}
               onDelete={() => setPracticeToDelete(practice)}
-              onTogglePublishStatus={(nextStatus) =>
-                void handlePracticePublishStatus(practice.id, nextStatus)
-              }
-              publishStatusUpdating={publishStatusUpdatingId === practice.id}
             />
           ))}
         </div>

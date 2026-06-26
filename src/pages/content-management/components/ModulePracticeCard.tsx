@@ -27,6 +27,7 @@ type ModulePracticeCardProps = {
   onEdit?: () => void;
   onPublish?: () => void;
   onSaveAsDraft?: () => void;
+  onDelete?: () => void;
 };
 
 export function ModulePracticeCard({
@@ -35,6 +36,7 @@ export function ModulePracticeCard({
   onEdit,
   onPublish,
   onSaveAsDraft,
+  onDelete,
 }: ModulePracticeCardProps) {
   const isPublished = isPracticePublished(practice);
   const statusLabel = practicePublishStatus(practice) ?? "DRAFT";
@@ -134,6 +136,18 @@ export function ModulePracticeCard({
                 >
                   {isPublished ? "Save as draft" : "Publish practice"}
                 </DropdownMenuItem>
+                {onDelete ? (
+                  <DropdownMenuItem
+                    disabled={statusUpdating}
+                    className="text-destructive focus:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                  >
+                    Delete practice
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

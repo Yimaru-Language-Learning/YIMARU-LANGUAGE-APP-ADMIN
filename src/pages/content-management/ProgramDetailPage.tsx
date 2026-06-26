@@ -3,7 +3,6 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Plus,
-  FileText,
   ClipboardList,
   ListChecks,
   ChevronRight,
@@ -12,7 +11,6 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { PracticeActionButton } from "./components/PracticeActionButton";
 import { Card } from "../../components/ui/card";
 import {
   Dialog,
@@ -648,15 +646,6 @@ export function ProgramDetailPage() {
               </div>
             </DialogContent>
           </Dialog>
-
-          <PracticeActionButton
-            variant="outline"
-            className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold  flex items-center gap-2"
-            pathOptions={{ isExamPrep: true, programType }}
-          >
-            <FileText className="h-5 w-5" />
-            Add Practice
-          </PracticeActionButton>
         </div>
       </div>
 

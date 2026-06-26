@@ -24,24 +24,32 @@ export function resolvePracticeParentFromPathOptions(
     }
   }
 
+  const courseId = options.courseId?.trim()
+  if (options.isExamPrep && courseId && !options.unitId?.trim() && !options.moduleId?.trim() && !lessonId) {
+    const id = Number(courseId)
+    if (Number.isFinite(id) && id > 0) {
+      return { parent_kind: "CATALOG_COURSE", parent_id: id }
+    }
+  }
+
+  const unitId = options.unitId?.trim()
+  if (options.isExamPrep && unitId && !options.moduleId?.trim() && !lessonId) {
+    const id = Number(unitId)
+    if (Number.isFinite(id) && id > 0) {
+      return { parent_kind: "UNIT", parent_id: id }
+    }
+  }
+
   const backTo = options.backTo?.trim()
   const moduleId = options.moduleId?.trim()
-  if (backTo === "module" && moduleId) {
+  if (backTo === "module" && moduleId && !options.isExamPrep) {
     const id = Number(moduleId)
     if (Number.isFinite(id) && id > 0) {
       return { parent_kind: "MODULE", parent_id: id }
     }
   }
 
-  if (options.isExamPrep && moduleId && !lessonId) {
-    const id = Number(moduleId)
-    if (Number.isFinite(id) && id > 0) {
-      return { parent_kind: "MODULE", parent_id: id }
-    }
-  }
-
-  const courseId = options.courseId?.trim()
-  if ((backTo === "modules" || backTo === "courses") && courseId) {
+  if ((backTo === "modules" || backTo === "courses") && courseId && !options.isExamPrep) {
     const id = Number(courseId)
     if (Number.isFinite(id) && id > 0) {
       return { parent_kind: "COURSE", parent_id: id }
@@ -63,6 +71,7 @@ export function resolvePracticeParentSummaryFromPathOptions(
     return `Lesson #${options.lessonId.trim()}${lessonTitle ? ` — ${lessonTitle}` : ""}`
   }
   if (options.moduleId?.trim()) return `Module #${options.moduleId.trim()}`
+  if (options.unitId?.trim()) return `Unit #${options.unitId.trim()}`
   if (options.courseId?.trim()) return `Course #${options.courseId.trim()}`
   return "selected content"
 }
@@ -71,6 +80,7 @@ function buildPracticeQuery(options: PracticeContentPathOptions): string {
   const params = new URLSearchParams()
   if (options.backTo?.trim()) params.set("backTo", options.backTo.trim())
   if (options.courseId?.trim()) params.set("courseId", options.courseId.trim())
+  if (options.unitId?.trim()) params.set("unitId", options.unitId.trim())
   if (options.moduleId?.trim()) params.set("moduleId", options.moduleId.trim())
   if (options.lessonId?.trim()) params.set("lessonId", options.lessonId.trim())
   if (options.lessonTitle?.trim()) {
@@ -88,6 +98,9 @@ function practiceBasePath(options: PracticeContentPathOptions): string {
     const moduleId = options.moduleId?.trim()
     if (programType && courseId && unitId && moduleId) {
       return `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}`
+    }
+    if (programType && courseId && unitId) {
+      return `/new-content/courses/${programType}/${courseId}/${unitId}`
     }
     if (programType && courseId) {
       return `/new-content/courses/${programType}/${courseId}`

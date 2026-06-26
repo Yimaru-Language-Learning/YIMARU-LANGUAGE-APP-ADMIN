@@ -381,6 +381,70 @@ export interface PublishExamPrepModuleLessonRequest {
   publish_status: PracticePublishStatus
 }
 
+/** POST /exam-prep/catalog-courses/:catalogCourseId/practices */
+export interface CreateExamPrepCatalogCoursePracticeRequest {
+  title: string
+  story_description: string
+  story_image: string
+  persona_id: number
+  question_set_id: number
+  quick_tips: string
+  publish_status?: PracticePublishStatus
+}
+
+export interface CreateExamPrepCatalogCoursePracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetExamPrepCatalogCoursePracticesResponse {
+  message: string
+  data: {
+    practices: ParentContextPractice[]
+    total_count: number
+    limit: number
+    offset: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+/** POST /exam-prep/units/:unitId/practices */
+export interface CreateExamPrepUnitPracticeRequest {
+  title: string
+  story_description: string
+  story_image: string
+  persona_id: number
+  question_set_id: number
+  quick_tips: string
+  publish_status?: PracticePublishStatus
+}
+
+export interface CreateExamPrepUnitPracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
+export interface GetExamPrepUnitPracticesResponse {
+  message: string
+  data: {
+    practices: ParentContextPractice[]
+    total_count: number
+    limit: number
+    offset: number
+  }
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
 /** POST /exam-prep/lessons/:lessonId/practices */
 export interface CreateExamPrepLessonPracticeRequest {
   title: string
@@ -586,7 +650,12 @@ export interface GetPracticesListParams {
   unlinked_only?: boolean
 }
 
-export type PracticeParentKind = "COURSE" | "MODULE" | "LESSON"
+export type PracticeParentKind =
+  | "COURSE"
+  | "MODULE"
+  | "LESSON"
+  | "CATALOG_COURSE"
+  | "UNIT"
 
 export interface PracticeParent {
   parent_kind: PracticeParentKind

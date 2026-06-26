@@ -1,6 +1,12 @@
 import type { PracticeParent, PracticeParentKind } from "../types/course.types"
 
-const PARENT_KINDS: PracticeParentKind[] = ["COURSE", "MODULE", "LESSON"]
+const PARENT_KINDS: PracticeParentKind[] = [
+  "COURSE",
+  "MODULE",
+  "LESSON",
+  "CATALOG_COURSE",
+  "UNIT",
+]
 
 export function isPracticeParentKind(value: string): value is PracticeParentKind {
   return PARENT_KINDS.includes(value.toUpperCase() as PracticeParentKind)
@@ -88,7 +94,20 @@ export function validatePracticeParents(
 }
 
 export function formatPracticeParentLabel(parent: PracticeParent): string {
-  return `${parent.parent_kind} #${parent.parent_id}`
+  switch (parent.parent_kind) {
+    case "CATALOG_COURSE":
+      return `Catalog course #${parent.parent_id}`
+    case "UNIT":
+      return `Unit #${parent.parent_id}`
+    case "COURSE":
+      return `Course #${parent.parent_id}`
+    case "MODULE":
+      return `Module #${parent.parent_id}`
+    case "LESSON":
+      return `Lesson #${parent.parent_id}`
+    default:
+      return `${parent.parent_kind} #${parent.parent_id}`
+  }
 }
 
 export function formatPracticeParentsSummary(parents: PracticeParent[]): string {

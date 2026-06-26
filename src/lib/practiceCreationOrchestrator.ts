@@ -1,7 +1,9 @@
 import type { AxiosResponse } from "axios"
 import {
   addQuestionToSet,
+  createExamPrepCatalogCoursePractice,
   createExamPrepLessonPractice,
+  createExamPrepUnitPractice,
   createParentLinkedPractice,
   createQuestion,
   createQuestionSet,
@@ -44,6 +46,10 @@ export interface PracticeCreationInput {
   definitions: QuestionTypeDefinition[]
   /** English proficiency lesson practices use POST /exam-prep/lessons/:id/practices. */
   examPrepLessonId?: number
+  /** English proficiency catalog course practices use POST /exam-prep/catalog-courses/:id/practices. */
+  examPrepCatalogCourseId?: number
+  /** English proficiency unit practices use POST /exam-prep/units/:id/practices. */
+  examPrepUnitId?: number
 }
 
 function extractCreatedResourceId(
@@ -190,7 +196,27 @@ export async function executePracticeCreation(
         quick_tips: opts.quickTips.trim(),
         publish_status: opts.status,
       })
-    : await createParentLinkedPractice({
+    : opts.examPrepCatalogCourseId
+      ? await createExamPrepCatalogCoursePractice(opts.examPrepCatalogCourseId, {
+          title: opts.practiceTitle.trim(),
+          story_description: opts.storyDescription.trim(),
+          story_image: opts.storyImage.trim(),
+          persona_id: opts.personaId,
+          question_set_id: setId,
+          quick_tips: opts.quickTips.trim(),
+          publish_status: opts.status,
+        })
+      : opts.examPrepUnitId
+        ? await createExamPrepUnitPractice(opts.examPrepUnitId, {
+            title: opts.practiceTitle.trim(),
+            story_description: opts.storyDescription.trim(),
+            story_image: opts.storyImage.trim(),
+            persona_id: opts.personaId,
+            question_set_id: setId,
+            quick_tips: opts.quickTips.trim(),
+            publish_status: opts.status,
+          })
+      : await createParentLinkedPractice({
         parents: createParents,
         title: opts.practiceTitle.trim(),
         story_description: opts.storyDescription.trim(),

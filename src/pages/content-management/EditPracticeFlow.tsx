@@ -77,6 +77,7 @@ export function EditPracticeFlow() {
     if (backToParam?.trim()) return backToParam.trim();
     if (routeLessonId) return "lesson";
     if (isExamPrep && routeModuleId) return "module";
+    if (isExamPrep && routeUnitId && !routeModuleId) return "unit";
     if (isExamPrep && routeCourseId) return "courses";
     if (routeModuleId) return "module";
     if (routeCourseId) return "courses";
@@ -86,6 +87,7 @@ export function EditPracticeFlow() {
     routeLessonId,
     isExamPrep,
     routeModuleId,
+    routeUnitId,
     routeCourseId,
   ]);
 
@@ -108,6 +110,7 @@ export function EditPracticeFlow() {
   })();
 
   const isModuleContext = effectiveBackTo === "module";
+  const isUnitContext = effectiveBackTo === "unit";
   const isCourseContext =
     effectiveBackTo === "courses" || effectiveBackTo === "modules";
   const isLessonContext = effectiveBackTo === "lesson" || Boolean(routeLessonId);
@@ -121,14 +124,21 @@ export function EditPracticeFlow() {
     if (lessonId)
       return `Lesson #${lessonId}${lessonTitleDisplay ? ` — ${lessonTitleDisplay}` : ""}`;
     if (isModuleContext && moduleId) return `Module #${moduleId}`;
-    if (isCourseContext && courseId) return `Course #${courseId}`;
+    if (isUnitContext && unitId) return `Unit #${unitId}`;
+    if (isCourseContext && courseId) {
+      return isExamPrep
+        ? `Catalog course #${courseId}`
+        : `Course #${courseId}`;
+    }
     return null;
   }, [
     lessonId,
     lessonTitleDisplay,
     isModuleContext,
+    isUnitContext,
     isCourseContext,
     moduleId,
+    unitId,
     courseId,
   ]);
 
@@ -145,7 +155,9 @@ export function EditPracticeFlow() {
       ? "Back to lesson practices"
       : effectiveBackTo === "module"
         ? "Back to Module"
-        : effectiveBackTo === "modules"
+        : effectiveBackTo === "unit"
+          ? "Back to Unit"
+          : effectiveBackTo === "modules"
           ? "Back to Modules"
           : effectiveBackTo === "courses"
             ? "Back to Course"
@@ -169,6 +181,9 @@ export function EditPracticeFlow() {
         moduleId
       ) {
         return `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}`;
+      }
+      if (effectiveBackTo === "unit" && programType && courseId && unitId) {
+        return `/new-content/courses/${programType}/${courseId}/${unitId}`;
       }
       if (effectiveBackTo === "courses" && programType && courseId) {
         return `/new-content/courses/${programType}/${courseId}`;

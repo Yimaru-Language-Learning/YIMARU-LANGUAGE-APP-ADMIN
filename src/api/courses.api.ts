@@ -101,6 +101,12 @@ import type {
   PublishExamPrepModuleLessonRequest,
   CreateExamPrepLessonPracticeRequest,
   CreateExamPrepLessonPracticeResponse,
+  CreateExamPrepCatalogCoursePracticeRequest,
+  CreateExamPrepCatalogCoursePracticeResponse,
+  CreateExamPrepUnitPracticeRequest,
+  CreateExamPrepUnitPracticeResponse,
+  GetExamPrepUnitPracticesResponse,
+  GetExamPrepCatalogCoursePracticesResponse,
   GetExamPrepLessonPracticesResponse,
   GetExamPrepModuleLessonsResponse,
   GetTopLevelModuleLessonsResponse,
@@ -644,6 +650,46 @@ export const setExamPrepModuleLessonAccessTier = (
 /** English proficiency lesson — DELETE /exam-prep/lessons/:lessonId */
 export const deleteExamPrepModuleLesson = (lessonId: number) =>
   http.delete(`/exam-prep/lessons/${lessonId}`)
+
+/** POST /exam-prep/catalog-courses/:catalogCourseId/practices */
+export const createExamPrepCatalogCoursePractice = (
+  catalogCourseId: number,
+  data: CreateExamPrepCatalogCoursePracticeRequest,
+) =>
+  http.post<CreateExamPrepCatalogCoursePracticeResponse>(
+    `/exam-prep/catalog-courses/${catalogCourseId}/practices`,
+    data,
+  )
+
+/** GET /exam-prep/catalog-courses/:catalogCourseId/practices */
+export const getExamPrepCatalogCoursePractices = (
+  catalogCourseId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetExamPrepCatalogCoursePracticesResponse>(
+    `/exam-prep/catalog-courses/${catalogCourseId}/practices`,
+    { params },
+  )
+
+/** POST /exam-prep/units/:unitId/practices */
+export const createExamPrepUnitPractice = (
+  unitId: number,
+  data: CreateExamPrepUnitPracticeRequest,
+) =>
+  http.post<CreateExamPrepUnitPracticeResponse>(
+    `/exam-prep/units/${unitId}/practices`,
+    data,
+  )
+
+/** GET /exam-prep/units/:unitId/practices */
+export const getExamPrepUnitPractices = (
+  unitId: number,
+  params?: { limit?: number; offset?: number },
+) =>
+  http.get<GetExamPrepUnitPracticesResponse>(
+    `/exam-prep/units/${unitId}/practices`,
+    { params },
+  )
 
 /** POST /exam-prep/lessons/:lessonId/practices */
 export const createExamPrepLessonPractice = (

@@ -10,6 +10,7 @@ import {
   Trash2,
   ArrowRight,
   X,
+  FileText,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
@@ -45,6 +46,9 @@ import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
 } from "../../lib/contentListFilters";
+import { PracticeActionButton } from "./components/PracticeActionButton";
+import { UnitPracticesPanel } from "./components/UnitPracticesPanel";
+import { cn } from "../../lib/utils";
 
 export function UnitManagementPage() {
   const navigate = useNavigate();
@@ -109,6 +113,18 @@ export function UnitManagementPage() {
   const [listSearch, setListSearch] = useState("");
   const [publishStatusFilter, setPublishStatusFilter] =
     useState<PublishStatusFilter>("all");
+  const [activeTab, setActiveTab] = useState<"modules" | "practices">("modules");
+
+  const unitPracticePathOptions = useMemo(
+    () => ({
+      isExamPrep: true as const,
+      programType,
+      courseId: String(catalogCourseId),
+      unitId: String(parsedUnitId),
+      backTo: "unit",
+    }),
+    [programType, catalogCourseId, parsedUnitId],
+  );
 
   const filteredModules = useMemo(
     () =>
@@ -608,6 +624,7 @@ export function UnitManagementPage() {
           ) : null}
         </div>
 
+        <div className="flex flex-wrap items-center gap-3 pt-2">
         <Dialog
           open={addModuleOpen}
           onOpenChange={(open) => {
@@ -796,6 +813,46 @@ export function UnitManagementPage() {
             </div>
           </DialogContent>
         </Dialog>
+          <PracticeActionButton
+            variant="outline"
+            className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold flex items-center gap-2 shadow-sm"
+            pathOptions={unitPracticePathOptions}
+            parentLabel={unitDisplayName}
+          >
+            <FileText className="h-5 w-5" />
+            Attach Practice
+          </PracticeActionButton>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-grayScale-200">
+        <div className="flex gap-10">
+          <button
+            type="button"
+            onClick={() => setActiveTab("modules")}
+            className={cn(
+              "pb-4 text-[16px] font-medium transition-all relative",
+              activeTab === "modules"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                : "text-grayScale-400 hover:text-grayScale-600",
+            )}
+          >
+            Modules
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("practices")}
+            className={cn(
+              "pb-4 text-[16px] font-medium transition-all relative",
+              activeTab === "practices"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                : "text-grayScale-400 hover:text-grayScale-600",
+            )}
+          >
+            Practices
+          </button>
+        </div>
       </div>
 
       {/* Gradient Divider */}
@@ -814,6 +871,14 @@ export function UnitManagementPage() {
       </div>
 
       {/* Grid of Modules */}
+      {activeTab === "practices" ? (
+        <UnitPracticesPanel
+          unitId={parsedUnitId}
+          programType={programType ?? ""}
+          courseId={catalogCourseId}
+          unitName={unitDisplayName}
+        />
+      ) : (
       <div className="space-y-4 pt-4">
         {!modulesLoading && modules.length > 0 ? (
           <ContentListSearchFilterBar
@@ -967,6 +1032,7 @@ export function UnitManagementPage() {
         )}
         </div>
       </div>
+      )}
 
       <Dialog
         open={editingModuleId !== null}

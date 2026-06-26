@@ -70,9 +70,10 @@ export function AddPracticeFlow() {
   const effectiveBackTo = useMemo(() => {
     if (backToParam?.trim()) return backToParam.trim();
     if (isExamPrep && routeModuleId) return "module";
+    if (isExamPrep && routeUnitId && !routeModuleId) return "unit";
     if (isExamPrep && routeCourseId) return "courses";
     return null;
-  }, [backToParam, isExamPrep, routeModuleId, routeCourseId]);
+  }, [backToParam, isExamPrep, routeModuleId, routeUnitId, routeCourseId]);
 
   const courseId = isExamPrep
     ? routeCourseId ?? searchParams.get("courseId")
@@ -93,6 +94,7 @@ export function AddPracticeFlow() {
   })();
 
   const isModuleContext = effectiveBackTo === "module";
+  const isUnitContext = effectiveBackTo === "unit";
   const isCourseContext =
     effectiveBackTo === "modules" || effectiveBackTo === "courses";
   const isLessonPractice = useMemo(() => {
@@ -109,26 +111,37 @@ export function AddPracticeFlow() {
     const lid = lessonId ? Number(lessonId) : NaN;
     if (Number.isFinite(lid) && lid > 0) return { kind: "LESSON", id: lid };
     const mid = moduleId ? Number(moduleId) : NaN;
-    if (isModuleContext && Number.isFinite(mid) && mid > 0)
+    if (isModuleContext && !isExamPrep && Number.isFinite(mid) && mid > 0)
       return { kind: "MODULE", id: mid };
+    const uid = unitId ? Number(unitId) : NaN;
+    if (isUnitContext && isExamPrep && Number.isFinite(uid) && uid > 0)
+      return { kind: "UNIT", id: uid };
     const cid = courseId ? Number(courseId) : NaN;
-    if (isCourseContext && Number.isFinite(cid) && cid > 0)
-      return { kind: "COURSE", id: cid };
+    if (isCourseContext && Number.isFinite(cid) && cid > 0) {
+      return { kind: isExamPrep ? "CATALOG_COURSE" : "COURSE", id: cid };
+    }
     return null;
-  }, [lessonId, moduleId, courseId, isModuleContext, isCourseContext]);
+  }, [lessonId, moduleId, unitId, courseId, isModuleContext, isUnitContext, isCourseContext, isExamPrep]);
 
   const parentSummary = useMemo(() => {
     if (lessonId)
       return `Lesson #${lessonId}${lessonTitleDisplay ? ` — ${lessonTitleDisplay}` : ""}`;
     if (isModuleContext && moduleId) return `Module #${moduleId}`;
-    if (isCourseContext && courseId) return `Course #${courseId}`;
+    if (isUnitContext && unitId) return `Unit #${unitId}`;
+    if (isCourseContext && courseId) {
+      return isExamPrep
+        ? `Catalog course #${courseId}`
+        : `Course #${courseId}`;
+    }
     return null;
   }, [
     lessonId,
     lessonTitleDisplay,
     isModuleContext,
+    isUnitContext,
     isCourseContext,
     moduleId,
+    unitId,
     courseId,
   ]);
 
@@ -144,7 +157,9 @@ export function AddPracticeFlow() {
     ? "Back to Question Types"
     : effectiveBackTo === "module"
       ? "Back to Module"
-      : effectiveBackTo === "modules"
+      : effectiveBackTo === "unit"
+        ? "Back to Unit"
+        : effectiveBackTo === "modules"
         ? "Back to Modules"
         : effectiveBackTo === "courses"
           ? "Back to Course"
@@ -163,6 +178,9 @@ export function AddPracticeFlow() {
         moduleId
       ) {
         return `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}`;
+      }
+      if (effectiveBackTo === "unit" && programType && courseId && unitId) {
+        return `/new-content/courses/${programType}/${courseId}/${unitId}`;
       }
       if (effectiveBackTo === "courses" && programType && courseId) {
         return `/new-content/courses/${programType}/${courseId}`;
@@ -402,6 +420,22 @@ export function AddPracticeFlow() {
       parentContext != null &&
       Number.isFinite(parentContext.id);
 
+    const useExamPrepCatalogCourseApi =
+      isExamPrep &&
+      isCourseContext &&
+      !isLessonPractice &&
+      parentContext?.kind === "CATALOG_COURSE" &&
+      parentContext != null &&
+      Number.isFinite(parentContext.id);
+
+    const useExamPrepUnitApi =
+      isExamPrep &&
+      isUnitContext &&
+      !isLessonPractice &&
+      parentContext?.kind === "UNIT" &&
+      parentContext != null &&
+      Number.isFinite(parentContext.id);
+
     setSubmitting(true);
     try {
       await executePracticeCreation({
@@ -409,6 +443,10 @@ export function AddPracticeFlow() {
         parentKind: parentContext?.kind,
         parentId: parentContext?.id,
         examPrepLessonId: useExamPrepLessonApi ? parentContext!.id : undefined,
+        examPrepCatalogCourseId: useExamPrepCatalogCourseApi
+          ? parentContext!.id
+          : undefined,
+        examPrepUnitId: useExamPrepUnitApi ? parentContext!.id : undefined,
         status,
         questionSetTitle: isLearnEnglishLessonPractice
           ? lessonDefaultTitle

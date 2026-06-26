@@ -222,6 +222,14 @@ export function AppRoutes() {
           element={<LinkExistingPracticeFlow />}
         />
         <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/add-practice"
+          element={<AddPracticeFlow />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/attach-practice"
+          element={<LinkExistingPracticeFlow />}
+        />
+        <Route
           path="/new-content/courses/:programType/:courseId/:unitId/:moduleId/add-practice"
           element={<AddPracticeFlow />}
         />
@@ -240,6 +248,14 @@ export function AppRoutes() {
         <Route
           path="/new-content/courses/:programType/:courseId/:unitId/:moduleId"
           element={<CourseModuleDetailPage />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/edit-practice/:practiceId"
+          element={<EditPracticeFlow />}
+        />
+        <Route
+          path="/new-content/courses/:programType/:courseId/:unitId/edit-practice/:practiceId"
+          element={<EditPracticeFlow />}
         />
         <Route
           path="/new-content/courses/:programType/:courseId/:unitId/:moduleId/lessons/:lessonId/practices"

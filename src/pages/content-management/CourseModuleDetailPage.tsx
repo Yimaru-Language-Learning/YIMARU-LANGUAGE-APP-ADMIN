@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Plus, FileText, Video } from "lucide-react";
+import { ArrowLeft, Plus, Video } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
-import { PracticeActionButton } from "./components/PracticeActionButton";
 import { PracticeActionChoiceDialog } from "./components/PracticeActionChoiceDialog";
 import {
   buildPracticeContentPaths,
@@ -55,23 +54,6 @@ const LESSON_THUMB_GRADIENTS = [
   "from-[#FCE7F3] to-[#F9A8D4]",
 ] as const;
 
-const MOCK_PRACTICES = [
-  {
-    id: "p1",
-    title: "1.1 Conversation Practice",
-    duration: "08:45",
-    status: "Published",
-    thumbnailColor: "bg-[#E0F2FE]",
-  },
-  {
-    id: "p2",
-    title: "1.2 Roleplay Scenario",
-    duration: "08:45",
-    status: "Draft",
-    thumbnailColor: "bg-[#F0FDF4]",
-  },
-];
-
 export function CourseModuleDetailPage() {
   const navigate = useNavigate();
   const { programType, courseId, unitId, moduleId } = useParams<{
@@ -83,7 +65,6 @@ export function CourseModuleDetailPage() {
   const parsedModuleId = Number(moduleId);
   const parsedUnitId = Number(unitId);
 
-  const [activeTab, setActiveTab] = useState<"video" | "practice">("video");
   const [lessonPracticeChoice, setLessonPracticeChoice] =
     useState<PracticeContentPathOptions | null>(null);
   const lessonPracticeChoicePaths = useMemo(
@@ -92,16 +73,6 @@ export function CourseModuleDetailPage() {
         ? buildPracticeContentPaths(lessonPracticeChoice)
         : null,
     [lessonPracticeChoice],
-  );
-  const modulePracticePathOptions = useMemo(
-    (): PracticeContentPathOptions => ({
-      isExamPrep: true,
-      programType,
-      courseId,
-      unitId,
-      moduleId,
-    }),
-    [programType, courseId, unitId, moduleId],
   );
   const [moduleTitle, setModuleTitle] = useState("Module");
   const [moduleDescription, setModuleDescription] = useState("—");
@@ -272,9 +243,8 @@ export function CourseModuleDetailPage() {
   }, [parsedModuleId]);
 
   useEffect(() => {
-    if (activeTab !== "video") return;
     void loadLessons();
-  }, [activeTab, loadLessons]);
+  }, [loadLessons]);
 
   const clearCreateLessonForm = () => {
     setCreateTitle("");
@@ -690,15 +660,6 @@ export function CourseModuleDetailPage() {
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <PracticeActionButton
-            variant="outline"
-            className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2 shadow-sm"
-            pathOptions={modulePracticePathOptions}
-            parentLabel={moduleTitle}
-          >
-            <FileText className="h-5 w-5" />
-            Add Practice
-          </PracticeActionButton>
           <Dialog
             open={createLessonOpen}
             onOpenChange={(open) => {
@@ -893,38 +854,9 @@ export function CourseModuleDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-grayScale-200">
-        <div className="flex gap-10">
-          <button
-            onClick={() => setActiveTab("video")}
-            className={cn(
-              "pb-4 text-[16px] font-medium transition-all relative",
-              activeTab === "video"
-                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
-                : "text-grayScale-400 hover:text-grayScale-600",
-            )}
-          >
-            Lesson
-          </button>
-          <button
-            onClick={() => setActiveTab("practice")}
-            className={cn(
-              "pb-4 text-[16px] font-medium transition-all relative",
-              activeTab === "practice"
-                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
-                : "text-grayScale-400 hover:text-grayScale-600",
-            )}
-          >
-            Practice
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
+      {/* Lessons */}
       <div className="mt-8">
-        {activeTab === "video" ? (
-          lessonsLoading ? (
+        {lessonsLoading ? (
             <div className="flex flex-col items-center justify-center py-24 text-grayScale-500 text-[15px] font-medium">
               Loading lessons…
             </div>
@@ -1016,13 +948,7 @@ export function CourseModuleDetailPage() {
               </Button>
             </div>
           )
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {MOCK_PRACTICES.map((item) => (
-              <PracticeCard key={item.id} {...item} />
-            ))}
-          </div>
-        )}
+        }
       </div>
 
       <Dialog
@@ -1244,71 +1170,6 @@ export function CourseModuleDetailPage() {
         />
       ) : null}
     </div>
-  );
-}
-
-function PracticeCard({
-  title,
-  duration,
-  status,
-  thumbnailColor,
-}: {
-  title: string;
-  duration: string;
-  status: string;
-  thumbnailColor: string;
-}) {
-  return (
-    <Card className="group flex flex-col bg-white rounded-[20px] border border-grayScale-50 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-grayScale-400/5 transition-all">
-      {/* Thumbnail Area */}
-      <div className={cn("h-44 w-full relative", thumbnailColor)}>
-        <div className="absolute bottom-3 right-3 bg-black/60 text-white text-[11px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">
-          {duration}
-        </div>
-      </div>
-
-      <div className="p-5 flex flex-col flex-1 space-y-5">
-        <div className="flex items-center justify-between">
-          <div
-            className={cn(
-              "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 border",
-              status === "Published"
-                ? "bg-[#F0FDF4] text-[#16A34A] border-[#DCFCE7]"
-                : "bg-grayScale-50 text-grayScale-400 border-grayScale-100",
-            )}
-          >
-            <div
-              className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                status === "Published" ? "bg-[#16A34A]" : "bg-grayScale-300",
-              )}
-            />
-            {status}
-          </div>
-          <div />
-        </div>
-
-        <h3 className="text-[14px] font-bold text-[#0F172A] line-clamp-2 leading-snug">
-          {title}
-        </h3>
-
-        <div className="pt-2 grid grid-cols-1 gap-2 mt-auto">
-          <Button variant="outline" className="w-full h-10 rounded-[10px] border-grayScale-200 text-grayScale-600 font-bold text-xs">
-            Edit
-          </Button>
-          <Button
-            className={cn(
-              "w-full h-10 rounded-[10px] font-bold text-xs shadow-sm",
-              status === "Published"
-                ? "bg-[#ECD5E9] text-[#9E2891] hover:bg-[#EBD0E7]"
-                : "bg-brand-500 text-white hover:bg-brand-600",
-            )}
-          >
-            {status === "Published" ? "Published" : "Publish"}
-          </Button>
-        </div>
-      </div>
-    </Card>
   );
 }
 

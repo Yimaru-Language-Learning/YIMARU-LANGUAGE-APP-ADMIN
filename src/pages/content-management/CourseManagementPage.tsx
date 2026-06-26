@@ -11,9 +11,13 @@ import {
   ChevronRight,
   ArrowRight,
   X,
+  FileText,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
+import { PracticeActionButton } from "./components/PracticeActionButton";
+import { CatalogCoursePracticesPanel } from "./components/CatalogCoursePracticesPanel";
+import { cn } from "../../lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -102,6 +106,17 @@ export function CourseManagementPage() {
   >(null);
   const [catalogCoursePublishStatusUpdating, setCatalogCoursePublishStatusUpdating] =
     useState(false);
+  const [activeTab, setActiveTab] = useState<"units" | "practices">("units");
+
+  const catalogCoursePracticePathOptions = useMemo(
+    () => ({
+      isExamPrep: true as const,
+      programType,
+      courseId: String(catalogCourseId),
+      backTo: "courses",
+    }),
+    [programType, catalogCourseId],
+  );
 
   const filteredUnits = useMemo(
     () =>
@@ -550,12 +565,12 @@ export function CourseManagementPage() {
             </ContentPageDescription>
           ) : (
             <p className="max-w-2xl text-[15px] font-medium leading-relaxed text-grayScale-500">
-              Manage units and modules inside {courseDisplayName}
+              Manage units and practices inside {courseDisplayName}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex flex-wrap items-center gap-3 pt-2">
           <Dialog
             open={addUnitOpen}
             onOpenChange={(open) => {
@@ -704,6 +719,45 @@ export function CourseManagementPage() {
               </div>
             </DialogContent>
           </Dialog>
+          <PracticeActionButton
+            variant="outline"
+            className="h-10 px-6 rounded-[6px] border-brand-500 text-brand-500 font-bold flex items-center gap-2 shadow-sm"
+            pathOptions={catalogCoursePracticePathOptions}
+            parentLabel={courseDisplayName}
+          >
+            <FileText className="h-5 w-5" />
+            Attach Practice
+          </PracticeActionButton>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-grayScale-200">
+        <div className="flex gap-10">
+          <button
+            type="button"
+            onClick={() => setActiveTab("units")}
+            className={cn(
+              "pb-4 text-[16px] font-medium transition-all relative",
+              activeTab === "units"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                : "text-grayScale-400 hover:text-grayScale-600",
+            )}
+          >
+            Units
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("practices")}
+            className={cn(
+              "pb-4 text-[16px] font-medium transition-all relative",
+              activeTab === "practices"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-brand-500 after:rounded-t-full"
+                : "text-grayScale-400 hover:text-grayScale-600",
+            )}
+          >
+            Practices
+          </button>
         </div>
       </div>
 
@@ -722,8 +776,16 @@ export function CourseManagementPage() {
         </div>
       </div>
 
-      {/* Grid of Units */}
+      {/* Grid of Units / Practices */}
       <div className="space-y-4 pt-4">
+        {activeTab === "practices" ? (
+          <CatalogCoursePracticesPanel
+            catalogCourseId={catalogCourseId}
+            programType={programType ?? "proficiency"}
+            courseName={courseDisplayName}
+          />
+        ) : (
+        <>
         {!unitsLoading && units.length > 0 ? (
           <ContentListSearchFilterBar
             search={listSearch}
@@ -864,6 +926,8 @@ export function CourseManagementPage() {
           ))
         )}
         </div>
+        </>
+        )}
       </div>
 
       <Dialog

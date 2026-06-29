@@ -58,6 +58,7 @@ import { HumanLanguageSubModulePage } from "../pages/content-management/HumanLan
 import { UserLogPage } from "../pages/user-log/UserLogPage";
 import { IssuesPage } from "../pages/issues/IssuesPage";
 import { PaymentsPage } from "../pages/payments/PaymentsPage";
+import { SubscriptionsExportPage } from "../pages/subscriptions/SubscriptionsExportPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { TeamManagementPage } from "../pages/team/TeamManagementPage";
@@ -333,6 +334,7 @@ export function AppRoutes() {
         />
         <Route path="/notifications/all" element={<AllNotificationsPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/subscriptions/export" element={<SubscriptionsExportPage />} />
         <Route path="/user-log" element={<UserLogPage />} />
         <Route path="/issues" element={<IssuesPage />} />
         <Route path="/help/faqs" element={<FaqsPage />} />

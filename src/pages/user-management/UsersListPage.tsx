@@ -1,8 +1,10 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Search, TrendingUp, UserCheck, Users, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
+import { ExportCsvButton } from "../../components/export/ExportCsvButton"
+import { ExportTruncationWarning } from "../../components/export/ExportTruncationWarning"
 import { Input } from "../../components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
@@ -21,6 +23,8 @@ import { useUsersStore } from "../../zustand/userStore"
 import { toast } from "sonner"
 import axios from "axios"
 import { USER_FILTER_COUNTRIES, USER_FILTER_ETHIOPIA_REGIONS } from "../../data/userFilterLocations"
+import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
+import { usersExportQuery } from "../../lib/csvExportFilters"
 
 function formatJoinedAt(iso: string): string {
   if (!iso?.trim()) return "—"
@@ -334,6 +338,30 @@ export function UsersListPage() {
     setPage(1)
   }
 
+  const exportParams = useMemo(
+    () =>
+      usersExportQuery({
+        role: roleFilter || undefined,
+        status: statusFilter || undefined,
+        query: search || undefined,
+        created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
+        created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
+        country: countryFilter.trim() || undefined,
+        region: regionFilter.trim() || undefined,
+        subscription_status: subscriptionStatusFilter || undefined,
+      }),
+    [
+      roleFilter,
+      statusFilter,
+      search,
+      createdAfterLocal,
+      createdBeforeLocal,
+      countryFilter,
+      regionFilter,
+      subscriptionStatusFilter,
+    ],
+  )
+
   const renderContactDetails = (phone: string | undefined, email: string | undefined) => {
     const hasPhone = Boolean(phone?.trim())
     const hasEmail = Boolean(email?.trim())
@@ -351,9 +379,17 @@ export function UsersListPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-grayScale-600">Users List</h1>
-        <p className="text-sm text-grayScale-400">View and manage all registered users.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-grayScale-600">Users List</h1>
+          <p className="text-sm text-grayScale-400">View and manage all registered users.</p>
+        </div>
+        <ExportCsvButton
+          permission={EXPORT_PERMISSIONS.users}
+          exportPath={EXPORT_ROUTES.users}
+          params={exportParams}
+          disabled={loading}
+        />
       </div>
 
       {/* Platform-wide user summary (same metrics as former User Management dashboard) */}
@@ -420,6 +456,9 @@ export function UsersListPage() {
       </div>
 
       <div className="min-w-0 overflow-hidden bg-white rounded-xl border">
+        <div className="px-4 pt-4">
+          <ExportTruncationWarning totalCount={total} />
+        </div>
         <AdminFiltersPanel
           className="border-0 border-b rounded-none shadow-none"
           activeFilterCount={activeFilterCount}

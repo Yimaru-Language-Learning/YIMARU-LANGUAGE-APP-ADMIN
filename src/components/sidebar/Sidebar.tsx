@@ -27,6 +27,7 @@ import { hasFaqPermission } from "../../lib/faqPermissions";
 import { hasRatingsPermission } from "../../lib/ratingsPermissions";
 import { hasPersonaPermission } from "../../lib/personasPermissions";
 import { hasActivityLogPermission } from "../../lib/activityLogPermissions";
+import { hasExportPermission } from "../../lib/exportPermissions";
 import { SidebarNavGroup } from "./SidebarNavGroup";
 
 type NavLinkItem = {
@@ -110,6 +111,13 @@ const navEntries: NavEntry[] = [
 
   { kind: "section", label: "Operations" },
   { kind: "link", label: "Payments", to: "/payments", icon: CreditCard },
+  {
+    kind: "link",
+    label: "Subscriptions export",
+    to: "/subscriptions/export",
+    icon: CreditCard,
+    permission: "subscriptions.export",
+  },
   { kind: "link", label: "Activity log", to: "/user-log", icon: ClipboardList, permission: "activity_logs.list" },
   { kind: "link", label: "Issue reports", to: "/issues", icon: CircleAlert },
   {
@@ -287,11 +295,19 @@ export function Sidebar({
                 return null;
               }
               if (
+                entry.permission === "subscriptions.export" &&
+                !permissionsLoading &&
+                !hasExportPermission("subscriptions.export", permissions)
+              ) {
+                return null;
+              }
+              if (
                 entry.permission &&
                 entry.permission !== "faqs.list" &&
                 entry.permission !== "ratings.list_by_target" &&
                 entry.permission !== "personas.list" &&
                 entry.permission !== "activity_logs.list" &&
+                entry.permission !== "subscriptions.export" &&
                 !permissionsLoading &&
                 !hasPermission(entry.permission)
               ) {

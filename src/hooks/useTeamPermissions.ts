@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { fetchCurrentTeamMemberPermissions } from "../api/team.api"
 import { getMyProfile } from "../api/users.api"
 import type { TeamMeProfile } from "../types/team.types"
 
@@ -9,6 +10,12 @@ export function useTeamPermissions() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
+      const fromMembersList = await fetchCurrentTeamMemberPermissions()
+      if (fromMembersList.length > 0) {
+        setPermissions(fromMembersList)
+        return
+      }
+
       const res = await getMyProfile()
       const profile = res.data?.data as TeamMeProfile & { permissions?: string[] }
       setPermissions(Array.isArray(profile?.permissions) ? profile.permissions : [])

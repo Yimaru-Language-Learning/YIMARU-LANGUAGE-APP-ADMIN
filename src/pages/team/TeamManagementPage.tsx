@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel";
+import { ExportCsvButton } from "../../components/export/ExportCsvButton";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -28,6 +29,8 @@ import { getTeamMembers, updateTeamMemberStatus } from "../../api/team.api";
 import type { TeamMember } from "../../types/team.types";
 import { toast } from "sonner";
 import { InviteTeamMemberDialog } from "../role-management/components/InviteTeamMemberDialog";
+import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export";
+import { teamMemberExportQuery } from "../../lib/csvExportFilters";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -228,6 +231,16 @@ export function TeamManagementPage() {
     setStatusFilter("");
   };
 
+  const exportParams = useMemo(
+    () =>
+      teamMemberExportQuery({
+        team_role: roleFilter || undefined,
+        status: statusFilter || undefined,
+        search: search || undefined,
+      }),
+    [roleFilter, statusFilter, search],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -237,13 +250,22 @@ export function TeamManagementPage() {
             Manage user access, roles, and platform permissions.
           </p>
         </div>
-        <Button
-          className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto"
-          onClick={() => setInviteOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Add Team Member
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <ExportCsvButton
+            permission={EXPORT_PERMISSIONS.teamMembers}
+            exportPath={EXPORT_ROUTES.teamMembers}
+            params={exportParams}
+            disabled={loading}
+            className="w-full sm:w-auto"
+          />
+          <Button
+            className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto"
+            onClick={() => setInviteOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Add Team Member
+          </Button>
+        </div>
       </div>
 
       <AdminFiltersPanel

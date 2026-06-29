@@ -409,7 +409,7 @@ export interface GetUsersParams {
   subscription_status?: string
 }
 
-function buildGetUsersQuery(params: GetUsersParams): Record<string, string | number> {
+export function buildUsersListQuery(params: GetUsersParams): Record<string, string | number> {
   const q: Record<string, string | number> = {}
   const addString = (key: string, value: string | undefined) => {
     const v = value?.trim()
@@ -431,7 +431,7 @@ function buildGetUsersQuery(params: GetUsersParams): Record<string, string | num
 
 export const getUsers = (params: GetUsersParams = {}) =>
   http.get<GetUsersResponse>("/users", {
-    params: buildGetUsersQuery(params),
+    params: buildUsersListQuery(params),
   });
 
 export type UserStatus = "ACTIVE" | "DEACTIVATED" | "SUSPENDED" | "PENDING";

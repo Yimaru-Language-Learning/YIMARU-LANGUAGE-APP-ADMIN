@@ -90,6 +90,29 @@ export const getTeamMembers = (page?: number, pageSize?: number) =>
     },
   })
 
+/** Permissions for the signed-in team member (from the members list payload). */
+export async function fetchCurrentTeamMemberPermissions(): Promise<string[]> {
+  const memberId = Number(localStorage.getItem("member_id"))
+  if (!Number.isFinite(memberId)) return []
+
+  const batchSize = 100
+  let page = 1
+  let totalPages = 1
+
+  do {
+    const res = await getTeamMembers(page, batchSize)
+    totalPages = res.data.metadata?.total_pages ?? 1
+    const members = (res.data.data ?? [])
+      .map((entry) => normalizeTeamMember(entry))
+      .filter((entry): entry is TeamMember => entry != null)
+    const self = members.find((member) => member.id === memberId)
+    if (self) return self.permissions ?? []
+    page++
+  } while (page <= totalPages)
+
+  return []
+}
+
 export const getTeamMemberById = (id: number) =>
   http.get<GetTeamMemberResponse>(`/team/members/${id}`).then((res) => {
     const body = res.data

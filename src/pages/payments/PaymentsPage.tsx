@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   ChevronDown,
   ChevronLeft,
@@ -16,6 +16,8 @@ import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { getAllPayments, getPayments, paymentsFilterParams } from "../../api/payments.api"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
+import { ExportCsvButton } from "../../components/export/ExportCsvButton"
+import { ExportTruncationWarning } from "../../components/export/ExportTruncationWarning"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -43,6 +45,8 @@ import {
   type PaymentAggregateStats,
 } from "../../lib/payments"
 import { SUBSCRIPTION_CURRENCIES, SUBSCRIPTION_PLAN_CATEGORIES } from "../../lib/subscriptionPlans"
+import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
+import { paymentListFiltersToExportQuery } from "../../lib/csvExportFilters"
 import type {
   Payment,
   PaymentPlanCategory,
@@ -125,6 +129,11 @@ export function PaymentsPage() {
     currency: currencyFilter,
     reference: referenceFilter,
   }
+
+  const exportParams = useMemo(
+    () => paymentListFiltersToExportQuery(listFilters),
+    [listFilters],
+  )
 
   const activeFilterCount = countActiveFilters([
     { value: statusFilter },
@@ -260,15 +269,23 @@ export function PaymentsPage() {
             Browse and filter checkout transactions from Chapa, Arifpay, and other providers.
           </p>
         </div>
-        <Button
-          variant="outline"
-          className="shrink-0 rounded-[6px]"
-          disabled={loading || statsLoading}
-          onClick={refreshAll}
-        >
-          <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
-          Refresh
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportCsvButton
+            permission={EXPORT_PERMISSIONS.payments}
+            exportPath={EXPORT_ROUTES.payments}
+            params={exportParams}
+            disabled={loading}
+          />
+          <Button
+            variant="outline"
+            className="shrink-0 rounded-[6px]"
+            disabled={loading || statsLoading}
+            onClick={refreshAll}
+          >
+            <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -322,6 +339,7 @@ export function PaymentsPage() {
           <CardTitle className="text-sm font-bold text-grayScale-900">Transaction history</CardTitle>
         </CardHeader>
         <CardContent className="min-w-0 space-y-4 p-4 sm:p-6">
+          <ExportTruncationWarning totalCount={totalCount} />
           <AdminFiltersPanel
             activeFilterCount={activeFilterCount}
             onClearFilters={clearFilters}

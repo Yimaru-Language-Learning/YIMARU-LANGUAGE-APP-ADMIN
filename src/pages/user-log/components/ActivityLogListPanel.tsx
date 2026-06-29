@@ -23,6 +23,8 @@ import {
   getActivityLogs,
 } from "../../../api/activity-logs.api"
 import { AdminFiltersPanel } from "../../../components/filters/AdminFiltersPanel"
+import { ExportCsvButton } from "../../../components/export/ExportCsvButton"
+import { ExportTruncationWarning } from "../../../components/export/ExportTruncationWarning"
 import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
@@ -57,6 +59,8 @@ import {
   toRfc3339StartOfDay,
 } from "../../../lib/activityLogDisplay"
 import { cn } from "../../../lib/utils"
+import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../../lib/csv-export"
+import { activityLogExportQuery } from "../../../lib/csvExportFilters"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
 import type { ActivityLog, ActivityLogFilters } from "../../../types/activity-log.types"
 import { ActorCell, ActorLabel } from "./ActorLabel"
@@ -130,6 +134,11 @@ export function ActivityLogListPanel({
     dateAfter,
     dateBefore,
   ])
+
+  const exportParams = useMemo(
+    () => activityLogExportQuery(serverFilters),
+    [serverFilters],
+  )
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
@@ -224,13 +233,29 @@ export function ActivityLogListPanel({
   return (
     <div className={cn("space-y-4", scrollable && "min-w-0")}>
       {!compact ? (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
+          <ExportCsvButton
+            permission={EXPORT_PERMISSIONS.activityLogs}
+            exportPath={EXPORT_ROUTES.activityLogs}
+            params={exportParams}
+            disabled={loading}
+          />
           <Button variant="outline" className="gap-2" disabled={loading} onClick={() => void fetchLogs()}>
             {loading ? <SpinnerIcon className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
             Refresh
           </Button>
         </div>
-      ) : null}
+      ) : (
+        <div className="flex justify-end">
+          <ExportCsvButton
+            permission={EXPORT_PERMISSIONS.activityLogs}
+            exportPath={EXPORT_ROUTES.activityLogs}
+            params={exportParams}
+            disabled={loading}
+            size="sm"
+          />
+        </div>
+      )}
 
       {error ? (
         <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -271,6 +296,8 @@ export function ActivityLogListPanel({
           </div>
         </div>
       ) : null}
+
+      <ExportTruncationWarning totalCount={totalCount} />
 
       <AdminFiltersPanel activeFilterCount={activeFilterCount} onClearFilters={clearFilters}>
         {!compact ? (

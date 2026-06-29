@@ -445,6 +445,28 @@ export interface GetExamPrepUnitPracticesResponse {
   metadata: unknown | null
 }
 
+/** POST /exam-prep/practices — create with optional parents (unlinked shell). */
+export interface CreateExamPrepPracticeRequest {
+  question_set_id: number
+  parents?: PracticeParent[] | null
+  parent_kind?: PracticeParentKind
+  parent_id?: number
+  title?: string
+  story_description?: string
+  story_image?: string
+  persona_id?: number
+  quick_tips?: string
+  publish_status?: PracticePublishStatus
+}
+
+export interface CreateExamPrepPracticeResponse {
+  message: string
+  data: ParentContextPractice
+  success: boolean
+  status_code: number
+  metadata: unknown | null
+}
+
 /** POST /exam-prep/lessons/:lessonId/practices */
 export interface CreateExamPrepLessonPracticeRequest {
   title: string
@@ -641,6 +663,9 @@ export interface GetPracticesByParentContextResponse {
 
 /** GET /practices — paginated list of all Learn English practices. */
 export type GetPracticesListResponse = GetPracticesByParentContextResponse
+
+/** GET /exam-prep/practices — paginated list of exam-prep practices. */
+export type GetExamPrepPracticesListResponse = GetPracticesByParentContextResponse
 
 export interface GetPracticesListParams {
   limit?: number

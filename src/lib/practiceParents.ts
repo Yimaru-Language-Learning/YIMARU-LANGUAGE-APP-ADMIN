@@ -110,9 +110,16 @@ export function formatPracticeParentLabel(parent: PracticeParent): string {
   }
 }
 
-export function formatPracticeParentsSummary(parents: PracticeParent[]): string {
+export function formatPracticeParentsSummary(
+  parents: PracticeParent[],
+  options?: { isExamPrep?: boolean },
+): string {
   const list = dedupeParents(parents)
-  if (list.length === 0) return "Not attached to any course, module, or lesson"
+  if (list.length === 0) {
+    return options?.isExamPrep
+      ? "Not attached to any catalog course, unit, or lesson"
+      : "Not attached to any course, module, or lesson"
+  }
   return list.map(formatPracticeParentLabel).join(" · ")
 }
 

@@ -1,17 +1,23 @@
-import { getPractices } from "../api/courses.api"
+import { getExamPrepPractices, getPractices } from "../api/courses.api"
 import type { ParentContextPractice } from "../types/course.types"
 
 const FETCH_PAGE_SIZE = 100
 
+export type FetchAllPracticesOptions = {
+  isExamPrep?: boolean
+}
+
 export async function fetchAllPractices(
   unlinkedOnly: boolean,
+  options?: FetchAllPracticesOptions,
 ): Promise<ParentContextPractice[]> {
+  const listPractices = options?.isExamPrep ? getExamPrepPractices : getPractices
   const all: ParentContextPractice[] = []
   let offset = 0
   let totalCount = Number.POSITIVE_INFINITY
 
   while (offset < totalCount) {
-    const res = await getPractices({
+    const res = await listPractices({
       limit: FETCH_PAGE_SIZE,
       offset,
       unlinked_only: unlinkedOnly,

@@ -1,4 +1,7 @@
-import { updatePracticeParents } from "../api/courses.api"
+import {
+  updateExamPrepPracticeParents,
+  updatePracticeParents,
+} from "../api/courses.api"
 import type { ParentContextPractice, PracticeParent } from "../types/course.types"
 import { dedupeParents, parentsFromPractice } from "./practiceParents"
 
@@ -22,11 +25,15 @@ export function mergedParentsForAttach(
 export async function attachPracticeToParent(
   practice: ParentContextPractice,
   newParent: PracticeParent,
+  options?: { isExamPrep?: boolean },
 ): Promise<void> {
   if (practiceAlreadyLinkedToParent(practice, newParent)) {
     throw new Error("This practice is already linked to the selected location.")
   }
-  await updatePracticeParents(practice.id, {
-    parents: mergedParentsForAttach(practice, newParent),
-  })
+  const parents = mergedParentsForAttach(practice, newParent)
+  if (options?.isExamPrep) {
+    await updateExamPrepPracticeParents(practice.id, { parents })
+    return
+  }
+  await updatePracticeParents(practice.id, { parents })
 }

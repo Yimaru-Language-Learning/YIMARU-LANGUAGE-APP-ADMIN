@@ -67,8 +67,6 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
   const [pendingSaveStatus, setPendingSaveStatus] =
     useState<PracticePublishStatus | null>(null)
 
-  const canUseWizard = parent != null
-
   useEffect(() => {
     if (step === 4 && setTitle.trim() && !practiceTitle.trim()) {
       setPracticeTitle(setTitle.trim())
@@ -181,7 +179,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
   }
 
   const handleStep4 = async (status: PracticePublishStatus) => {
-    if (!parent || questionSetId == null) return
+    if (questionSetId == null) return
     if (!practiceTitle.trim() || !storyDescription.trim() || !storyImage.trim()) {
       toast.error("Title, story description, and story image are required")
       return
@@ -190,7 +188,9 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
     setSaving(true)
     try {
       await createParentLinkedPractice({
-        parents: [{ parent_kind: parent.kind, parent_id: parent.id }],
+        parents: parent
+          ? [{ parent_kind: parent.kind, parent_id: parent.id }]
+          : null,
         title: practiceTitle.trim(),
         story_description: storyDescription.trim(),
         story_image: storyImage.trim(),
@@ -218,7 +218,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
         <CardTitle className="text-base font-semibold text-grayScale-800">Create a new practice</CardTitle>
         <p className="text-sm font-normal text-grayScale-500">
           Four steps: create a question set, add audio questions, attach them, then set the practice
-          story. Select the course, module, or lesson above first.
+          story. Locations are optional — attach a course, module, or lesson later if needed.
         </p>
         <ol className="mt-4 flex flex-wrap gap-2">
           {STEPS.map((s) => {
@@ -242,15 +242,14 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
         </ol>
       </CardHeader>
       <CardContent className="pt-5">
-        {!canUseWizard && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
-            Choose a program, course, and the target (course / module / lesson) in the &quot;Look up
-            practice&quot; section, then return here. The practice is created for the same selection
-            (course id, module id, or lesson id).
+        {!parent ? (
+          <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+            No placement selected — the practice shell will be created unlinked. Attach it to a
+            course, module, or lesson later.
           </p>
-        )}
+        ) : null}
 
-        {canUseWizard && step === 1 && (
+        {step === 1 && (
           <div className="space-y-4">
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-grayScale-500">
@@ -273,7 +272,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
           </div>
         )}
 
-        {canUseWizard && step === 2 && (
+        {step === 2 && (
           <div className="space-y-4">
             <p className="text-sm text-grayScale-600">
               Add one or more audio questions to question set #{questionSetId}.
@@ -382,7 +381,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
           </div>
         )}
 
-        {canUseWizard && step === 3 && (
+        {step === 3 && (
           <div className="space-y-4">
             <p className="text-sm text-grayScale-600">
               Confirm the order of questions in the set.
@@ -414,7 +413,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
           </div>
         )}
 
-        {canUseWizard && step === 4 && parent && (
+        {step === 4 && (
           <div className="space-y-4">
             <p className="text-sm text-grayScale-600">
               Linked to {parent.kind.toLowerCase()} #{parent.id} · question set #{questionSetId}

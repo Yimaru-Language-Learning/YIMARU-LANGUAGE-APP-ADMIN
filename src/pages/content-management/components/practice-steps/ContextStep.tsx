@@ -31,6 +31,8 @@ interface ContextStepProps {
   lockedParentKey?: string | null;
   /** When true, locations are optional and the picker can stay collapsed. */
   parentsOptional?: boolean;
+  /** Use exam-prep parent kinds in the locations editor. */
+  isExamPrepParents?: boolean;
   parentsCollapsedDefault?: boolean;
 }
 
@@ -49,6 +51,7 @@ export function ContextStep({
   lockedParentKey = null,
   parentsOptional = false,
   parentsCollapsedDefault = false,
+  isExamPrepParents = false,
 }: ContextStepProps) {
   const storyFileRef = useRef<HTMLInputElement>(null);
   const [uploadingStory, setUploadingStory] = useState(false);
@@ -133,7 +136,10 @@ export function ContextStep({
               <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
                 <p className="font-semibold text-amber-900">Locations optional</p>
                 <p className="mt-1 text-amber-900/90">
-                  You can create this practice now and attach it to courses, modules, or lessons
+                  You can create this practice now and attach it to{" "}
+                  {isExamPrepParents
+                    ? "catalog courses, units, or lessons"
+                    : "courses, modules, or lessons"}{" "}
                   later from the practice editor.
                 </p>
               </div>
@@ -162,6 +168,7 @@ export function ContextStep({
                   parents={formData.parents ?? []}
                   lockedParentKey={lockedParentKey}
                   optional
+                  isExamPrep={isExamPrepParents}
                   onChange={(parents) => setFormData({ ...formData, parents })}
                 />
               ) : null}
@@ -170,6 +177,7 @@ export function ContextStep({
             <PracticeParentsField
               parents={formData.parents ?? []}
               lockedParentKey={lockedParentKey}
+              isExamPrep={isExamPrepParents}
               onChange={(parents) => setFormData({ ...formData, parents })}
             />
           )

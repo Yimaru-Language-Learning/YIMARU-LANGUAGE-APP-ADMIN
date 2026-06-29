@@ -211,7 +211,7 @@ export function LinkExistingPracticeFlow() {
     if (!selectedPractice) return
     setSubmitting(true)
     try {
-      await attachPracticeToParent(selectedPractice, targetParent)
+      await attachPracticeToParent(selectedPractice, targetParent, { isExamPrep })
       toast.success("Practice linked successfully")
       setIsComplete(true)
     } catch (e) {
@@ -298,6 +298,7 @@ export function LinkExistingPracticeFlow() {
         <div className="mx-auto max-w-4xl">
           {currentStep === 1 ? (
             <SelectPracticeToAttachStep
+              isExamPrep={isExamPrep}
               targetParent={targetParent}
               targetSummary={targetSummary}
               selectedPracticeId={selectedPractice?.id ?? null}

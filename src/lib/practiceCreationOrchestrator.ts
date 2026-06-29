@@ -3,6 +3,7 @@ import {
   addQuestionToSet,
   createExamPrepCatalogCoursePractice,
   createExamPrepLessonPractice,
+  createExamPrepPractice,
   createExamPrepUnitPractice,
   createParentLinkedPractice,
   createQuestion,
@@ -50,6 +51,8 @@ export interface PracticeCreationInput {
   examPrepCatalogCourseId?: number
   /** English proficiency unit practices use POST /exam-prep/units/:id/practices. */
   examPrepUnitId?: number
+  /** When true, fall back to POST /exam-prep/practices when no nested route applies. */
+  isExamPrep?: boolean
 }
 
 function extractCreatedResourceId(
@@ -216,6 +219,17 @@ export async function executePracticeCreation(
             quick_tips: opts.quickTips.trim(),
             publish_status: opts.status,
           })
+        : opts.isExamPrep
+          ? await createExamPrepPractice({
+              parents: createParents,
+              title: opts.practiceTitle.trim(),
+              story_description: opts.storyDescription.trim(),
+              story_image: opts.storyImage.trim(),
+              persona_id: opts.personaId,
+              question_set_id: setId,
+              quick_tips: opts.quickTips.trim(),
+              publish_status: opts.status,
+            })
       : await createParentLinkedPractice({
         parents: createParents,
         title: opts.practiceTitle.trim(),

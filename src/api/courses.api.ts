@@ -105,7 +105,10 @@ import type {
   CreateExamPrepCatalogCoursePracticeResponse,
   CreateExamPrepUnitPracticeRequest,
   CreateExamPrepUnitPracticeResponse,
+  CreateExamPrepPracticeRequest,
+  CreateExamPrepPracticeResponse,
   GetExamPrepUnitPracticesResponse,
+  GetExamPrepPracticesListResponse,
   GetExamPrepCatalogCoursePracticesResponse,
   GetExamPrepLessonPracticesResponse,
   GetExamPrepModuleLessonsResponse,
@@ -709,6 +712,24 @@ export const getExamPrepLessonPractices = (
   http.get<GetExamPrepLessonPracticesResponse>(
     `/exam-prep/lessons/${lessonId}/practices`,
     { params },
+  )
+
+/** POST /exam-prep/practices — create practice with optional parents. */
+export const createExamPrepPractice = (data: CreateExamPrepPracticeRequest) =>
+  http.post<CreateExamPrepPracticeResponse>("/exam-prep/practices", data)
+
+/** GET /exam-prep/practices — list practices (supports unlinked_only). */
+export const getExamPrepPractices = (params?: GetPracticesListParams) =>
+  http.get<GetExamPrepPracticesListResponse>("/exam-prep/practices", { params })
+
+/** PUT /exam-prep/practices/:id/parents — replace all parent links. */
+export const updateExamPrepPracticeParents = (
+  practiceId: number,
+  data: UpdatePracticeParentsRequest,
+) =>
+  http.put<UpdatePracticeParentsResponse>(
+    `/exam-prep/practices/${practiceId}/parents`,
+    data,
   )
 
 /** DELETE /exam-prep/practices/:practiceId */

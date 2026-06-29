@@ -22,6 +22,7 @@ interface SelectPracticeToAttachStepProps {
   nextStep: () => void
   onCancel: () => void
   variant?: "page" | "dialog"
+  isExamPrep?: boolean
 }
 
 function publishStatusClass(status?: string | null): string {
@@ -42,7 +43,7 @@ function matchesPracticeSearch(
     practice.story_description ?? "",
     String(practice.id),
     String(practice.question_set_id),
-    formatPracticeParentsSummary(practice.parents ?? []),
+    formatPracticeParentsSummary(practice.parents ?? [], { isExamPrep }),
   ]
     .join(" ")
     .toLowerCase()
@@ -57,6 +58,7 @@ export function SelectPracticeToAttachStep({
   nextStep,
   onCancel,
   variant = "page",
+  isExamPrep = false,
 }: SelectPracticeToAttachStepProps) {
   const isDialog = variant === "dialog"
   const [loading, setLoading] = useState(true)
@@ -69,7 +71,7 @@ export function SelectPracticeToAttachStep({
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const practices = await fetchAllPractices(unlinkedOnly)
+      const practices = await fetchAllPractices(unlinkedOnly, { isExamPrep })
       setAllPractices(practices)
     } catch (e) {
       toast.error("Could not load practices", {
@@ -79,7 +81,7 @@ export function SelectPracticeToAttachStep({
     } finally {
       setLoading(false)
     }
-  }, [unlinkedOnly])
+  }, [unlinkedOnly, isExamPrep])
 
   useEffect(() => {
     void load()
@@ -187,7 +189,9 @@ export function SelectPracticeToAttachStep({
           <p className="text-sm font-semibold text-grayScale-700">No practices found</p>
           <p className="max-w-sm text-xs text-grayScale-500">
             {unlinkedOnly
-              ? "No unlinked practices match your search. Try all practices or create a new shell from Question Types."
+              ? isExamPrep
+                ? "No unlinked exam-prep practices match your search. Try all practices or create a new shell first."
+                : "No unlinked practices match your search. Try all practices or create a new shell from Question Types."
               : "Try a different search, switch to unlinked only, or create a new practice instead."}
           </p>
         </div>

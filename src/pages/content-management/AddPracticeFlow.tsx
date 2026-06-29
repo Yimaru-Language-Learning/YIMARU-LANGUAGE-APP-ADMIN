@@ -344,7 +344,7 @@ export function AddPracticeFlow() {
         : formData.parents,
     );
     const parentsErr = validatePracticeParents(parents, {
-      required: !isFromQuestionType,
+      required: !isFromQuestionType && !isExamPrep,
     });
     if (parentsErr) {
       toast.error("Check practice locations", { description: parentsErr });
@@ -447,6 +447,7 @@ export function AddPracticeFlow() {
           ? parentContext!.id
           : undefined,
         examPrepUnitId: useExamPrepUnitApi ? parentContext!.id : undefined,
+        isExamPrep,
         status,
         questionSetTitle: isLearnEnglishLessonPractice
           ? lessonDefaultTitle
@@ -504,7 +505,11 @@ export function AddPracticeFlow() {
             ? dedupeParents(formData.parents).length > 0
               ? "Your practice is saved with the selected locations. You can edit questions or attach more locations anytime."
               : "Your practice is saved as a draft shell. Attach it to courses, modules, or lessons when you are ready."
-            : lessonId
+            : isExamPrep
+              ? parentContext
+                ? "Your speaking practice is saved for the linked catalog course, unit, or lesson."
+                : "Your practice is saved as a draft shell. Attach it to catalog courses, units, or lessons when you are ready."
+              : lessonId
               ? "Your speaking practice is saved and linked to this lesson’s question set."
               : "Your speaking practice is saved for the linked course or module."}
         </p>
@@ -697,9 +702,9 @@ export function AddPracticeFlow() {
             prevStep={prevStep}
             onEditContext={() => setCurrentStep(1)}
             onEditQuestions={() => setCurrentStep(3)}
-            parentSummary={parentSummary}
+            parentSummary={parentSummary ?? (isExamPrep ? formatPracticeParentsSummary([], { isExamPrep: true }) : null)}
             typeDefinitions={typeDefinitions}
-            canPublish={parentContext !== null}
+            canPublish={isExamPrep || parentContext !== null}
             submitting={submitting}
             onSaveDraft={() => void submitPractice("DRAFT")}
             onPublish={() => void submitPractice("PUBLISHED")}
@@ -748,6 +753,15 @@ export function AddPracticeFlow() {
                 <span className="font-medium">{seededQuestionType.display_name}</span>
                 <span className="mx-1.5 text-violet-400">·</span>
                 <span className="font-mono text-xs">#{seededQuestionType.id}</span>
+              </p>
+            </div>
+          ) : null}
+          {isExamPrep && !parentContext && !lessonId ? (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
+              <p className="font-semibold text-amber-900">No placement yet</p>
+              <p className="mt-1 text-amber-900/90">
+                This practice will be created without catalog course, unit, or lesson links. Attach
+                locations later from the attach-practice flow or practice editor.
               </p>
             </div>
           ) : null}

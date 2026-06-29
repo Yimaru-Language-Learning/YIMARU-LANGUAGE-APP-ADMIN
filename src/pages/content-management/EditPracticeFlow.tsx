@@ -404,6 +404,12 @@ export function EditPracticeFlow() {
         toast.error("Check practice locations", { description: parentsErr });
         return;
       }
+    } else {
+      const parentsErr = validatePracticeParents(formData.parents, { required: false });
+      if (parentsErr) {
+        toast.error("Check practice locations", { description: parentsErr });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -423,16 +429,15 @@ export function EditPracticeFlow() {
         isLearnEnglishLessonPractice,
         lessonDefaultTitle,
         parents: dedupeParents(formData.parents),
-        parentsChanged:
-          !isExamPrep &&
-          !practiceParentsEqual(formData.parents, initialParentsRef.current),
+        parentsChanged: !practiceParentsEqual(
+          formData.parents,
+          initialParentsRef.current,
+        ),
       });
       toast.success(
         status === "PUBLISHED" ? "Practice updated and published" : "Practice saved as draft",
       );
-      if (!isExamPrep) {
-        initialParentsRef.current = dedupeParents(formData.parents);
-      }
+      initialParentsRef.current = dedupeParents(formData.parents);
       setIsSaved(true);
     } catch (e) {
       toast.error("Could not update practice", {
@@ -511,12 +516,15 @@ export function EditPracticeFlow() {
 
   const reviewParentSummary =
     formData.parents.length > 0
-      ? formatPracticeParentsSummary(formData.parents)
+      ? formatPracticeParentsSummary(formData.parents, { isExamPrep })
       : parentSummary;
 
   const renderStep = () => {
     const useContextStep =
-      isModuleContext || isCourseContext || isLessonContext;
+      isModuleContext ||
+      isCourseContext ||
+      isLessonContext ||
+      isUnitContext;
 
     if (useContextStep) {
       switch (currentStep) {
@@ -530,7 +538,10 @@ export function EditPracticeFlow() {
               isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               parentSummary={reviewParentSummary}
-              showParentsEditor={!isExamPrep}
+              showParentsEditor={!isLearnEnglishLessonPractice}
+              isExamPrepParents={isExamPrep}
+              parentsOptional={isExamPrep}
+              parentsCollapsedDefault={isExamPrep}
             />
           );
         case 2:

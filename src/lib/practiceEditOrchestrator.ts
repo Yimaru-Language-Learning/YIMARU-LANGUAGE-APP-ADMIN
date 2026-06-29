@@ -1,5 +1,6 @@
 import {
   updateExamPrepPracticeFull,
+  updateExamPrepPracticeParents,
   updateLearnEnglishPracticeFull,
   updatePracticeParents,
 } from "../api/courses.api"
@@ -44,6 +45,11 @@ export async function executePracticeUpdate(
 
   if (opts.isExamPrep) {
     await updateExamPrepPracticeFull(opts.practiceId, payload)
+    if (opts.parentsChanged && opts.parents) {
+      await updateExamPrepPracticeParents(opts.practiceId, {
+        parents: dedupeParents(opts.parents),
+      })
+    }
     return
   }
 

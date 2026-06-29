@@ -4,9 +4,15 @@ import { Input } from "../../../../components/ui/input"
 import type { PracticeParent, PracticeParentKind } from "../../../../types/course.types"
 import { dedupeParents, newParentRow } from "../../../../lib/practiceParents"
 
-const KIND_OPTIONS: { value: PracticeParentKind; label: string }[] = [
+const LMS_KIND_OPTIONS: { value: PracticeParentKind; label: string }[] = [
   { value: "COURSE", label: "Course" },
   { value: "MODULE", label: "Module" },
+  { value: "LESSON", label: "Lesson" },
+]
+
+const EXAM_PREP_KIND_OPTIONS: { value: PracticeParentKind; label: string }[] = [
+  { value: "CATALOG_COURSE", label: "Catalog course" },
+  { value: "UNIT", label: "Unit" },
   { value: "LESSON", label: "Lesson" },
 ]
 
@@ -18,6 +24,8 @@ interface PracticeParentsFieldProps {
   lockedParentKey?: string | null
   /** When true, all rows can be cleared (unlinked practice). */
   optional?: boolean
+  /** Use exam-prep parent kinds instead of Learn English. */
+  isExamPrep?: boolean
 }
 
 function parentKey(parent: PracticeParent): string {
@@ -30,8 +38,10 @@ export function PracticeParentsField({
   disabled = false,
   lockedParentKey = null,
   optional = false,
+  isExamPrep = false,
 }: PracticeParentsFieldProps) {
-  const rows = parents.length > 0 ? parents : [newParentRow()]
+  const kindOptions = isExamPrep ? EXAM_PREP_KIND_OPTIONS : LMS_KIND_OPTIONS
+  const rows = parents.length > 0 ? parents : [newParentRow(isExamPrep ? "CATALOG_COURSE" : "LESSON")]
 
   const updateRow = (index: number, patch: Partial<PracticeParent>) => {
     const next = rows.map((row, i) => (i === index ? { ...row, ...patch } : row))
@@ -58,8 +68,12 @@ export function PracticeParentsField({
         <p className="text-sm font-semibold text-grayScale-800">Attached locations</p>
         <p className="text-xs text-grayScale-500">
           {optional
-            ? "Attach now or leave empty and link this practice later."
-            : "Link this practice to one or more courses, modules, or lessons. Each location can only have one practice."}
+            ? isExamPrep
+              ? "Attach now or leave empty and link this practice to catalog courses, units, or lessons later."
+              : "Attach now or leave empty and link this practice later."
+            : isExamPrep
+              ? "Link this practice to one or more catalog courses, units, or lessons."
+              : "Link this practice to one or more courses, modules, or lessons. Each location can only have one practice."}
         </p>
       </div>
 
@@ -80,7 +94,7 @@ export function PracticeParentsField({
                 }
                 className="h-9 rounded-[8px] border border-grayScale-200 bg-white px-2.5 text-sm font-medium text-grayScale-700 focus:outline-none focus:ring-2 focus:ring-brand-200"
               >
-                {KIND_OPTIONS.map((opt) => (
+                {kindOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

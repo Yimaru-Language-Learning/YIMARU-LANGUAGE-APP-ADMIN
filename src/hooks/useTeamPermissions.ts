@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { fetchCurrentTeamMemberPermissions } from "../api/team.api"
 import { getMyProfile } from "../api/users.api"
+import { syncSessionTeamRole } from "../lib/teamRole"
 import type { TeamMeProfile } from "../types/team.types"
 
 export function useTeamPermissions() {
@@ -18,6 +19,7 @@ export function useTeamPermissions() {
 
       const res = await getMyProfile()
       const profile = res.data?.data as TeamMeProfile & { permissions?: string[] }
+      syncSessionTeamRole(profile?.team_role)
       setPermissions(Array.isArray(profile?.permissions) ? profile.permissions : [])
     } catch {
       setPermissions([])

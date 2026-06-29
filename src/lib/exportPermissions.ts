@@ -1,4 +1,4 @@
-import { getSessionTeamRole } from "./teamRole"
+import { getNormalizedSessionTeamRole } from "./teamRole"
 
 const ALL_EXPORT_PERMISSIONS = [
   "payments.export",
@@ -18,6 +18,6 @@ const EXPORT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
 
 export function hasExportPermission(permission: string, permissions: string[]): boolean {
   if (permissions.includes(permission)) return true
-  const rolePerms = EXPORT_ROLE_PERMISSIONS[getSessionTeamRole().toUpperCase()]
+  const rolePerms = EXPORT_ROLE_PERMISSIONS[getNormalizedSessionTeamRole()]
   return rolePerms?.includes(permission) ?? false
 }

@@ -1,4 +1,5 @@
 import http from "./http"
+import { syncSessionTeamRole } from "../lib/teamRole"
 import type {
   AcceptInvitationRequest,
   AcceptInvitationResponse,
@@ -106,7 +107,10 @@ export async function fetchCurrentTeamMemberPermissions(): Promise<string[]> {
       .map((entry) => normalizeTeamMember(entry))
       .filter((entry): entry is TeamMember => entry != null)
     const self = members.find((member) => member.id === memberId)
-    if (self) return self.permissions ?? []
+    if (self) {
+      syncSessionTeamRole(self.team_role)
+      return self.permissions ?? []
+    }
     page++
   } while (page <= totalPages)
 

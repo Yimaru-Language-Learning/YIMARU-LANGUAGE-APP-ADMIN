@@ -61,17 +61,25 @@ export interface DynamicQuestionPayload {
   response: DynamicElementInstance[]
 }
 
+export type QuestionTypeDefinitionPracticeKind = "LMS" | "EXAM_PREP"
+
 /** Row from GET /questions/type-definitions/:id/practices */
 export interface QuestionTypeDefinitionPractice {
-  practice_kind: string
+  practice_kind: QuestionTypeDefinitionPracticeKind
   practice_id: number
   question_set_id: number
   title: string
   story_description?: string
   story_image?: string
+  persona_id?: number
   quick_tips?: string
-  publish_status?: string
+  publish_status?: "DRAFT" | "PUBLISHED" | string
+  /** LMS hierarchy links — read when `practice_kind === "LMS"`. */
   parents: PracticeParent[] | null
+  /** Exam-prep hierarchy links — read when `practice_kind === "EXAM_PREP"`. */
+  exam_prep_parents?: PracticeParent[] | null
+  /** Legacy convenience when a LESSON parent exists; prefer `exam_prep_parents`. */
+  exam_prep_lesson_id?: number | null
   /** @deprecated use parents[] */
   parent_kind?: string
   /** @deprecated use parents[] */

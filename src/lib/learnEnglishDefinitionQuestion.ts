@@ -193,6 +193,7 @@ export interface LearnEnglishDefinitionQuestionInput {
   associatedQuestionId?: number | null
   associatedAnchorRowId?: string | null
   prerequisiteQuestionIds?: number[]
+  stimulusBlockKey?: string | null
   displayOrder?: number
   mcqOptions?: { option_text: string; is_correct: boolean }[]
   trueFalseAnswerIsTrue?: boolean

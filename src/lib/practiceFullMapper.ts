@@ -6,6 +6,7 @@ import type {
   PracticeFullQuestionSet,
   PracticeParent,
   PracticePublishStatus,
+  AuthoringProfile,
   QuestionOption,
   QuestionShortAnswer,
   UpdatePracticeFullRequest,
@@ -24,9 +25,23 @@ import {
   questionRowHasContent,
   type LearnEnglishDefinitionQuestionInput,
 } from "./learnEnglishDefinitionQuestion"
-import { serializeMultipleChoiceSlotValue } from "./multipleChoiceSlotValue"
 import { normalizePracticeParents, parentsFromPractice } from "./practiceParents"
 import { validatePracticeQuestionsWithDefinitions } from "./practiceCreationOrchestrator"
+import {
+  dynamicPayloadToFieldValues,
+  slotApiValueToFieldString,
+} from "./practiceDynamicQuestionPayload"
+import {
+  filterQuestionStimulusForBlock,
+  getBlockStimulusByKey,
+  isIeltsSharedStimulusMode,
+  mapApiStimulusBlocksToForm,
+  mapFormStimulusBlocksToApi,
+  normalizeAuthoringProfile,
+  validatePracticeStimulusBlocks,
+  validateStimulusBlocks,
+  type PracticeFormStimulusBlock,
+} from "./practiceStimulusBlocks"
 import {
   resolveAssociatedQuestionId,
   validateQuestionAssociations,
@@ -39,6 +54,7 @@ export interface PracticeFormQuestionRow {
   associatedQuestionId: number | null
   associatedAnchorRowId: string | null
   prerequisiteQuestionIds?: number[]
+  stimulusBlockKey: string | null
   questionTypeDefinitionId: number | null
   text: string
   difficultyLevel: "EASY" | "MEDIUM" | "HARD"
@@ -55,6 +71,8 @@ export interface PracticeFormState {
   storyImageUrl: string
   shuffleQuestions: boolean
   tips: string
+  authoringProfile: AuthoringProfile
+  stimulusBlocks: PracticeFormStimulusBlock[]
   parents: PracticeParent[]
   questions: PracticeFormQuestionRow[]
 }
@@ -232,6 +250,15 @@ export function normalizePracticeFullQuestion(
     dynamic_payload: normalizeDynamicPayload(
       record.dynamic_payload ?? record.DynamicPayload,
     ),
+    effective_dynamic_payload: normalizeDynamicPayload(
+      record.effective_dynamic_payload ?? record.EffectiveDynamicPayload,
+    ),
+    stimulus_block_key:
+      record.stimulus_block_key != null
+        ? String(record.stimulus_block_key).trim() || null
+        : record.StimulusBlockKey != null
+          ? String(record.StimulusBlockKey).trim() || null
+          : null,
     difficulty_level:
       pickStr(record, "difficulty_level", "DifficultyLevel", "difficultyLevel") ||
       undefined,
@@ -322,6 +349,9 @@ function normalizePracticeFullPractice(raw: unknown): PracticeFullPractice | nul
       pickStr(record, "story_image", "StoryImage", "storyImage") || undefined,
     persona_id: pickNum(record, "persona_id", "PersonaId", "personaId"),
     question_set_id: questionSetId,
+    authoring_profile: normalizeAuthoringProfile(
+      record.authoring_profile ?? record.AuthoringProfile,
+    ),
     publish_status:
       pickStr(record, "publish_status", "PublishStatus", "publishStatus") || null,
     quick_tips: pickStr(record, "quick_tips", "QuickTips", "quickTips") || undefined,
@@ -348,7 +378,29 @@ export function normalizePracticeFullData(raw: unknown): PracticeFullData | null
   const questions = questionsRaw
     .map((entry) => normalizePracticeFullQuestion(entry))
     .filter((entry): entry is PracticeFullQuestionItem => entry != null)
-  return { practice, question_set: questionSet, questions }
+  const stimulusBlocksRaw = record.stimulus_blocks ?? record.StimulusBlocks
+  const stimulus_blocks = Array.isArray(stimulusBlocksRaw)
+    ? stimulusBlocksRaw
+        .map((entry) => {
+          const blockRecord = asRecord(entry)
+          if (!blockRecord) return null
+          const blockKey = pickStr(blockRecord, "block_key", "BlockKey", "blockKey")
+          if (!blockKey) return null
+          return {
+            ...(pickNum(blockRecord, "id", "Id", "ID") != null
+              ? { id: pickNum(blockRecord, "id", "Id", "ID")! }
+              : {}),
+            block_key: blockKey,
+            display_order:
+              pickNum(blockRecord, "display_order", "DisplayOrder", "displayOrder") ?? 0,
+            stimulus: normalizeDynamicElementArray(
+              blockRecord.stimulus ?? blockRecord.Stimulus,
+            ),
+          }
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry != null)
+    : undefined
+  return { practice, question_set: questionSet, questions, stimulus_blocks }
 }
 
 function payloadValuesByKind(
@@ -408,38 +460,6 @@ function hydrateDynamicFieldValues(
   }
 
   return merged
-}
-
-function slotApiValueToFieldString(value: unknown, kind: string): string {
-  const upperKind = kind.trim().toUpperCase()
-  if (value == null) return ""
-  if (typeof value === "string") return value
-  if (upperKind === "PREP_TIME" || upperKind === "ANSWER_TIMER") {
-    if (typeof value === "object" && value !== null && "seconds" in value) {
-      const seconds = (value as { seconds?: unknown }).seconds
-      if (typeof seconds === "number" && Number.isFinite(seconds)) {
-        return String(seconds)
-      }
-    }
-  }
-  if (upperKind === "MULTIPLE_CHOICE" || upperKind === "OPTION") {
-    return serializeMultipleChoiceSlotValue(value as { options: unknown[] })
-  }
-  if (typeof value === "object") return JSON.stringify(value)
-  return String(value)
-}
-
-export function dynamicPayloadToFieldValues(
-  payload: DynamicQuestionPayload | null | undefined,
-): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const slot of payload?.stimulus ?? []) {
-    out[`stimulus:${slot.id}`] = slotApiValueToFieldString(slot.value, slot.kind)
-  }
-  for (const slot of payload?.response ?? []) {
-    out[`response:${slot.id}`] = slotApiValueToFieldString(slot.value, slot.kind)
-  }
-  return out
 }
 
 function normalizeShortAnswers(
@@ -531,6 +551,7 @@ function mapFullQuestionToFormRow(
     associatedQuestionId: q.associated_question_id ?? null,
     associatedAnchorRowId: null,
     prerequisiteQuestionIds: q.prerequisite_question_ids,
+    stimulusBlockKey: q.stimulus_block_key ?? null,
     questionTypeDefinitionId: defId,
     text,
     difficultyLevel,
@@ -553,7 +574,7 @@ export function mapPracticeFullToFormState(
   preservedQuestionSet: PreservedQuestionSetFields
   parents: PracticeParent[]
 } {
-  const { practice, question_set, questions } = data
+  const { practice, question_set, questions, stimulus_blocks } = data
   const sorted = [...questions].sort(
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
   )
@@ -568,6 +589,7 @@ export function mapPracticeFullToFormState(
             serverQuestionId: null,
             associatedQuestionId: null,
             associatedAnchorRowId: null,
+            stimulusBlockKey: null,
             questionTypeDefinitionId: typeDefinitions[0]?.id ?? null,
             text: "",
             difficultyLevel: "EASY" as const,
@@ -591,6 +613,8 @@ export function mapPracticeFullToFormState(
       storyImageUrl: practice.story_image?.trim() || "",
       shuffleQuestions: Boolean(question_set.shuffle_questions),
       tips: practice.quick_tips?.trim() || "",
+      authoringProfile: normalizeAuthoringProfile(practice.authoring_profile),
+      stimulusBlocks: mapApiStimulusBlocksToForm(stimulus_blocks),
       parents: parentsFromPractice(practice),
       questions: formQuestions,
     },
@@ -638,7 +662,17 @@ function buildFullUpdateQuestion(
   if (created.question_type_definition_id != null) {
     item.question_type_definition_id = created.question_type_definition_id
   }
-  if (created.dynamic_payload) item.dynamic_payload = created.dynamic_payload
+  if (created.dynamic_payload) {
+    item.dynamic_payload = q.stimulusBlockKey?.trim()
+      ? filterQuestionStimulusForBlock(
+          created.dynamic_payload,
+          q.dynamicFieldValues ?? {},
+        )
+      : created.dynamic_payload
+  }
+  if (q.stimulusBlockKey?.trim()) {
+    item.stimulus_block_key = q.stimulusBlockKey.trim()
+  }
   if (created.options?.length) item.options = created.options
   if (created.short_answers?.length) {
     item.short_answers = created.short_answers.map((entry) =>
@@ -674,11 +708,22 @@ export interface BuildPracticeFullUpdateInput {
 export function buildPracticeFullUpdateRequest(
   opts: BuildPracticeFullUpdateInput,
 ): UpdatePracticeFullRequest {
-  const err = validatePracticeQuestionsWithDefinitions(
-    opts.questions,
-    opts.definitions,
-  )
-  if (err) throw new Error(err)
+  const useBlocks = isIeltsSharedStimulusMode(opts.formData.authoringProfile)
+  if (useBlocks) {
+    const blockValidationErr = validatePracticeStimulusBlocks(
+      opts.formData.authoringProfile,
+      opts.formData.stimulusBlocks,
+      opts.questions,
+      opts.definitions,
+    )
+    if (blockValidationErr) throw new Error(blockValidationErr)
+  } else {
+    const err = validatePracticeQuestionsWithDefinitions(
+      opts.questions,
+      opts.definitions,
+    )
+    if (err) throw new Error(err)
+  }
 
   const lessonTitle = opts.lessonDefaultTitle?.trim() || "Lesson practice"
   const practiceTitle = opts.isLearnEnglishLessonPractice
@@ -748,6 +793,7 @@ export function buildPracticeFullUpdateRequest(
       persona_id: opts.personaId,
       quick_tips: opts.formData.tips.trim(),
       publish_status: opts.status,
+      authoring_profile: opts.formData.authoringProfile,
     },
     question_set: {
       title: opts.isLearnEnglishLessonPractice
@@ -762,6 +808,9 @@ export function buildPracticeFullUpdateRequest(
       status: opts.status,
       intro_video_url: opts.preservedQuestionSet.introVideoUrl.trim() || null,
     },
+    stimulus_blocks: useBlocks
+      ? mapFormStimulusBlocksToApi(opts.formData.stimulusBlocks)
+      : [],
     questions,
   }
 }

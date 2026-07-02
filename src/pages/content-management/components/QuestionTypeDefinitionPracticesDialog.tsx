@@ -14,8 +14,11 @@ import {
 } from "../../../components/ui/dialog"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 import { cn } from "../../../lib/utils"
-import { resolveLearnEnglishPracticeEditPath } from "../../../lib/learnEnglishPracticeEditPath"
-import { formatPracticeParentsSummary } from "../../../lib/practiceParents"
+import { resolveQuestionTypeDefinitionPracticeEditPath } from "../../../lib/questionTypeDefinitionPracticeEditPath"
+import {
+  formatPracticeLocation,
+  isQuestionTypeDefinitionPracticeUnlinked,
+} from "../../../lib/questionTypeDefinitionPractices"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
 import type {
   QuestionTypeDefinition,
@@ -98,10 +101,13 @@ export function QuestionTypeDefinitionPracticesDialog({
   const handleEditPractice = async (practice: QuestionTypeDefinitionPractice) => {
     setEditingPracticeId(practice.practice_id)
     try {
-      const path = await resolveLearnEnglishPracticeEditPath(practice)
+      const path = await resolveQuestionTypeDefinitionPracticeEditPath(practice)
       if (!path) {
         toast.error("Could not open practice editor", {
-          description: "This practice could not be linked to its course context.",
+          description:
+            practice.practice_kind === "EXAM_PREP"
+              ? "This exam-prep practice could not be linked to its catalog context."
+              : "This practice could not be linked to its course context.",
         })
         return
       }
@@ -163,9 +169,11 @@ export function QuestionTypeDefinitionPracticesDialog({
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-grayScale-100 text-grayScale-400">
                 <GraduationCap className="h-7 w-7" aria-hidden />
               </div>
-              <p className="text-sm font-semibold text-grayScale-700">No practices found</p>
+              <p className="text-sm font-semibold text-grayScale-700">
+                No practices use this question type yet.
+              </p>
               <p className="max-w-sm text-xs text-grayScale-500">
-                No published or draft practices currently contain questions built from this definition.
+                Create a practice shell and add questions built from this definition.
               </p>
               {definition ? (
                 <Button
@@ -181,7 +189,10 @@ export function QuestionTypeDefinitionPracticesDialog({
             </div>
           ) : (
             <ul className="divide-y divide-grayScale-100 overflow-y-auto px-2 py-2">
-              {practices.map((practice) => (
+              {practices.map((practice) => {
+                const location = formatPracticeLocation(practice)
+                const isUnlinked = isQuestionTypeDefinitionPracticeUnlinked(practice)
+                return (
                 <li key={`${practice.practice_kind}-${practice.practice_id}`} className="px-4 py-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1.5">
@@ -190,17 +201,12 @@ export function QuestionTypeDefinitionPracticesDialog({
                         <span className="font-mono">practice #{practice.practice_id}</span>
                         <span className="text-grayScale-300">·</span>
                         <span className="font-mono">set #{practice.question_set_id}</span>
-                        {practice.parents && practice.parents.length > 0 ? (
-                          <>
-                            <span className="text-grayScale-300">·</span>
-                            <span>{formatPracticeParentsSummary(practice.parents)}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-grayScale-300">·</span>
-                            <span className="italic text-amber-700">Unlinked</span>
-                          </>
-                        )}
+                        <span className="text-grayScale-300">·</span>
+                        <span
+                          className={cn(isUnlinked && "italic text-amber-700")}
+                        >
+                          {location}
+                        </span>
                       </div>
                       {practice.story_description?.trim() ? (
                         <p className="line-clamp-2 text-xs text-grayScale-500">{practice.story_description}</p>
@@ -238,7 +244,7 @@ export function QuestionTypeDefinitionPracticesDialog({
                     </div>
                   </div>
                 </li>
-              ))}
+              )})}
             </ul>
           )}
 

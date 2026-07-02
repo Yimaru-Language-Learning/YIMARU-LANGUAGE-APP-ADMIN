@@ -21,6 +21,12 @@ import {
   setExamPrepPracticePublishStatus,
   setLearnEnglishPracticePublishStatus,
 } from "../../api/courses.api";
+import { parentsFromPractice } from "../../lib/practiceParents";
+import {
+  isPracticeParentUnlinkNotLinkedError,
+  mapPracticeParentUnlinkError,
+  unlinkPracticeFromParent,
+} from "../../lib/practiceParentUnlink";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { PracticeActionButton } from "./components/PracticeActionButton";
@@ -38,6 +44,7 @@ import type {
   GetExamPrepLessonPracticesResponse,
   GetPracticesByParentContextResponse,
   ParentContextPractice,
+  PracticeParent,
   PracticePublishStatus,
 } from "../../types/course.types";
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
@@ -96,6 +103,7 @@ function PracticeCard({
   index,
   total,
   onEdit,
+  onUnlink,
   onDelete,
   onTogglePublishStatus,
   publishStatusUpdating,
@@ -104,6 +112,7 @@ function PracticeCard({
   index: number;
   total: number;
   onEdit?: () => void;
+  onUnlink?: () => void;
   onDelete?: () => void;
   onTogglePublishStatus?: (nextStatus: PracticePublishStatus) => void;
   publishStatusUpdating?: boolean;
@@ -167,6 +176,17 @@ function PracticeCard({
                   onToggle={onTogglePublishStatus}
                 />
               </div>
+              {onUnlink ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-grayScale-700 hover:bg-grayScale-100"
+                  onClick={onUnlink}
+                >
+                  Unlink
+                </Button>
+              ) : null}
               {onDelete ? (
                 <Button
                   type="button"
@@ -259,7 +279,9 @@ export function LessonPracticesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [practiceToDelete, setPracticeToDelete] = useState<ParentContextPractice | null>(null);
+  const [practiceToUnlink, setPracticeToUnlink] = useState<ParentContextPractice | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
   const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
     number | null
   >(null);
@@ -401,6 +423,38 @@ export function LessonPracticesPage() {
       toast.error(err.response?.data?.message || "Failed to update practice status");
     } finally {
       setPublishStatusUpdatingId(null);
+    }
+  };
+
+  const lessonParent = useMemo(
+    (): PracticeParent => ({ parent_kind: "LESSON", parent_id: lid }),
+    [lid],
+  );
+
+  const confirmUnlinkPractice = async () => {
+    if (!practiceToUnlink) return;
+    setUnlinking(true);
+    try {
+      await unlinkPracticeFromParent({
+        practiceId: practiceToUnlink.id,
+        parent: lessonParent,
+        isExamPrep,
+      });
+      toast.success(`Practice removed from ${displayTitle}`);
+      setPracticeToUnlink(null);
+      await load();
+    } catch (e) {
+      if (isPracticeParentUnlinkNotLinkedError(e)) {
+        toast.info("This location was already removed.");
+        setPracticeToUnlink(null);
+        await load();
+        return;
+      }
+      toast.error("Could not remove from lesson", {
+        description: mapPracticeParentUnlinkError(e),
+      });
+    } finally {
+      setUnlinking(false);
     }
   };
 
@@ -611,6 +665,7 @@ export function LessonPracticesPage() {
                       onSaveAsDraft={() =>
                         void handlePracticePublishStatus(p.id, "DRAFT")
                       }
+                      onUnlink={() => setPracticeToUnlink(p)}
                       onDelete={() => setPracticeToDelete(p)}
                     />
                   ))}
@@ -623,9 +678,8 @@ export function LessonPracticesPage() {
                   index={i}
                   total={filteredPractices.length}
                   onEdit={() => void navigate(editPracticeHref(p.id))}
-                  onDelete={
-                    isExamPrep ? () => setPracticeToDelete(p) : undefined
-                  }
+                  onUnlink={() => setPracticeToUnlink(p)}
+                  onDelete={isExamPrep ? () => setPracticeToDelete(p) : undefined}
                   publishStatusUpdating={publishStatusUpdatingId === p.id}
                   onTogglePublishStatus={(nextStatus) =>
                     void handlePracticePublishStatus(p.id, nextStatus)
@@ -639,6 +693,53 @@ export function LessonPracticesPage() {
       </div>
 
       <Dialog
+        open={practiceToUnlink !== null}
+        onOpenChange={(open) => {
+          if (!open && !unlinking) setPracticeToUnlink(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove from this lesson?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-grayScale-600">
+            <span className="font-semibold text-grayScale-900">
+              {practiceToUnlink?.title}
+            </span>{" "}
+            will be detached from{" "}
+            <span className="font-semibold text-grayScale-900">{displayTitle}</span>.
+            {practiceToUnlink &&
+            parentsFromPractice(practiceToUnlink).filter(
+              (p) =>
+                !(
+                  p.parent_kind === lessonParent.parent_kind &&
+                  p.parent_id === lessonParent.parent_id
+                ),
+            ).length === 0
+              ? " The practice will be unlinked until you attach it again. Questions are kept."
+              : " Other locations are unaffected."}
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={unlinking}
+              onClick={() => setPracticeToUnlink(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={unlinking}
+              onClick={() => void confirmUnlinkPractice()}
+            >
+              {unlinking ? "Removing…" : "Remove from lesson"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={practiceToDelete !== null}
         onOpenChange={(open) => {
           if (!open && !deleting) setPracticeToDelete(null);
@@ -646,13 +747,13 @@ export function LessonPracticesPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete this practice?</DialogTitle>
+            <DialogTitle>Delete this practice permanently?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-grayScale-600">
             <span className="font-semibold text-grayScale-900">
               {practiceToDelete?.title}
             </span>{" "}
-            will be removed from this lesson. This action cannot be undone.
+            and all of its questions will be deleted. This cannot be undone.
           </p>
           <DialogFooter>
             <Button

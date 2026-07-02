@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit2, Loader2, MoreVertical } from "lucide-react";
+import { Edit2, Loader2, MoreVertical, Unlink } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import {
@@ -27,6 +27,7 @@ type ModulePracticeCardProps = {
   onEdit?: () => void;
   onPublish?: () => void;
   onSaveAsDraft?: () => void;
+  onUnlink?: () => void;
   onDelete?: () => void;
 };
 
@@ -36,6 +37,7 @@ export function ModulePracticeCard({
   onEdit,
   onPublish,
   onSaveAsDraft,
+  onUnlink,
   onDelete,
 }: ModulePracticeCardProps) {
   const isPublished = isPracticePublished(practice);
@@ -136,6 +138,18 @@ export function ModulePracticeCard({
                 >
                   {isPublished ? "Save as draft" : "Publish practice"}
                 </DropdownMenuItem>
+                {onUnlink ? (
+                  <DropdownMenuItem
+                    disabled={statusUpdating}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUnlink();
+                    }}
+                  >
+                    <Unlink className="mr-2 h-4 w-4" />
+                    Unlink
+                  </DropdownMenuItem>
+                ) : null}
                 {onDelete ? (
                   <DropdownMenuItem
                     disabled={statusUpdating}
@@ -145,7 +159,7 @@ export function ModulePracticeCard({
                       onDelete();
                     }}
                   >
-                    Delete practice
+                    Delete
                   </DropdownMenuItem>
                 ) : null}
               </DropdownMenuContent>

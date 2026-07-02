@@ -27,6 +27,7 @@ import {
   multipleChoiceSlotHasContent,
   normalizeMultipleChoiceValue,
   parseMultipleChoiceSlotValue,
+  serializeMultipleChoiceSlotValue,
 } from "./multipleChoiceSlotValue"
 import { isNoInputComponentKind } from "./questionComponentKinds"
 
@@ -161,6 +162,38 @@ function slotValueForRow(
   }
 
   return parseDynamicSlotValue(rawField)
+}
+
+export function slotApiValueToFieldString(value: unknown, kind: string): string {
+  const upperKind = kind.trim().toUpperCase()
+  if (value == null) return ""
+  if (typeof value === "string") return value
+  if (upperKind === "PREP_TIME" || upperKind === "ANSWER_TIMER") {
+    if (typeof value === "object" && value !== null && "seconds" in value) {
+      const seconds = (value as { seconds?: unknown }).seconds
+      if (typeof seconds === "number" && Number.isFinite(seconds)) {
+        return String(seconds)
+      }
+    }
+  }
+  if (upperKind === "MULTIPLE_CHOICE" || upperKind === "OPTION") {
+    return serializeMultipleChoiceSlotValue(value as { options: unknown[] })
+  }
+  if (typeof value === "object") return JSON.stringify(value)
+  return String(value)
+}
+
+export function dynamicPayloadToFieldValues(
+  payload: DynamicQuestionPayload | null | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const slot of payload?.stimulus ?? []) {
+    out[`stimulus:${slot.id}`] = slotApiValueToFieldString(slot.value, slot.kind)
+  }
+  for (const slot of payload?.response ?? []) {
+    out[`response:${slot.id}`] = slotApiValueToFieldString(slot.value, slot.kind)
+  }
+  return out
 }
 
 export function buildDynamicQuestionPayload(input: {

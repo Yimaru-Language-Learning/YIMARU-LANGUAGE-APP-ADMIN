@@ -125,6 +125,7 @@ import type {
   UpdateParentLinkedPracticeResponse,
   UpdatePracticeParentsRequest,
   UpdatePracticeParentsResponse,
+  PracticeParent,
   PublishParentLinkedPracticeRequest,
   PublishStatusOnlyRequest,
   AccessTierOnlyRequest,
@@ -732,6 +733,15 @@ export const updateExamPrepPracticeParents = (
     data,
   )
 
+/** DELETE /exam-prep/practices/:id/parents/:parentKind/:parentId — unlink one parent. */
+export const unlinkExamPrepPracticeParent = (
+  practiceId: number,
+  parent: PracticeParent,
+) =>
+  http.delete<UpdatePracticeParentsResponse>(
+    `/exam-prep/practices/${practiceId}/parents/${parent.parent_kind.toUpperCase()}/${parent.parent_id}`,
+  )
+
 /** DELETE /exam-prep/practices/:practiceId */
 export const deleteExamPrepPractice = (practiceId: number) =>
   http.delete<{ message: string; success: boolean; status_code: number; metadata: unknown }>(
@@ -923,6 +933,15 @@ export const updatePracticeParents = (
   practiceId: number,
   data: UpdatePracticeParentsRequest,
 ) => http.put<UpdatePracticeParentsResponse>(`/practices/${practiceId}/parents`, data)
+
+/** DELETE /practices/:id/parents/:parentKind/:parentId — unlink one parent. */
+export const unlinkPracticeParent = (
+  practiceId: number,
+  parent: PracticeParent,
+) =>
+  http.delete<UpdatePracticeParentsResponse>(
+    `/practices/${practiceId}/parents/${parent.parent_kind.toUpperCase()}/${parent.parent_id}`,
+  )
 
 /** PUT /practices/:id */
 export const updateParentLinkedPractice = (

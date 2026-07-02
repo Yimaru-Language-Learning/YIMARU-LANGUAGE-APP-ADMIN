@@ -8,6 +8,12 @@ import {
   setExamPrepPracticePublishStatus,
 } from "../../../api/courses.api"
 import { unwrapPracticesList } from "../../../lib/parentContextPractice"
+import { parentsFromPractice } from "../../../lib/practiceParents"
+import {
+  isPracticeParentUnlinkNotLinkedError,
+  mapPracticeParentUnlinkError,
+  unlinkPracticeFromParent,
+} from "../../../lib/practiceParentUnlink"
 import { Button } from "../../../components/ui/button"
 import {
   Dialog,
@@ -24,6 +30,7 @@ import {
 } from "../../../lib/contentListFilters"
 import type {
   ParentContextPractice,
+  PracticeParent,
   PracticePublishStatus,
 } from "../../../types/course.types"
 
@@ -58,7 +65,9 @@ export function CatalogCoursePracticesPanel({
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [practiceToDelete, setPracticeToDelete] = useState<ParentContextPractice | null>(null)
+  const [practiceToUnlink, setPracticeToUnlink] = useState<ParentContextPractice | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [unlinking, setUnlinking] = useState(false)
   const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<number | null>(null)
   const [listSearch, setListSearch] = useState("")
   const [publishStatusFilter, setPublishStatusFilter] = useState<PublishStatusFilter>("all")
@@ -132,6 +141,38 @@ export function CatalogCoursePracticesPanel({
       toast.error(err.response?.data?.message || "Failed to update practice status")
     } finally {
       setPublishStatusUpdatingId(null)
+    }
+  }
+
+  const catalogParent = useMemo(
+    (): PracticeParent => ({ parent_kind: "CATALOG_COURSE", parent_id: catalogCourseId }),
+    [catalogCourseId],
+  )
+
+  const confirmUnlinkPractice = async () => {
+    if (!practiceToUnlink) return
+    setUnlinking(true)
+    try {
+      await unlinkPracticeFromParent({
+        practiceId: practiceToUnlink.id,
+        parent: catalogParent,
+        isExamPrep: true,
+      })
+      toast.success(`Practice removed from ${courseName}`)
+      setPracticeToUnlink(null)
+      await load()
+    } catch (e) {
+      if (isPracticeParentUnlinkNotLinkedError(e)) {
+        toast.info("This location was already removed.")
+        setPracticeToUnlink(null)
+        await load()
+        return
+      }
+      toast.error("Could not remove location", {
+        description: mapPracticeParentUnlinkError(e),
+      })
+    } finally {
+      setUnlinking(false)
     }
   }
 
@@ -214,23 +255,60 @@ export function CatalogCoursePracticesPanel({
               onEdit={() => navigate(editPracticeHref(practice.id))}
               onPublish={() => void handlePracticePublishStatus(practice.id, "PUBLISHED")}
               onSaveAsDraft={() => void handlePracticePublishStatus(practice.id, "DRAFT")}
+              onUnlink={() => setPracticeToUnlink(practice)}
               onDelete={() => setPracticeToDelete(practice)}
             />
           ))}
         </div>
       )}
 
+      <Dialog
+        open={practiceToUnlink != null}
+        onOpenChange={(open) => !open && !unlinking && setPracticeToUnlink(null)}
+      >
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Remove from this catalog course?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-grayScale-600">
+            <span className="font-semibold text-grayScale-800">
+              {practiceToUnlink?.title || "This practice"}
+            </span>{" "}
+            will be detached from{" "}
+            <span className="font-semibold text-grayScale-800">{courseName}</span>.
+            {practiceToUnlink &&
+            parentsFromPractice(practiceToUnlink).filter(
+              (p) =>
+                !(
+                  p.parent_kind === catalogParent.parent_kind &&
+                  p.parent_id === catalogParent.parent_id
+                ),
+            ).length === 0
+              ? " The practice will be unlinked until re-attached."
+              : " Other locations are unaffected."}
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPracticeToUnlink(null)} disabled={unlinking}>
+              Cancel
+            </Button>
+            <Button onClick={() => void confirmUnlinkPractice()} disabled={unlinking}>
+              {unlinking ? "Removing…" : "Remove location"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={practiceToDelete != null} onOpenChange={(open) => !open && setPracticeToDelete(null)}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Delete practice?</DialogTitle>
+            <DialogTitle>Delete practice permanently?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-grayScale-600">
             This permanently removes{" "}
             <span className="font-semibold text-grayScale-800">
               {practiceToDelete?.title || "this practice"}
-            </span>
-            .
+            </span>{" "}
+            and all of its questions.
           </p>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setPracticeToDelete(null)} disabled={deleting}>

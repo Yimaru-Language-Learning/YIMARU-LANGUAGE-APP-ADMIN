@@ -48,6 +48,11 @@ import {
 import { cn } from "../../../../lib/utils";
 import { toast } from "sonner";
 import { QuestionAssociationField } from "./QuestionAssociationField";
+import { StimulusBlocksPanel } from "./StimulusBlocksPanel";
+import {
+  isIeltsSharedStimulusMode,
+  validatePracticeStimulusBlocks,
+} from "../../../../lib/practiceStimulusBlocks";
 
 function syncQuestionDisplayOrders<T extends { displayOrder?: number }>(
   questions: T[],
@@ -173,6 +178,7 @@ function createEmptyQuestionRow(id: string, displayOrder = 1, inheritAnchor?: {
     associatedQuestionId: inheritAnchor?.associatedQuestionId ?? null,
     associatedAnchorRowId: inheritAnchor?.associatedAnchorRowId ?? null,
     prerequisiteQuestionIds: [] as number[],
+    stimulusBlockKey: null as string | null,
     questionTypeDefinitionId: null as number | null,
     text: "",
     difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
@@ -318,37 +324,83 @@ export function QuestionsStep({
     setExpandedQuestionIds(new Set([id]));
   };
 
-  const renderTypeSpecificFields = (q: any, i: number, def: QuestionTypeDefinition) => {
+  const renderTypeSpecificFields = (
+    q: any,
+    i: number,
+    def: QuestionTypeDefinition,
+    options?: { responseOnly?: boolean },
+  ) => {
+    const responseOnly = Boolean(options?.responseOnly);
     if (definitionUsesDynamicPayload(def)) {
       return (
         <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
           <p className="text-xs leading-snug text-grayScale-600">
-            <span className="font-medium text-grayScale-800">Image, audio, and PDF</span> use upload or URL.{" "}
-            <span className="font-medium text-grayScale-800">Table</span> uses the visual table builder. Timer and
-            prep-time slots use seconds. Other slots use text or structured JSON where noted.
+            {responseOnly ? (
+              <>
+                Shared stimulus comes from the linked block. Edit{" "}
+                <span className="font-medium text-grayScale-800">response</span> fields below.
+                Use overrides only when this question needs different stimulus than the block.
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-grayScale-800">Image, audio, and PDF</span> use upload or URL.{" "}
+                <span className="font-medium text-grayScale-800">Table</span> uses the visual table builder. Timer and
+                prep-time slots use seconds. Other slots use text or structured JSON where noted.
+              </>
+            )}
           </p>
-          {def.stimulus_schema.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">Stimulus</p>
-              {def.stimulus_schema.map((row) => (
-                <div
-                  key={`stimulus-${row.id}`}
-                  className="rounded-lg border border-grayScale-200 bg-white p-2.5"
-                >
-                  <DynamicSchemaSlotField
-                    row={row}
-                    side="stimulus"
-                    value={q.dynamicFieldValues?.[`stimulus:${row.id}`] ?? ""}
-                    onChange={(next) =>
-                      setDynamicValue(i, `stimulus:${row.id}`, next)
-                    }
-                    allFieldValues={q.dynamicFieldValues}
-                    stimulusSchema={def.stimulus_schema}
-                    responseSchema={def.response_schema}
-                  />
-                </div>
-              ))}
-            </div>
+          {!responseOnly ? (
+            def.stimulus_schema.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                  Stimulus
+                </p>
+                {def.stimulus_schema.map((row) => (
+                  <div
+                    key={`stimulus-${row.id}`}
+                    className="rounded-lg border border-grayScale-200 bg-white p-2.5"
+                  >
+                    <DynamicSchemaSlotField
+                      row={row}
+                      side="stimulus"
+                      value={q.dynamicFieldValues?.[`stimulus:${row.id}`] ?? ""}
+                      onChange={(next) =>
+                        setDynamicValue(i, `stimulus:${row.id}`, next)
+                      }
+                      allFieldValues={q.dynamicFieldValues}
+                      stimulusSchema={def.stimulus_schema}
+                      responseSchema={def.response_schema}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null
+          ) : def.stimulus_schema.length > 0 ? (
+            <details className="rounded-lg border border-violet-100 bg-white/80 p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-violet-900">
+                Override block stimulus for this question (optional)
+              </summary>
+              <div className="mt-3 space-y-2">
+                {def.stimulus_schema.map((row) => (
+                  <div
+                    key={`stimulus-${row.id}`}
+                    className="rounded-lg border border-grayScale-200 bg-white p-2.5"
+                  >
+                    <DynamicSchemaSlotField
+                      row={row}
+                      side="stimulus"
+                      value={q.dynamicFieldValues?.[`stimulus:${row.id}`] ?? ""}
+                      onChange={(next) =>
+                        setDynamicValue(i, `stimulus:${row.id}`, next)
+                      }
+                      allFieldValues={q.dynamicFieldValues}
+                      stimulusSchema={def.stimulus_schema}
+                      responseSchema={def.response_schema}
+                    />
+                  </div>
+                ))}
+              </div>
+            </details>
           ) : null}
           {def.response_schema.length > 0 ? (
             <div className="space-y-2">
@@ -535,16 +587,40 @@ export function QuestionsStep({
     );
   };
 
+  const ieltsMode = isIeltsSharedStimulusMode(formData.authoringProfile);
+
   return (
     <div className="space-y-6">
       <div className="space-y-1 px-2">
         <h2 className="text-2xl font-bold text-grayScale-700">Questions</h2>
         <p className="text-grayScale-400 text-lg">
-          Choose a question type for each item, then fill in the fields that type requires.
+          {ieltsMode
+            ? "Create shared stimulus blocks, link questions to a block, then fill in each question's response fields."
+            : "Choose a question type for each item, then fill in the fields that type requires."}{" "}
           Group questions into sections so learners complete earlier blocks before later ones unlock.
           Collapse cards to compare and drag them into order.
         </p>
       </div>
+
+      {ieltsMode ? (
+        <div className="px-2">
+          <StimulusBlocksPanel
+            blocks={formData.stimulusBlocks ?? []}
+            questions={formData.questions}
+            onChange={(stimulusBlocks) => setFormData({ ...formData, stimulusBlocks })}
+            onClearQuestionBlockKeys={(blockKey) => {
+              setFormData({
+                ...formData,
+                questions: formData.questions.map((row: { stimulusBlockKey?: string | null }) =>
+                  row.stimulusBlockKey?.trim() === blockKey.trim()
+                    ? { ...row, stimulusBlockKey: null }
+                    : row,
+                ),
+              });
+            }}
+          />
+        </div>
+      ) : null}
 
       {formData.questions.length > 1 ? (
         <div className="flex flex-wrap items-center justify-end gap-2 px-2">
@@ -651,6 +727,11 @@ export function QuestionsStep({
                                 <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-semibold text-sky-800">
                                   {sectionBadgeLabel(q, formData.questions)}
                                 </span>
+                                {q.stimulusBlockKey ? (
+                                  <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[11px] font-semibold text-violet-800">
+                                    {q.stimulusBlockKey}
+                                  </span>
+                                ) : null}
                                 <span className="text-xs font-medium text-grayScale-500">
                                   {q.points ?? 1} pt{(q.points ?? 1) === 1 ? "" : "s"}
                                 </span>
@@ -721,6 +802,39 @@ export function QuestionsStep({
                     setFormData({ ...formData, questions: newQuestions });
                   }}
                 />
+
+                {ieltsMode ? (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
+                      Shared stimulus block
+                    </label>
+                    <select
+                      className="h-11 w-full max-w-xl rounded-lg border border-grayScale-200 bg-white px-3 text-sm font-medium text-grayScale-800"
+                      value={q.stimulusBlockKey ?? ""}
+                      onChange={(e) => {
+                        const newQuestions = [...formData.questions];
+                        newQuestions[i] = {
+                          ...newQuestions[i],
+                          stimulusBlockKey: e.target.value ? e.target.value : null,
+                        };
+                        setFormData({ ...formData, questions: newQuestions });
+                      }}
+                    >
+                      <option value="">None (standalone)</option>
+                      {(formData.stimulusBlocks ?? [])
+                        .slice()
+                        .sort(
+                          (a: { displayOrder?: number }, b: { displayOrder?: number }) =>
+                            (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+                        )
+                        .map((block: { blockKey: string }) => (
+                          <option key={block.blockKey} value={block.blockKey}>
+                            {block.blockKey}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                ) : null}
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -828,7 +942,9 @@ export function QuestionsStep({
                   </p>
                 ) : null}
 
-                            {def ? renderTypeSpecificFields(q, i, def) : null}
+                            {def ? renderTypeSpecificFields(q, i, def, {
+                              responseOnly: ieltsMode && Boolean(q.stimulusBlockKey),
+                            }) : null}
                           </div>
                         </QuestionCollapsibleBody>
                       </div>
@@ -918,6 +1034,7 @@ export function QuestionsStep({
               displayOrder: row.displayOrder,
               associatedQuestionId: row.associatedQuestionId ?? null,
               associatedAnchorRowId: row.associatedAnchorRowId ?? null,
+              stimulusBlockKey: row.stimulusBlockKey ?? null,
               mcqOptions: (row.mcqOptions ?? []).map(
                 (o: { text?: string; isCorrect?: boolean }) => ({
                   option_text: String(o.text ?? ""),
@@ -940,10 +1057,21 @@ export function QuestionsStep({
               toast.error("Check question sections", { description: associationErr });
               return;
             }
-            const msg = validateLearnEnglishQuestionsWithDefinitions(
-              mapped,
-              typeDefinitions,
-            );
+            const blockErr = isIeltsSharedStimulusMode(formData.authoringProfile)
+              ? validatePracticeStimulusBlocks(
+                  formData.authoringProfile ?? "STANDALONE",
+                  formData.stimulusBlocks ?? [],
+                  mapped,
+                  typeDefinitions,
+                )
+              : null;
+            if (blockErr) {
+              toast.error("Check stimulus blocks", { description: blockErr });
+              return;
+            }
+            const msg = isIeltsSharedStimulusMode(formData.authoringProfile)
+              ? null
+              : validateLearnEnglishQuestionsWithDefinitions(mapped, typeDefinitions);
             if (msg) {
               toast.error("Check your questions", { description: msg });
               return;

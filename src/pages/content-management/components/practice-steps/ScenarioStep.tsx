@@ -105,6 +105,54 @@ export function ScenarioStep({
           />
           <span>Shuffle questions in the set</span>
         </label>
+
+        <div className="rounded-xl border border-sky-100 bg-sky-50/50 px-4 py-4">
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-grayScale-800">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-grayScale-300 text-sky-600 focus:ring-sky-500"
+              checked={formData.authoringProfile === "IELTS_SHARED_STIMULUS"}
+              onChange={(e) => {
+                const nextProfile = e.target.checked
+                  ? "IELTS_SHARED_STIMULUS"
+                  : "STANDALONE";
+                if (
+                  !e.target.checked &&
+                  formData.authoringProfile === "IELTS_SHARED_STIMULUS" &&
+                  (formData.stimulusBlocks?.length ?? 0) > 0
+                ) {
+                  const proceed = window.confirm(
+                    "Switching off IELTS shared stimulus mode will remove stimulus blocks on save. Continue?",
+                  );
+                  if (!proceed) return;
+                }
+                setFormData({
+                  ...formData,
+                  authoringProfile: nextProfile,
+                  ...(nextProfile === "STANDALONE"
+                    ? {
+                        stimulusBlocks: [],
+                        questions: (formData.questions ?? []).map(
+                          (q: { stimulusBlockKey?: string | null }) => ({
+                            ...q,
+                            stimulusBlockKey: null,
+                          }),
+                        ),
+                      }
+                    : {}),
+                });
+              }}
+            />
+            <span>
+              <span className="font-semibold text-sky-900">
+                Use shared stimulus sections (IELTS mode)
+              </span>
+              <span className="mt-1 block text-xs leading-relaxed text-sky-900/80">
+                Authors define shared audio, passages, or instructions per section.
+              </span>
+            </span>
+          </label>
+        </div>
       </Card>
 
       <Card className="p-8 space-y-6 border-grayScale-200 rounded-2xl bg-white">

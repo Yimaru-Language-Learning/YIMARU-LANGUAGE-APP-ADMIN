@@ -19,6 +19,11 @@ import {
   validateLearnEnglishQuestionsWithDefinitions,
 } from "../../lib/learnEnglishPracticePublish";
 import { executePracticeCreation } from "../../lib/practiceCreationOrchestrator";
+import { syncStimulusBlocksAfterCreate } from "../../lib/practiceEditOrchestrator";
+import {
+  isIeltsSharedStimulusMode,
+  validatePracticeStimulusBlocks,
+} from "../../lib/practiceStimulusBlocks";
 import {
   buildCreatePracticeParentsPayload,
   dedupeParents,
@@ -226,6 +231,8 @@ export function AddPracticeFlow() {
     storyImageUrl: "",
     shuffleQuestions: false,
     tips: "",
+    authoringProfile: "STANDALONE" as const,
+    stimulusBlocks: [] as import("../../lib/practiceStimulusBlocks").PracticeFormStimulusBlock[],
     parents: [] as { parent_kind: PracticeParentKind; parent_id: number }[],
     questions: [
       {
@@ -235,6 +242,7 @@ export function AddPracticeFlow() {
         associatedQuestionId: null as number | null,
         associatedAnchorRowId: null as string | null,
         prerequisiteQuestionIds: [] as number[],
+        stimulusBlockKey: null as string | null,
         questionTypeDefinitionId: null as number | null,
         text: "",
         difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
@@ -389,6 +397,7 @@ export function AddPracticeFlow() {
             : index + 1,
         associatedQuestionId: q.associatedQuestionId ?? null,
         associatedAnchorRowId: q.associatedAnchorRowId ?? null,
+        stimulusBlockKey: q.stimulusBlockKey ?? null,
         dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
         mcqOptions: (q.mcqOptions ?? []).map(
           (o: { text?: string; isCorrect?: boolean }) => ({
@@ -400,10 +409,14 @@ export function AddPracticeFlow() {
         shortAnswers: (q.shortAnswers ?? []).map((s: string) => String(s)),
       }));
 
-    const validationMsg = validateLearnEnglishQuestionsWithDefinitions(
-      mappedQuestions,
-      typeDefinitions,
-    );
+    const validationMsg = isIeltsSharedStimulusMode(formData.authoringProfile)
+      ? validatePracticeStimulusBlocks(
+          formData.authoringProfile,
+          formData.stimulusBlocks,
+          mappedQuestions,
+          typeDefinitions,
+        )
+      : validateLearnEnglishQuestionsWithDefinitions(mappedQuestions, typeDefinitions);
     if (validationMsg) {
       toast.error("Check your questions", { description: validationMsg });
       return;
@@ -438,7 +451,7 @@ export function AddPracticeFlow() {
 
     setSubmitting(true);
     try {
-      await executePracticeCreation({
+      const { practiceId } = await executePracticeCreation({
         parents: createParents,
         parentKind: parentContext?.kind,
         parentId: parentContext?.id,
@@ -471,6 +484,25 @@ export function AddPracticeFlow() {
         questions: mappedQuestions,
         definitions: typeDefinitions,
       });
+      if (isIeltsSharedStimulusMode(formData.authoringProfile)) {
+        await syncStimulusBlocksAfterCreate({
+          practiceId,
+          isExamPrep,
+          status,
+          formData,
+          personaId,
+          preservedQuestionSet: {
+            timeLimitMinutes: null,
+            passingScore: null,
+            introVideoUrl: "",
+            status,
+          },
+          questions: mappedQuestions,
+          definitions: typeDefinitions,
+          isLearnEnglishLessonPractice,
+          lessonDefaultTitle,
+        });
+      }
       toast.success("Practice created successfully");
       setIsPublished(true);
     } catch (e) {
@@ -531,6 +563,9 @@ export function AddPracticeFlow() {
                 storyImageUrl: "",
                 shuffleQuestions: false,
                 tips: "",
+                authoringProfile: "STANDALONE",
+                stimulusBlocks: [],
+                parents: [],
                 questions: [
                   {
                     id: "q1",
@@ -539,6 +574,7 @@ export function AddPracticeFlow() {
                     associatedQuestionId: null as number | null,
                     associatedAnchorRowId: null as string | null,
                     prerequisiteQuestionIds: [] as number[],
+                    stimulusBlockKey: null as string | null,
                     questionTypeDefinitionId:
                       typeDefinitions[0]?.id ?? (null as number | null),
                     text: "",

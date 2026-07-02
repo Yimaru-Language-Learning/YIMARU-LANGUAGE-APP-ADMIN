@@ -762,16 +762,27 @@ export interface UpdatePracticeParentsResponse {
   metadata: unknown | null
 }
 
+export type AuthoringProfile = "STANDALONE" | "IELTS_SHARED_STIMULUS"
+
+export interface PracticeStimulusBlock {
+  id?: number
+  block_key: string
+  display_order: number
+  stimulus: import("./questionTypeDefinition.types").DynamicElementInstance[]
+}
+
 /** Question row in GET/PUT /practices/:id/full and /exam-prep/practices/:id/full. */
 export interface PracticeFullQuestionItem {
   id?: number | null
   display_order: number
   associated_question_id?: number | null
   prerequisite_question_ids?: number[]
+  stimulus_block_key?: string | null
   question_text?: string
   question_type: string
   question_type_definition_id?: number | null
   dynamic_payload?: DynamicQuestionPayload | null
+  effective_dynamic_payload?: DynamicQuestionPayload | null
   difficulty_level?: string
   points?: number
   status?: PracticePublishStatus | string
@@ -810,6 +821,7 @@ export interface PracticeFullPractice {
   story_image?: string
   persona_id?: number | null
   question_set_id: number
+  authoring_profile?: AuthoringProfile | string | null
   publish_status?: PracticePublishStatus | string | null
   quick_tips?: string
   parents?: PracticeParent[]
@@ -825,6 +837,7 @@ export interface PracticeFullPractice {
 export interface PracticeFullData {
   practice: PracticeFullPractice
   question_set: PracticeFullQuestionSet
+  stimulus_blocks?: PracticeStimulusBlock[]
   questions: PracticeFullQuestionItem[]
 }
 
@@ -836,6 +849,12 @@ export interface GetPracticeFullResponse {
   metadata: unknown | null
 }
 
+export interface UpdatePracticeFullStimulusBlockItem {
+  block_key: string
+  display_order?: number
+  stimulus: import("./questionTypeDefinition.types").DynamicElementInstance[]
+}
+
 export interface UpdatePracticeFullRequest {
   practice: {
     title: string
@@ -844,6 +863,7 @@ export interface UpdatePracticeFullRequest {
     persona_id: number
     quick_tips: string
     publish_status: PracticePublishStatus
+    authoring_profile?: AuthoringProfile
   }
   question_set: {
     title: string
@@ -854,6 +874,7 @@ export interface UpdatePracticeFullRequest {
     status: PracticePublishStatus
     intro_video_url?: string | null
   }
+  stimulus_blocks?: UpdatePracticeFullStimulusBlockItem[]
   questions: PracticeFullQuestionItem[]
 }
 

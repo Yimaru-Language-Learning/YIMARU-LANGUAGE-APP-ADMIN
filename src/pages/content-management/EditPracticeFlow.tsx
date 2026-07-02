@@ -22,6 +22,10 @@ import {
 } from "../../lib/learnEnglishPracticePublish";
 import { executePracticeUpdate } from "../../lib/practiceEditOrchestrator";
 import {
+  isIeltsSharedStimulusMode,
+  validatePracticeStimulusBlocks,
+} from "../../lib/practiceStimulusBlocks";
+import {
   dedupeParents,
   formatPracticeParentsSummary,
   practiceParentsEqual,
@@ -245,12 +249,17 @@ export function EditPracticeFlow() {
     storyImageUrl: "",
     shuffleQuestions: false,
     tips: "",
+    authoringProfile: "STANDALONE" as const,
+    stimulusBlocks: [] as import("../../lib/practiceStimulusBlocks").PracticeFormStimulusBlock[],
     parents: [] as PracticeParent[],
     questions: [
       {
         id: "q1",
         displayOrder: 1,
         serverQuestionId: null as number | null,
+        associatedQuestionId: null as number | null,
+        associatedAnchorRowId: null as string | null,
+        stimulusBlockKey: null as string | null,
         questionTypeDefinitionId: null as number | null,
         text: "",
         difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
@@ -374,6 +383,7 @@ export function EditPracticeFlow() {
       serverQuestionId: q.serverQuestionId ?? null,
       associatedQuestionId: q.associatedQuestionId ?? null,
       associatedAnchorRowId: q.associatedAnchorRowId ?? null,
+      stimulusBlockKey: q.stimulusBlockKey ?? null,
       dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
       mcqOptions: (q.mcqOptions ?? []).map(
         (o: { text?: string; isCorrect?: boolean }) => ({
@@ -385,10 +395,14 @@ export function EditPracticeFlow() {
       shortAnswers: (q.shortAnswers ?? []).map((s: string) => String(s)),
     }));
 
-    const validationMsg = validateLearnEnglishQuestionsWithDefinitions(
-      mappedQuestions,
-      typeDefinitions,
-    );
+    const validationMsg = isIeltsSharedStimulusMode(formData.authoringProfile)
+      ? validatePracticeStimulusBlocks(
+          formData.authoringProfile,
+          formData.stimulusBlocks,
+          mappedQuestions,
+          typeDefinitions,
+        )
+      : validateLearnEnglishQuestionsWithDefinitions(mappedQuestions, typeDefinitions);
     if (validationMsg) {
       toast.error("Check your questions", { description: validationMsg });
       return;
@@ -542,6 +556,11 @@ export function EditPracticeFlow() {
               isExamPrepParents={isExamPrep}
               parentsOptional={isExamPrep}
               parentsCollapsedDefault={isExamPrep}
+              practiceId={practiceId}
+              onParentsUnlinked={(parents) => {
+                setFormData((fd) => ({ ...fd, parents }))
+                initialParentsRef.current = parents
+              }}
             />
           );
         case 2:

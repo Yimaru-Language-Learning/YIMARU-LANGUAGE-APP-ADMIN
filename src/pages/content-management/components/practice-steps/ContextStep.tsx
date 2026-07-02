@@ -6,7 +6,7 @@ import { Input } from "../../../../components/ui/input";
 import { Textarea } from "../../../../components/ui/textarea";
 import { toast } from "sonner";
 import { uploadImageFile } from "../../../../api/files.api";
-import type { PracticeParent } from "../../../../types/course.types";
+import type { PracticeParent, AuthoringProfile } from "../../../../types/course.types";
 import { PracticeParentsField } from "./PracticeParentsField";
 import { formatPracticeParentsSummary } from "../../../../lib/practiceParents";
 
@@ -17,6 +17,7 @@ interface ContextStepProps {
     storyImageUrl?: string;
     shuffleQuestions?: boolean;
     tips?: string;
+    authoringProfile?: AuthoringProfile;
     parents?: PracticeParent[];
   };
   setFormData: (data: ContextStepProps["formData"]) => void;
@@ -34,6 +35,9 @@ interface ContextStepProps {
   /** Use exam-prep parent kinds in the locations editor. */
   isExamPrepParents?: boolean;
   parentsCollapsedDefault?: boolean;
+  /** When editing an existing practice, enable per-parent DELETE unlink. */
+  practiceId?: number;
+  onParentsUnlinked?: (parents: PracticeParent[]) => void;
 }
 
 /**
@@ -52,6 +56,8 @@ export function ContextStep({
   parentsOptional = false,
   parentsCollapsedDefault = false,
   isExamPrepParents = false,
+  practiceId,
+  onParentsUnlinked,
 }: ContextStepProps) {
   const storyFileRef = useRef<HTMLInputElement>(null);
   const [uploadingStory, setUploadingStory] = useState(false);
@@ -169,6 +175,8 @@ export function ContextStep({
                   lockedParentKey={lockedParentKey}
                   optional
                   isExamPrep={isExamPrepParents}
+                  practiceId={practiceId}
+                  onUnlinked={onParentsUnlinked}
                   onChange={(parents) => setFormData({ ...formData, parents })}
                 />
               ) : null}
@@ -178,6 +186,8 @@ export function ContextStep({
               parents={formData.parents ?? []}
               lockedParentKey={lockedParentKey}
               isExamPrep={isExamPrepParents}
+              practiceId={practiceId}
+              onUnlinked={onParentsUnlinked}
               onChange={(parents) => setFormData({ ...formData, parents })}
             />
           )
@@ -283,6 +293,58 @@ export function ContextStep({
           />
           <span>Shuffle questions in the set</span>
         </label>
+
+        <div className="rounded-xl border border-sky-100 bg-sky-50/50 px-4 py-4">
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-grayScale-800">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-grayScale-300 text-sky-600 focus:ring-sky-500"
+              checked={formData.authoringProfile === "IELTS_SHARED_STIMULUS"}
+              onChange={(e) => {
+                const nextProfile: AuthoringProfile = e.target.checked
+                  ? "IELTS_SHARED_STIMULUS"
+                  : "STANDALONE";
+                if (
+                  !e.target.checked &&
+                  formData.authoringProfile === "IELTS_SHARED_STIMULUS"
+                ) {
+                  const hasBlocks =
+                    Array.isArray((formData as { stimulusBlocks?: unknown[] }).stimulusBlocks) &&
+                    ((formData as { stimulusBlocks?: unknown[] }).stimulusBlocks?.length ?? 0) > 0;
+                  if (hasBlocks) {
+                    const proceed = window.confirm(
+                      "Switching off IELTS shared stimulus mode will remove stimulus blocks on save. Continue?",
+                    );
+                    if (!proceed) return;
+                  }
+                }
+                setFormData({
+                  ...formData,
+                  authoringProfile: nextProfile,
+                  ...(nextProfile === "STANDALONE"
+                    ? {
+                        stimulusBlocks: [],
+                        questions: Array.isArray((formData as { questions?: { stimulusBlockKey?: string | null }[] }).questions)
+                          ? (formData as { questions: { stimulusBlockKey?: string | null }[] }).questions.map(
+                              (q) => ({ ...q, stimulusBlockKey: null }),
+                            )
+                          : undefined,
+                      }
+                    : {}),
+                });
+              }}
+            />
+            <span>
+              <span className="font-semibold text-sky-900">
+                Use shared stimulus sections (IELTS mode)
+              </span>
+              <span className="mt-1 block text-xs leading-relaxed text-sky-900/80">
+                Authors define shared audio, passages, or instructions per section. Questions
+                link to a block and edit response fields only.
+              </span>
+            </span>
+          </label>
+        </div>
       </div>
 
       <div className="flex items-center justify-between border-t border-grayScale-100 bg-[#F8FAFC] p-4 px-12">

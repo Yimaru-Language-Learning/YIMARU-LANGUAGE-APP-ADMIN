@@ -12,7 +12,13 @@ import type {
   ValidateQuestionTypeDefinitionResult,
 } from "../types/questionTypeDefinition.types"
 import { normalizeGroupIds } from "../lib/questionTypeGroupIds"
-import { normalizePracticeParents, parentsFromPractice } from "../lib/practiceParents"
+import {
+  dedupeParents,
+  normalizePracticeParent,
+  normalizePracticeParents,
+  parentsFromPractice,
+} from "../lib/practiceParents"
+import type { PracticeParent } from "../types/course.types"
 
 interface ApiEnvelope<T> {
   message?: string
@@ -436,6 +442,15 @@ export async function deleteQuestionTypeDefinition(id: number) {
   return http.delete<ApiEnvelope<unknown>>(`/questions/type-definitions/${id}`)
 }
 
+function normalizeParentsArray(raw: unknown): PracticeParent[] {
+  if (!Array.isArray(raw)) return []
+  return dedupeParents(
+    raw
+      .map((entry) => normalizePracticeParent(entry))
+      .filter((entry): entry is PracticeParent => entry != null),
+  )
+}
+
 function normalizePracticeFromApi(row: unknown): QuestionTypeDefinitionPractice | null {
   if (!row || typeof row !== "object") return null
   const o = row as Record<string, unknown>
@@ -473,14 +488,36 @@ function normalizePracticeFromApi(row: unknown): QuestionTypeDefinitionPractice 
   const course_id = Number(o.course_id ?? o.CourseId ?? o.courseId)
   const module_id = Number(o.module_id ?? o.ModuleId ?? o.moduleId)
   const lesson_id = Number(o.lesson_id ?? o.LessonId ?? o.lessonId)
-  const parents = parentsFromPractice({
-    parents: normalizePracticeParents(row),
-    parent_kind,
-    parent_id,
-  })
+  const practiceKindRaw = asStr(o.practice_kind ?? o.PracticeKind ?? o.practiceKind ?? "LMS")
+  const isExamPrep = practiceKindRaw.toUpperCase() === "EXAM_PREP"
+
+  const examPrepParentsRaw = o.exam_prep_parents ?? o.ExamPrepParents ?? o.examPrepParents
+  const examPrepParentsList = normalizeParentsArray(examPrepParentsRaw)
+  const exam_prep_parents = examPrepParentsList.length > 0 ? examPrepParentsList : null
+
+  const exam_prep_lesson_id_raw = Number(
+    o.exam_prep_lesson_id ?? o.ExamPrepLessonId ?? o.examPrepLessonId,
+  )
+  const exam_prep_lesson_id =
+    Number.isFinite(exam_prep_lesson_id_raw) && exam_prep_lesson_id_raw > 0
+      ? exam_prep_lesson_id_raw
+      : undefined
+
+  const lmsParentsList = isExamPrep
+    ? []
+    : parentsFromPractice({
+        parents: normalizePracticeParents(row),
+        parent_kind,
+        parent_id,
+      })
+  const parents = isExamPrep ? null : lmsParentsList.length > 0 ? lmsParentsList : null
+
+  const persona_id_raw = Number(o.persona_id ?? o.PersonaId ?? o.personaId)
+  const persona_id =
+    Number.isFinite(persona_id_raw) && persona_id_raw > 0 ? persona_id_raw : undefined
 
   return {
-    practice_kind: asStr(o.practice_kind ?? o.PracticeKind ?? o.practiceKind ?? "LMS"),
+    practice_kind: isExamPrep ? "EXAM_PREP" : "LMS",
     practice_id,
     question_set_id,
     title: asStr(o.title ?? o.Title) || `Practice #${practice_id}`,
@@ -504,8 +541,11 @@ function normalizePracticeFromApi(row: unknown): QuestionTypeDefinitionPractice 
           : undefined,
     publish_status: asStr(o.publish_status ?? o.PublishStatus ?? o.publishStatus) || undefined,
     parents,
-    parent_kind: parents[0]?.parent_kind,
-    parent_id: parents[0]?.parent_id,
+    exam_prep_parents,
+    exam_prep_lesson_id,
+    parent_kind: (isExamPrep ? exam_prep_parents?.[0] : parents?.[0])?.parent_kind,
+    parent_id: (isExamPrep ? exam_prep_parents?.[0] : parents?.[0])?.parent_id,
+    persona_id,
     program_id: Number.isFinite(program_id) && program_id > 0 ? program_id : undefined,
     course_id: Number.isFinite(course_id) && course_id > 0 ? course_id : undefined,
     module_id: Number.isFinite(module_id) && module_id > 0 ? module_id : undefined,
@@ -592,7 +632,7 @@ function parsePracticesPage(
 
 /**
  * GET /questions/type-definitions/:id/practices
- * Lists LMS practices that contain questions using this definition.
+ * Lists LMS and exam-prep practices whose question set contains matching questions.
  */
 export async function getQuestionTypeDefinitionPractices(
   definitionId: number,

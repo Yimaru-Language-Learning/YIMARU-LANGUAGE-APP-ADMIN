@@ -15,10 +15,17 @@ import {
 import type {
   ContentAccessTier,
   ParentContextPractice,
+  PracticeParent,
   PracticePublishStatus,
   TopLevelModuleLessonItem,
 } from "../../types/course.types";
 import { unwrapPracticesList } from "../../lib/parentContextPractice";
+import { parentsFromPractice } from "../../lib/practiceParents";
+import {
+  isPracticeParentUnlinkNotLinkedError,
+  mapPracticeParentUnlinkError,
+  unlinkPracticeFromParent,
+} from "../../lib/practiceParentUnlink";
 import { Button } from "../../components/ui/button";
 import { PracticeActionButton } from "./components/PracticeActionButton";
 import { PracticeActionChoiceDialog } from "./components/PracticeActionChoiceDialog";
@@ -123,6 +130,9 @@ export function ModuleDetailPage() {
   const [publishStatusPracticeId, setPublishStatusPracticeId] = useState<
     number | null
   >(null);
+  const [practiceToUnlink, setPracticeToUnlink] =
+    useState<ParentContextPractice | null>(null);
+  const [unlinkingPractice, setUnlinkingPractice] = useState(false);
   const [loadedModuleName, setLoadedModuleName] = useState<string | null>(null);
   const [loadedModuleDescription, setLoadedModuleDescription] = useState<
     string | null
@@ -326,13 +336,43 @@ export function ModuleDetailPage() {
           : "Practice saved as draft",
       );
     } catch (e: unknown) {
-      console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update practice status";
-      toast.error(msg);
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to update practice status");
     } finally {
       setPublishStatusPracticeId(null);
+    }
+  };
+
+  const moduleParent = useMemo((): PracticeParent | null => {
+    const mid = Number(moduleId);
+    if (!Number.isFinite(mid) || mid < 1) return null;
+    return { parent_kind: "MODULE", parent_id: mid };
+  }, [moduleId]);
+
+  const confirmUnlinkPractice = async () => {
+    if (!practiceToUnlink || !moduleParent) return;
+    setUnlinkingPractice(true);
+    try {
+      await unlinkPracticeFromParent({
+        practiceId: practiceToUnlink.id,
+        parent: moduleParent,
+        isExamPrep: false,
+      });
+      toast.success(`Practice removed from ${displayModuleName}`);
+      setPracticeToUnlink(null);
+      await loadModulePractices();
+    } catch (e) {
+      if (isPracticeParentUnlinkNotLinkedError(e)) {
+        toast.info("This location was already removed.");
+        setPracticeToUnlink(null);
+        await loadModulePractices();
+        return;
+      }
+      toast.error("Could not remove from module", {
+        description: mapPracticeParentUnlinkError(e),
+      });
+    } finally {
+      setUnlinkingPractice(false);
     }
   };
 
@@ -694,6 +734,7 @@ export function ModuleDetailPage() {
                     onSaveAsDraft={() =>
                       void handlePracticePublishStatus(practice.id, "DRAFT")
                     }
+                    onUnlink={() => setPracticeToUnlink(practice)}
                   />
                 ))}
               </div>
@@ -887,6 +928,55 @@ export function ModuleDetailPage() {
           </div>
         </div>
       )}
+
+      {practiceToUnlink && moduleParent ? (
+        <Dialog
+          open={practiceToUnlink != null}
+          onOpenChange={(open) => {
+            if (!open && !unlinkingPractice) setPracticeToUnlink(null);
+          }}
+        >
+          <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>Remove from this module?</DialogTitle>
+              <DialogDescription>
+                <span className="font-semibold text-grayScale-800">
+                  {practiceToUnlink.title}
+                </span>{" "}
+                will be detached from{" "}
+                <span className="font-semibold text-grayScale-800">
+                  {displayModuleName}
+                </span>
+                .
+                {parentsFromPractice(practiceToUnlink).filter(
+                  (p) =>
+                    !(
+                      p.parent_kind === moduleParent.parent_kind &&
+                      p.parent_id === moduleParent.parent_id
+                    ),
+                ).length === 0
+                  ? " The practice will be unlinked until re-attached."
+                  : " Other locations are unaffected."}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setPracticeToUnlink(null)}
+                disabled={unlinkingPractice}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void confirmUnlinkPractice()}
+                disabled={unlinkingPractice}
+              >
+                {unlinkingPractice ? "Removing…" : "Remove from module"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       {lessonPracticeChoice && lessonPracticeChoicePaths ? (
         <PracticeActionChoiceDialog

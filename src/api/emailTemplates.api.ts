@@ -12,9 +12,16 @@ import type {
   UpdateEmailTemplateResponse,
 } from "../types/emailTemplate.types"
 
-/** GET /admin/email-templates — list all email templates. */
-export const getEmailTemplates = () =>
-  http.get<GetEmailTemplatesResponse>("/admin/email-templates")
+export interface GetEmailTemplatesParams {
+  status?: string
+  limit?: number
+  offset?: number
+  query?: string
+}
+
+/** GET /admin/email-templates — list email templates (paginated). */
+export const getEmailTemplates = (params?: GetEmailTemplatesParams) =>
+  http.get<GetEmailTemplatesResponse>("/admin/email-templates", { params })
 
 /** GET /admin/email-templates/slug/:slug — single template by slug. */
 export const getEmailTemplateBySlug = (slug: string) =>
@@ -23,28 +30,55 @@ export const getEmailTemplateBySlug = (slug: string) =>
   )
 
 function normalizeEmailTemplate(row: unknown): EmailTemplate | null {
-  if (!row || typeof row !== "object" || !("slug" in row)) return null
-  const t = row as EmailTemplate
+  if (!row || typeof row !== "object") return null
+  const o = row as Record<string, unknown>
+  const slug = String(o.slug ?? o.Slug ?? "").trim()
+  if (!slug) return null
+
+  const id = Number(o.id ?? o.ID ?? o.Id)
+  const variablesRaw = o.variables ?? o.Variables
+  const variables = Array.isArray(variablesRaw)
+    ? variablesRaw.map((v) => String(v).trim()).filter(Boolean)
+    : []
+
   return {
-    ...t,
-    variables: Array.isArray(t.variables) ? t.variables : [],
-    status: t.status ?? "ACTIVE",
-    updated_at: t.updated_at ?? t.created_at ?? "",
+    id: Number.isFinite(id) && id > 0 ? id : 0,
+    slug,
+    name: String(o.name ?? o.Name ?? slug),
+    subject: String(o.subject ?? o.Subject ?? ""),
+    body_text: String(o.body_text ?? o.BodyText ?? o.bodyText ?? ""),
+    body_html: String(o.body_html ?? o.BodyHtml ?? o.bodyHTML ?? ""),
+    variables,
+    is_system: Boolean(o.is_system ?? o.IsSystem ?? false),
+    status: String(o.status ?? o.Status ?? "ACTIVE"),
+    created_at: String(o.created_at ?? o.CreatedAt ?? ""),
+    updated_at: String(o.updated_at ?? o.UpdatedAt ?? o.created_at ?? o.CreatedAt ?? ""),
   }
+}
+
+function extractTemplateRows(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data
+  if (!data || typeof data !== "object") return []
+  const record = data as Record<string, unknown>
+  const candidates = [
+    record.templates,
+    record.Templates,
+    record.email_templates,
+    record.EmailTemplates,
+  ]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate
+  }
+  return []
 }
 
 export function parseEmailTemplatesResponse(
   response: Awaited<ReturnType<typeof getEmailTemplates>>,
 ): EmailTemplate[] {
   const data = response.data?.data
-  const rows = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.templates)
-      ? data.templates
-      : []
-  return rows
+  return extractTemplateRows(data)
     .map(normalizeEmailTemplate)
-    .filter((row): row is EmailTemplate => row != null)
+    .filter((row): row is EmailTemplate => row != null && row.id > 0)
 }
 
 /** PUT /admin/email-templates/:id — update subject and bodies. */

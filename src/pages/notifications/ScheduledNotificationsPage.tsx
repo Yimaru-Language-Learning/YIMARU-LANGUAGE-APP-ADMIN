@@ -263,6 +263,11 @@ export function ScheduledNotificationsPage() {
                             {job.title || "—"}
                           </p>
                           <p className="truncate text-xs text-grayScale-400">{job.message}</p>
+                          {job.channel === "email" && job.email_template_slug ? (
+                            <p className="mt-0.5 truncate text-[10px] text-grayScale-400">
+                              Template: {job.email_template_slug}
+                            </p>
+                          ) : null}
                         </TableCell>
                         <TableCell className="text-xs text-grayScale-500">
                           {targetingSummary(job)}

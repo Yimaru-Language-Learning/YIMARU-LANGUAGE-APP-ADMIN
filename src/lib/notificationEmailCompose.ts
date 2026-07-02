@@ -1,6 +1,9 @@
+import { getEmailTemplates, parseEmailTemplatesResponse } from "../api/emailTemplates.api"
 import type { EmailTemplate } from "../types/emailTemplate.types"
 
-/** Reserved for automated learner/team flows — not for admin outbound campaigns. */
+const TEMPLATE_LIST_PAGE_SIZE = 100
+
+/** Slugs reserved for automated learner/team flows — shown with a label in the compose UI. */
 export const AUTOMATED_EMAIL_TEMPLATE_SLUGS = new Set([
   "otp",
   "invitation",
@@ -8,14 +11,71 @@ export const AUTOMATED_EMAIL_TEMPLATE_SLUGS = new Set([
   "welcome",
 ])
 
-export function isOutboundEmailTemplate(template: EmailTemplate): boolean {
-  if (String(template.status ?? "").toUpperCase() !== "ACTIVE") return false
-  if (AUTOMATED_EMAIL_TEMPLATE_SLUGS.has(template.slug)) return false
-  return template.slug === "custom_message" || !template.is_system
+export function isAutomatedEmailTemplateSlug(slug: string): boolean {
+  return AUTOMATED_EMAIL_TEMPLATE_SLUGS.has(slug)
 }
 
+/** ACTIVE templates available in bulk-email compose. */
+export function isComposeEmailTemplate(template: EmailTemplate): boolean {
+  return String(template.status ?? "").toUpperCase() === "ACTIVE"
+}
+
+/** @deprecated Use isComposeEmailTemplate */
+export function isOutboundEmailTemplate(template: EmailTemplate): boolean {
+  return isComposeEmailTemplate(template)
+}
+
+export function filterComposeEmailTemplates(templates: EmailTemplate[]): EmailTemplate[] {
+  return templates.filter(isComposeEmailTemplate)
+}
+
+/** @deprecated Use filterComposeEmailTemplates */
 export function filterOutboundEmailTemplates(templates: EmailTemplate[]): EmailTemplate[] {
-  return templates.filter(isOutboundEmailTemplate)
+  return filterComposeEmailTemplates(templates)
+}
+
+function sortOutboundEmailTemplates(templates: EmailTemplate[]): EmailTemplate[] {
+  return [...templates].sort((a, b) => {
+    if (a.slug === "custom_message") return -1
+    if (b.slug === "custom_message") return 1
+    return a.name.localeCompare(b.name)
+  })
+}
+
+/** Loads all ACTIVE email templates for bulk-email compose. */
+export async function fetchActiveOutboundEmailTemplates(): Promise<EmailTemplate[]> {
+  const all: EmailTemplate[] = []
+  let offset = 0
+
+  while (true) {
+    const response = await getEmailTemplates({
+      limit: TEMPLATE_LIST_PAGE_SIZE,
+      offset,
+    })
+    const rawPage = parseEmailTemplatesResponse(response)
+    if (rawPage.length === 0) break
+
+    all.push(...rawPage)
+
+    const data = response.data?.data
+    const totalRaw =
+      data && typeof data === "object" && !Array.isArray(data)
+        ? (data as Record<string, unknown>).total_count ??
+          (data as Record<string, unknown>).TotalCount
+        : undefined
+    const total = totalRaw != null ? Number(totalRaw) : undefined
+
+    offset += rawPage.length
+    if (total != null && Number.isFinite(total) && offset >= total) break
+    if (rawPage.length < TEMPLATE_LIST_PAGE_SIZE) break
+  }
+
+  return sortOutboundEmailTemplates(filterComposeEmailTemplates(all))
+}
+
+export function defaultOutboundEmailTemplateSlug(templates: EmailTemplate[]): string {
+  const custom = templates.find((t) => t.slug === "custom_message")
+  return custom?.slug ?? templates[0]?.slug ?? ""
 }
 
 export function isCustomMessageTemplate(slug: string): boolean {

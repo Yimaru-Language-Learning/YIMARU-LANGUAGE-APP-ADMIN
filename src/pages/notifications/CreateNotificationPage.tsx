@@ -13,10 +13,6 @@ import { NotificationSchedulePicker } from "../../components/notifications/Notif
 import { EmailComposeFields } from "../../components/notifications/EmailComposeFields"
 import { cn } from "../../lib/utils"
 import {
-  getEmailTemplates,
-  parseEmailTemplatesResponse,
-} from "../../api/emailTemplates.api"
-import {
   sendBulkEmail,
   sendBulkInApp,
   sendBulkPush,
@@ -24,7 +20,7 @@ import {
 } from "../../api/notifications.api"
 import {
   appendBulkEmailContentToForm,
-  filterOutboundEmailTemplates,
+  fetchActiveOutboundEmailTemplates,
   validateEmailComposeInput,
 } from "../../lib/notificationEmailCompose"
 import {
@@ -102,11 +98,21 @@ function buildContentPreview(
   title: string,
   message: string,
   emailTemplateSlug: string,
+  htmlBody: string,
 ): { titlePreview: string; messagePreview: string } {
   if (channel === "email" && emailTemplateSlug) {
     return {
       titlePreview: title.trim() || `Template: ${emailTemplateSlug}`,
       messagePreview: message.trim() || `Using template "${emailTemplateSlug}"`,
+    }
+  }
+  if (channel === "email") {
+    return {
+      titlePreview: title.trim() || "Email",
+      messagePreview:
+        htmlBody.trim() ||
+        message.trim() ||
+        "Free-form email (no template)",
     }
   }
   if (channel === "sms") {
@@ -190,10 +196,9 @@ export function CreateNotificationPage() {
     }
     let cancelled = false
     setEmailTemplatesLoading(true)
-    getEmailTemplates()
-      .then((response) => {
-        if (cancelled) return
-        setEmailTemplates(filterOutboundEmailTemplates(parseEmailTemplatesResponse(response)))
+    fetchActiveOutboundEmailTemplates()
+      .then((templates) => {
+        if (!cancelled) setEmailTemplates(templates)
       })
       .catch(() => {
         if (!cancelled) setEmailTemplates([])
@@ -384,7 +389,13 @@ export function CreateNotificationPage() {
       directRecipients,
       channel,
     )
-    const contentPreview = buildContentPreview(channel, title, message, emailTemplateSlug)
+    const contentPreview = buildContentPreview(
+      channel,
+      title,
+      message,
+      emailTemplateSlug,
+      htmlBody,
+    )
 
     try {
       setSending(true)
@@ -1190,13 +1201,20 @@ export function CreateNotificationPage() {
                             : "Notification title")}
                     </p>
                     <p className="truncate text-[11px] text-grayScale-500">
-                      {message || "Message preview will appear here."}
+                      {channel === "email" && !emailTemplateSlug && htmlBody.trim()
+                        ? "HTML email body"
+                        : message || "Message preview will appear here."}
                     </p>
                   </div>
                 </div>
               </div>
               <p className="text-[10px] text-grayScale-400">
                 Channel: {channel.toUpperCase().replace("_", "-")}
+                {channel === "email" && emailTemplateSlug
+                  ? ` · Template: ${emailTemplateSlug}`
+                  : channel === "email" && htmlBody.trim()
+                    ? " · Free-form HTML"
+                    : ""}
                 {isScheduling && scheduledAt
                   ? ` · Scheduled ${formatScheduledAtLabel(scheduledAt)}`
                   : ""}

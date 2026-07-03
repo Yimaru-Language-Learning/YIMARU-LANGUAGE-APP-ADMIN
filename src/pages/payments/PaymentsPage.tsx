@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   ChevronDown,
@@ -168,7 +169,7 @@ export function PaymentsPage() {
         setError(true)
         setPayments([])
         setTotalCount(0)
-        toast.error("Failed to load payments")
+        notifyApiError(e, "Failed to load payments")
       } finally {
         setLoading(false)
       }
@@ -190,7 +191,7 @@ export function PaymentsPage() {
     } catch (e) {
       console.error(e)
       setPaymentStats(EMPTY_PAYMENT_STATS)
-      toast.error("Failed to load payment summary")
+      notifyApiError(e, "Failed to load payment summary")
     } finally {
       setStatsLoading(false)
     }

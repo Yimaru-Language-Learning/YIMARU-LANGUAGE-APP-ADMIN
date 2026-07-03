@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type ChangeEvent } from "react"
 import { Camera } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../lib/apiErrors"
 import { uploadImageFile } from "../../api/files.api"
 import { updateTeamMe } from "../../api/team.api"
 import { SpinnerIcon } from "../ui/spinner-icon"
@@ -53,10 +54,7 @@ export function ProfileAvatarUpload({
         toast.success(updateRes.data.message || "Profile picture updated")
       } catch (err: unknown) {
         console.error(err)
-        const uploadMsg =
-          (err as { response?: { data?: { message?: string } } })?.response?.data
-            ?.message
-        toast.error(uploadMsg ?? "Failed to update profile picture")
+        notifyApiError(err, "Failed to update profile picture")
       } finally {
         setUploading(false)
       }

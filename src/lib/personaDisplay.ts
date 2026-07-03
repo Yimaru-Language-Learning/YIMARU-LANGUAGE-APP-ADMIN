@@ -2,6 +2,14 @@ import type {
   GetPersonasResponse,
   PersonaListItem,
 } from "../types/persona.types"
+import amanuelAvatar from "../assets/personas/amanuel.png"
+import aseffaAvatar from "../assets/personas/aseffa.png"
+import bethelAvatar from "../assets/personas/bethel.png"
+import dawitAvatar from "../assets/personas/dawit.png"
+import hanaAvatar from "../assets/personas/hana.png"
+import liyaAvatar from "../assets/personas/liya.png"
+import mahletAvatar from "../assets/personas/mahlet.png"
+import nahomAvatar from "../assets/personas/nahom.png"
 
 export type PersonaCardModel = {
   id: string
@@ -10,12 +18,57 @@ export type PersonaCardModel = {
   avatar: string
 }
 
-/** Soft, professional palette aligned with the admin brand (slate, indigo, violet). */
-const PERSONA_FALLBACK_BACKGROUNDS = "f1f5f9,e0e7ff,ede9fe,fdf4ff,ecfeff"
+/** Realistic default portraits bundled with the admin app (see src/assets/personas). */
+const DEFAULT_PERSONA_AVATARS = [
+  dawitAvatar,
+  mahletAvatar,
+  amanuelAvatar,
+  bethelAvatar,
+  liyaAvatar,
+  aseffaAvatar,
+  hanaAvatar,
+  nahomAvatar,
+] as const
+
+const PERSONA_NAME_AVATARS: Record<string, string> = {
+  dawit: dawitAvatar,
+  mahlet: mahletAvatar,
+  amanuel: amanuelAvatar,
+  bethel: bethelAvatar,
+  liya: liyaAvatar,
+  aseffa: aseffaAvatar,
+  hana: hanaAvatar,
+  nahom: nahomAvatar,
+}
+
+function hashString(value: string): number {
+  let hash = 0
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
+function defaultPersonaAvatarUrl(
+  name: string,
+  personaId?: number | string,
+): string {
+  const normalizedName = name.trim().toLowerCase()
+  const byName = PERSONA_NAME_AVATARS[normalizedName]
+  if (byName) return byName
+
+  const numericId = personaId != null ? Number(personaId) : NaN
+  const index =
+    Number.isFinite(numericId) && numericId > 0
+      ? (numericId - 1) % DEFAULT_PERSONA_AVATARS.length
+      : hashString(normalizedName || "persona") % DEFAULT_PERSONA_AVATARS.length
+
+  return DEFAULT_PERSONA_AVATARS[index]
+}
 
 /**
- * Default avatar when `profile_picture` is null: professional illustrated portrait
- * (DiceBear personas), not casual cartoon avataaars.
+ * Default avatar when `profile_picture` is null: realistic bundled portrait,
+ * matched by persona name when possible.
  */
 export function personaAvatarUrl(
   profilePicture: string | null | undefined,
@@ -24,12 +77,7 @@ export function personaAvatarUrl(
 ): string {
   const url = profilePicture?.trim()
   if (url) return url
-  const params = new URLSearchParams({
-    seed: personaId != null ? `yimaru-persona-${personaId}` : `yimaru-persona-${name}`,
-    backgroundColor: PERSONA_FALLBACK_BACKGROUNDS,
-    radius: "50",
-  })
-  return `https://api.dicebear.com/7.x/personas/svg?${params.toString()}`
+  return defaultPersonaAvatarUrl(name, personaId)
 }
 
 export function mapPersonaToCard(persona: PersonaListItem): PersonaCardModel {

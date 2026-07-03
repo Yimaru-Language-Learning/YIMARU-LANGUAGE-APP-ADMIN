@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
+import { notifyApiError } from "../../../../lib/apiErrors"
 import { Button } from "../../../../components/ui/button"
 import { Card } from "../../../../components/ui/card"
 import {
@@ -94,12 +95,7 @@ export function QuestionTypeReviewPublishStep({
       })
       navigate(`/new-content/question-types?created=${id}`)
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string; error?: string } } }
-      const msg =
-        err.response?.data?.message ||
-        (e instanceof Error ? e.message : isEdit ? "Update failed" : "Create failed")
-      const detail = err.response?.data?.error
-      toast.error(String(msg), { description: detail ? String(detail) : undefined })
+      notifyApiError(e, isEdit ? "Update failed" : "Create failed")
     } finally {
       setSubmitting(false)
     }

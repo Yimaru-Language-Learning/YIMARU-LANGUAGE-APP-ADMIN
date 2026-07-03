@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { BookOpen, ChevronDown, ChevronRight, FolderTree, Languages, Pencil, Plus, Trash2 } from "lucide-react"
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "../../components/ui/input"
 import { Select } from "../../components/ui/select"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
 import {
   createModule,
   deleteModule,
@@ -303,7 +305,7 @@ export function HumanLanguageHierarchyPage() {
       console.error(err)
       setHierarchyRows([])
       setHierarchyError("Could not load Human Language hierarchy")
-      toast.error("Failed to load Human Language hierarchy")
+      notifyApiError(err, "Failed to load Human Language hierarchy")
     } finally {
       setHierarchyLoading(false)
     }
@@ -358,7 +360,7 @@ export function HumanLanguageHierarchyPage() {
       setCourseRowsByCourseId({})
       setLevelPracticesByLevelId({})
       setCourseHierarchyError("Could not load hierarchy for selected courses")
-      toast.error("Failed to load course hierarchy")
+      notifyApiError(err, "Failed to load course hierarchy")
     } finally {
       setCourseHierarchyLoading(false)
     }
@@ -516,7 +518,7 @@ export function HumanLanguageHierarchyPage() {
       await fetchHierarchiesForCourses(refreshCourseIds)
     } catch (error) {
       console.error(error)
-      toast.error("Failed to create module")
+      notifyApiError(error, "Failed to create module")
     } finally {
       setCreateModuleSaving(false)
     }
@@ -606,7 +608,7 @@ export function HumanLanguageHierarchyPage() {
       await fetchHierarchiesForCourses(refreshCourseIds)
     } catch (error) {
       console.error(error)
-      toast.error("Failed to update module")
+      notifyApiError(error, "Failed to update module")
     } finally {
       setEditModuleSaving(false)
     }
@@ -633,7 +635,7 @@ export function HumanLanguageHierarchyPage() {
       await fetchHierarchiesForCourses(refreshCourseIds)
     } catch (error) {
       console.error(error)
-      toast.error("Failed to delete module")
+      notifyApiError(error, "Failed to delete module")
     } finally {
       setDeleteModuleSavingId(null)
     }
@@ -666,6 +668,7 @@ export function HumanLanguageHierarchyPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <PageBackLink fallbackTo="/content" label="Back to Content Management" />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
@@ -676,9 +679,6 @@ export function HumanLanguageHierarchyPage() {
             <p className="text-sm text-grayScale-500">Hierarchy management</p>
           </div>
         </div>
-        <Button type="button" variant="outline" asChild>
-          <Link to="/content">Back to Content Management</Link>
-        </Button>
       </div>
 
       <AdminFiltersPanel

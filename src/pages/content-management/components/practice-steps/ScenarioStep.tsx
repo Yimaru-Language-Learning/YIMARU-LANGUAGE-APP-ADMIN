@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../../lib/apiErrors"
 import { useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { Upload, ArrowRight, Loader2 } from "lucide-react";
@@ -35,7 +36,7 @@ export function ScenarioStep({
       setFormData({ ...formData, storyImageUrl: url });
       toast.success("Story image uploaded");
     } catch {
-      toast.error("Could not upload image");
+      notifyApiError(err, "Could not upload image");
     } finally {
       setUploadingBanner(false);
     }

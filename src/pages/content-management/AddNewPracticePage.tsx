@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import {
@@ -228,7 +229,7 @@ export function AddNewPracticePage() {
       });
     } catch (error) {
       console.error("Failed to upload intro video:", error);
-      toast.error("Failed to upload intro video");
+      notifyApiError(error, "Failed to upload intro video");
     } finally {
       setUploadingIntroVideo(false);
     }
@@ -259,7 +260,7 @@ export function AddNewPracticePage() {
       });
     } catch (error) {
       console.error("Failed to import intro video URL:", error);
-      toast.error("Failed to import intro video URL");
+      notifyApiError(error, "Failed to import intro video URL");
     } finally {
       setImportingIntroVideoUrl(false);
     }

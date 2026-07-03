@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import {
@@ -26,7 +27,6 @@ import { cn } from "../../lib/utils"
 import {
   deleteQuestionTypeDefinitionGroup,
   getQuestionTypeDefinitionGroupById,
-  groupApiErrorMessage,
 } from "../../api/questionTypeDefinitionGroups.api"
 import { assignQuestionTypeDefinitionGroups } from "../../api/questionTypeDefinitions.api"
 import { removeGroupFromMembership } from "../../lib/questionTypeGroupIds"
@@ -67,7 +67,7 @@ export function QuestionTypeGroupDetailPage() {
       }
       setGroup(detail)
     } catch (e) {
-      toast.error(groupApiErrorMessage(e, "Failed to load group"))
+      notifyApiError(e, "Failed to load group")
       setGroup(null)
     } finally {
       setLoading(false)
@@ -88,7 +88,7 @@ export function QuestionTypeGroupDetailPage() {
       toast.success("Removed from this group")
       await load()
     } catch (e) {
-      toast.error(groupApiErrorMessage(e, "Could not remove from group"))
+      notifyApiError(e, "Could not remove from group")
     } finally {
       setDetachingId(null)
     }
@@ -102,7 +102,7 @@ export function QuestionTypeGroupDetailPage() {
       toast.success("Group deleted. Membership links for this group were removed.")
       navigate("/new-content/question-types")
     } catch (e) {
-      toast.error(groupApiErrorMessage(e, "Delete failed"))
+      notifyApiError(e, "Delete failed")
     } finally {
       setDeleteSubmitting(false)
     }

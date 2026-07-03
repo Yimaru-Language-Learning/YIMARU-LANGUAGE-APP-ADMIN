@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { ChevronDown, ChevronLeft, ChevronRight, Search, TrendingUp, UserCheck, Users, X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -300,9 +301,7 @@ export function UsersListPage() {
       toast.success(`User ${nextActive ? "activated" : "deactivated"} successfully`)
     } catch (err: any) {
       setToggledStatuses((prev) => ({ ...prev, [id]: previousActive }))
-      toast.error("Failed to update user status", {
-        description: err?.response?.data?.message || "Please try again.",
-      })
+      notifyApiError(err, "Failed to update user status")
     } finally {
       setUpdatingStatusIds((prev) => {
         const next = new Set(prev)

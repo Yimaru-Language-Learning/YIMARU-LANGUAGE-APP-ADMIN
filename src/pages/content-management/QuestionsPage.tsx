@@ -21,6 +21,7 @@ import { deleteQuestion, getQuestionById, getQuestions, updateQuestion } from ".
 import { countActiveFilters } from "../../lib/adminFilterUtils"
 import type { QuestionDetail } from "../../types/course.types"
 import { cn } from "../../lib/utils"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 
 type QuestionTypeFilter = "all" | "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO"
@@ -338,6 +339,7 @@ export function QuestionsPage() {
 
   return (
     <div className="space-y-8">
+      <PageBackLink fallbackTo="/content" label="Back" />
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

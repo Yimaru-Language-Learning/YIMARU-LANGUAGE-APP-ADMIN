@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Eye, ExternalLink, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../lib/apiErrors"
 import {
   parseEmailTemplatePreviewResponse,
   previewEmailTemplate,
@@ -123,10 +124,7 @@ export function EmailComposeFields({
       if (!result) throw new Error("Empty preview response")
       setPreview(result)
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to preview email template"
-      toast.error(msg)
+      notifyApiError(err, "Failed to preview email template")
     } finally {
       setPreviewLoading(false)
     }

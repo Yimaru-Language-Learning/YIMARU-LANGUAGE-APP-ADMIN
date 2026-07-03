@@ -9,16 +9,19 @@ import {
   Shield,
   User,
   UsersRound,
+  X,
 } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Avatar, AvatarFallback } from "../../components/ui/avatar"
 import { Separator } from "../../components/ui/separator"
 import { cn } from "../../lib/utils"
+import { notifyApiError } from "../../lib/apiErrors"
 import { formatTeamRoleLabel } from "../../lib/teamRoles"
 import { displayValue, NOT_ASSIGNED_LABEL } from "../../lib/displayValue"
-import { getTeamMemberById } from "../../api/team.api"
+import { getTeamMemberById, updateTeamMemberStatus } from "../../api/team.api"
 import type { TeamMemberDetail } from "../../types/team.types"
 import { ActivityLogListPanel } from "../user-log/components/ActivityLogListPanel"
 
@@ -178,6 +181,8 @@ export function TeamMemberDetailPage() {
   const [member, setMember] = useState<TeamMemberDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{ newStatus: string } | null>(null)
 
   useEffect(() => {
     const memberId = Number(id)
@@ -204,6 +209,33 @@ export function TeamMemberDetailPage() {
 
     void fetchMember()
   }, [id])
+
+  const handleStatusToggleClick = () => {
+    if (!member || updatingStatus) return
+    const isCurrentlyActive = member.status.trim().toLowerCase() === "active"
+    setConfirmDialog({ newStatus: isCurrentlyActive ? "inactive" : "active" })
+  }
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!member || !confirmDialog) return
+    const { newStatus } = confirmDialog
+    const previousStatus = member.status
+
+    setUpdatingStatus(true)
+    setMember((prev) => (prev ? { ...prev, status: newStatus } : prev))
+    try {
+      await updateTeamMemberStatus(member.id, newStatus)
+      toast.success(
+        `Team member ${newStatus === "active" ? "activated" : "deactivated"} successfully`,
+      )
+    } catch (err: unknown) {
+      setMember((prev) => (prev ? { ...prev, status: previousStatus } : prev))
+      notifyApiError(err, "Failed to update team member status")
+    } finally {
+      setUpdatingStatus(false)
+      setConfirmDialog(null)
+    }
+  }
 
   if (loading) return <LoadingSkeleton />
 
@@ -237,6 +269,7 @@ export function TeamMemberDetailPage() {
   const fullName = `${member.first_name} ${member.last_name}`.trim()
   const initials = `${member.first_name?.[0] ?? ""}${member.last_name?.[0] ?? ""}`.toUpperCase()
   const roleLabel = formatTeamRoleLabel(member.team_role)
+  const isActive = member.status.trim().toLowerCase() === "active"
 
   return (
     <div className="space-y-6">
@@ -248,13 +281,22 @@ export function TeamMemberDetailPage() {
         Back to Team
       </Link>
 
-      <div>
-        <p className="text-sm font-semibold text-grayScale-500">Team members</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">{fullName}</h1>
-        <p className="mt-1 text-sm text-grayScale-500">
-          Member #{member.id}
-          {member.department?.trim() ? ` · ${member.department.trim()}` : ""}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-grayScale-500">Team members</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">{fullName}</h1>
+          <p className="mt-1 text-sm text-grayScale-500">
+            Member #{member.id}
+            {member.department?.trim() ? ` · ${member.department.trim()}` : ""}
+          </p>
+        </div>
+        <Button
+          variant={isActive ? "destructive" : "outline"}
+          onClick={handleStatusToggleClick}
+          disabled={updatingStatus}
+        >
+          {updatingStatus ? "Updating..." : isActive ? "Block Member" : "Unblock Member"}
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
@@ -387,6 +429,42 @@ export function TeamMemberDetailPage() {
           </Card>
         </div>
       </div>
+
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
+              <h2 className="text-lg font-semibold text-grayScale-900">Confirm Status Change</h2>
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-sm leading-relaxed text-grayScale-600">
+                Are you sure you want to change the status of{" "}
+                <span className="font-semibold">{fullName || "this team member"}</span> to{" "}
+                <span className="font-semibold capitalize">{confirmDialog.newStatus}</span>?
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => setConfirmDialog(null)} disabled={updatingStatus}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-brand-600 text-white hover:bg-brand-500"
+                onClick={() => void handleConfirmStatusUpdate()}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? "Updating..." : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

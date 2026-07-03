@@ -805,6 +805,7 @@ export interface PracticeFullQuestionSet {
   owner_type?: string
   owner_id?: number
   persona?: string | null
+  persona_id?: number | null
   shuffle_questions?: boolean
   status?: PracticePublishStatus | string
   time_limit_minutes?: number | null

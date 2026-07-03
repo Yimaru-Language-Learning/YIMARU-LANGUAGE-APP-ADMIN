@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useMemo, useState, type ChangeEvent } from "react"
 import { ArrowLeft, ArrowRight, Check, GripVertical, Plus, Rocket, Trash2, Upload } from "lucide-react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
@@ -161,7 +162,7 @@ export function AddNewLessonPage() {
       toast.success("Intro video uploaded")
     } catch (error) {
       console.error("Failed to upload lesson intro video:", error)
-      toast.error("Failed to upload intro video")
+      notifyApiError(error, "Failed to upload intro video")
     } finally {
       setUploadingIntroVideo(false)
     }
@@ -193,7 +194,7 @@ export function AddNewLessonPage() {
       toast.success("Intro video URL imported")
     } catch (error) {
       console.error("Failed to import intro video URL:", error)
-      toast.error("Failed to import intro video URL")
+      notifyApiError(error, "Failed to import intro video URL")
     } finally {
       setUploadingIntroVideo(false)
     }

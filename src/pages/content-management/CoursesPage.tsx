@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "../../lib/apiErrors"
 import { useEffect, useMemo, useState } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
 import {
@@ -150,7 +151,7 @@ export function CoursesPage() {
       await fetchSubCategories()
     } catch (err: any) {
       console.error("Failed to create course:", err)
-      setSaveError(err.response?.data?.message || "Failed to create sub-category")
+      setSaveError(getApiErrorMessage(err, "Failed to create sub-category"))
     } finally {
       setSaving(false)
     }
@@ -230,7 +231,7 @@ export function CoursesPage() {
       await fetchSubCategories()
     } catch (err: any) {
       console.error("Failed to update course:", err)
-      setUpdateError(err.response?.data?.message || "Failed to update sub-category")
+      setUpdateError(getApiErrorMessage(err, "Failed to update sub-category"))
     } finally {
       setUpdating(false)
     }

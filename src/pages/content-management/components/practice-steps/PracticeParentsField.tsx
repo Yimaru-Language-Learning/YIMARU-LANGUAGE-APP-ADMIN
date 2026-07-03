@@ -1,16 +1,18 @@
-import { useState } from "react"
+import { notifyApiError } from "../../../../lib/apiErrors"
+import { useMemo, useState } from "react"
 import { Loader2, Plus, Trash2 } from "lucide-react"
+import { usePracticeParentTitles } from "../../../../hooks/usePracticeParentTitles"
 import { toast } from "sonner"
 import { Button } from "../../../../components/ui/button"
 import { Input } from "../../../../components/ui/input"
 import type { PracticeParent, PracticeParentKind } from "../../../../types/course.types"
 import {
   dedupeParents,
-  formatPracticeParentLabel,
   isPracticeParentKind,
   newParentRow,
   parentsFromPractice,
 } from "../../../../lib/practiceParents"
+import { formatPracticeParentDisplayLabel } from "../../../../lib/practiceParentTitles"
 import {
   isPracticeParentUnlinkNotLinkedError,
   mapPracticeParentUnlinkError,
@@ -62,6 +64,11 @@ export function PracticeParentsField({
 }: PracticeParentsFieldProps) {
   const kindOptions = isExamPrep ? EXAM_PREP_KIND_OPTIONS : LMS_KIND_OPTIONS
   const rows = parents.length > 0 ? parents : [newParentRow(isExamPrep ? "CATALOG_COURSE" : "LESSON")]
+  const savedParents = useMemo(
+    () => dedupeParents(parents.filter((parent) => parent.parent_id > 0)),
+    [parents],
+  )
+  const { titles, loading: titlesLoading } = usePracticeParentTitles(savedParents)
   const [unlinkingKey, setUnlinkingKey] = useState<string | null>(null)
   const canPersistUnlink =
     practiceId != null && Number.isFinite(practiceId) && practiceId > 0
@@ -88,7 +95,7 @@ export function PracticeParentsField({
 
     const hasSavedParent = row.parent_id > 0 && isPracticeParentKind(row.parent_kind)
     if (canPersistUnlink && hasSavedParent) {
-      const label = formatPracticeParentLabel(row)
+      const label = formatPracticeParentDisplayLabel(row, titles)
       const remaining = parentsFromPractice({ parents }).filter(
         (p) => parentKey(p) !== parentKey(row),
       )
@@ -125,9 +132,7 @@ export function PracticeParentsField({
           toast.info("This location was already removed.")
           return
         }
-        toast.error("Could not remove location", {
-          description: mapPracticeParentUnlinkError(err),
-        })
+        notifyApiError(err, "Could not remove location")
       } finally {
         setUnlinkingKey(null)
       }
@@ -163,39 +168,51 @@ export function PracticeParentsField({
           const key = parentKey(row)
           const isLocked = Boolean(lockedParentKey && key === lockedParentKey && row.parent_id > 0)
           const isUnlinking = unlinkingKey === key
+          const isSavedLocation = row.parent_id > 0 && isPracticeParentKind(row.parent_kind)
+          const locationLabel = isSavedLocation
+            ? formatPracticeParentDisplayLabel(row, titles)
+            : null
           return (
             <li
               key={`${index}-${row.parent_kind}`}
               className="flex flex-wrap items-center gap-2 rounded-xl border border-grayScale-200 bg-grayScale-50/50 px-3 py-2.5"
             >
-              <select
-                value={row.parent_kind}
-                disabled={disabled || isLocked || isUnlinking}
-                onChange={(e) =>
-                  updateRow(index, { parent_kind: e.target.value as PracticeParentKind })
-                }
-                className="h-9 rounded-[8px] border border-grayScale-200 bg-white px-2.5 text-sm font-medium text-grayScale-700 focus:outline-none focus:ring-2 focus:ring-brand-200"
-              >
-                {kindOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <Input
-                type="number"
-                min={1}
-                disabled={disabled || isLocked || isUnlinking}
-                value={row.parent_id > 0 ? row.parent_id : ""}
-                onChange={(e) =>
-                  updateRow(index, { parent_id: Number(e.target.value) || 0 })
-                }
-                placeholder="Parent id"
-                className="h-9 w-28 rounded-[8px] border-grayScale-200 font-mono text-sm"
-              />
-              <span className="text-xs text-grayScale-400 hidden sm:inline">
-                {row.parent_kind} parent id from the content hierarchy
-              </span>
+              {isSavedLocation ? (
+                <span className="min-w-0 flex-1 text-sm font-medium text-grayScale-800">
+                  {titlesLoading ? "Loading location…" : locationLabel}
+                </span>
+              ) : (
+                <>
+                  <select
+                    value={row.parent_kind}
+                    disabled={disabled || isLocked || isUnlinking}
+                    onChange={(e) =>
+                      updateRow(index, { parent_kind: e.target.value as PracticeParentKind })
+                    }
+                    className="h-9 rounded-[8px] border border-grayScale-200 bg-white px-2.5 text-sm font-medium text-grayScale-700 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                  >
+                    {kindOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    type="number"
+                    min={1}
+                    disabled={disabled || isLocked || isUnlinking}
+                    value={row.parent_id > 0 ? row.parent_id : ""}
+                    onChange={(e) =>
+                      updateRow(index, { parent_id: Number(e.target.value) || 0 })
+                    }
+                    placeholder="Parent id"
+                    className="h-9 w-28 rounded-[8px] border-grayScale-200 font-mono text-sm"
+                  />
+                  <span className="text-xs text-grayScale-400 hidden sm:inline">
+                    {row.parent_kind} parent id from the content hierarchy
+                  </span>
+                </>
+              )}
               <Button
                 type="button"
                 variant="ghost"

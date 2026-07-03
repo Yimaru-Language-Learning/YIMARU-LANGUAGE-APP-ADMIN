@@ -9,6 +9,7 @@ import {
   User,
 } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../lib/apiErrors"
 import { getTeamMe, updateTeamMe } from "../api/team.api"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
@@ -193,10 +194,7 @@ export function ProfilePage() {
       toast.success(res.data.message || "Profile updated successfully")
     } catch (err) {
       console.error("Failed to update profile", err)
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update profile"
-      toast.error(message)
+      notifyApiError(err, "Failed to update profile")
     } finally {
       setSaving(false)
     }

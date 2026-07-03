@@ -37,10 +37,8 @@ import {
   formatRatingDate,
   reviewTextOrPlaceholder,
 } from "../../lib/ratingsDisplay"
-import {
-  getRatingsApiErrorMessage,
-  isRatingsForbiddenError,
-} from "../../lib/ratingsErrors"
+import { notifyApiError } from "../../lib/apiErrors"
+import { isRatingsForbiddenError } from "../../lib/ratingsErrors"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { cn } from "../../lib/utils"
 import type { Rating, RatingSummary } from "../../types/ratings.types"
@@ -91,9 +89,9 @@ export function AppReviewsPage() {
       setReviewerProfiles(new Map())
       if (isRatingsForbiddenError(e)) {
         setPermissionDenied(true)
-        toast.error(getRatingsApiErrorMessage(e, "You do not have permission to view app reviews"))
+        notifyApiError(e, "You do not have permission to view app reviews")
       } else {
-        toast.error(getRatingsApiErrorMessage(e, "Failed to load app reviews"))
+        notifyApiError(e, "Failed to load app reviews")
       }
     } finally {
       setLoading(false)

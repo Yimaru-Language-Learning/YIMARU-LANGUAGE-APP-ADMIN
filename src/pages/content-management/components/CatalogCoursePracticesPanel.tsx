@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { BookOpen, Loader2, RefreshCw } from "lucide-react"
@@ -95,7 +96,7 @@ export function CatalogCoursePracticesPanel({
       setPractices([])
       setTotalCount(0)
       setLoadError("Could not load practices for this catalog course.")
-      toast.error("Failed to load practices")
+      notifyApiError(err, "Failed to load practices")
     } finally {
       setLoading(false)
     }
@@ -138,7 +139,7 @@ export function CatalogCoursePracticesPanel({
       )
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Failed to update practice status")
+      notifyApiError(err, "Failed to update practice status")
     } finally {
       setPublishStatusUpdatingId(null)
     }
@@ -168,9 +169,7 @@ export function CatalogCoursePracticesPanel({
         await load()
         return
       }
-      toast.error("Could not remove location", {
-        description: mapPracticeParentUnlinkError(e),
-      })
+      notifyApiError(err, "Could not remove location")
     } finally {
       setUnlinking(false)
     }
@@ -186,7 +185,7 @@ export function CatalogCoursePracticesPanel({
       await load()
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Failed to delete practice")
+      notifyApiError(err, "Failed to delete practice")
     } finally {
       setDeleting(false)
     }

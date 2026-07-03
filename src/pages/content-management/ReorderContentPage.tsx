@@ -1,18 +1,11 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { ContentHierarchyList } from "./components/ContentHierarchyList";
+import { PageBackLink } from "../../components/navigation/PageBackLink";
 
 export function ReorderContentPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="space-y-6">
-        <Link
-          to="/new-content"
-          className="flex items-center gap-2 text-[15px] font-bold text-grayScale-600 transition-colors hover:text-brand-500 group w-fit"
-        >
-          <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
-          Back to Content Management
-        </Link>
+        <PageBackLink fallbackTo="/new-content" label="Back to Content Management" iconClassName="h-5 w-5 group-hover:-translate-x-1" />
 
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">

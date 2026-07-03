@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../../lib/apiErrors"
 import {
   getPracticesByParentCourse,
   getPracticesByParentModule,
@@ -97,10 +98,7 @@ export function PublishPracticeButton({
       await loadPractices()
       onPublished?.()
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to publish practice"
-      toast.error(msg)
+      notifyApiError(e, "Failed to publish practice")
     } finally {
       setActing(false)
     }
@@ -133,10 +131,7 @@ export function PublishPracticeButton({
       await loadPractices()
       onPublished?.()
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to save practice as draft"
-      toast.error(msg)
+      notifyApiError(e, "Failed to save practice as draft")
     } finally {
       setActing(false)
     }

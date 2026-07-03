@@ -7,6 +7,7 @@ import { Button } from "../../../components/ui/button"
 import { Input } from "../../../components/ui/input"
 import { Select } from "../../../components/ui/select"
 import { Textarea } from "../../../components/ui/textarea"
+import { PersonaAvatar } from "../../../components/personas/PersonaAvatar"
 import { personaAvatarUrl } from "../../../lib/personaDisplay"
 import { PersonaProfilePictureUploadField } from "./PersonaProfilePictureUploadField"
 
@@ -91,11 +92,7 @@ export function PersonaForm({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <img
-          src={previewUrl}
-          alt=""
-          className="h-16 w-16 rounded-full border border-grayScale-200 bg-grayScale-50 object-cover"
-        />
+        <PersonaAvatar src={previewUrl} alt={draft.name.trim() || "Persona"} size="lg" />
         <p className="text-xs text-grayScale-500">
           Upload an image from your computer, paste a URL, or leave empty for a generated
           placeholder.

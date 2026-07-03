@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Eye, Mail, Plus, RefreshCw, Search, Shield, Trash2 } from "lucide-react"
@@ -45,7 +46,7 @@ export function EmailTemplatesPage() {
       setError(true)
       setTemplates([])
       setTotalCount(0)
-      toast.error("Failed to load email templates")
+      notifyApiError(e, "Failed to load email templates")
     } finally {
       setLoading(false)
     }

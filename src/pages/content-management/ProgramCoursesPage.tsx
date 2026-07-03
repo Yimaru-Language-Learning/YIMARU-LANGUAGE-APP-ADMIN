@@ -1,6 +1,8 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { PageBackLink } from "../../components/navigation/PageBackLink";
 import { toast } from "sonner";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -121,10 +123,7 @@ export function ProgramCoursesPage() {
         nextStatus === "PUBLISHED" ? "Course published" : "Course saved as draft",
       );
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update course status";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update course status");
     } finally {
       setPublishStatusUpdatingId(null);
     }
@@ -146,10 +145,7 @@ export function ProgramCoursesPage() {
         nextTier === "PREMIUM" ? "Course set to Premium" : "Course set to Free",
       );
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update course access tier";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update course access tier");
     } finally {
       setAccessTierUpdatingId(null);
     }
@@ -187,9 +183,7 @@ export function ProgramCoursesPage() {
       setError("Failed to load courses");
       setCourses([]);
       setProgram(null);
-      toast.error("Could not load courses", {
-        description: "Check your connection or try again.",
-      });
+      notifyApiError(e, "Could not load courses");
     } finally {
       setLoading(false);
     }
@@ -209,10 +203,7 @@ export function ProgramCoursesPage() {
       await loadData();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete course";
-      toast.error(msg);
+      notifyApiError(e, "Failed to delete course");
     } finally {
       setDeleting(false);
     }
@@ -266,10 +257,7 @@ export function ProgramCoursesPage() {
       toast.success("Thumbnail uploaded");
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(msg);
+      notifyApiError(e, "Failed to upload thumbnail");
     } finally {
       setUploadingEditThumbnail(false);
     }
@@ -305,10 +293,7 @@ export function ProgramCoursesPage() {
       await loadData();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update course";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update course");
     } finally {
       setSavingEdit(false);
     }
@@ -357,10 +342,7 @@ export function ProgramCoursesPage() {
       toast.success("Thumbnail uploaded");
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(msg);
+      notifyApiError(e, "Failed to upload thumbnail");
     } finally {
       setCreateUploadingThumbnail(false);
     }
@@ -397,10 +379,7 @@ export function ProgramCoursesPage() {
       await loadData();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create course";
-      toast.error(msg);
+      notifyApiError(e, "Failed to create course");
     } finally {
       setCreateSaving(false);
     }
@@ -418,13 +397,7 @@ export function ProgramCoursesPage() {
   return (
     <div className="space-y-8 pt-10">
       {/* Navigation */}
-      <Link
-        to="/new-content/learn-english"
-        className="flex items-center gap-2 text-sm font-medium text-grayScale-500 transition-colors hover:text-brand-500"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Programs
-      </Link>
+      <PageBackLink fallbackTo="/new-content/learn-english" label="Back to Programs" className="text-sm text-grayScale-500" />
 
       {/* Header section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

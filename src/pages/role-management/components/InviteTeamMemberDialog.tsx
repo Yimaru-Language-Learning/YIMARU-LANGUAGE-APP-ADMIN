@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Mail, Shield } from "lucide-react"
 import { toast } from "sonner"
+import { fetchAllRoles } from "../../../api/rbac.api"
 import { inviteTeamMember } from "../../../api/team.api"
 import { Button } from "../../../components/ui/button"
 import {
@@ -14,19 +15,27 @@ import {
 import { Input } from "../../../components/ui/input"
 import { Select } from "../../../components/ui/select"
 import { Textarea } from "../../../components/ui/textarea"
+import { getApiErrorMessage } from "../../../lib/apiErrors"
 import { cn } from "../../../lib/utils"
 import {
   isValidInviteEmail,
   parseInviteEmails,
   type InviteEmailSendResult,
 } from "../../../lib/parseInviteEmails"
-import { formatTeamRoleLabel, TEAM_ROLE_OPTIONS } from "../../../lib/teamRoles"
+import {
+  formatTeamRoleLabel,
+  rbacRolesToTeamRoleOptions,
+  teamRoleNameForInvite,
+  TEAM_ROLE_OPTIONS,
+  type TeamRoleOption,
+} from "../../../lib/teamRoles"
 
 type InviteTeamMemberDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   presetTeamRole?: string
   presetRoleLabel?: string
+  roleOptions?: TeamRoleOption[]
   onInvited?: () => void
 }
 
@@ -35,13 +44,16 @@ export function InviteTeamMemberDialog({
   onOpenChange,
   presetTeamRole,
   presetRoleLabel,
+  roleOptions,
   onInvited,
 }: InviteTeamMemberDialogProps) {
   const roleLocked = Boolean(presetTeamRole?.trim())
   const lockedRole = presetTeamRole?.trim() ?? ""
 
   const [emailsText, setEmailsText] = useState("")
-  const [teamRole, setTeamRole] = useState(lockedRole || "CONTENT_MANAGER")
+  const [teamRole, setTeamRole] = useState(lockedRole)
+  const [loadedRoleOptions, setLoadedRoleOptions] = useState<TeamRoleOption[]>([])
+  const [rolesLoading, setRolesLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(
     null,
@@ -54,19 +66,57 @@ export function InviteTeamMemberDialog({
     [parsedEmails],
   )
 
+  const fallbackRoleOptions = useMemo<TeamRoleOption[]>(
+    () => TEAM_ROLE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+    [],
+  )
+
+  const selectableRoleOptions = roleOptions?.length
+    ? roleOptions
+    : loadedRoleOptions.length
+      ? loadedRoleOptions
+      : fallbackRoleOptions
+
+  useEffect(() => {
+    if (!open || roleLocked || roleOptions?.length) return
+
+    let cancelled = false
+    setRolesLoading(true)
+    void fetchAllRoles()
+      .then((roles) => {
+        if (cancelled) return
+        setLoadedRoleOptions(rbacRolesToTeamRoleOptions(roles))
+      })
+      .catch(() => {
+        if (!cancelled) setLoadedRoleOptions([])
+      })
+      .finally(() => {
+        if (!cancelled) setRolesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, roleLocked, roleOptions])
+
   useEffect(() => {
     if (!open) return
     setEmailsText("")
-    setTeamRole(lockedRole || "CONTENT_MANAGER")
+    setTeamRole(lockedRole)
     setResults(null)
     setProgress(null)
   }, [open, lockedRole])
+
+  useEffect(() => {
+    if (!open || roleLocked || lockedRole) return
+    setTeamRole((current) => current || selectableRoleOptions[0]?.value || "")
+  }, [open, roleLocked, lockedRole, selectableRoleOptions])
 
   const handleOpenChange = (next: boolean) => {
     if (!next && !submitting) onOpenChange(false)
   }
 
-  const sendInvitations = async (emails: string[], role: string) => {
+  const sendInvitations = async (emails: string[], roleName: string) => {
     const outcome: InviteEmailSendResult[] = []
 
     for (let i = 0; i < emails.length; i++) {
@@ -74,7 +124,7 @@ export function InviteTeamMemberDialog({
       setProgress({ current: i + 1, total: emails.length })
 
       try {
-        const res = await inviteTeamMember({ email, team_role: role })
+        const res = await inviteTeamMember({ email, team_role: roleName })
         outcome.push({
           email,
           success: true,
@@ -82,9 +132,7 @@ export function InviteTeamMemberDialog({
           invitationId: res.data?.data?.invitation_id,
         })
       } catch (err: unknown) {
-        const msg =
-          (err as { response?: { data?: { message?: string } } })?.response?.data
-            ?.message ?? "Failed to send invitation"
+        const msg = getApiErrorMessage(err, "Failed to send invitation")
         outcome.push({ email, success: false, message: msg })
       }
     }
@@ -95,6 +143,7 @@ export function InviteTeamMemberDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const role = roleLocked ? lockedRole : teamRole
+    const roleName = teamRoleNameForInvite(role, presetRoleLabel)
 
     if (parsedEmails.length === 0) {
       toast.error("Enter at least one email address")
@@ -112,7 +161,7 @@ export function InviteTeamMemberDialog({
     setSubmitting(true)
     setResults(null)
     try {
-      const outcome = await sendInvitations(parsedEmails, role)
+      const outcome = await sendInvitations(parsedEmails, roleName)
       setResults(outcome)
 
       const succeeded = outcome.filter((r) => r.success)
@@ -130,7 +179,8 @@ export function InviteTeamMemberDialog({
       }
 
       if (succeeded.length === 0) {
-        toast.error("No invitations were sent")
+        const firstFailed = failed[0]
+        toast.error(firstFailed?.message ?? getApiErrorMessage(null, "No invitations were sent"))
       } else {
         toast.warning(
           `${succeeded.length} sent, ${failed.length} failed. Review details below.`,
@@ -220,13 +270,19 @@ export function InviteTeamMemberDialog({
                 id="invite-role"
                 value={teamRole}
                 onChange={(e) => setTeamRole(e.target.value)}
-                disabled={submitting}
+                disabled={submitting || rolesLoading || selectableRoleOptions.length === 0}
               >
-                {TEAM_ROLE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
+                {rolesLoading ? (
+                  <option value="">Loading roles…</option>
+                ) : selectableRoleOptions.length === 0 ? (
+                  <option value="">No roles available</option>
+                ) : (
+                  selectableRoleOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))
+                )}
               </Select>
             )}
           </div>

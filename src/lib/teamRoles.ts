@@ -41,3 +41,26 @@ export function formatTeamRoleLabel(teamRole: string): string {
   if (found) return found.label
   return teamRole.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
+
+/** Role name sent to POST /team/members/invite (used in invitation emails). */
+export function teamRoleNameForInvite(teamRole: string, explicitName?: string): string {
+  const named = explicitName?.trim()
+  if (named) return named
+
+  const fromOptions = TEAM_ROLE_OPTIONS.find(
+    (o) => o.value === teamRole || o.value === teamRole.toUpperCase(),
+  )
+  if (fromOptions) return fromOptions.label
+
+  return teamRole.trim()
+}
+
+export type TeamRoleOption = { value: string; label: string }
+
+export function rbacRolesToTeamRoleOptions(roles: Role[]): TeamRoleOption[] {
+  const names = Array.from(
+    new Set(roles.map((role) => role.name.trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b))
+
+  return names.map((name) => ({ value: name, label: name }))
+}

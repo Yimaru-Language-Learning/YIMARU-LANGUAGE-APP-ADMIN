@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useEffect, useState } from "react"
 import { Save } from "lucide-react"
 import { toast } from "sonner"
@@ -125,7 +126,7 @@ export function EditAppVersionDialog({
       })
       onOpenChange(false)
     } catch {
-      toast.error("Failed to update app version.")
+      notifyApiError(err, "Failed to update app version.")
     } finally {
       setSaving(false)
     }

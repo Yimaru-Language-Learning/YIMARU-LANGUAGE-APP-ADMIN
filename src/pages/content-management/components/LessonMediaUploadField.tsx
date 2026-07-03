@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { CloudUpload } from "lucide-react";
 import { toast } from "sonner";
@@ -78,10 +79,7 @@ export function LessonMediaUploadField({
           toast.success("Thumbnail uploaded");
         } catch (e: unknown) {
           console.error(e);
-          const msg =
-            (e as { response?: { data?: { message?: string } } })?.response?.data
-              ?.message ?? "Failed to upload thumbnail";
-          toast.error(msg);
+          notifyApiError(e, "Failed to upload thumbnail");
         } finally {
           setBusy(false);
         }
@@ -107,10 +105,7 @@ export function LessonMediaUploadField({
         toast.success("Video uploaded");
       } catch (e: unknown) {
         console.error(e);
-        const msg =
-          (e as { response?: { data?: { message?: string } } })?.response?.data
-            ?.message ?? "Failed to upload video";
-        toast.error(msg);
+        notifyApiError(e, "Failed to upload video");
       } finally {
         setBusy(false);
       }

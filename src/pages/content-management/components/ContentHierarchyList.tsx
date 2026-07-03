@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import React, { useState, useEffect, useCallback } from "react";
 import {
   DndContext,
@@ -439,12 +440,6 @@ export function ContentHierarchyList() {
     return arrayMove(siblings, oldIndex, newIndex);
   };
 
-  const reorderErrorMessage = (error: unknown, fallback: string) => {
-    const message = (error as { response?: { data?: { message?: string } } })
-      ?.response?.data?.message;
-    return typeof message === "string" && message.trim() ? message : fallback;
-  };
-
   const handleProgramReorder = async (activeId: string, overId: string) => {
     const reordered = reorderSiblings(programs, activeId, overId);
     if (!reordered) return;
@@ -456,7 +451,7 @@ export function ContentHierarchyList() {
       toast.success("Programs reordered");
     } catch (error) {
       setPrograms(previous);
-      toast.error(reorderErrorMessage(error, "Failed to reorder programs"));
+      notifyApiError(error, "Failed to reorder programs");
     }
   };
 
@@ -481,7 +476,7 @@ export function ContentHierarchyList() {
       toast.success("Courses reordered");
     } catch (error) {
       setCourses(previous);
-      toast.error(reorderErrorMessage(error, "Failed to reorder courses"));
+      notifyApiError(error, "Failed to reorder courses");
     }
   };
 
@@ -506,7 +501,7 @@ export function ContentHierarchyList() {
       toast.success("Modules reordered");
     } catch (error) {
       setModules(previous);
-      toast.error(reorderErrorMessage(error, "Failed to reorder modules"));
+      notifyApiError(error, "Failed to reorder modules");
     }
   };
 
@@ -531,7 +526,7 @@ export function ContentHierarchyList() {
       toast.success("Lessons reordered");
     } catch (error) {
       setLessons(previous);
-      toast.error(reorderErrorMessage(error, "Failed to reorder lessons"));
+      notifyApiError(error, "Failed to reorder lessons");
     }
   };
 

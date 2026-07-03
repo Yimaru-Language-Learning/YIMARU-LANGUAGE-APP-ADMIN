@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
@@ -91,7 +92,7 @@ export function ScheduledNotificationsPage() {
       setError(true)
       setRows([])
       setTotalCount(0)
-      toast.error("Failed to load scheduled notifications")
+      notifyApiError(err, "Failed to load scheduled notifications")
     } finally {
       setLoading(false)
     }
@@ -115,7 +116,7 @@ export function ScheduledNotificationsPage() {
       })
       await load()
     } catch {
-      toast.error("Failed to cancel scheduled notification")
+      notifyApiError(err, "Failed to cancel scheduled notification")
     } finally {
       setCancellingId(null)
     }

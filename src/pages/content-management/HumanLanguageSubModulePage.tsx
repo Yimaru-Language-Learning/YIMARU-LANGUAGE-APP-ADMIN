@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, BookOpen, Eye, FileText, Plus, Search, Trophy, Video } from "lucide-react"
@@ -184,7 +185,7 @@ export function HumanLanguageSubModulePage() {
         console.error(e)
         setMetaError("Failed to load sub-module")
         setSubCourse(null)
-        toast.error("Failed to load sub-module")
+        notifyApiError(e, "Failed to load sub-module")
       } finally {
         setLoadingMeta(false)
       }
@@ -202,7 +203,7 @@ export function HumanLanguageSubModulePage() {
       setSets(list)
     } catch (e) {
       console.error(e)
-      toast.error("Failed to load question sets")
+      notifyApiError(e, "Failed to load question sets")
       setSets([])
     } finally {
       setSetsLoading(false)
@@ -217,7 +218,7 @@ export function HumanLanguageSubModulePage() {
       setVideos(res.data?.data?.videos ?? [])
     } catch (e) {
       console.error(e)
-      toast.error("Failed to load videos")
+      notifyApiError(e, "Failed to load videos")
       setVideos([])
     } finally {
       setVideosLoading(false)
@@ -233,7 +234,7 @@ export function HumanLanguageSubModulePage() {
       setLessons(list)
     } catch (e) {
       console.error(e)
-      toast.error("Failed to load lessons")
+      notifyApiError(e, "Failed to load lessons")
       setLessons([])
     } finally {
       setLessonsLoading(false)
@@ -250,7 +251,7 @@ export function HumanLanguageSubModulePage() {
       setLessonDetail(res.data?.data ?? null)
     } catch (e) {
       console.error(e)
-      toast.error("Failed to load lesson detail")
+      notifyApiError(e, "Failed to load lesson detail")
     } finally {
       setLessonDetailLoading(false)
     }
@@ -298,7 +299,7 @@ export function HumanLanguageSubModulePage() {
       await fetchLessons()
     } catch (error) {
       console.error(error)
-      toast.error("Failed to update lesson")
+      notifyApiError(error, "Failed to update lesson")
     } finally {
       setLessonUpdateSaving(false)
     }
@@ -317,7 +318,7 @@ export function HumanLanguageSubModulePage() {
       await fetchLessons()
     } catch (error) {
       console.error(error)
-      toast.error("Failed to soft delete lesson")
+      notifyApiError(error, "Failed to soft delete lesson")
     } finally {
       setLessonSoftDeleteSaving(false)
     }

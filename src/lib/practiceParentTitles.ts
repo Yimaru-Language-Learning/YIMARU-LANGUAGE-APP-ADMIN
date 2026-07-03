@@ -30,6 +30,8 @@ export function practiceParentKey(parent: PracticeParent): string {
 }
 
 function kindLabel(kind: PracticeParentKind): string {
+  if (kind === "CATALOG_COURSE") return "Catalog course"
+  if (kind === "UNIT") return "Unit"
   if (kind === "COURSE") return "Course"
   if (kind === "MODULE") return "Module"
   return "Lesson"
@@ -98,8 +100,28 @@ async function resolveExamPrepCourseTitles(
   const res = await getExamPrepCatalogCourses({ limit: LIST_LIMIT, offset: 0 })
   for (const course of res.data?.data?.catalog_courses ?? []) {
     if (ids.has(course.id)) {
-      map.set(`COURSE:${course.id}`, course.name?.trim() || `Course #${course.id}`)
+      const title = course.name?.trim() || `Course #${course.id}`
+      map.set(`CATALOG_COURSE:${course.id}`, title)
+      map.set(`COURSE:${course.id}`, title)
       ids.delete(course.id)
+    }
+  }
+}
+
+async function resolveExamPrepUnitTitles(
+  ids: Set<number>,
+  map: PracticeParentTitleMap,
+): Promise<void> {
+  if (ids.size === 0) return
+  const coursesRes = await getExamPrepCatalogCourses({ limit: LIST_LIMIT, offset: 0 })
+  for (const course of coursesRes.data?.data?.catalog_courses ?? []) {
+    if (ids.size === 0) break
+    const unitsRes = await getExamPrepCatalogUnits(course.id, { limit: LIST_LIMIT, offset: 0 })
+    for (const unit of unitsRes.data?.data?.units ?? []) {
+      if (ids.has(unit.id)) {
+        map.set(`UNIT:${unit.id}`, unit.name?.trim() || `Unit #${unit.id}`)
+        ids.delete(unit.id)
+      }
     }
   }
 }
@@ -230,18 +252,23 @@ export async function resolvePracticeParentTitles(
 
   const normalized = dedupeParents(parents)
   const unresolvedCourses = new Set<number>()
+  const unresolvedCatalogCourses = new Set<number>()
+  const unresolvedUnits = new Set<number>()
   const unresolvedModules = new Set<number>()
   const unresolvedLessons = new Set<number>()
 
   for (const parent of normalized) {
     if (map.has(practiceParentKey(parent))) continue
     if (parent.parent_kind === "COURSE") unresolvedCourses.add(parent.parent_id)
+    if (parent.parent_kind === "CATALOG_COURSE") unresolvedCatalogCourses.add(parent.parent_id)
+    if (parent.parent_kind === "UNIT") unresolvedUnits.add(parent.parent_id)
     if (parent.parent_kind === "MODULE") unresolvedModules.add(parent.parent_id)
     if (parent.parent_kind === "LESSON") unresolvedLessons.add(parent.parent_id)
   }
 
   await resolveLearnEnglishCourseTitles(unresolvedCourses, map)
-  await resolveExamPrepCourseTitles(unresolvedCourses, map)
+  await resolveExamPrepCourseTitles(unresolvedCatalogCourses, map)
+  await resolveExamPrepUnitTitles(unresolvedUnits, map)
   await resolveLearnEnglishModuleTitles(unresolvedModules, map)
   await resolveExamPrepModuleTitles(unresolvedModules, map)
   await resolveLearnEnglishLessonTitles(unresolvedLessons, map)

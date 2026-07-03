@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../../lib/apiErrors"
 import { deleteEmailTemplate } from "../../../api/emailTemplates.api"
 import { Button } from "../../../components/ui/button"
 import {
@@ -47,10 +48,7 @@ export function EmailTemplateDeleteDialog({
       onDeleted?.()
     } catch (e: unknown) {
       console.error(e)
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete email template"
-      toast.error(msg)
+      notifyApiError(e, "Failed to delete email template")
     } finally {
       setDeleting(false)
     }

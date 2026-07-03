@@ -1,6 +1,8 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { Loader2 } from "lucide-react"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
 import { toast } from "sonner"
 import { Button } from "../../components/ui/button"
 import { Card } from "../../components/ui/card"
@@ -129,7 +131,7 @@ export function CreateQuestionTypeFlow() {
         if (!cancelled) {
           console.error(e)
           setCatalogError("Failed to load component catalog.")
-          toast.error("Failed to load component catalog")
+          notifyApiError(e, "Failed to load component catalog")
         }
       } finally {
         if (!cancelled) setCatalogLoading(false)
@@ -165,7 +167,7 @@ export function CreateQuestionTypeFlow() {
       } catch (e) {
         if (!cancelled) {
           console.error(e)
-          toast.error("Failed to load definition")
+          notifyApiError(e, "Failed to load definition")
           navigate("/new-content/question-types")
         }
       } finally {
@@ -276,9 +278,7 @@ export function CreateQuestionTypeFlow() {
       navigate(`/new-content/question-types?updated=${id}`)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string; error?: string } } }
-      toast.error(String(err.response?.data?.message || "Save failed"), {
-        description: err.response?.data?.error ? String(err.response.data.error) : undefined,
-      })
+      notifyApiError(err, "Save failed")
     } finally {
       setSaving(false)
     }
@@ -326,9 +326,7 @@ export function CreateQuestionTypeFlow() {
       navigate(`/new-content/question-types?created=${id}`)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string; error?: string } } }
-      toast.error(String(err.response?.data?.message || "Save failed"), {
-        description: err.response?.data?.error ? String(err.response.data.error) : undefined,
-      })
+      notifyApiError(err, "Save failed")
     }
   }
 
@@ -349,13 +347,11 @@ export function CreateQuestionTypeFlow() {
       <div className=" border-b border-grayScale-100 sticky top-0 z-50 bg-white/95 backdrop-blur">
         <div className="max-w-[1440px] mx-auto py-6 px-4 sm:px-6">
           <div className="flex items-center justify-between mb-8">
-            <Link
-              to="/new-content/question-types"
-              className="flex items-center gap-2 text-[15px] font-medium text-grayScale-600 transition-colors hover:text-brand-500 group"
-            >
-              <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
-              Back to Question Type Library
-            </Link>
+            <PageBackLink
+              fallbackTo="/new-content/question-types"
+              label="Back to Question Type Library"
+              iconClassName="h-5 w-5 group-hover:-translate-x-1"
+            />
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">

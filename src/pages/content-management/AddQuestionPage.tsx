@@ -1,6 +1,8 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Plus, X } from "lucide-react"
+import { navigateBack } from "../../lib/navigateBack"
 import { toast } from "sonner"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -128,7 +130,7 @@ export function AddQuestionPage() {
         })
       } catch (error) {
         console.error("Failed to load question:", error)
-        toast.error("Failed to load question details")
+        notifyApiError(error, "Failed to load question details")
       } finally {
         setLoading(false)
       }
@@ -339,7 +341,7 @@ export function AddQuestionPage() {
       navigate("/content/questions")
     } catch (error) {
       console.error("Failed to save question:", error)
-      toast.error("Failed to save question")
+      notifyApiError(error, "Failed to save question")
     } finally {
       setSubmitting(false)
     }
@@ -351,7 +353,7 @@ export function AddQuestionPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/content/questions")}
+          onClick={() => navigateBack(navigate, "/content/questions")}
           className="h-9 w-9 shrink-0 rounded-lg bg-grayScale-50 hover:bg-brand-500/10 hover:text-brand-500"
         >
           <ArrowLeft className="h-4 w-4" />

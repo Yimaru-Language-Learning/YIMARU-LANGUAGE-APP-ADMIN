@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog"
-import { getFaqApiErrorMessage } from "../../../lib/faqErrors"
+import { notifyApiError } from "../../../lib/apiErrors"
 import {
   draftToCreatePayload,
   EMPTY_FAQ_FORM_DRAFT,
@@ -75,7 +75,7 @@ export function CreateFaqDialog({
       onCreated?.()
     } catch (e: unknown) {
       console.error(e)
-      toast.error(getFaqApiErrorMessage(e, "Failed to create FAQ"))
+      notifyApiError(e, "Failed to create FAQ")
     } finally {
       setSaving(false)
       setSavingAction(null)

@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../../lib/apiErrors"
 import { useRef, useState, type ChangeEvent } from "react";
 import { ArrowRight, ChevronDown, ChevronUp, Loader2, Upload } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
@@ -75,7 +76,7 @@ export function ContextStep({
       setFormData({ ...formData, storyImageUrl: url });
       toast.success("Story image uploaded");
     } catch {
-      toast.error("Could not upload story image");
+      notifyApiError(err, "Could not upload story image");
     } finally {
       setUploadingStory(false);
     }

@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { CloudUpload } from "lucide-react";
 import { toast } from "sonner";
@@ -66,10 +67,7 @@ export function ModuleIconUploadField({
         toast.success("Icon uploaded");
       } catch (e: unknown) {
         console.error(e);
-        const msg =
-          (e as { response?: { data?: { message?: string } } })?.response?.data
-            ?.message ?? "Failed to upload icon";
-        toast.error(msg);
+        notifyApiError(e, "Failed to upload icon");
       } finally {
         setBusy(false);
       }

@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
@@ -127,7 +128,7 @@ export function ProgramDetailPage() {
       );
     } catch (error) {
       console.error(error);
-      toast.error("Failed to fetch catalog courses");
+      notifyApiError(error, "Failed to fetch catalog courses");
       setCreatedCourses([]);
     } finally {
       setCatalogLoading(false);
@@ -190,10 +191,7 @@ export function ProgramDetailPage() {
         nextStatus === "PUBLISHED" ? "Course published" : "Course saved as draft",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update course status";
-      toast.error(message);
+      notifyApiError(error, "Failed to update course status");
     } finally {
       setPublishStatusUpdatingId(null);
     }
@@ -217,10 +215,7 @@ export function ProgramDetailPage() {
         nextTier === "PREMIUM" ? "Course set to Premium" : "Course set to Free",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update course access tier";
-      toast.error(message);
+      notifyApiError(error, "Failed to update course access tier");
     } finally {
       setAccessTierUpdatingId(null);
     }
@@ -257,10 +252,7 @@ export function ProgramDetailPage() {
       toast.success("Thumbnail URL uploaded to MinIO");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail URL";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload thumbnail URL");
     } finally {
       setUploadingThumbnail(false);
     }
@@ -335,10 +327,7 @@ export function ProgramDetailPage() {
       setCreateOpen(false);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create course";
-      toast.error(message);
+      notifyApiError(error, "Failed to create course");
     } finally {
       setCreating(false);
     }
@@ -380,10 +369,7 @@ export function ProgramDetailPage() {
       toast.success("Thumbnail uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload thumbnail");
     } finally {
       setUploadingEditThumbnail(false);
     }
@@ -438,10 +424,7 @@ export function ProgramDetailPage() {
       closeEditCourse();
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update course";
-      toast.error(message);
+      notifyApiError(error, "Failed to update course");
     } finally {
       setSavingEdit(false);
     }
@@ -457,10 +440,7 @@ export function ProgramDetailPage() {
       setDeletingCourseId(null);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete course";
-      toast.error(message);
+      notifyApiError(error, "Failed to delete course");
     } finally {
       setDeletingCourse(false);
     }
@@ -493,10 +473,7 @@ export function ProgramDetailPage() {
       toast.success("Thumbnail uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload thumbnail");
     } finally {
       setUploadingThumbnail(false);
     }

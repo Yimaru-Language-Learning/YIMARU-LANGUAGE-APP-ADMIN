@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../lib/apiErrors"
 import {
   acceptTeamInvitation,
   parseVerifyInvitation,
@@ -129,10 +130,7 @@ export function AcceptInvitePage() {
       toast.success(res.data?.message ?? "Account setup complete. You can sign in now.")
       navigate("/login", { replace: true })
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to complete setup"
-      toast.error(msg)
+      notifyApiError(e, "Failed to complete setup")
     } finally {
       setSubmitting(false)
     }

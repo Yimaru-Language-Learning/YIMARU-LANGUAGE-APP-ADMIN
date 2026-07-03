@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../lib/apiErrors"
 import {
   createEmailTemplate,
   parseEmailTemplateResponse,
@@ -94,10 +95,7 @@ export function CreateEmailTemplatePage() {
       navigate(`/notifications/email-templates/${created.slug}`)
     } catch (e: unknown) {
       console.error(e)
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create email template"
-      toast.error(msg)
+      notifyApiError(e, "Failed to create email template")
     } finally {
       setSaving(false)
     }

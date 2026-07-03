@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { toast } from "sonner";
 import { teamRefresh } from "./teamRefresh.api";
 import { TeamAuthError } from "../types/auth.types";
 import {
@@ -7,6 +8,7 @@ import {
   getRefreshToken,
   saveTeamSession,
 } from "../lib/teamAuthStorage";
+import { markApiErrorNotified, readApiResponseMessage } from "../lib/apiErrors";
 
 const http: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -90,19 +92,9 @@ const shouldAttachApiAuth = (url?: string): boolean => {
   return requestOrigin === API_BASE_ORIGIN;
 };
 
-function readErrorMessage(data: unknown): string {
-  if (typeof data === "string") return data;
-  if (data && typeof data === "object") {
-    const record = data as Record<string, unknown>;
-    if (typeof record.error === "string") return record.error;
-    if (typeof record.message === "string") return record.message;
-  }
-  return "";
-}
-
 function isRefreshableAccessTokenError(error: AxiosError): boolean {
   if (error.response?.status !== 401) return false;
-  const message = readErrorMessage(error.response.data).toLowerCase();
+  const message = readApiResponseMessage(error.response.data).toLowerCase();
   return (
     message.includes("access token expired") ||
     message.includes("invalid access token")
@@ -199,6 +191,16 @@ http.interceptors.response.use(
         return http(originalRequest);
       } catch (refreshError) {
         return Promise.reject(refreshError);
+      }
+    }
+
+    const skipErrorToast =
+      originalRequest.skipErrorToast || isAuthEndpointRequest(originalRequest.url);
+    if (!skipErrorToast && error.response) {
+      const message = readApiResponseMessage(error.response.data);
+      if (message) {
+        toast.error(message);
+        markApiErrorNotified(error);
       }
     }
 

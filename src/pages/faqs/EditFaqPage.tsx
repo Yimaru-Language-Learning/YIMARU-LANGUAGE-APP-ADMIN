@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { useFaqPermissions } from "../../hooks/useFaqPermissions"
 import { deriveFaqCategories } from "../../lib/faqDisplay"
-import { getFaqApiErrorMessage, isFaqForbiddenError } from "../../lib/faqErrors"
+import { notifyApiError } from "../../lib/apiErrors"
+import { isFaqForbiddenError } from "../../lib/faqErrors"
 import type { FAQ, FAQStatus } from "../../types/faq.types"
 import { FaqAccessDenied } from "./components/FaqAccessDenied"
 import {
@@ -79,10 +80,10 @@ export function EditFaqPage() {
       }
       if (isFaqForbiddenError(e)) {
         setPermissionDenied(true)
-        toast.error(getFaqApiErrorMessage(e, "You do not have permission to view this FAQ"))
+        notifyApiError(e, "You do not have permission to view this FAQ")
         return
       }
-      toast.error(getFaqApiErrorMessage(e, "Failed to load FAQ"))
+      notifyApiError(e, "Failed to load FAQ")
     } finally {
       setLoading(false)
     }
@@ -121,7 +122,7 @@ export function EditFaqPage() {
       )
     } catch (e: unknown) {
       console.error(e)
-      toast.error(getFaqApiErrorMessage(e, "Failed to update FAQ"))
+      notifyApiError(e, "Failed to update FAQ")
     } finally {
       setSaving(false)
       setSavingAction(null)

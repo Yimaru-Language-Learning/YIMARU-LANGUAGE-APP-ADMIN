@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -282,18 +283,14 @@ export function CourseDetailPage() {
       } else {
         console.error(modulesOutcome.reason);
         setModules([]);
-        toast.error("Could not load modules", {
-          description: "Check your connection or try again.",
-        });
+        notifyApiError(err, "Could not load modules");
       }
     } catch (e) {
       console.error(e);
       setError("Failed to load course");
       setCourse(null);
       setModules([]);
-      toast.error("Could not load course", {
-        description: "Check your connection or try again.",
-      });
+      notifyApiError(e, "Could not load course");
     } finally {
       setLoading(false);
     }
@@ -378,10 +375,7 @@ export function CourseDetailPage() {
       );
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update practice status";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update practice status");
     } finally {
       setPublishStatusPracticeId(null);
     }
@@ -406,10 +400,7 @@ export function CourseDetailPage() {
       );
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update module status";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update module status");
     } finally {
       setPublishStatusModuleId(null);
     }
@@ -434,10 +425,7 @@ export function CourseDetailPage() {
       );
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update module access tier";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update module access tier");
     } finally {
       setAccessTierModuleId(null);
     }
@@ -474,10 +462,7 @@ export function CourseDetailPage() {
       await loadPage();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update module";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update module");
     } finally {
       setSavingModuleEdit(false);
     }
@@ -493,10 +478,7 @@ export function CourseDetailPage() {
       await loadPage();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete module";
-      toast.error(msg);
+      notifyApiError(e, "Failed to delete module");
     } finally {
       setDeletingModuleInFlight(false);
     }

@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Video, Calendar, Trash2, X } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -246,7 +247,7 @@ export function ModuleDetailPage() {
           setLessons([]);
           setLessonsLoadError("Failed to load lessons. Please try again.");
         } else {
-          toast.error("Failed to refresh lessons");
+          notifyApiError(err, "Failed to refresh lessons");
         }
       } finally {
         if (showPageLoading) {
@@ -337,7 +338,7 @@ export function ModuleDetailPage() {
       );
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || "Failed to update practice status");
+      notifyApiError(err, "Failed to update practice status");
     } finally {
       setPublishStatusPracticeId(null);
     }
@@ -368,9 +369,7 @@ export function ModuleDetailPage() {
         await loadModulePractices();
         return;
       }
-      toast.error("Could not remove from module", {
-        description: mapPracticeParentUnlinkError(e),
-      });
+      notifyApiError(err, "Could not remove from module");
     } finally {
       setUnlinkingPractice(false);
     }
@@ -421,10 +420,7 @@ export function ModuleDetailPage() {
       await loadModuleLessons({ showPageLoading: false });
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update lesson";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update lesson");
     } finally {
       setSavingLessonEdit(false);
     }
@@ -451,13 +447,10 @@ export function ModuleDetailPage() {
       );
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ??
-        (nextStatus === "PUBLISHED"
-          ? "Failed to publish lesson"
-          : "Failed to save lesson as draft");
-      toast.error(msg);
+      notifyApiError(
+        e,
+        nextStatus === "PUBLISHED" ? "Failed to publish lesson" : "Failed to save lesson as draft",
+      );
     } finally {
       setPublishStatusLessonId(null);
     }
@@ -482,10 +475,7 @@ export function ModuleDetailPage() {
       );
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update lesson access tier";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update lesson access tier");
     } finally {
       setAccessTierLessonId(null);
     }
@@ -501,10 +491,7 @@ export function ModuleDetailPage() {
       await loadModuleLessons({ showPageLoading: false });
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete lesson";
-      toast.error(msg);
+      notifyApiError(e, "Failed to delete lesson");
     } finally {
       setDeletingLessonInFlight(false);
     }

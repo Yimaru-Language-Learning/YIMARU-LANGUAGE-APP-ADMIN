@@ -7,6 +7,7 @@ import { Button } from "../../../components/ui/button"
 import { Card, CardContent } from "../../../components/ui/card"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 import { getSessionTeamRole, hasFaqRoleBypass } from "../../../lib/faqPermissions"
+import { notifyApiError } from "../../../lib/apiErrors"
 import { FAQ_FORBIDDEN_MESSAGE } from "../../../lib/faqErrors"
 
 type FaqAccessDeniedProps = {
@@ -25,10 +26,7 @@ export function FaqAccessDenied({ apiForbidden = false }: FaqAccessDeniedProps) 
       toast.success(res.data?.message ?? "RBAC permissions synced. Please sign in again.")
     } catch (e: unknown) {
       console.error(e)
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to sync RBAC permissions"
-      toast.error(msg)
+      notifyApiError(e, "Failed to sync RBAC permissions")
     } finally {
       setSyncing(false)
     }

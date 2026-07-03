@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useEffect, useState } from "react"
 import { Plus } from "lucide-react"
 import { toast } from "sonner"
@@ -114,7 +115,7 @@ export function CreateSubscriptionPlanDialog({
       onCreated(res.data)
       onOpenChange(false)
     } catch {
-      toast.error("Failed to create subscription plan.")
+      notifyApiError(err, "Failed to create subscription plan.")
     } finally {
       setSaving(false)
     }

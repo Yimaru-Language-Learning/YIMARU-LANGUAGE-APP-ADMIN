@@ -308,6 +308,7 @@ function normalizePracticeFullQuestionSet(raw: unknown): PracticeFullQuestionSet
     owner_type: pickStr(record, "owner_type", "OwnerType", "ownerType") || undefined,
     owner_id: pickNum(record, "owner_id", "OwnerId", "ownerId") ?? undefined,
     persona: pickStr(record, "persona", "Persona") || null,
+    persona_id: pickNum(record, "persona_id", "PersonaId", "personaId"),
     shuffle_questions: Boolean(
       record.shuffle_questions ?? record.ShuffleQuestions ?? false,
     ),
@@ -565,6 +566,25 @@ function mapFullQuestionToFormRow(
   }
 }
 
+function parsePersonaIdValue(value: unknown): number | null {
+  if (value == null) return null
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+export function resolvePracticePersonaId(
+  practice: PracticeFullPractice,
+  questionSet: PracticeFullQuestionSet,
+): number | null {
+  const fromPractice = parsePersonaIdValue(practice.persona_id)
+  if (fromPractice != null) return fromPractice
+
+  const fromQuestionSet = parsePersonaIdValue(questionSet.persona_id)
+  if (fromQuestionSet != null) return fromQuestionSet
+
+  return parsePersonaIdValue(questionSet.persona)
+}
+
 export function mapPracticeFullToFormState(
   data: PracticeFullData,
   typeDefinitions: QuestionTypeDefinition[],
@@ -618,10 +638,7 @@ export function mapPracticeFullToFormState(
       parents: parentsFromPractice(practice),
       questions: formQuestions,
     },
-    personaId:
-      practice.persona_id != null && Number.isFinite(practice.persona_id)
-        ? practice.persona_id
-        : null,
+    personaId: resolvePracticePersonaId(practice, question_set),
     preservedQuestionSet: {
       timeLimitMinutes: question_set.time_limit_minutes ?? null,
       passingScore: question_set.passing_score ?? null,

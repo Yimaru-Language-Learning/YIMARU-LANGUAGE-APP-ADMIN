@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Plus } from "lucide-react"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
 import { Button } from "../../components/ui/button"
 import { Card } from "../../components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
@@ -29,6 +30,7 @@ export function PracticeMembersPage() {
 
   return (
     <div className="space-y-8">
+      <PageBackLink fallbackTo="/content/practices" label="Back to Practice Management" />
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">Practice Management</h1>

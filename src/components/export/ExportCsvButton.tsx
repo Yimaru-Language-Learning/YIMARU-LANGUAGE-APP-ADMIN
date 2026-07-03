@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { Download } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -43,7 +44,7 @@ export function ExportCsvButton({
       const filename = await downloadCsvExport(exportPath, params, { resourceName })
       toast.success(`Downloaded ${filename}`)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Export failed")
+      notifyApiError(e, "Export failed")
     } finally {
       setExporting(false)
     }

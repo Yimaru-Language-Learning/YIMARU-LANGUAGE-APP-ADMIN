@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Edit, Info, Loader2, Play, Rocket } from "lucide-react";
+import { PersonaAvatar } from "../../../../components/personas/PersonaAvatar";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { cn } from "../../../../lib/utils";
@@ -221,11 +222,7 @@ export function PracticeSequentialReview({
                 className="h-full w-full object-cover"
               />
             ) : persona?.avatar ? (
-              <img
-                src={persona.avatar}
-                alt=""
-                className="h-full w-full object-cover"
-              />
+              <PersonaAvatar src={persona.avatar} alt={persona.name} size="md" />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#E0F2FE] to-[#BFDBFE]" />
             )}
@@ -260,13 +257,7 @@ export function PracticeSequentialReview({
             </span>
             {persona ? (
               <div className="flex flex-col items-center gap-1.5">
-                <div className="h-12 w-12 overflow-hidden rounded-full bg-grayScale-100 ring-2 ring-brand-100">
-                  <img
-                    src={persona.avatar}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+                <PersonaAvatar src={persona.avatar} alt={persona.name} size="md" />
                 <span className="text-sm font-semibold text-grayScale-900">
                   {persona.name}
                 </span>

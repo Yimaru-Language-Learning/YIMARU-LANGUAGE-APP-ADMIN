@@ -1,11 +1,8 @@
+import { getApiErrorMessage, notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useMemo, useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { PageBackLink } from "../../components/navigation/PageBackLink";
+import { navigateBack } from "../../lib/navigateBack";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Stepper } from "../../components/ui/stepper";
@@ -15,7 +12,6 @@ import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.
 import { getQuestionTypeDefinitions } from "../../api/questionTypeDefinitions.api";
 import { emptyDynamicFieldValuesForDefinition } from "../../lib/learnEnglishDefinitionQuestion";
 import {
-  learnEnglishPracticeApiErrorMessage,
   validateLearnEnglishQuestionsWithDefinitions,
 } from "../../lib/learnEnglishPracticePublish";
 import { executePracticeCreation } from "../../lib/practiceCreationOrchestrator";
@@ -213,6 +209,8 @@ export function AddPracticeFlow() {
     isFromQuestionType,
   ]);
 
+  const goBack = () => navigateBack(navigate, backPath);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -279,7 +277,7 @@ export function AddPracticeFlow() {
         if (!cancelled) setTypeDefinitions(list);
       } catch (e) {
         if (!cancelled) {
-          setDefinitionsError(learnEnglishPracticeApiErrorMessage(e));
+          setDefinitionsError(getApiErrorMessage(e, "Failed to load question type definitions"));
           setTypeDefinitions([]);
         }
       } finally {
@@ -506,9 +504,7 @@ export function AddPracticeFlow() {
       toast.success("Practice created successfully");
       setIsPublished(true);
     } catch (e) {
-      toast.error("Could not save practice", {
-        description: learnEnglishPracticeApiErrorMessage(e),
-      });
+      notifyApiError(e, "Could not save practice");
     } finally {
       setSubmitting(false);
     }
@@ -547,7 +543,7 @@ export function AddPracticeFlow() {
         </p>
         <div className="flex flex-col gap-4 w-full max-w-[400px]">
           <Button
-            onClick={() => navigate(backPath)}
+            onClick={goBack}
             className="h-14 rounded-[6px] bg-[#9E2891] font-bold shadow-xl shadow-brand-500/20 text-[16px] text-white "
           >
             {backLabel}
@@ -626,7 +622,7 @@ export function AddPracticeFlow() {
               formData={formData}
               setFormData={setFormData}
               nextStep={nextStep}
-              onCancel={() => navigate(backPath)}
+              onCancel={goBack}
               isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               parentSummary={parentSummary}
@@ -755,13 +751,7 @@ export function AddPracticeFlow() {
     <div className="space-y-8 px-6 pb-16 pt-6">
       <div className="mx-auto max-w-7xl w-full">
         <div className="flex items-center justify-between mb-8">
-          <Link
-            to={backPath}
-            className="flex items-center gap-2 text-[15px] font-medium text-grayScale-600 transition-colors hover:text-brand-500 decoration-none"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {backLabel}
-          </Link>
+          <PageBackLink fallbackTo={backPath} label={backLabel} />
         </div>
 
         <div className=" mb-10">
@@ -772,7 +762,7 @@ export function AddPracticeFlow() {
             <Button
               variant="outline"
               className="rounded-[8px] border-grayScale-200 text-grayScale-600 h-10 px-6 font-bold bg-white hover:bg-grayScale-50"
-              onClick={() => navigate(backPath)}
+              onClick={goBack}
             >
               Cancel
             </Button>

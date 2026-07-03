@@ -1,7 +1,9 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { PageBackLink } from "../../components/navigation/PageBackLink";
+import { navigateBack } from "../../lib/navigateBack";
 import { Button } from "../../components/ui/button";
 import { Stepper } from "../../components/ui/stepper";
 import { createModuleLesson } from "../../api/courses.api";
@@ -62,6 +64,7 @@ export function AddVideoFlow() {
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
   const backPath = `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`;
+  const goBack = () => navigateBack(navigate, backPath);
 
   const handleCreateLesson = async (publishStatus: PracticePublishStatus) => {
     const mid = Number(moduleId);
@@ -118,10 +121,7 @@ export function AddVideoFlow() {
       setIsPublished(true);
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create lesson";
-      toast.error(msg);
+      notifyApiError(e, "Failed to create lesson");
     } finally {
       setPublishing(false);
     }
@@ -155,7 +155,7 @@ export function AddVideoFlow() {
 
         <div className="flex flex-col gap-4 w-full max-w-[400px]">
           <Button
-            onClick={() => navigate(backPath)}
+            onClick={goBack}
             className="h-12 rounded-[6px] bg-brand-500 font-bold text-[17px] text-white  transition-all active:scale-95"
           >
             View module
@@ -189,17 +189,11 @@ export function AddVideoFlow() {
     <div className="space-y-8 pb-32 px-6 pt-6 min-h-screen ">
       <div className="mx-auto max-w-7xl w-full">
         <div className="flex items-center justify-between mb-8">
-          <Link
-            to={backPath}
-            className="flex items-center gap-2 text-[15px] font-medium text-grayScale-500 transition-colors hover:text-brand-500 decoration-none"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to module
-          </Link>
+          <PageBackLink fallbackTo={backPath} label="Back to module" className="text-grayScale-500" />
           <Button
             variant="outline"
             className="rounded-[8px] border-grayScale-200 text-grayScale-600 h-10 px-6 font-bold bg-white hover:bg-grayScale-50"
-            onClick={() => navigate(backPath)}
+            onClick={goBack}
           >
             Cancel
           </Button>

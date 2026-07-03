@@ -155,7 +155,9 @@ export const changeTeamMemberPassword = (id: number, data: ChangeTeamMemberPassw
 
 /** POST /team/members/invite — send invitation email (permission: team.members.invite). */
 export const inviteTeamMember = (data: InviteTeamMemberRequest) =>
-  http.post<InviteTeamMemberResponse>("/team/members/invite", data)
+  http.post<InviteTeamMemberResponse>("/team/members/invite", data, {
+    skipErrorToast: true,
+  })
 
 /** GET /team/invitations/verify?token= — public (accept-invite page). */
 export const verifyTeamInvitation = (token: string) =>

@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, RefreshCw, Shield, Trash2 } from "lucide-react"
@@ -65,7 +66,7 @@ export function EmailTemplateDetailPage() {
       console.error(e)
       setError(true)
       setTemplate(null)
-      toast.error("Failed to load email template")
+      notifyApiError(e, "Failed to load email template")
     } finally {
       setLoading(false)
     }
@@ -104,10 +105,7 @@ export function EmailTemplateDetailPage() {
       toast.success("Email template updated")
     } catch (e: unknown) {
       console.error(e)
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update email template"
-      toast.error(msg)
+      notifyApiError(e, "Failed to update email template")
     } finally {
       setSaving(false)
     }

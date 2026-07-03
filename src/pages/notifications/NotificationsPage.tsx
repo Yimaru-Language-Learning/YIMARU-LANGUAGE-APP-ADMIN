@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useState, useCallback } from "react"
 import {
   Bell,
@@ -396,7 +397,7 @@ export function NotificationsPage() {
         }
       } else {
         setDetailError(true)
-        toast.error("Failed to load notification details")
+        notifyApiError(err, "Failed to load notification details")
       }
     } finally {
       setDetailLoading(false)

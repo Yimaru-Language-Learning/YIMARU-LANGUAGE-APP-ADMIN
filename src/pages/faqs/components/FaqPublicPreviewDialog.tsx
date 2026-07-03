@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useCallback, useEffect, useState } from "react"
 import { Eye } from "lucide-react"
 import { toast } from "sonner"
@@ -36,7 +37,7 @@ export function FaqPublicPreviewDialog({
     } catch (e) {
       console.error(e)
       setFaqs([])
-      toast.error("Failed to load public FAQ preview")
+      notifyApiError(e, "Failed to load public FAQ preview")
     } finally {
       setLoading(false)
     }

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from "react"
 import { CloudUpload } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../../lib/apiErrors"
 import { uploadImageFile } from "../../../api/files.api"
 import { Input } from "../../../components/ui/input"
 import { cn } from "../../../lib/utils"
@@ -62,10 +63,7 @@ export function PersonaProfilePictureUploadField({
         toast.success("Profile picture uploaded")
       } catch (e: unknown) {
         console.error(e)
-        const msg =
-          (e as { response?: { data?: { message?: string } } })?.response?.data
-            ?.message ?? "Failed to upload profile picture"
-        toast.error(msg)
+        notifyApiError(e, "Failed to upload profile picture")
       } finally {
         setBusy(false)
       }

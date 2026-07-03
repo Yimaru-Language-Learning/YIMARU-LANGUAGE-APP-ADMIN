@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { FolderOpen, RefreshCw, BookOpen, Plus, Trash2 } from "lucide-react"
@@ -371,13 +372,8 @@ export function CourseCategoryPage() {
                   setPendingSubCategories([])
                   setCreateOpen(false)
                   fetchCategories()
-                } catch (err: any) {
-                  const message =
-                    err?.response?.data?.message ||
-                    "Failed to create category. Please try again."
-                  toast.error("Could not create category", {
-                    description: message,
-                  })
+                } catch (err: unknown) {
+                  notifyApiError(err, "Could not create category")
                 } finally {
                   setCreating(false)
                 }
@@ -415,9 +411,8 @@ export function CourseCategoryPage() {
                   toast.success("Category deleted")
                   setDeleteTarget(null)
                   await fetchCategories()
-                } catch (err: any) {
-                  const message = err?.response?.data?.message || "Failed to delete category."
-                  toast.error("Could not delete category", { description: message })
+                } catch (err: unknown) {
+                  notifyApiError(err, "Could not delete category")
                 } finally {
                   setDeleting(false)
                 }

@@ -1,6 +1,8 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, ArrowRight, Pencil, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PageBackLink } from "../../components/navigation/PageBackLink";
 import { toast } from "sonner";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -147,10 +149,7 @@ export function LearnEnglishPage() {
       toast.success("Thumbnail uploaded");
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(msg);
+      notifyApiError(e, "Failed to upload thumbnail");
     } finally {
       setUploadingEditThumbnail(false);
     }
@@ -198,10 +197,7 @@ export function LearnEnglishPage() {
       toast.success("Thumbnail uploaded");
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(msg);
+      notifyApiError(e, "Failed to upload thumbnail");
     } finally {
       setCreateUploadingThumbnail(false);
     }
@@ -238,10 +234,7 @@ export function LearnEnglishPage() {
       await fetchPrograms();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create program";
-      toast.error(msg);
+      notifyApiError(e, "Failed to create program");
     } finally {
       setCreateSaving(false);
     }
@@ -277,10 +270,7 @@ export function LearnEnglishPage() {
       await fetchPrograms();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update program";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update program");
     } finally {
       setSavingEdit(false);
     }
@@ -304,10 +294,7 @@ export function LearnEnglishPage() {
         nextStatus === "PUBLISHED" ? "Program published" : "Program saved as draft",
       );
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update program status";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update program status");
     } finally {
       setPublishStatusUpdatingId(null);
     }
@@ -329,10 +316,7 @@ export function LearnEnglishPage() {
         nextTier === "PREMIUM" ? "Program set to Premium" : "Program set to Free",
       );
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update program access tier";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update program access tier");
     } finally {
       setAccessTierUpdatingId(null);
     }
@@ -348,10 +332,7 @@ export function LearnEnglishPage() {
       await fetchPrograms();
     } catch (e: unknown) {
       console.error(e);
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete program";
-      toast.error(msg);
+      notifyApiError(e, "Failed to delete program");
     } finally {
       setDeleting(false);
     }
@@ -401,9 +382,7 @@ export function LearnEnglishPage() {
       console.error(e);
       setError("Failed to load programs");
       setPrograms([]);
-      toast.error("Could not load programs", {
-        description: "Check your connection or try again.",
-      });
+      notifyApiError(e, "Could not load programs");
     } finally {
       setLoading(false);
     }
@@ -415,6 +394,7 @@ export function LearnEnglishPage() {
 
   return (
     <div className="space-y-8">
+      <PageBackLink fallbackTo="/new-content" label="Back to Content Management" />
       {/* Header section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

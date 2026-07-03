@@ -1,3 +1,4 @@
+import { notifyApiError } from "../lib/apiErrors"
 import React, { useEffect, useState } from "react";
 import {
   Eye,
@@ -81,10 +82,7 @@ function SecurityTab({ memberId }: { memberId: number }) {
       logoutToLogin({ passwordChanged: true });
       return;
     } catch (e: unknown) {
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update password.";
-      toast.error(msg);
+      notifyApiError(e, "Failed to update password.");
     } finally {
       setSaving(false);
     }

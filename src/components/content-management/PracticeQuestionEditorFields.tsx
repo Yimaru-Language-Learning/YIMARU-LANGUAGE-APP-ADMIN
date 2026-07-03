@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import {
   useCallback,
   useEffect,
@@ -330,7 +331,7 @@ export function PracticeQuestionEditorFields({
         toast.success("Audio uploaded successfully")
       } catch (error) {
         console.error("Failed to upload audio:", error)
-        toast.error("Failed to upload audio file")
+        notifyApiError(error, "Failed to upload audio file")
       } finally {
         if (field === "voice_prompt") setUploadingVoice(false)
         else setUploadingSample(false)
@@ -387,7 +388,7 @@ export function PracticeQuestionEditorFields({
       else setSamplePreviewUrl(url)
     } catch (error) {
       console.error("Failed to resolve audio:", error)
-      toast.error("Could not import/resolve audio URL")
+      notifyApiError(error, "Could not import/resolve audio URL")
     } finally {
       if (field === "voice_prompt") setUploadingVoice(false)
       else setUploadingSample(false)
@@ -419,7 +420,7 @@ export function PracticeQuestionEditorFields({
       toast.success("Image uploaded successfully")
     } catch (error) {
       console.error("Failed to upload image:", error)
-      toast.error("Failed to upload image")
+      notifyApiError(error, "Failed to upload image")
     } finally {
       setUploadingImage(false)
     }
@@ -435,7 +436,7 @@ export function PracticeQuestionEditorFields({
       setImagePreviewUrl(resolved)
     } catch (error) {
       console.error("Failed to resolve image preview URL:", error)
-      toast.error("Could not resolve image preview URL")
+      notifyApiError(error, "Could not resolve image preview URL")
     }
   }
 
@@ -704,7 +705,7 @@ export function PracticeQuestionEditorFields({
       })
     } catch (e) {
       console.error(e)
-      toast.error("Failed to load definition details")
+      notifyApiError(e, "Failed to load definition details")
     } finally {
       setDefinitionDetailLoading(false)
     }

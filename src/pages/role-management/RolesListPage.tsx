@@ -18,6 +18,7 @@ import {
   UserCheck,
   Mail,
 } from "lucide-react"
+import { notifyApiError } from "../../lib/apiErrors"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
@@ -41,7 +42,6 @@ import { cn } from "../../lib/utils"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { toast } from "sonner"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
-import { teamRoleFromRbacRole } from "../../lib/teamRoles"
 import { InviteTeamMemberDialog } from "./components/InviteTeamMemberDialog"
 
 export function RolesListPage() {
@@ -130,8 +130,8 @@ export function RolesListPage() {
     try {
       const res = await getRoleDetail(roleId)
       setSelectedRole(res.data.data)
-    } catch {
-      toast.error("Failed to load role details.")
+    } catch (err: unknown) {
+      notifyApiError(err, "Failed to load role details.")
       setDetailOpen(false)
     } finally {
       setDetailLoading(false)
@@ -172,10 +172,10 @@ export function RolesListPage() {
       }
       setBulkDialog(null)
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        (type === "deactivate" ? "Bulk deactivation failed." : "Bulk reactivation failed.")
-      toast.error(message)
+      notifyApiError(
+        err,
+        type === "deactivate" ? "Bulk deactivation failed." : "Bulk reactivation failed.",
+      )
     } finally {
       setBulkActionLoading(false)
     }
@@ -201,10 +201,7 @@ export function RolesListPage() {
       setDeleteDialogOpen(false)
       await fetchRoles()
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to delete role."
-      toast.error(message)
+      notifyApiError(err, "Failed to delete role.")
     } finally {
       setDeleteLoading(false)
     }
@@ -235,10 +232,7 @@ export function RolesListPage() {
       setEditingRole(false)
       toast.success("Role updated successfully.")
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to update role."
-      toast.error(message)
+      notifyApiError(err, "Failed to update role.")
     } finally {
       setSavingRole(false)
     }
@@ -255,8 +249,8 @@ export function RolesListPage() {
       try {
         const res = await getAllPermissions()
         setAllPermissionsMap(res.data.data ?? {})
-      } catch {
-        toast.error("Failed to load permissions.")
+      } catch (err: unknown) {
+        notifyApiError(err, "Failed to load permissions.")
         setEditingPermissions(false)
       } finally {
         setPermLoading(false)
@@ -302,8 +296,8 @@ export function RolesListPage() {
       setSelectedRole(res.data.data)
       setEditingPermissions(false)
       toast.success("Permissions updated successfully.")
-    } catch {
-      toast.error("Failed to update permissions.")
+    } catch (err: unknown) {
+      notifyApiError(err, "Failed to update permissions.")
     } finally {
       setSavingPermissions(false)
     }
@@ -1016,9 +1010,7 @@ export function RolesListPage() {
         onOpenChange={(open) => {
           if (!open) setInviteForRole(null)
         }}
-        presetTeamRole={
-          inviteForRole ? teamRoleFromRbacRole(inviteForRole) : undefined
-        }
+        presetTeamRole={inviteForRole?.name}
         presetRoleLabel={inviteForRole?.name}
       />
     </div>

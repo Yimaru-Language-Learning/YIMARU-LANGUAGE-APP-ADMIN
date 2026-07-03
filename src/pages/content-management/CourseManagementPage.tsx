@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
@@ -183,7 +184,7 @@ export function CourseManagementPage() {
       );
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load units");
+      notifyApiError(error, "Failed to load units");
       setUnits([]);
     } finally {
       setUnitsLoading(false);
@@ -212,10 +213,7 @@ export function CourseManagementPage() {
         nextStatus === "PUBLISHED" ? "Course published" : "Course saved as draft",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update course status";
-      toast.error(message);
+      notifyApiError(error, "Failed to update course status");
     } finally {
       setCatalogCoursePublishStatusUpdating(false);
     }
@@ -239,10 +237,7 @@ export function CourseManagementPage() {
         nextStatus === "PUBLISHED" ? "Unit published" : "Unit saved as draft",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update unit status";
-      toast.error(message);
+      notifyApiError(error, "Failed to update unit status");
     } finally {
       setPublishStatusUpdatingId(null);
     }
@@ -264,10 +259,7 @@ export function CourseManagementPage() {
         nextTier === "PREMIUM" ? "Unit set to Premium" : "Unit set to Free",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update unit access tier";
-      toast.error(message);
+      notifyApiError(error, "Failed to update unit access tier");
     } finally {
       setAccessTierUpdatingId(null);
     }
@@ -328,10 +320,7 @@ export function CourseManagementPage() {
       toast.success("Thumbnail uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload thumbnail");
     } finally {
       setUploadingThumbnail(false);
     }
@@ -373,10 +362,7 @@ export function CourseManagementPage() {
       setAddUnitOpen(false);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create unit";
-      toast.error(message);
+      notifyApiError(error, "Failed to create unit");
     } finally {
       setCreating(false);
     }
@@ -394,10 +380,7 @@ export function CourseManagementPage() {
       }
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload URL to MinIO";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload URL to MinIO");
     } finally {
       setUploadingThumbnail(false);
     }
@@ -415,10 +398,7 @@ export function CourseManagementPage() {
       }
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload URL to MinIO";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload URL to MinIO");
     } finally {
       setUploadingEditThumbnail(false);
     }
@@ -458,10 +438,7 @@ export function CourseManagementPage() {
       toast.success("Thumbnail uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload thumbnail");
     } finally {
       setUploadingEditThumbnail(false);
     }
@@ -504,10 +481,7 @@ export function CourseManagementPage() {
       closeEditUnit();
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update unit";
-      toast.error(message);
+      notifyApiError(error, "Failed to update unit");
     } finally {
       setSavingEdit(false);
     }
@@ -523,10 +497,7 @@ export function CourseManagementPage() {
       setDeletingUnitId(null);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete unit";
-      toast.error(message);
+      notifyApiError(error, "Failed to delete unit");
     } finally {
       setDeletingUnit(false);
     }

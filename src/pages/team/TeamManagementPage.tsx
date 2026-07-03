@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -210,7 +211,7 @@ export function TeamManagementPage() {
     } catch (error) {
       console.error("Failed to update member status:", error);
       setToggledStatuses((prev) => ({ ...prev, [id]: previousActive }));
-      toast.error("Failed to update team member status. Please try again.");
+      notifyApiError(err, "Failed to update team member status. Please try again.");
     } finally {
       setUpdating(false);
       handleCancelConfirm();

@@ -10,10 +10,29 @@ import type {
   GetPermissionsResponse,
   BulkRoleDeactivateResponse,
   BulkRoleReactivateResponse,
+  Role,
 } from "../types/rbac.types"
 
 export const getRoles = (params?: GetRolesParams) =>
   http.get<GetRolesResponse>("/rbac/roles", { params })
+
+/** Fetch every RBAC role across paginated list responses. */
+export async function fetchAllRoles(): Promise<Role[]> {
+  const pageSize = 50
+  const firstRes = await getRoles({ page: 1, page_size: pageSize })
+  const firstBatch = firstRes.data?.data?.roles ?? []
+  const total = firstRes.data?.data?.total ?? firstBatch.length
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+
+  if (totalPages === 1) return firstBatch
+
+  const remaining = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, idx) =>
+      getRoles({ page: idx + 2, page_size: pageSize }),
+    ),
+  )
+  return [...firstBatch, ...remaining.flatMap((res) => res.data?.data?.roles ?? [])]
+}
 
 export const getRoleDetail = (roleId: number) =>
   http.get<GetRoleDetailResponse>(`/rbac/roles/${roleId}`)

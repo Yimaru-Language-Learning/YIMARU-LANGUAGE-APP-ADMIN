@@ -30,16 +30,15 @@ import {
 import { usePersonaPermissions } from "../../hooks/usePersonaPermissions"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
+import { PersonaAvatar } from "../../components/personas/PersonaAvatar"
 import {
   formatPersonaDate,
   personaAvatarUrl,
   personaGenderLabel,
   personaStatusLabel,
 } from "../../lib/personaDisplay"
-import {
-  getPersonaApiErrorMessage,
-  isPersonaForbiddenError,
-} from "../../lib/personasErrors"
+import { notifyApiError } from "../../lib/apiErrors"
+import { isPersonaForbiddenError } from "../../lib/personasErrors"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import type { LmsPersona } from "../../types/persona.types"
 import { CreatePersonaDialog } from "./components/CreatePersonaDialog"
@@ -100,9 +99,9 @@ export function PersonasPage() {
       setPersonas([])
       if (isPersonaForbiddenError(e)) {
         setPermissionDenied(true)
-        toast.error(getPersonaApiErrorMessage(e, "You do not have permission to view personas"))
+        notifyApiError(e, "You do not have permission to view personas")
       } else {
-        toast.error(getPersonaApiErrorMessage(e, "Failed to load personas"))
+        notifyApiError(e, "Failed to load personas")
       }
     } finally {
       setLoading(false)
@@ -173,7 +172,7 @@ export function PersonasPage() {
       }
     } catch (e) {
       console.error(e)
-      toast.error(getPersonaApiErrorMessage(e, "Failed to update persona status"))
+      notifyApiError(e, "Failed to update persona status")
     } finally {
       setTogglingId(null)
     }
@@ -299,14 +298,14 @@ export function PersonasPage() {
                   paginated.map((persona) => (
                     <TableRow key={persona.id}>
                       <TableCell className="py-3.5">
-                        <img
+                        <PersonaAvatar
                           src={personaAvatarUrl(
                             persona.profile_picture,
                             persona.name,
                             persona.id,
                           )}
-                          alt=""
-                          className="h-10 w-10 rounded-full border border-grayScale-200 bg-grayScale-50 object-cover"
+                          alt={persona.name}
+                          size="sm"
                         />
                       </TableCell>
                       <TableCell className="py-3.5">

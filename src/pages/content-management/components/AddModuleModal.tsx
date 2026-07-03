@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -97,10 +98,7 @@ export function AddModuleModal({
       resetAndClose();
     } catch (err: unknown) {
       console.error(err);
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create module";
-      toast.error(msg);
+      notifyApiError(err, "Failed to create module");
     } finally {
       setSubmitting(false);
     }

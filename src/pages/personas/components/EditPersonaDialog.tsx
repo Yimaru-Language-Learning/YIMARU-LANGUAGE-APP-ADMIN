@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
-import { getPersonaApiErrorMessage } from "../../../lib/personasErrors"
+import { notifyApiError } from "../../../lib/apiErrors"
 import type { LmsPersona } from "../../../types/persona.types"
 import {
   draftToUpdatePayload,
@@ -54,7 +54,7 @@ export function EditPersonaDialog({
       if (status === 404) {
         toast.error("Persona not found")
       } else {
-        toast.error(getPersonaApiErrorMessage(e, "Failed to load persona"))
+        notifyApiError(e, "Failed to load persona")
       }
       onOpenChange(false)
     } finally {
@@ -95,7 +95,7 @@ export function EditPersonaDialog({
       onUpdated?.()
     } catch (e: unknown) {
       console.error(e)
-      toast.error(getPersonaApiErrorMessage(e, "Failed to update persona"))
+      notifyApiError(e, "Failed to update persona")
     } finally {
       setSaving(false)
     }

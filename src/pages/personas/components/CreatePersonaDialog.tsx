@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog"
-import { getPersonaApiErrorMessage } from "../../../lib/personasErrors"
+import { notifyApiError } from "../../../lib/apiErrors"
 import {
   draftToCreatePayload,
   EMPTY_PERSONA_FORM_DRAFT,
@@ -62,7 +62,7 @@ export function CreatePersonaDialog({
       onCreated?.()
     } catch (e: unknown) {
       console.error(e)
-      toast.error(getPersonaApiErrorMessage(e, "Failed to create persona"))
+      notifyApiError(e, "Failed to create persona")
     } finally {
       setSaving(false)
     }

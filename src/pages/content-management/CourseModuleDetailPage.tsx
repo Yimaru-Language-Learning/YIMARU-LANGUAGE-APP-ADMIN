@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Plus, Video } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -282,10 +283,7 @@ export function CourseModuleDetailPage() {
       toast.success("Video uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload video";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload video");
     } finally {
       setUploadingVideo(false);
     }
@@ -310,10 +308,7 @@ export function CourseModuleDetailPage() {
       toast.success("Thumbnail uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload thumbnail");
     } finally {
       setUploadingThumbnail(false);
     }
@@ -331,10 +326,7 @@ export function CourseModuleDetailPage() {
       }
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload URL to MinIO";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload URL to MinIO");
     } finally {
       setUploadingThumbnail(false);
     }
@@ -376,10 +368,7 @@ export function CourseModuleDetailPage() {
       setCreateLessonOpen(false);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create lesson";
-      toast.error(message);
+      notifyApiError(error, "Failed to create lesson");
     } finally {
       setCreatingLesson(false);
     }
@@ -427,10 +416,7 @@ export function CourseModuleDetailPage() {
       toast.success("Video uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload video";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload video");
     } finally {
       setUploadingEditVideo(false);
     }
@@ -455,10 +441,7 @@ export function CourseModuleDetailPage() {
       toast.success("Thumbnail uploaded");
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload thumbnail";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload thumbnail");
     } finally {
       setUploadingEditThumbnail(false);
     }
@@ -476,10 +459,7 @@ export function CourseModuleDetailPage() {
       }
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload URL to MinIO";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload URL to MinIO");
     } finally {
       setUploadingEditThumbnail(false);
     }
@@ -513,10 +493,7 @@ export function CourseModuleDetailPage() {
       closeEditLesson();
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update lesson";
-      toast.error(message);
+      notifyApiError(error, "Failed to update lesson");
     } finally {
       setSavingEdit(false);
     }
@@ -532,10 +509,7 @@ export function CourseModuleDetailPage() {
       setDeletingLessonId(null);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete lesson";
-      toast.error(message);
+      notifyApiError(error, "Failed to delete lesson");
     } finally {
       setDeletingLesson(false);
     }
@@ -556,10 +530,7 @@ export function CourseModuleDetailPage() {
       );
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update module status";
-      toast.error(message);
+      notifyApiError(error, "Failed to update module status");
     } finally {
       setModulePublishStatusUpdating(false);
     }
@@ -586,13 +557,10 @@ export function CourseModuleDetailPage() {
       );
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ??
-        (nextStatus === "PUBLISHED"
-          ? "Failed to publish lesson"
-          : "Failed to save lesson as draft");
-      toast.error(message);
+      notifyApiError(
+        error,
+        nextStatus === "PUBLISHED" ? "Failed to publish lesson" : "Failed to save lesson as draft",
+      );
     } finally {
       setPublishStatusLessonId(null);
     }
@@ -617,10 +585,7 @@ export function CourseModuleDetailPage() {
       );
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update lesson access tier";
-      toast.error(message);
+      notifyApiError(error, "Failed to update lesson access tier");
     } finally {
       setAccessTierLessonId(null);
     }

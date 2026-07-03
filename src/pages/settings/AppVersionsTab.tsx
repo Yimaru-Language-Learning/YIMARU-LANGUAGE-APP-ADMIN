@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   AlertTriangle,
@@ -90,7 +91,7 @@ export function AppVersionsTab() {
       console.error(e)
       setError(true)
       setVersions([])
-      toast.error("Failed to load app versions")
+      notifyApiError(e, "Failed to load app versions")
     } finally {
       setLoading(false)
     }

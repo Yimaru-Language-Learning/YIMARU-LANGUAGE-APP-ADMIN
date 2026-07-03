@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useEffect, useState } from "react"
 import { Plus } from "lucide-react"
 import { toast } from "sonner"
@@ -133,7 +134,7 @@ export function CreateAppVersionDialog({
       onCreated(res.data)
       onOpenChange(false)
     } catch {
-      toast.error("Failed to create app version.")
+      notifyApiError(err, "Failed to create app version.")
     } finally {
       setSaving(false)
     }

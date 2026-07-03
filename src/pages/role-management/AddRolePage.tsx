@@ -8,6 +8,7 @@ import { Textarea } from "../../components/ui/textarea"
 import { Badge } from "../../components/ui/badge"
 import { createRole, setRolePermissions, getAllPermissions } from "../../api/rbac.api"
 import type { RolePermission } from "../../types/rbac.types"
+import { notifyApiError } from "../../lib/apiErrors"
 import { cn } from "../../lib/utils"
 import { toast } from "sonner"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
@@ -33,8 +34,8 @@ export function AddRolePage() {
       try {
         const res = await getAllPermissions()
         setPermissionsMap(res.data.data ?? {})
-      } catch {
-        toast.error("Failed to load permissions.")
+      } catch (err: unknown) {
+        notifyApiError(err, "Failed to load permissions.")
       } finally {
         setPermLoading(false)
       }
@@ -122,10 +123,7 @@ export function AddRolePage() {
       toast.success(`Role "${res.data.data.name}" created successfully.`)
       navigate("/roles")
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to create role."
-      toast.error(message)
+      notifyApiError(err, "Failed to create role.")
     } finally {
       setSaving(false)
     }

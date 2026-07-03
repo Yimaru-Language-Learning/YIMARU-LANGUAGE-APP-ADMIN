@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, ChevronDown, ChevronRight, Image as ImageIcon, Mic, Plus, Trash2, Upload } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -593,7 +594,7 @@ export function SpeakingPage() {
       toast.success("Practice created. Continue adding questions.")
     } catch (error) {
       console.error("Failed to create speaking practice set:", error)
-      toast.error("Failed to create practice set")
+      notifyApiError(error, "Failed to create practice set")
     } finally {
       setCreatingSet(false)
     }
@@ -616,7 +617,7 @@ export function SpeakingPage() {
       toast.success("Intro video uploaded", { description: "The URL has been filled in for you." })
     } catch (error) {
       console.error("Failed to upload intro video:", error)
-      toast.error("Failed to upload intro video")
+      notifyApiError(error, "Failed to upload intro video")
     } finally {
       setUploadingIntroVideo(false)
     }
@@ -715,7 +716,7 @@ export function SpeakingPage() {
         toast.success("Audio uploaded successfully")
       } catch (error) {
         console.error("Failed to upload audio:", error)
-        toast.error("Failed to upload audio file")
+        notifyApiError(error, "Failed to upload audio file")
       } finally {
         updateDraft(draftIndex, (draft) =>
           field === "voice_prompt"
@@ -768,7 +769,7 @@ export function SpeakingPage() {
       toast.success("Image uploaded successfully")
     } catch (error) {
       console.error("Failed to upload image:", error)
-      toast.error("Failed to upload image")
+      notifyApiError(error, "Failed to upload image")
     } finally {
       updateDraft(draftIndex, (draft) => ({ ...draft, uploadingImage: false }))
       event.target.value = ""
@@ -839,7 +840,7 @@ export function SpeakingPage() {
       )
     } catch (error) {
       console.error("Failed to resolve audio preview URL:", error)
-      toast.error("Could not import/resolve audio URL")
+      notifyApiError(error, "Could not import/resolve audio URL")
     } finally {
       updateDraft(draftIndex, (draft) =>
         field === "voice_prompt"
@@ -861,7 +862,7 @@ export function SpeakingPage() {
       updateDraft(draftIndex, (current) => ({ ...current, imagePreviewUrl: resolved }))
     } catch (error) {
       console.error("Failed to resolve image preview URL:", error)
-      toast.error("Could not resolve image preview URL")
+      notifyApiError(error, "Could not resolve image preview URL")
     }
   }
 
@@ -1093,7 +1094,7 @@ export function SpeakingPage() {
       await fetchAudioQuestions()
     } catch (error) {
       console.error("Failed to create speaking practice:", error)
-      toast.error("Failed to create speaking practice")
+      notifyApiError(error, "Failed to create speaking practice")
     } finally {
       setSaving(false)
     }
@@ -1138,7 +1139,7 @@ export function SpeakingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch question detail:", error)
-      toast.error("Failed to load question detail")
+      notifyApiError(error, "Failed to load question detail")
       setDetailOpen(false)
     } finally {
       setDetailLoading(false)
@@ -1199,7 +1200,7 @@ export function SpeakingPage() {
       toast.success("AUDIO question updated")
     } catch (error) {
       console.error("Failed to update AUDIO question:", error)
-      toast.error("Failed to update AUDIO question")
+      notifyApiError(error, "Failed to update AUDIO question")
     } finally {
       setDetailSaving(false)
     }
@@ -1219,7 +1220,7 @@ export function SpeakingPage() {
       toast.success("AUDIO question deleted")
     } catch (error) {
       console.error("Failed to delete AUDIO question:", error)
-      toast.error("Failed to delete AUDIO question")
+      notifyApiError(error, "Failed to delete AUDIO question")
     } finally {
       setDetailDeleting(false)
     }
@@ -1254,7 +1255,7 @@ export function SpeakingPage() {
       toast.success(`Deleted ${selectedQuestionIds.length} AUDIO question(s)`)
     } catch (error) {
       console.error("Failed to delete selected AUDIO questions:", error)
-      toast.error("Failed to delete selected AUDIO questions")
+      notifyApiError(error, "Failed to delete selected AUDIO questions")
     } finally {
       setBulkDeleting(false)
     }

@@ -37,7 +37,8 @@ import {
   formatFaqDate,
   suggestNextDisplayOrder,
 } from "../../lib/faqDisplay"
-import { getFaqApiErrorMessage, isFaqForbiddenError } from "../../lib/faqErrors"
+import { notifyApiError } from "../../lib/apiErrors"
+import { isFaqForbiddenError } from "../../lib/faqErrors"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
@@ -103,9 +104,9 @@ export function FaqsPage() {
       setFaqs([])
       if (isFaqForbiddenError(e)) {
         setPermissionDenied(true)
-        toast.error(getFaqApiErrorMessage(e, "You do not have permission to view FAQs"))
+        notifyApiError(e, "You do not have permission to view FAQs")
       } else {
-        toast.error(getFaqApiErrorMessage(e, "Failed to load FAQs"))
+        notifyApiError(e, "Failed to load FAQs")
       }
     } finally {
       setLoading(false)
@@ -168,8 +169,7 @@ export function FaqsPage() {
       )
     } catch (e: unknown) {
       console.error(e)
-      const msg = getFaqApiErrorMessage(e, "Failed to update FAQ status")
-      toast.error(msg)
+      notifyApiError(e, "Failed to update FAQ status")
     } finally {
       setTogglingId(null)
     }

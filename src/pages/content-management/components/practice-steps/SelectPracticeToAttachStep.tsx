@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { toast } from "sonner"
@@ -7,7 +8,6 @@ import { Input } from "../../../../components/ui/input"
 import { SpinnerIcon } from "../../../../components/ui/spinner-icon"
 import { practiceAlreadyLinkedToParent } from "../../../../lib/attachPracticeToParent"
 import { fetchAllPractices } from "../../../../lib/fetchAllPractices"
-import { learnEnglishPracticeApiErrorMessage } from "../../../../lib/learnEnglishPracticePublish"
 import { formatPracticeParentsSummary } from "../../../../lib/practiceParents"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../../../lib/tablePagination"
 import type { ParentContextPractice, PracticeParent } from "../../../../types/course.types"
@@ -74,9 +74,7 @@ export function SelectPracticeToAttachStep({
       const practices = await fetchAllPractices(unlinkedOnly, { isExamPrep })
       setAllPractices(practices)
     } catch (e) {
-      toast.error("Could not load practices", {
-        description: learnEnglishPracticeApiErrorMessage(e),
-      })
+      notifyApiError(e, "Could not load practices")
       setAllPractices([])
     } finally {
       setLoading(false)

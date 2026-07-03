@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
@@ -226,7 +227,7 @@ export function UnitManagementPage() {
       );
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load modules");
+      notifyApiError(error, "Failed to load modules");
       setModules([]);
     } finally {
       setModulesLoading(false);
@@ -253,10 +254,7 @@ export function UnitManagementPage() {
         nextStatus === "PUBLISHED" ? "Unit published" : "Unit saved as draft",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update unit status";
-      toast.error(message);
+      notifyApiError(error, "Failed to update unit status");
     } finally {
       setUnitPublishStatusUpdating(false);
     }
@@ -280,10 +278,7 @@ export function UnitManagementPage() {
         nextStatus === "PUBLISHED" ? "Module published" : "Module saved as draft",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update module status";
-      toast.error(message);
+      notifyApiError(error, "Failed to update module status");
     } finally {
       setPublishStatusUpdatingId(null);
     }
@@ -305,10 +300,7 @@ export function UnitManagementPage() {
         nextTier === "PREMIUM" ? "Module set to Premium" : "Module set to Free",
       );
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update module access tier";
-      toast.error(message);
+      notifyApiError(error, "Failed to update module access tier");
     } finally {
       setAccessTierUpdatingId(null);
     }
@@ -355,10 +347,7 @@ export function UnitManagementPage() {
       toast.success(`${target === "thumbnail" ? "Thumbnail" : "Icon"} uploaded`);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload image";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload image");
     } finally {
       if (target === "thumbnail") {
         setUploadingThumbnail(false);
@@ -391,10 +380,7 @@ export function UnitManagementPage() {
       }
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload URL to MinIO";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload URL to MinIO");
     } finally {
       if (target === "thumbnail") {
         setUploadingThumbnail(false);
@@ -430,10 +416,7 @@ export function UnitManagementPage() {
       setAddModuleOpen(false);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to create module";
-      toast.error(message);
+      notifyApiError(error, "Failed to create module");
     } finally {
       setCreating(false);
     }
@@ -484,10 +467,7 @@ export function UnitManagementPage() {
       toast.success(`${target === "thumbnail" ? "Thumbnail" : "Icon"} uploaded`);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload image";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload image");
     } finally {
       if (target === "thumbnail") {
         setUploadingEditThumbnail(false);
@@ -517,10 +497,7 @@ export function UnitManagementPage() {
       }
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to upload URL to MinIO";
-      toast.error(message);
+      notifyApiError(error, "Failed to upload URL to MinIO");
     } finally {
       if (target === "thumbnail") {
         setUploadingEditThumbnail(false);
@@ -564,10 +541,7 @@ export function UnitManagementPage() {
       closeEditModule();
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to update module";
-      toast.error(message);
+      notifyApiError(error, "Failed to update module");
     } finally {
       setSavingEdit(false);
     }
@@ -583,10 +557,7 @@ export function UnitManagementPage() {
       setDeletingModuleId(null);
     } catch (error: unknown) {
       console.error(error);
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to delete module";
-      toast.error(message);
+      notifyApiError(error, "Failed to delete module");
     } finally {
       setDeletingModule(false);
     }

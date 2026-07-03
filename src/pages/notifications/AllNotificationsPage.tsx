@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Bell, List, RefreshCw } from "lucide-react"
@@ -132,7 +133,7 @@ export function AllNotificationsPage() {
       setError(true)
       setRows([])
       setTotalCount(0)
-      toast.error("Failed to load notifications")
+      notifyApiError(err, "Failed to load notifications")
     } finally {
       setLoading(false)
     }
@@ -192,7 +193,7 @@ export function AllNotificationsPage() {
         setSelectedNotification(notification)
       } else {
         setDetailError(true)
-        toast.error("Failed to load notification details")
+        notifyApiError(err, "Failed to load notification details")
       }
     } finally {
       setDetailLoading(false)

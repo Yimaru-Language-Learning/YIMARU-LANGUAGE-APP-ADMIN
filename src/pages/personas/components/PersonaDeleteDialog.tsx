@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { deletePersona } from "../../../api/personas.api"
 import { Button } from "../../../components/ui/button"
-import { getPersonaApiErrorMessage } from "../../../lib/personasErrors"
+import { notifyApiError } from "../../../lib/apiErrors"
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,7 @@ export function PersonaDeleteDialog({
       onDeleted?.()
     } catch (e: unknown) {
       console.error(e)
-      toast.error(getPersonaApiErrorMessage(e, "Failed to delete persona"))
+      notifyApiError(e, "Failed to delete persona")
     } finally {
       setDeleting(false)
     }

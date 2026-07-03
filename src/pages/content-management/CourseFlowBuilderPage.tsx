@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useMemo, useState } from "react"
 import {
   ChevronDown,
@@ -28,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button"
 import { Select } from "../../components/ui/select"
 import { Badge } from "../../components/ui/badge"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
 import {
   getCourseCategories,
   getCoursesByCategory,
@@ -226,7 +228,7 @@ export function CourseFlowBuilderPage() {
         const all = sortByDisplayOrder(res.data.data.categories ?? [])
         setCategories(all)
       } catch {
-        toast.error("Failed to load course categories.")
+        notifyApiError(err, "Failed to load course categories.")
       } finally {
         setLoading(false)
       }
@@ -263,7 +265,7 @@ export function CourseFlowBuilderPage() {
         setCoursesByCategory((prev) => ({ ...prev, [selectedCategoryId]: items }))
         setSelectedCourseId(items[0]?.id ?? null)
       } catch {
-        toast.error("Failed to load course sub-categories.")
+        notifyApiError(err, "Failed to load course sub-categories.")
       } finally {
         setLoadingCourses(false)
       }
@@ -351,7 +353,7 @@ export function CourseFlowBuilderPage() {
         })
         setVideosBySubCourse(videoMap)
       } catch {
-        toast.error("Failed to load course flow detail.")
+        notifyApiError(err, "Failed to load course flow detail.")
         setLearningPath(null)
       } finally {
         setLoadingPath(false)
@@ -402,7 +404,7 @@ export function CourseFlowBuilderPage() {
         [subCourseId]: videos,
       }))
     } catch {
-      toast.error("Failed to load practice sets for course.")
+      notifyApiError(err, "Failed to load practice sets for course.")
     } finally {
       setLoadingPracticesBySubCourse((prev) => ({ ...prev, [subCourseId]: false }))
     }
@@ -429,7 +431,7 @@ export function CourseFlowBuilderPage() {
       await reorderCategories(toReorderItems(reordered))
     } catch (err: any) {
       setCategories(previous)
-      toast.error(err?.response?.data?.message || "Failed to reorder categories.")
+      notifyApiError(err, "Failed to reorder categories.")
     } finally {
       setSavingKey(null)
     }
@@ -455,7 +457,7 @@ export function CourseFlowBuilderPage() {
       await reorderCourses(toReorderItems(reordered))
     } catch (err: any) {
       setCoursesByCategory((prev) => ({ ...prev, [selectedCategoryId]: previous }))
-      toast.error(err?.response?.data?.message || "Failed to reorder courses.")
+      notifyApiError(err, "Failed to reorder courses.")
     } finally {
       setSavingKey(null)
     }
@@ -481,7 +483,7 @@ export function CourseFlowBuilderPage() {
       await reorderSubModules(toReorderItems(reordered))
     } catch (err: any) {
       setLearningPath((prev) => (prev ? { ...prev, sub_courses: previous } : prev))
-      toast.error(err?.response?.data?.message || "Failed to reorder sub-modules.")
+      notifyApiError(err, "Failed to reorder sub-modules.")
     } finally {
       setSavingKey(null)
     }
@@ -526,7 +528,7 @@ export function CourseFlowBuilderPage() {
             }
           : prev,
       )
-      toast.error(err?.response?.data?.message || "Failed to reorder videos.")
+      notifyApiError(err, "Failed to reorder videos.")
     } finally {
       setSavingKey(null)
     }
@@ -552,7 +554,7 @@ export function CourseFlowBuilderPage() {
       await reorderPractices(toReorderItems(reordered))
     } catch (err: any) {
       setPracticesBySubCourse((prev) => ({ ...prev, [subCourseId]: previous }))
-      toast.error(err?.response?.data?.message || "Failed to reorder practices.")
+      notifyApiError(err, "Failed to reorder practices.")
     } finally {
       setSavingKey(null)
     }
@@ -569,6 +571,7 @@ export function CourseFlowBuilderPage() {
 
   return (
     <div className="space-y-6">
+      <PageBackLink fallbackTo="/content" label="Back" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">

@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Calendar,
@@ -51,7 +52,7 @@ export function SubscriptionPlansTab() {
       console.error(e)
       setError(true)
       setPlans([])
-      toast.error("Failed to load subscription packages")
+      notifyApiError(e, "Failed to load subscription packages")
     } finally {
       setLoading(false)
     }

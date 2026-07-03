@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Briefcase, Mail, Phone, Shield, User, Building2, Calendar } from "lucide-react"
@@ -51,13 +52,8 @@ export function AddTeamMemberPage() {
         description: `${firstName} ${lastName} has been created successfully.`,
       })
       navigate("/team")
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message ||
-        "Failed to create team member. Please check the details and try again."
-      toast.error("Creation failed", {
-        description: message,
-      })
+    } catch (err: unknown) {
+      notifyApiError(err, "Failed to create team member. Please check the details and try again.")
     } finally {
       setSubmitting(false)
     }

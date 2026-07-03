@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ChevronDown, ChevronLeft, ChevronRight, GraduationCap, Pencil, Plus } from "lucide-react"
@@ -69,7 +70,7 @@ export function QuestionTypeDefinitionPracticesDialog({
       setTotalCount(result.total_count)
     } catch (e) {
       console.error(e)
-      toast.error("Failed to load practices for this definition")
+      notifyApiError(e, "Failed to load practices for this definition")
       setPractices([])
       setTotalCount(0)
     } finally {
@@ -103,19 +104,14 @@ export function QuestionTypeDefinitionPracticesDialog({
     try {
       const path = await resolveQuestionTypeDefinitionPracticeEditPath(practice)
       if (!path) {
-        toast.error("Could not open practice editor", {
-          description:
-            practice.practice_kind === "EXAM_PREP"
-              ? "This exam-prep practice could not be linked to its catalog context."
-              : "This practice could not be linked to its course context.",
-        })
+        notifyApiError(e, "Could not open practice editor")
         return
       }
       onOpenChange(false)
       navigate(path)
     } catch (e) {
       console.error(e)
-      toast.error("Failed to open practice editor")
+      notifyApiError(e, "Failed to open practice editor")
     } finally {
       setEditingPracticeId(null)
     }

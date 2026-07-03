@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Bell, CalendarClock, Mail, MailOpen, Megaphone, Search, Smartphone } from "lucide-react"
@@ -24,7 +25,6 @@ import {
   validateEmailComposeInput,
 } from "../../lib/notificationEmailCompose"
 import {
-  extractApiErrorMessage,
   fetchAllPlatformUsers,
   fetchAllTeamMembers,
   formatScheduledAtLabel,
@@ -507,9 +507,7 @@ export function CreateNotificationPage() {
 
       resetForm()
     } catch (err) {
-      toast.error("Failed to send notification", {
-        description: extractApiErrorMessage(err, "Please try again."),
-      })
+      notifyApiError(err, "Failed to send notification")
     } finally {
       setSending(false)
     }

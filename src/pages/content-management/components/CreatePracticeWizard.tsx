@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useCallback, useEffect, useState } from "react"
 import { Check, ChevronLeft, ChevronRight, ListOrdered, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -106,7 +107,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
       setStep(2)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      toast.error(err.response?.data?.message || err.message || "Failed to create question set")
+      notifyApiError(err, "Failed to create question set")
     } finally {
       setSaving(false)
     }
@@ -152,7 +153,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
       setStep(3)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      toast.error(err.response?.data?.message || err.message || "Failed to create questions")
+      notifyApiError(err, "Failed to create questions")
     } finally {
       setSaving(false)
     }
@@ -172,7 +173,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
       setStep(4)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      toast.error(err.response?.data?.message || err.message || "Failed to attach questions")
+      notifyApiError(err, "Failed to attach questions")
     } finally {
       setSaving(false)
     }
@@ -205,7 +206,7 @@ export function CreatePracticeWizard({ parent, onCreated }: Props) {
       onCreated?.()
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      toast.error(err.response?.data?.message || err.message || "Failed to create practice")
+      notifyApiError(err, "Failed to create practice")
     } finally {
       setSaving(false)
       setPendingSaveStatus(null)

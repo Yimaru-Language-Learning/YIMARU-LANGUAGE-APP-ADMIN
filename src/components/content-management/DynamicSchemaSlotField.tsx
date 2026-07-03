@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import {
   useCallback,
   useEffect,
@@ -199,7 +200,7 @@ function DynamicImageSlot({
         toast.success("Image uploaded")
       } catch (e) {
         console.error(e)
-        toast.error("Failed to upload image")
+        notifyApiError(e, "Failed to upload image")
       } finally {
         setUploading(false)
       }
@@ -220,7 +221,7 @@ function DynamicImageSlot({
       toast.success("Image URL imported to storage")
     } catch (e) {
       console.error(e)
-      toast.error("Could not import image from URL")
+      notifyApiError(e, "Could not import image from URL")
     } finally {
       setUploading(false)
     }
@@ -454,7 +455,7 @@ function DynamicAudioSlot({
         toast.success("Audio uploaded")
       } catch (e) {
         console.error(e)
-        toast.error("Failed to upload audio")
+        notifyApiError(e, "Failed to upload audio")
       } finally {
         setUploading(false)
       }
@@ -477,7 +478,7 @@ function DynamicAudioSlot({
       toast.success("Audio URL imported to storage")
     } catch (e) {
       console.error(e)
-      toast.error("Could not import audio from URL")
+      notifyApiError(e, "Could not import audio from URL")
     } finally {
       setUploading(false)
     }
@@ -783,7 +784,7 @@ function DynamicPdfSlot({
         toast.success("PDF uploaded")
       } catch (e) {
         console.error(e)
-        toast.error("Failed to upload PDF")
+        notifyApiError(e, "Failed to upload PDF")
       } finally {
         setUploading(false)
       }

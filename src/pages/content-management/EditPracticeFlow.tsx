@@ -1,15 +1,12 @@
+import { getApiErrorMessage, notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { PageBackLink } from "../../components/navigation/PageBackLink";
+import { navigateBack } from "../../lib/navigateBack";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Stepper } from "../../components/ui/stepper";
-import successIcon from "../../assets/success.svg";
 import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.types";
 import {
   getExamPrepPracticeFull,
@@ -17,7 +14,6 @@ import {
 } from "../../api/courses.api";
 import { getQuestionTypeDefinitions } from "../../api/questionTypeDefinitions.api";
 import {
-  learnEnglishPracticeApiErrorMessage,
   validateLearnEnglishQuestionsWithDefinitions,
 } from "../../lib/learnEnglishPracticePublish";
 import { executePracticeUpdate } from "../../lib/practiceEditOrchestrator";
@@ -37,6 +33,10 @@ import {
   unwrapPracticeFullData,
   type PreservedQuestionSetFields,
 } from "../../lib/practiceFullMapper";
+import {
+  buildPracticeEditSnapshot,
+  hasPracticeEditChanges,
+} from "../../lib/practiceEditDirty";
 
 import { ContextStep } from "./components/practice-steps/ContextStep";
 import { ScenarioStep } from "./components/practice-steps/ScenarioStep";
@@ -221,13 +221,15 @@ export function EditPracticeFlow() {
     level,
   ]);
 
+  const goBack = () => navigateBack(navigate, backPath);
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSaved, setIsSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadingPractice, setLoadingPractice] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
+  const [loadedPersonaId, setLoadedPersonaId] = useState<number | null>(null);
   const [preservedQuestionSet, setPreservedQuestionSet] =
     useState<PreservedQuestionSetFields>({
       timeLimitMinutes: null,
@@ -241,7 +243,7 @@ export function EditPracticeFlow() {
     loading: personasLoading,
     error: personasError,
     reload: reloadPersonas,
-  } = useActivePersonas();
+  } = useActivePersonas({ ensurePersonaId: loadedPersonaId });
 
   const [formData, setFormData] = useState({
     title: "",
@@ -282,6 +284,7 @@ export function EditPracticeFlow() {
   );
   const [definitionsLoading, setDefinitionsLoading] = useState(true);
   const [definitionsError, setDefinitionsError] = useState<string | null>(null);
+  const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
   const initialParentsRef = useRef<PracticeParent[]>([]);
 
   useEffect(() => {
@@ -297,7 +300,7 @@ export function EditPracticeFlow() {
         if (!cancelled) setTypeDefinitions(list);
       } catch (e) {
         if (!cancelled) {
-          setDefinitionsError(learnEnglishPracticeApiErrorMessage(e));
+          setDefinitionsError(getApiErrorMessage(e, "Failed to load question type definitions"));
           setTypeDefinitions([]);
         }
       } finally {
@@ -323,15 +326,23 @@ export function EditPracticeFlow() {
         if (!full) throw new Error("Practice details were missing from the response.");
         const mapped = mapPracticeFullToFormState(full, typeDefinitions);
         if (cancelled) return;
+        const loadedPersona =
+          mapped.personaId != null ? String(mapped.personaId) : null;
         setFormData(mapped.formData);
         setPreservedQuestionSet(mapped.preservedQuestionSet);
         initialParentsRef.current = mapped.parents;
-        if (mapped.personaId != null) {
-          setSelectedPersona(String(mapped.personaId));
-        }
+        setLoadedPersonaId(mapped.personaId);
+        setSelectedPersona(loadedPersona);
+        setInitialSnapshot(
+          buildPracticeEditSnapshot({
+            formData: mapped.formData,
+            selectedPersona: loadedPersona,
+            preservedQuestionSet: mapped.preservedQuestionSet,
+          }),
+        );
       } catch (e) {
         if (!cancelled) {
-          setLoadError(learnEnglishPracticeApiErrorMessage(e));
+          setLoadError(getApiErrorMessage(e, "Failed to load practice"));
         }
       } finally {
         if (!cancelled) setLoadingPractice(false);
@@ -341,6 +352,23 @@ export function EditPracticeFlow() {
       cancelled = true;
     };
   }, [validPracticeId, practiceId, isExamPrep, typeDefinitions, definitionsLoading]);
+
+  useEffect(() => {
+    if (loadedPersonaId == null || personasLoading) return;
+    const idStr = String(loadedPersonaId);
+    if (!personas.some((persona) => persona.id === idStr)) return;
+    setSelectedPersona((current) => (current === idStr ? current : idStr));
+  }, [loadedPersonaId, personas, personasLoading]);
+
+  const hasUnsavedChanges = useMemo(
+    () =>
+      hasPracticeEditChanges(initialSnapshot, {
+        formData,
+        selectedPersona,
+        preservedQuestionSet,
+      }),
+    [initialSnapshot, formData, selectedPersona, preservedQuestionSet],
+  );
 
   const submitPractice = async (status: "DRAFT" | "PUBLISHED") => {
     if (!validPracticeId) {
@@ -448,15 +476,14 @@ export function EditPracticeFlow() {
           initialParentsRef.current,
         ),
       });
+      initialParentsRef.current = dedupeParents(formData.parents);
+      setPreservedQuestionSet((prev) => ({ ...prev, status }));
       toast.success(
         status === "PUBLISHED" ? "Practice updated and published" : "Practice saved as draft",
       );
-      initialParentsRef.current = dedupeParents(formData.parents);
-      setIsSaved(true);
+      navigate(backPath);
     } catch (e) {
-      toast.error("Could not update practice", {
-        description: learnEnglishPracticeApiErrorMessage(e),
-      });
+      notifyApiError(e, "Could not update practice");
     } finally {
       setSubmitting(false);
     }
@@ -466,11 +493,16 @@ export function EditPracticeFlow() {
     setCurrentStep((prev) => Math.min(prev + 1, STEP_LABELS.length));
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
+  const saveStatus: "DRAFT" | "PUBLISHED" =
+    preservedQuestionSet.status === "DRAFT" ? "DRAFT" : "PUBLISHED";
+
+  const handleSaveChanges = () => void submitPractice(saveStatus);
+
   if (!validPracticeId) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
         <p className="text-lg font-semibold text-grayScale-800">Invalid practice link</p>
-        <Button className="mt-6" variant="outline" onClick={() => navigate(-1)}>
+        <Button className="mt-6" variant="outline" onClick={goBack}>
           Go back
         </Button>
       </div>
@@ -492,38 +524,11 @@ export function EditPracticeFlow() {
         <p className="text-lg font-semibold text-grayScale-800">Could not load practice</p>
         <p className="mt-2 max-w-md text-sm text-grayScale-600">{loadError}</p>
         <div className="mt-6 flex gap-3">
-          <Button variant="outline" onClick={() => navigate(backPath)}>
+          <Button variant="outline" onClick={() => goBack()}>
             {backLabel}
           </Button>
           <Button onClick={() => window.location.reload()}>Try again</Button>
         </div>
-      </div>
-    );
-  }
-
-  if (isSaved) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center pb-20 animate-in fade-in zoom-in duration-500">
-        <div className="mb-10 relative">
-          <div className="absolute inset-0 bg-brand-500/10 blur-3xl rounded-full" />
-          <img
-            src={successIcon}
-            alt="Success"
-            className="h-[128px] w-[128px] relative"
-          />
-        </div>
-        <h1 className="text-[28px] font-bold text-grayScale-900 mb-2">
-          Practice Updated Successfully!
-        </h1>
-        <p className="text-grayScale-600 text-md mb-14 max-w-lg font-medium leading-relaxed">
-          Your changes to this practice have been saved.
-        </p>
-        <Button
-          onClick={() => navigate(backPath)}
-          className="h-14 rounded-[6px] bg-[#9E2891] font-bold shadow-xl shadow-brand-500/20 text-[16px] text-white w-full max-w-[400px]"
-        >
-          {backLabel}
-        </Button>
       </div>
     );
   }
@@ -548,7 +553,7 @@ export function EditPracticeFlow() {
               formData={formData}
               setFormData={setFormData}
               nextStep={nextStep}
-              onCancel={() => navigate(backPath)}
+              onCancel={() => goBack()}
               isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               parentSummary={reviewParentSummary}
@@ -558,8 +563,15 @@ export function EditPracticeFlow() {
               parentsCollapsedDefault={isExamPrep}
               practiceId={practiceId}
               onParentsUnlinked={(parents) => {
-                setFormData((fd) => ({ ...fd, parents }))
-                initialParentsRef.current = parents
+                setFormData((fd) => ({ ...fd, parents }));
+                initialParentsRef.current = parents;
+                setInitialSnapshot(
+                  buildPracticeEditSnapshot({
+                    formData: { ...formData, parents },
+                    selectedPersona,
+                    preservedQuestionSet,
+                  }),
+                );
               }}
             />
           );
@@ -685,25 +697,36 @@ export function EditPracticeFlow() {
     <div className="space-y-8 px-6 pb-16 pt-6">
       <div className="mx-auto max-w-7xl w-full">
         <div className="flex items-center justify-between mb-8">
-          <Link
-            to={backPath}
-            className="flex items-center gap-2 text-[15px] font-medium text-grayScale-600 transition-colors hover:text-brand-500 decoration-none"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {backLabel}
-          </Link>
+          <PageBackLink fallbackTo={backPath} label={backLabel} />
         </div>
 
         <div className="mb-10">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <h1 className="text-3xl font-bold text-[#0F172A]">Edit Practice</h1>
-            <Button
-              variant="outline"
-              className="rounded-[8px] border-grayScale-200 text-grayScale-600 h-10 px-6 font-bold bg-white hover:bg-grayScale-50"
-              onClick={() => navigate(backPath)}
-            >
-              Cancel
-            </Button>
+            <div className="flex shrink-0 items-center gap-3">
+              <Button
+                className="h-10 rounded-[8px] bg-brand-500 px-6 font-bold text-white shadow-md shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-50"
+                disabled={submitting || !hasUnsavedChanges}
+                onClick={handleSaveChanges}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                className="h-10 rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50"
+                disabled={submitting}
+                onClick={() => goBack()}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
           <p className="text-grayScale-400 text-base">
             Update story details, persona, and questions for practice #{practiceId}.

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../../lib/apiErrors"
 import { deleteSubscriptionPlan } from "../../../api/subscription-plans.api"
 import { Button } from "../../../components/ui/button"
 import {
@@ -44,10 +45,7 @@ export function DeleteSubscriptionPlanDialog({
       onOpenChange(false)
     } catch (e: unknown) {
       console.error(e)
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to delete subscription plan"
-      toast.error(msg)
+      notifyApiError(e, "Failed to delete subscription plan")
     } finally {
       setDeleting(false)
     }

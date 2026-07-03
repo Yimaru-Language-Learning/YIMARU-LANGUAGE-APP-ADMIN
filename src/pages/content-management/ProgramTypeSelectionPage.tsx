@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { GraduationCap, Brain } from "lucide-react";
+import { PageBackLink } from "../../components/navigation/PageBackLink";
 
 export function ProgramTypeSelectionPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PageBackLink fallbackTo="/new-content" label="Back to Content Management" />
       {/* Header section */}
       <div className="space-y-1.5 pt-2">
         <h1 className="text-[28px] font-bold tracking-tight text-grayScale-900">

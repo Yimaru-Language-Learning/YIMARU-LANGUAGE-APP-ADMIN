@@ -1,13 +1,15 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useMemo, useState } from "react"
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
-import { ArrowLeft, Link2 } from "lucide-react"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { Link2 } from "lucide-react"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
+import { navigateBack } from "../../lib/navigateBack"
 import { toast } from "sonner"
 import { Button } from "../../components/ui/button"
 import { Stepper } from "../../components/ui/stepper"
 import successIcon from "../../assets/success.svg"
 import type { ParentContextPractice, PracticeParentKind } from "../../types/course.types"
 import { attachPracticeToParent } from "../../lib/attachPracticeToParent"
-import { learnEnglishPracticeApiErrorMessage } from "../../lib/learnEnglishPracticePublish"
 import { formatPracticeParentLabel } from "../../lib/practiceParents"
 import type { PracticeParentTitleHints } from "../../lib/practiceParentTitles"
 import { LinkExistingPracticeReviewStep } from "./components/practice-steps/LinkExistingPracticeReviewStep"
@@ -170,6 +172,8 @@ export function LinkExistingPracticeFlow() {
     level,
   ])
 
+  const goBack = () => navigateBack(navigate, backPath)
+
   const parentTitleHints = useMemo((): PracticeParentTitleHints => {
     const hints: PracticeParentTitleHints = {}
     const lid = lessonId ? Number(lessonId) : NaN
@@ -198,7 +202,7 @@ export function LinkExistingPracticeFlow() {
           <Button
             className="mt-6 rounded-[6px]"
             variant="outline"
-            onClick={() => navigate(backPath)}
+            onClick={goBack}
           >
             {backLabel}
           </Button>
@@ -215,9 +219,7 @@ export function LinkExistingPracticeFlow() {
       toast.success("Practice linked successfully")
       setIsComplete(true)
     } catch (e) {
-      toast.error("Could not link practice", {
-        description: learnEnglishPracticeApiErrorMessage(e),
-      })
+      notifyApiError(e, "Could not link practice")
     } finally {
       setSubmitting(false)
     }
@@ -240,7 +242,7 @@ export function LinkExistingPracticeFlow() {
           is now attached to {targetSummary}.
         </p>
         <Button
-          onClick={() => navigate(backPath)}
+          onClick={goBack}
           className="h-14 rounded-[6px] bg-brand-500 px-10 text-[16px] font-bold text-white shadow-xl shadow-brand-500/20"
         >
           {backLabel}
@@ -253,13 +255,7 @@ export function LinkExistingPracticeFlow() {
     <div className="space-y-8 px-6 pb-16 pt-6">
       <div className="mx-auto w-full max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <Link
-            to={backPath}
-            className="flex items-center gap-2 text-[15px] font-medium text-grayScale-600 decoration-none transition-colors hover:text-brand-500"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {backLabel}
-          </Link>
+          <PageBackLink fallbackTo={backPath} label={backLabel} />
         </div>
 
         <div className="mb-10">
@@ -268,7 +264,7 @@ export function LinkExistingPracticeFlow() {
             <Button
               variant="outline"
               className="h-10 rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50"
-              onClick={() => navigate(backPath)}
+              onClick={goBack}
             >
               Cancel
             </Button>
@@ -304,7 +300,7 @@ export function LinkExistingPracticeFlow() {
               selectedPracticeId={selectedPractice?.id ?? null}
               onSelect={setSelectedPractice}
               nextStep={() => setCurrentStep(2)}
-              onCancel={() => navigate(backPath)}
+              onCancel={goBack}
             />
           ) : selectedPractice ? (
             <LinkExistingPracticeReviewStep

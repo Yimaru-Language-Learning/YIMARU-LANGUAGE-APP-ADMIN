@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Bell, BellOff, CheckCheck, Mail, MailOpen, Trash2 } from "lucide-react"
@@ -207,7 +208,7 @@ export function NotificationDropdown() {
         next.delete(pending.notification.id)
         return next
       })
-      toast.error("Failed to delete notification")
+      notifyApiError(err, "Failed to delete notification")
     }
   }, [commitDeleteNotification, selectedNotificationId])
 
@@ -282,7 +283,7 @@ export function NotificationDropdown() {
           }
         } else {
           setDetailError(true)
-          toast.error("Failed to load notification details")
+          notifyApiError(err, "Failed to load notification details")
         }
       } finally {
         setDetailLoading(false)

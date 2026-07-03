@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { deleteAppVersion } from "../../../api/app-versions.api"
+import { notifyApiError } from "../../../lib/apiErrors"
 import { Button } from "../../../components/ui/button"
 import {
   Dialog,
@@ -44,10 +45,7 @@ export function DeleteAppVersionDialog({
       onOpenChange(false)
     } catch (e: unknown) {
       console.error(e)
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to delete app version"
-      toast.error(msg)
+      notifyApiError(e, "Failed to delete app version")
     } finally {
       setDeleting(false)
     }

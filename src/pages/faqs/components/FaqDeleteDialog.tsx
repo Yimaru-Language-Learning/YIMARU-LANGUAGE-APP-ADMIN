@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { deleteFAQ } from "../../../api/faq.api"
 import { Button } from "../../../components/ui/button"
-import { getFaqApiErrorMessage } from "../../../lib/faqErrors"
+import { notifyApiError } from "../../../lib/apiErrors"
 import {
   Dialog,
   DialogContent,
@@ -44,8 +44,7 @@ export function FaqDeleteDialog({
       onDeleted?.()
     } catch (e: unknown) {
       console.error(e)
-      const msg = getFaqApiErrorMessage(e, "Failed to delete FAQ")
-      toast.error(msg)
+      notifyApiError(e, "Failed to delete FAQ")
     } finally {
       setDeleting(false)
     }

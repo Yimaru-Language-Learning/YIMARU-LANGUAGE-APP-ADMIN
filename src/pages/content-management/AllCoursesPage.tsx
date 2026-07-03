@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../lib/apiErrors"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Plus, RefreshCw, Edit2, ToggleLeft, ToggleRight, BookOpen, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
@@ -32,6 +33,7 @@ import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
 
 type CourseWithCategory = Course & { category_name: string }
 
@@ -173,9 +175,7 @@ export function AllCoursesPage() {
       await fetchAllCourses()
     } catch (err: any) {
       console.error("Failed to create course:", err)
-      toast.error("Failed to create sub-category", {
-        description: err?.response?.data?.message || "Please try again.",
-      })
+      notifyApiError(err, "Failed to create sub-category")
     } finally {
       setCreating(false)
     }
@@ -188,7 +188,7 @@ export function AllCoursesPage() {
       await fetchAllCourses()
     } catch (err) {
       console.error("Failed to update course status:", err)
-      toast.error("Failed to update sub-category status")
+      notifyApiError(err, "Failed to update sub-category status")
     } finally {
       setTogglingId(null)
     }
@@ -222,9 +222,7 @@ export function AllCoursesPage() {
       await fetchAllCourses()
     } catch (err: any) {
       console.error("Failed to update course:", err)
-      toast.error("Failed to update sub-category", {
-        description: err?.response?.data?.message || "Please try again.",
-      })
+      notifyApiError(err, "Failed to update sub-category")
     } finally {
       setUpdating(false)
     }
@@ -262,6 +260,7 @@ export function AllCoursesPage() {
 
   return (
     <div className="space-y-6">
+      <PageBackLink fallbackTo="/content" label="Back" />
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

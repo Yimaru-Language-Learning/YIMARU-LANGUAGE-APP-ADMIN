@@ -1,3 +1,4 @@
+import { getApiErrorMessage, notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BookOpen, GraduationCap, Layers, PlayCircle, RefreshCw, Pencil, Search, Trash2 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
@@ -39,6 +40,7 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { CreatePracticeWizard } from "./components/CreatePracticeWizard"
 import type { PracticeParentKind } from "../../types/course.types"
 import { cn } from "../../lib/utils"
+import { PageBackLink } from "../../components/navigation/PageBackLink"
 
 type ParentTab = "course" | "module" | "lesson"
 
@@ -336,7 +338,7 @@ export function PracticeDetailsPage() {
       setPractice(list[0] ?? null)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } }
-      setLoadError(err.response?.data?.message || "Failed to load practices for this parent.")
+      setLoadError(getApiErrorMessage(err, "Failed to load practices for this parent."))
       setPractice(null)
       setTotalCount(0)
     } finally {
@@ -609,7 +611,7 @@ export function PracticeDetailsPage() {
       setEditOpen(false)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Failed to update practice")
+      notifyApiError(err, "Failed to update practice")
     } finally {
       setSavePracticeLoading(false)
     }
@@ -632,7 +634,7 @@ export function PracticeDetailsPage() {
       }
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } }
-      toast.error(err.response?.data?.message || "Failed to delete practice")
+      notifyApiError(err, "Failed to delete practice")
     } finally {
       setDeletePracticeLoading(false)
     }
@@ -658,6 +660,7 @@ export function PracticeDetailsPage() {
 
   return (
     <div className="space-y-6">
+      <PageBackLink fallbackTo="/content" label="Back" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-grayScale-600">Practice Management</h1>

@@ -17,8 +17,8 @@ import {
   User,
 } from "lucide-react"
 import { toast } from "sonner"
+import { getApiErrorMessage, notifyApiError } from "../../../lib/apiErrors"
 import {
-  activityLogApiErrorMessage,
   getActivityLogById,
   getActivityLogs,
 } from "../../../api/activity-logs.api"
@@ -151,8 +151,9 @@ export function ActivityLogListPanel({
       console.error("Failed to fetch activity logs:", e)
       setLogs([])
       setTotalCount(0)
-      setError(activityLogApiErrorMessage(e, "Failed to load activity logs"))
-      toast.error(activityLogApiErrorMessage(e, "Failed to load activity logs"))
+      const msg = getApiErrorMessage(e, "Failed to load activity logs")
+      setError(msg)
+      notifyApiError(e, "Failed to load activity logs")
     } finally {
       setLoading(false)
     }
@@ -175,7 +176,7 @@ export function ActivityLogListPanel({
       setSelectedLog(log)
     } catch (e) {
       console.error("Failed to fetch log detail:", e)
-      toast.error(activityLogApiErrorMessage(e, "Failed to load log detail"))
+      notifyApiError(e, "Failed to load log detail")
       setDialogOpen(false)
     } finally {
       setDetailLoading(false)

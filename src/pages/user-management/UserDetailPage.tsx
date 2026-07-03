@@ -10,6 +10,7 @@ import {
   PlayCircle,
   Target,
   UserPlus,
+  X,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { Badge } from "../../components/ui/badge";
@@ -23,7 +24,11 @@ import {
   getUserLearningActivity,
   getUserRecentActivity,
   getUserSubscriptions,
+  updateUserStatus,
+  type UserStatus,
 } from "../../api/users.api";
+import { getApiErrorMessage, notifyApiError } from "../../lib/apiErrors";
+import { toast } from "sonner";
 import { SpinnerIcon } from "../../components/ui/spinner-icon";
 import type { UserProfileData, UserRecentActivityItem } from "../../types/user.types";
 import type { UserLearningActivityData, UserSubscriptionsData } from "../../types/userAdmin.types";
@@ -160,6 +165,10 @@ export function UserDetailPage() {
   const [recentActivityItems, setRecentActivityItems] = useState<UserRecentActivityItem[]>([]);
   const [recentActivityLoading, setRecentActivityLoading] = useState(false);
   const [recentActivityError, setRecentActivityError] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    nextStatus: UserStatus;
+  } | null>(null);
 
   useEffect(() => {
     const userId = Number(id);
@@ -201,10 +210,7 @@ export function UserDetailPage() {
       } catch (err) {
         console.error("Failed to load learning activity", err);
         setLearningActivity(null);
-        const message =
-          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Failed to load learning activity.";
-        setLearningActivityError(message);
+        setLearningActivityError(getApiErrorMessage(err, "Failed to load learning activity."));
       } finally {
         setLearningActivityLoading(false);
       }
@@ -227,10 +233,7 @@ export function UserDetailPage() {
       } catch (err) {
         console.error("Failed to load subscriptions", err);
         setSubscriptions(null);
-        const message =
-          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Failed to load subscriptions.";
-        setSubscriptionsError(message);
+        setSubscriptionsError(getApiErrorMessage(err, "Failed to load subscriptions."));
       } finally {
         setSubscriptionsLoading(false);
       }
@@ -256,10 +259,7 @@ export function UserDetailPage() {
       } catch (err) {
         console.error("Failed to load recent activity", err);
         setRecentActivityItems([]);
-        const message =
-          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          "Failed to load recent activity.";
-        setRecentActivityError(message);
+        setRecentActivityError(getApiErrorMessage(err, "Failed to load recent activity."));
       } finally {
         setRecentActivityLoading(false);
       }
@@ -267,6 +267,33 @@ export function UserDetailPage() {
 
     void loadRecent();
   }, [id]);
+
+  const handleStatusToggleClick = () => {
+    if (!user || updatingStatus) return;
+    const isCurrentlyActive = user.status === "ACTIVE";
+    const nextStatus: UserStatus = isCurrentlyActive ? "DEACTIVATED" : "ACTIVE";
+    setConfirmDialog({ nextStatus });
+  };
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!user || !confirmDialog) return;
+    const { nextStatus } = confirmDialog;
+    const nextActive = nextStatus === "ACTIVE";
+    const previousStatus = user.status;
+
+    setUpdatingStatus(true);
+    setUser((prev) => (prev ? { ...prev, status: nextStatus } : prev));
+    try {
+      await updateUserStatus({ user_id: user.id, status: nextStatus });
+      toast.success(`User ${nextActive ? "activated" : "deactivated"} successfully`);
+    } catch (err: unknown) {
+      setUser((prev) => (prev ? { ...prev, status: previousStatus } : prev));
+      notifyApiError(err, "Failed to update user status");
+    } finally {
+      setUpdatingStatus(false);
+      setConfirmDialog(null);
+    }
+  };
 
   if (loadingUser) return <LoadingSkeleton />;
 
@@ -298,6 +325,7 @@ export function UserDetailPage() {
   const fullName = `${user.first_name} ${user.last_name}`.trim();
   const initials = `${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}`.toUpperCase();
   const profilePicture = user.profile_picture_url?.trim() || undefined;
+  const isActive = user.status === "ACTIVE";
 
   const contactFields = [
     { icon: Mail, label: "Email", value: displayValue(user.email) },
@@ -315,12 +343,21 @@ export function UserDetailPage() {
         Back to Users
       </Link>
 
-      <div>
-        <p className="text-sm font-semibold text-grayScale-500">Learners</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">{fullName}</h1>
-        <p className="mt-1 text-sm text-grayScale-500">
-          User #{user.id} · {formatRoleLabel(user.role)}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-grayScale-500">Learners</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">{fullName}</h1>
+          <p className="mt-1 text-sm text-grayScale-500">
+            User #{user.id} · {formatRoleLabel(user.role)}
+          </p>
+        </div>
+        <Button
+          variant={isActive ? "destructive" : "outline"}
+          onClick={handleStatusToggleClick}
+          disabled={updatingStatus}
+        >
+          {updatingStatus ? "Updating..." : isActive ? "Block User" : "Unblock User"}
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
@@ -514,6 +551,42 @@ export function UserDetailPage() {
           </Card>
         </div>
       </div>
+
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
+              <h2 className="text-lg font-semibold text-grayScale-900">Confirm Status Change</h2>
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-sm leading-relaxed text-grayScale-600">
+                Are you sure you want to change the status of{" "}
+                <span className="font-semibold">{fullName || "this user"}</span> to{" "}
+                <span className="font-semibold capitalize">{confirmDialog.nextStatus.toLowerCase()}</span>?
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => setConfirmDialog(null)}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-brand-600 text-white hover:bg-brand-500"
+                onClick={handleConfirmStatusUpdate}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? "Updating..." : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

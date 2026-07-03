@@ -1,11 +1,7 @@
 import { Check, ArrowRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../../components/ui/button";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "../../../../components/ui/avatar";
+import { PersonaAvatar } from "../../../../components/personas/PersonaAvatar";
 import { cn } from "../../../../lib/utils";
 import type { PersonaCardModel } from "../../../../lib/personaDisplay";
 
@@ -96,19 +92,12 @@ export function PersonaStep({
                   </div>
                 )}
                 <div className="flex flex-col items-center gap-4">
-                  <div
-                    className={cn(
-                      "rounded-full p-[3px] transition-all duration-300",
-                      isSelected ? "bg-brand-500" : "bg-transparent",
-                    )}
-                  >
-                    <Avatar className="h-24 w-24 border-2 border-white">
-                      <AvatarImage src={persona.avatar} alt={persona.name} />
-                      <AvatarFallback>
-                        {persona.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
+                  <PersonaAvatar
+                    src={persona.avatar}
+                    alt={persona.name}
+                    size="xl"
+                    selected={isSelected}
+                  />
                   <div className="space-y-1 text-center">
                     <span className="block text-lg font-bold text-grayScale-700">
                       {persona.name}

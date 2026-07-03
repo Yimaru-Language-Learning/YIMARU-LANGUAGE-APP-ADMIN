@@ -1,3 +1,4 @@
+import { notifyApiError } from "../../../lib/apiErrors"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "../../../components/ui/button"
@@ -16,7 +17,6 @@ import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 import {
   createQuestionTypeDefinitionGroup,
   extractGroupMutationId,
-  groupApiErrorMessage,
   updateQuestionTypeDefinitionGroup,
 } from "../../../api/questionTypeDefinitionGroups.api"
 import type {
@@ -97,7 +97,7 @@ export function QuestionTypeGroupFormDialog({
       }
       onOpenChange(false)
     } catch (e) {
-      toast.error(groupApiErrorMessage(e, isEdit ? "Update failed" : "Create failed"))
+      notifyApiError(e, isEdit ? "Update failed" : "Create failed")
     } finally {
       setSubmitting(false)
     }

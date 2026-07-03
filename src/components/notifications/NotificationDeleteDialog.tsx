@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { notifyApiError } from "../../lib/apiErrors"
 import { deleteNotification } from "../../api/notifications.api"
 import { Button } from "../ui/button"
 import {
@@ -43,12 +44,7 @@ export function NotificationDeleteDialog({
       onDeleted?.(notification.id)
     } catch (e: unknown) {
       console.error(e)
-      const msg =
-        (e as { response?: { data?: { message?: string; error?: string } } })?.response
-          ?.data?.error ??
-        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        "Failed to delete notification"
-      toast.error(msg)
+      notifyApiError(e, "Failed to delete notification")
     } finally {
       setDeleting(false)
     }

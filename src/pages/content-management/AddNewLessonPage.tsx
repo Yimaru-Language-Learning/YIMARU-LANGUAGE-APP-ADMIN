@@ -5,6 +5,9 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { addQuestionToSet, createLesson, createQuestion } from "../../api/courses.api"
 import { uploadVideoFile } from "../../api/files.api"
+import { VideoUploadProgressBar } from "../../components/video-upload/VideoUploadProgressBar"
+import { useVideoUpload } from "../../hooks/useVideoUpload"
+import { vimeoResultToStoredUrl } from "../../lib/video-upload/upload-video"
 import { PracticeQuestionEditorFields } from "../../components/content-management/PracticeQuestionEditorFields"
 import type { PracticeQuestionDynamicRow } from "../../components/content-management/PracticeQuestionEditorFields"
 import { buildDynamicQuestionPayload } from "../../lib/practiceDynamicQuestionPayload"
@@ -140,7 +143,13 @@ export function AddNewLessonPage() {
   const [lessonTitle, setLessonTitle] = useState("")
   const [lessonDescription, setLessonDescription] = useState("")
   const [introVideoUrl, setIntroVideoUrl] = useState("")
-  const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false)
+  const {
+    upload: uploadIntroVideo,
+    cancel: cancelIntroVideo,
+    progress: introVideoProgress,
+    isBusy: uploadingIntroVideo,
+  } = useVideoUpload()
+  const [importingIntroVideoUrl, setImportingIntroVideoUrl] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([createEmptyQuestion("1")])
 
   const handleNext = () => setCurrentStep((s) => (s < 3 ? ((s + 1) as Step) : s))
@@ -150,21 +159,19 @@ export function AddNewLessonPage() {
     const file = event.target.files?.[0]
     event.target.value = ""
     if (!file) return
-    setUploadingIntroVideo(true)
     try {
-      const uploadRes = await uploadVideoFile(file, {
+      const res = await uploadIntroVideo(file, {
         title: lessonTitle.trim() || file.name.replace(/\.[^.]+$/, "") || "Lesson intro",
         description: lessonDescription.trim() || undefined,
       })
-      const finalUrl = introVideoUrlFromUploadResponse(uploadRes.data?.data)
-      if (!finalUrl) throw new Error("Missing uploaded video url")
-      setIntroVideoUrl(finalUrl)
-      toast.success("Intro video uploaded")
+      if (res) {
+        setIntroVideoUrl(vimeoResultToStoredUrl(res))
+        toast.success("Intro video uploaded")
+      }
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
       console.error("Failed to upload lesson intro video:", error)
       notifyApiError(error, "Failed to upload intro video")
-    } finally {
-      setUploadingIntroVideo(false)
     }
   }
 
@@ -182,7 +189,7 @@ export function AddNewLessonPage() {
     }
 
     // For non-direct URLs, automatically try server-side import via /files/upload.
-    setUploadingIntroVideo(true)
+    setImportingIntroVideoUrl(true)
     try {
       const uploadRes = await uploadVideoFile(source, {
         title: lessonTitle.trim() || "Lesson intro",
@@ -196,7 +203,7 @@ export function AddNewLessonPage() {
       console.error("Failed to import intro video URL:", error)
       notifyApiError(error, "Failed to import intro video URL")
     } finally {
-      setUploadingIntroVideo(false)
+      setImportingIntroVideoUrl(false)
     }
   }
 
@@ -417,17 +424,18 @@ export function AddNewLessonPage() {
                   inputMode="url"
                   autoComplete="off"
                   className="font-mono text-[13px]"
+                  disabled={uploadingIntroVideo || importingIntroVideoUrl}
                 />
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-grayScale-200 px-3 py-2 text-xs text-grayScale-700 hover:bg-grayScale-50">
                     {uploadingIntroVideo ? <SpinnerIcon className="h-4 w-4" alt="" /> : <Upload className="h-4 w-4" />}
-                    {uploadingIntroVideo ? "Uploading..." : "Upload video from computer"}
+                    {uploadingIntroVideo ? introVideoProgress.message || "Uploading..." : "Upload video from computer"}
                     <input
                       type="file"
                       accept="video/*"
                       className="hidden"
                       onChange={handleIntroVideoFileChange}
-                      disabled={uploadingIntroVideo}
+                      disabled={uploadingIntroVideo || importingIntroVideoUrl}
                     />
                   </label>
                   {introVideoUrl.trim() ? (
@@ -436,6 +444,12 @@ export function AddNewLessonPage() {
                     </Button>
                   ) : null}
                 </div>
+                {introVideoProgress.phase !== "idle" ? (
+                  <VideoUploadProgressBar
+                    progress={introVideoProgress}
+                    onCancel={cancelIntroVideo}
+                  />
+                ) : null}
                 {introVideoPreview ? (
                   <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-3">
                     <p className="mb-2 text-xs font-medium text-grayScale-500">Preview</p>

@@ -21,7 +21,10 @@ import {
   getQuestionSets,
   updateQuestion,
 } from "../../api/courses.api"
-import { resolveFileUrl, uploadAudioFile, uploadImageFile, uploadVideoFile } from "../../api/files.api"
+import { resolveFileUrl, uploadAudioFile, uploadImageFile } from "../../api/files.api"
+import { VideoUploadProgressBar } from "../../components/video-upload/VideoUploadProgressBar"
+import { useVideoUpload } from "../../hooks/useVideoUpload"
+import { vimeoResultToStoredUrl } from "../../lib/video-upload/upload-video"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
   DropdownMenu,
@@ -115,18 +118,6 @@ function normalizeObjectKey(value: string) {
   return trimmed
 }
 
-/** Prefer direct storage URL; for Vimeo pipeline match SubCourseContentPage player URL shape. */
-function introVideoUrlFromUploadResponse(data: { url?: string; embed_url?: string } | undefined): string | null {
-  if (!data) return null
-  const pageUrl = data.url?.trim()
-  const embedUrl = data.embed_url?.trim()
-  if (embedUrl) {
-    const hashFromUrl = pageUrl ? pageUrl.split("/").filter(Boolean).at(-1) : undefined
-    return hashFromUrl ? `${embedUrl}?h=${hashFromUrl}` : embedUrl
-  }
-  return pageUrl || null
-}
-
 function toVimeoEmbedUrl(rawUrl: string): string | null {
   try {
     const parsed = new URL(rawUrl.trim())
@@ -172,7 +163,12 @@ export function SpeakingPage() {
   const [setTitle, setSetTitle] = useState("")
   const [setDescription, setSetDescription] = useState("")
   const [introVideoUrl, setIntroVideoUrl] = useState("")
-  const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false)
+  const {
+    upload: uploadIntroVideo,
+    cancel: cancelIntroVideo,
+    progress: introVideoProgress,
+    isBusy: uploadingIntroVideo,
+  } = useVideoUpload()
   const introVideoFileInputRef = useRef<HTMLInputElement>(null)
   const [subCourseId, setSubCourseId] = useState("")
   const [subCourseOptions, setSubCourseOptions] = useState<SubCourseOption[]>([])
@@ -605,21 +601,19 @@ export function SpeakingPage() {
     event.target.value = ""
     if (!file) return
 
-    setUploadingIntroVideo(true)
     try {
-      const uploadRes = await uploadVideoFile(file, {
+      const res = await uploadIntroVideo(file, {
         title: setTitle.trim() || file.name.replace(/\.[^.]+$/, "") || "Speaking intro",
         description: setDescription.trim() || undefined,
       })
-      const finalUrl = introVideoUrlFromUploadResponse(uploadRes.data?.data)
-      if (!finalUrl) throw new Error("Missing uploaded video url")
-      setIntroVideoUrl(finalUrl)
-      toast.success("Intro video uploaded", { description: "The URL has been filled in for you." })
+      if (res) {
+        setIntroVideoUrl(vimeoResultToStoredUrl(res))
+        toast.success("Intro video uploaded", { description: "The URL has been filled in for you." })
+      }
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
       console.error("Failed to upload intro video:", error)
       notifyApiError(error, "Failed to upload intro video")
-    } finally {
-      setUploadingIntroVideo(false)
     }
   }
 
@@ -1990,7 +1984,9 @@ export function SpeakingPage() {
                           ) : (
                             <Upload className="h-4 w-4" />
                           )}
-                          {uploadingIntroVideo ? "Uploading…" : "Upload video from computer"}
+                          {uploadingIntroVideo
+                            ? introVideoProgress.message || "Uploading…"
+                            : "Upload video from computer"}
                         </Button>
                         {introVideoUrl.trim() ? (
                           <Button type="button" variant="ghost" size="sm" onClick={() => setIntroVideoUrl("")}>
@@ -1998,8 +1994,14 @@ export function SpeakingPage() {
                           </Button>
                         ) : null}
                       </div>
+                      {introVideoProgress.phase !== "idle" ? (
+                        <VideoUploadProgressBar
+                          progress={introVideoProgress}
+                          onCancel={cancelIntroVideo}
+                        />
+                      ) : null}
                       <p className="text-xs leading-relaxed text-grayScale-500">
-                        Paste a link or upload from your computer; uploads use the same file service as elsewhere. Optional, not tied to sub-course video rows.
+                        Paste a Vimeo link or upload from your computer. Optional, not tied to sub-course video rows.
                       </p>
                       {introVideoPreview ? (
                         <div className="rounded-xl border border-grayScale-200 bg-black/95 p-2">

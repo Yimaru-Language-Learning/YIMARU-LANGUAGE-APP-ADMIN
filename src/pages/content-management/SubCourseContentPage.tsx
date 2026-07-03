@@ -19,7 +19,9 @@ import {
   getVimeoSample,
 } from "../../api/courses.api"
 import { getRatings } from "../../api/ratings.api"
-import { uploadVideoFile } from "../../api/files.api"
+import { VideoUploadProgressBar } from "../../components/video-upload/VideoUploadProgressBar"
+import { useVideoUpload } from "../../hooks/useVideoUpload"
+import { vimeoResultToStoredUrl } from "../../lib/video-upload/upload-video"
 import type {
   SubCourse,
   QuestionSet,
@@ -90,6 +92,12 @@ export function SubModuleContentPage() {
   const [videoVisibility, setVideoVisibility] = useState<VideoVisibility>("PUBLISHED")
   const [videoStatus, setVideoStatus] = useState<VideoStatus>("PUBLISHED")
   const [videoDisplayOrder, setVideoDisplayOrder] = useState<number>(1)
+  const {
+    upload: uploadNewVideo,
+    cancel: cancelNewVideo,
+    progress: newVideoProgress,
+    isBusy: uploadingNewVideo,
+  } = useVideoUpload()
 
   // Vimeo preview state
   const [showPreviewModal, setShowPreviewModal] = useState(false)
@@ -287,21 +295,16 @@ export function SubModuleContentPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      const uploadRes = await uploadVideoFile(videoFile, {
-        title: videoTitle.trim(),
-        description: videoDescription.trim(),
+      const uploadResult = await uploadNewVideo(videoFile, {
+        title: videoTitle.trim() || videoFile.name,
+        description: videoDescription.trim() || undefined,
       })
+      if (!uploadResult) {
+        setSaving(false)
+        return
+      }
 
-      // Per backend guide, use embed_url as the video_url reference.
-      const embedUrl = uploadRes.data?.data?.embed_url?.trim()
-      const vimeoUrl = uploadRes.data?.data?.url?.trim()
-      if (!embedUrl) throw new Error("Missing uploaded video embed_url")
-
-      // Backend requires: https://player.vimeo.com/video/<id>?h=<hash>
-      // where <hash> is the last path segment from `url` (e.g. https://vimeo.com/<id>/<hash>)
-      const hashFromUrl = vimeoUrl ? vimeoUrl.split("/").filter(Boolean).at(-1) : undefined
-      const finalVideoUrl = hashFromUrl ? `${embedUrl}?h=${hashFromUrl}` : embedUrl
-
+      const finalVideoUrl = vimeoResultToStoredUrl(uploadResult)
       const finalTitle = videoTitle.trim() || videoFile.name
 
       await createCourseVideo({
@@ -1108,18 +1111,30 @@ export function SubModuleContentPage() {
                   </select>
                 </div>
               </div>
+              {newVideoProgress.phase !== "idle" ? (
+                <VideoUploadProgressBar
+                  progress={newVideoProgress}
+                  onCancel={cancelNewVideo}
+                />
+              ) : null}
               {saveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{saveError}</p>}
             </div>
             <div className="flex flex-col-reverse gap-2.5 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
-              <Button variant="outline" onClick={() => setShowAddVideoModal(false)} disabled={saving}>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddVideoModal(false)}
+                disabled={saving || uploadingNewVideo}
+              >
                 Cancel
               </Button>
               <Button
                 className="bg-brand-500 shadow-sm hover:bg-brand-600"
                 onClick={handleSaveNewVideo}
-                disabled={saving || !videoTitle.trim() || !videoFile}
+                disabled={saving || uploadingNewVideo || !videoTitle.trim() || !videoFile}
               >
-                {saving ? "Uploading..." : "Upload Video"}
+                {saving || uploadingNewVideo
+                  ? newVideoProgress.message || "Uploading..."
+                  : "Upload Video"}
               </Button>
             </div>
           </div>

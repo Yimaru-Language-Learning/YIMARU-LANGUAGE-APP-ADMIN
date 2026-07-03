@@ -34,7 +34,10 @@ import {
   setExamPrepModuleLessonPublishStatus,
   setExamPrepUnitModulePublishStatus,
 } from "../../api/courses.api";
-import { uploadImageFile, uploadVideoFile } from "../../api/files.api";
+import { uploadImageFile } from "../../api/files.api";
+import { VideoUploadProgressBar } from "../../components/video-upload/VideoUploadProgressBar";
+import { useVideoUpload } from "../../hooks/useVideoUpload";
+import { vimeoResultToStoredUrl } from "../../lib/video-upload/upload-video";
 import { resolveThumbnailForPreview } from "../../lib/videoPreview";
 import type {
   ContentAccessTier,
@@ -124,7 +127,12 @@ export function CourseModuleDetailPage() {
   const [createDescription, setCreateDescription] = useState("");
   const [creatingLesson, setCreatingLesson] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
-  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const {
+    upload: uploadCreateVideo,
+    cancel: cancelCreateVideo,
+    progress: createVideoProgress,
+    isBusy: uploadingVideo,
+  } = useVideoUpload();
   const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
   const createVideoFileInputRef = useRef<HTMLInputElement>(null);
   const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
@@ -135,7 +143,12 @@ export function CourseModuleDetailPage() {
   const [editSortOrder, setEditSortOrder] = useState("1");
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingEditThumbnail, setUploadingEditThumbnail] = useState(false);
-  const [uploadingEditVideo, setUploadingEditVideo] = useState(false);
+  const {
+    upload: uploadEditVideo,
+    cancel: cancelEditVideo,
+    progress: editVideoProgress,
+    isBusy: uploadingEditVideo,
+  } = useVideoUpload();
   const editThumbnailFileInputRef = useRef<HTMLInputElement>(null);
   const editVideoFileInputRef = useRef<HTMLInputElement>(null);
   const [deletingLessonId, setDeletingLessonId] = useState<number | null>(null);
@@ -270,22 +283,19 @@ export function CourseModuleDetailPage() {
       toast.error("Please choose a video file");
       return;
     }
-    setUploadingVideo(true);
     try {
-      const res = await uploadVideoFile(file, {
+      const res = await uploadCreateVideo(file, {
         title: createTitle.trim() || "Lesson video",
         description: createDescription.trim() || undefined,
       });
-      const finalUrl =
-        res.data?.data?.url?.trim() || res.data?.data?.embed_url?.trim() || "";
-      if (!finalUrl) throw new Error("Upload did not return a video URL");
-      setCreateVideoUrl(finalUrl);
-      toast.success("Video uploaded");
+      if (res) {
+        setCreateVideoUrl(vimeoResultToStoredUrl(res));
+        toast.success("Video uploaded");
+      }
     } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       console.error(error);
       notifyApiError(error, "Failed to upload video");
-    } finally {
-      setUploadingVideo(false);
     }
   };
 
@@ -403,22 +413,19 @@ export function CourseModuleDetailPage() {
       toast.error("Please choose a video file");
       return;
     }
-    setUploadingEditVideo(true);
     try {
-      const res = await uploadVideoFile(file, {
+      const res = await uploadEditVideo(file, {
         title: editTitle.trim() || "Lesson video",
         description: editDescription.trim() || undefined,
       });
-      const finalUrl =
-        res.data?.data?.url?.trim() || res.data?.data?.embed_url?.trim() || "";
-      if (!finalUrl) throw new Error("Upload did not return a video URL");
-      setEditVideoUrl(finalUrl);
-      toast.success("Video uploaded");
+      if (res) {
+        setEditVideoUrl(vimeoResultToStoredUrl(res));
+        toast.success("Video uploaded");
+      }
     } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       console.error(error);
       notifyApiError(error, "Failed to upload video");
-    } finally {
-      setUploadingEditVideo(false);
     }
   };
 
@@ -687,7 +694,9 @@ export function CourseModuleDetailPage() {
                         </div>
                         <p className="text-[15px]">
                           <span className="text-brand-500 font-bold hover:underline">
-                            {uploadingVideo ? "Uploading…" : "Click to upload"}
+                            {uploadingVideo
+                              ? createVideoProgress.message || "Uploading…"
+                              : "Click to upload"}
                           </span>{" "}
                           <span className="text-grayScale-500">
                             video from your computer
@@ -698,6 +707,12 @@ export function CourseModuleDetailPage() {
                         </p>
                       </div>
                     </button>
+                    {createVideoProgress.phase !== "idle" ? (
+                      <VideoUploadProgressBar
+                        progress={createVideoProgress}
+                        onCancel={cancelCreateVideo}
+                      />
+                    ) : null}
                     <Input
                       value={createVideoUrl}
                       onChange={(e) => setCreateVideoUrl(e.target.value)}
@@ -963,7 +978,9 @@ export function CourseModuleDetailPage() {
                     </div>
                     <p className="text-[15px]">
                       <span className="text-brand-500 font-bold hover:underline">
-                        {uploadingEditVideo ? "Uploading…" : "Click to upload"}
+                        {uploadingEditVideo
+                          ? editVideoProgress.message || "Uploading…"
+                          : "Click to upload"}
                       </span>{" "}
                       <span className="text-grayScale-500">
                         video from your computer
@@ -974,6 +991,12 @@ export function CourseModuleDetailPage() {
                     </p>
                   </div>
                 </button>
+                {editVideoProgress.phase !== "idle" ? (
+                  <VideoUploadProgressBar
+                    progress={editVideoProgress}
+                    onCancel={cancelEditVideo}
+                  />
+                ) : null}
                 <Input
                   value={editVideoUrl}
                   onChange={(e) => setEditVideoUrl(e.target.value)}

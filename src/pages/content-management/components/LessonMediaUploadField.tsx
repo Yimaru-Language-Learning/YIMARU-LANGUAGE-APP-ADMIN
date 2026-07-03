@@ -1,13 +1,15 @@
 import { notifyApiError } from "../../../lib/apiErrors"
-import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { CloudUpload } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "../../../components/ui/input";
 import { cn } from "../../../lib/utils";
-import { uploadImageFile, uploadVideoFile } from "../../../api/files.api";
+import { uploadImageFile } from "../../../api/files.api";
+import { useVideoUpload } from "../../../hooks/useVideoUpload";
+import { VideoUploadProgressBar } from "../../../components/video-upload/VideoUploadProgressBar";
+import { vimeoResultToStoredUrl } from "../../../lib/video-upload/upload-video";
 
 const MAX_THUMB_BYTES = 5 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024;
 
 const THUMB_TYPES = new Set(["image/jpeg", "image/png"]);
 const VIDEO_TYPES_PREFIX = "video/";
@@ -33,6 +35,9 @@ export interface LessonMediaUploadFieldProps {
   disabled?: boolean;
   onUploadBusyChange?: (busy: boolean) => void;
   className?: string;
+  /** Vimeo title when uploading a video file */
+  videoTitle?: string;
+  videoDescription?: string;
 }
 
 export function LessonMediaUploadField({
@@ -42,18 +47,22 @@ export function LessonMediaUploadField({
   disabled = false,
   onUploadBusyChange,
   className,
+  videoTitle,
+  videoDescription,
 }: LessonMediaUploadFieldProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const { upload: uploadVideo, cancel: cancelVideo, progress: videoProgress, isBusy: videoBusy } =
+    useVideoUpload();
 
-  const setBusy = useCallback(
-    (next: boolean) => {
-      setUploading(next);
-      onUploadBusyChange?.(next);
-    },
-    [onUploadBusyChange],
-  );
+  const uploading = kind === "video" ? videoBusy : uploadingThumb;
+
+  useEffect(() => {
+    if (kind === "video") {
+      onUploadBusyChange?.(videoBusy);
+    }
+  }, [kind, videoBusy, onUploadBusyChange]);
 
   const processFile = useCallback(
     async (file: File) => {
@@ -70,7 +79,8 @@ export function LessonMediaUploadField({
           });
           return;
         }
-        setBusy(true);
+        setUploadingThumb(true);
+        onUploadBusyChange?.(true);
         try {
           const res = await uploadImageFile(file);
           const url = res.data?.data?.url?.trim();
@@ -81,7 +91,8 @@ export function LessonMediaUploadField({
           console.error(e);
           notifyApiError(e, "Failed to upload thumbnail");
         } finally {
-          setBusy(false);
+          setUploadingThumb(false);
+          onUploadBusyChange?.(false);
         }
         return;
       }
@@ -90,27 +101,32 @@ export function LessonMediaUploadField({
         toast.error("Please use a video file (e.g. MP4, WebM, MOV).");
         return;
       }
-      if (file.size > MAX_VIDEO_BYTES) {
-        toast.error("Video is too large", {
-          description: "Maximum size is 2 GB.",
-        });
-        return;
-      }
-      setBusy(true);
+
       try {
-        const res = await uploadVideoFile(file);
-        const url = res.data?.data?.url?.trim();
-        if (!url) throw new Error("Upload did not return a file URL");
-        onChange(url);
-        toast.success("Video uploaded");
+        const res = await uploadVideo(file, {
+          title: videoTitle?.trim() || file.name,
+          description: videoDescription?.trim() || undefined,
+        });
+        if (res) {
+          onChange(vimeoResultToStoredUrl(res));
+          toast.success("Video uploaded");
+        }
       } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
         console.error(e);
         notifyApiError(e, "Failed to upload video");
-      } finally {
-        setBusy(false);
       }
     },
-    [disabled, uploading, kind, onChange, setBusy],
+    [
+      disabled,
+      uploading,
+      kind,
+      onChange,
+      onUploadBusyChange,
+      uploadVideo,
+      videoTitle,
+      videoDescription,
+    ],
   );
 
   const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -147,6 +163,15 @@ export function LessonMediaUploadField({
     ? "JPG, PNG (MAX 5 MB)"
     : "MP4, MOV, WebM (MAX 2 GB)";
 
+  const videoUploadingLabel =
+    videoProgress.phase === "processing"
+      ? videoProgress.message
+      : videoProgress.phase === "uploading"
+        ? videoProgress.message
+        : videoProgress.phase === "creating"
+          ? "Preparing upload…"
+          : "Uploading…";
+
   return (
     <div className={cn("space-y-3", className)}>
       <label className="text-sm font-medium text-grayScale-700">
@@ -178,8 +203,10 @@ export function LessonMediaUploadField({
           zoneDisabled && "cursor-not-allowed opacity-60",
         )}
       >
-        {uploading ? (
+        {uploading && isThumb ? (
           <p className="text-sm font-medium text-grayScale-600">Uploading…</p>
+        ) : uploading && !isThumb ? (
+          <p className="text-sm font-medium text-grayScale-600">{videoUploadingLabel}</p>
         ) : (
           <>
             <CloudUpload
@@ -197,6 +224,9 @@ export function LessonMediaUploadField({
           </>
         )}
       </button>
+      {!isThumb && videoProgress.phase !== "idle" ? (
+        <VideoUploadProgressBar progress={videoProgress} onCancel={cancelVideo} />
+      ) : null}
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}

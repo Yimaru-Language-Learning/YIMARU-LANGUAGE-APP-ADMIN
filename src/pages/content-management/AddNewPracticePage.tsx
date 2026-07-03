@@ -28,6 +28,9 @@ import {
   addQuestionToSet,
 } from "../../api/courses.api";
 import { uploadVideoFile } from "../../api/files.api";
+import { VideoUploadProgressBar } from "../../components/video-upload/VideoUploadProgressBar";
+import { useVideoUpload } from "../../hooks/useVideoUpload";
+import { vimeoResultToStoredUrl } from "../../lib/video-upload/upload-video";
 import type { QuestionOption } from "../../types/course.types";
 import type { PracticeQuestionDynamicRow } from "../../components/content-management/PracticeQuestionEditorFields";
 import { buildDynamicQuestionPayload } from "../../lib/practiceDynamicQuestionPayload";
@@ -165,7 +168,12 @@ export function AddNewPracticePage() {
   const [practiceTitle, setPracticeTitle] = useState("");
   const [practiceDescription, setPracticeDescription] = useState("");
   const [introVideoUrl, setIntroVideoUrl] = useState("");
-  const [uploadingIntroVideo, setUploadingIntroVideo] = useState(false);
+  const {
+    upload: uploadIntroVideo,
+    cancel: cancelIntroVideo,
+    progress: introVideoProgress,
+    isBusy: uploadingIntroVideo,
+  } = useVideoUpload();
   const [importingIntroVideoUrl, setImportingIntroVideoUrl] = useState(false);
   const introVideoFileInputRef = useRef<HTMLInputElement>(null);
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
@@ -212,26 +220,24 @@ export function AddNewPracticePage() {
     event.target.value = "";
     if (!file) return;
 
-    setUploadingIntroVideo(true);
     try {
-      const uploadRes = await uploadVideoFile(file, {
+      const res = await uploadIntroVideo(file, {
         title:
           practiceTitle.trim() ||
           file.name.replace(/\.[^.]+$/, "") ||
           "Practice intro",
         description: practiceDescription.trim() || undefined,
       });
-      const finalUrl = introVideoUrlFromUploadResponse(uploadRes.data?.data);
-      if (!finalUrl) throw new Error("Missing uploaded video url");
-      setIntroVideoUrl(finalUrl);
-      toast.success("Intro video uploaded", {
-        description: "The URL has been filled in for you.",
-      });
+      if (res) {
+        setIntroVideoUrl(vimeoResultToStoredUrl(res));
+        toast.success("Intro video uploaded", {
+          description: "The URL has been filled in for you.",
+        });
+      }
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       console.error("Failed to upload intro video:", error);
       notifyApiError(error, "Failed to upload intro video");
-    } finally {
-      setUploadingIntroVideo(false);
     }
   };
 
@@ -607,7 +613,7 @@ export function AddNewPracticePage() {
                           <Upload className="h-4 w-4" />
                         )}
                         {uploadingIntroVideo
-                          ? "Uploading…"
+                          ? introVideoProgress.message || "Uploading…"
                           : "Upload video from computer"}
                       </Button>
                       <Button
@@ -641,6 +647,12 @@ export function AddNewPracticePage() {
                         </Button>
                       ) : null}
                     </div>
+                    {introVideoProgress.phase !== "idle" ? (
+                      <VideoUploadProgressBar
+                        progress={introVideoProgress}
+                        onCancel={cancelIntroVideo}
+                      />
+                    ) : null}
                     {introVideoPreview ? (
                       <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/40 p-3">
                         <p className="mb-2 text-xs font-medium text-grayScale-500">

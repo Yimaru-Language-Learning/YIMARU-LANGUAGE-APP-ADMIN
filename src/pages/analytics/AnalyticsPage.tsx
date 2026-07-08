@@ -33,6 +33,9 @@ import {
   FolderOpen,
   RefreshCw,
   ChevronDown,
+  PlayCircle,
+  RotateCcw,
+  CheckCircle2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
@@ -46,6 +49,7 @@ import {
   formatAnalyticsLabel,
   getSubscriptionMetrics,
   getVideoLessonsSummary,
+  formatPercentRate,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
 
@@ -363,7 +367,7 @@ export function AnalyticsPage() {
     )
   }
 
-  const { users, subscriptions, payments, courses, content, notifications, issues, team } = dashboard
+  const { users, subscriptions, payments, courses, content, notifications, issues, team, videos } = dashboard
   const subscriptionMetrics = getSubscriptionMetrics(subscriptions)
   const seriesPeriodLabel = getSeriesPeriodLabel(dashboard.date_filter)
   const lms = courses.lms
@@ -401,6 +405,21 @@ export function AnalyticsPage() {
     value: s.count,
     color: PIE_COLORS[i % PIE_COLORS.length],
   }))
+
+  const dropOffData =
+    videos?.drop_off_by_checkpoint.map((d) => ({
+      checkpoint: `${d.checkpoint_percent}%`,
+      checkpointPercent: d.checkpoint_percent,
+      dropOffRate: Number((d.drop_off_rate * 100).toFixed(1)),
+      viewersReached: d.viewers_reached,
+      totalSessions: d.total_sessions,
+    })) ?? []
+
+  const retentionData =
+    videos?.drop_off_by_checkpoint.map((d) => ({
+      checkpoint: `${d.checkpoint_percent}%`,
+      viewers: d.viewers_reached,
+    })) ?? []
 
   const generatedAt = new Date(dashboard.generated_at).toLocaleString("en-US", {
     month: "short",
@@ -879,6 +898,160 @@ export function AnalyticsPage() {
             <BreakdownList title="Question Sets by Type" data={content.question_sets_by_type} />
           </div>
         </Section>
+
+        {/* ─── Video Analytics ─── */}
+        {videos && (
+          <Section title="Video Analytics" icon={PlayCircle} count={videos.total_watch_sessions} defaultOpen>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                icon={PlayCircle}
+                label="Watch Sessions"
+                value={formatNumber(videos.total_watch_sessions)}
+                sub={`${videos.unique_video_starts.toLocaleString()} unique starts`}
+                trend={videos.total_watch_sessions > 0 ? "up" : "neutral"}
+              />
+              <KpiCard
+                icon={CheckCircle2}
+                label="Completion Rate"
+                value={formatPercentRate(videos.completion_rate)}
+                sub={`${videos.completed_sessions.toLocaleString()} completed sessions`}
+                trend={videos.completion_rate >= 0.25 ? "up" : "neutral"}
+              />
+              <KpiCard
+                icon={RotateCcw}
+                label="Replay Rate"
+                value={formatPercentRate(videos.replay_rate)}
+                sub={`${videos.replay_sessions.toLocaleString()} replays · ${videos.users_who_replayed.toLocaleString()} users`}
+                trend={videos.replay_rate > 0 ? "up" : "neutral"}
+              />
+              <KpiCard
+                icon={Video}
+                label="Unique Starts"
+                value={formatNumber(videos.unique_video_starts)}
+                sub={`${videos.completed_sessions.toLocaleString()} completed · ${videos.replay_sessions.toLocaleString()} replays`}
+                trend="neutral"
+              />
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <Card className="shadow-none">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Viewer Retention by Checkpoint</CardTitle>
+                      <div className="mt-1 text-xs text-grayScale-400">
+                        Viewers still watching at each progress milestone
+                      </div>
+                    </div>
+                    <Badge variant="secondary">{seriesPeriodLabel}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-[280px] p-6 pt-2">
+                  {retentionData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={retentionData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="gradRetention" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366F1" stopOpacity={0.25} />
+                            <stop offset="100%" stopColor="#6366F1" stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
+                        <XAxis dataKey="checkpoint" tickLine={false} axisLine={false} fontSize={11} />
+                        <YAxis tickLine={false} axisLine={false} fontSize={11} width={36} allowDecimals={false} />
+                        <Tooltip
+                          formatter={(v) => [Number(v).toLocaleString(), "Viewers"]}
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #E0E0E0",
+                            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                            fontSize: 12,
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="viewers"
+                          stroke="#6366F1"
+                          strokeWidth={2}
+                          fill="url(#gradRetention)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-grayScale-400">
+                      No checkpoint data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-none">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Drop-off Rate by Checkpoint</CardTitle>
+                      <div className="mt-1 text-xs text-grayScale-400">
+                        Share of sessions that stopped before each milestone
+                      </div>
+                    </div>
+                    <Badge variant="secondary">{seriesPeriodLabel}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-[280px] p-6 pt-2">
+                  {dropOffData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dropOffData} margin={{ left: 8, right: 8, top: 8 }}>
+                        <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
+                        <XAxis dataKey="checkpoint" tickLine={false} axisLine={false} fontSize={11} />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          fontSize={11}
+                          width={42}
+                          tickFormatter={(v) => `${v}%`}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip
+                          formatter={(v, _name, props) => {
+                            const row = props?.payload as (typeof dropOffData)[number] | undefined
+                            return [
+                              `${Number(v).toFixed(1)}% drop-off`,
+                              `${row?.viewersReached?.toLocaleString() ?? 0} viewers reached`,
+                            ]
+                          }}
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #E0E0E0",
+                            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                            fontSize: 12,
+                          }}
+                        />
+                        <Bar dataKey="dropOffRate" radius={[6, 6, 0, 0]} fill="#F97316" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-grayScale-400">
+                      No drop-off data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {dropOffData.length > 0 && (
+              <div className="mt-4">
+                <BreakdownList
+                  title="Checkpoint Funnel"
+                  data={dropOffData.map((d) => ({
+                    label: `${d.checkpointPercent}% — ${d.viewersReached} viewers (${d.dropOffRate}% drop-off)`,
+                    count: d.viewersReached,
+                  }))}
+                  total={videos.total_watch_sessions}
+                />
+              </div>
+            )}
+          </Section>
+        )}
 
         {/* ─── Team ─── */}
         <Section title="Team" icon={UsersRound} count={team.total_members} defaultOpen={false}>

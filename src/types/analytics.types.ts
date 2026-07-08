@@ -117,6 +117,24 @@ export interface DashboardTeam {
   by_status: LabelCount[]
 }
 
+export interface VideoDropOffCheckpoint {
+  checkpoint_percent: number
+  total_sessions: number
+  viewers_reached: number
+  drop_off_rate: number
+}
+
+export interface DashboardVideos {
+  total_watch_sessions: number
+  completed_sessions: number
+  replay_sessions: number
+  unique_video_starts: number
+  users_who_replayed: number
+  completion_rate: number
+  replay_rate: number
+  drop_off_by_checkpoint: VideoDropOffCheckpoint[]
+}
+
 export type DashboardDateFilterMode = "all_time" | "year" | "year_month" | "custom"
 
 export interface DashboardDateFilter {
@@ -153,6 +171,7 @@ export interface DashboardData {
   notifications: DashboardNotifications
   issues: DashboardIssues
   team: DashboardTeam
+  videos?: DashboardVideos
 }
 
 export interface DashboardResponse {

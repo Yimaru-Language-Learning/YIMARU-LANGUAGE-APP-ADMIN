@@ -119,7 +119,7 @@ export function DashboardPage() {
     const fetchPlans = async () => {
       setSubscriptionPlansLoading(true)
       try {
-        const res = await getSubscriptionPlans()
+        const res = await getSubscriptionPlans({ active_only: false })
         setSubscriptionPlans(res.data)
       } catch (err) {
         console.error(err)

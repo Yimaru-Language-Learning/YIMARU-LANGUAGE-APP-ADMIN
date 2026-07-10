@@ -137,16 +137,17 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-6">
       <div className="h-5 w-32 animate-pulse rounded bg-grayScale-100" />
-      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <div className="h-80 animate-pulse rounded-2xl bg-grayScale-100" />
-          <div className="h-64 animate-pulse rounded-2xl bg-grayScale-100" />
+          <div className="h-48 animate-pulse rounded-2xl bg-grayScale-100" />
         </div>
         <div className="space-y-6">
           <div className="h-56 animate-pulse rounded-2xl bg-grayScale-100" />
           <div className="h-72 animate-pulse rounded-2xl bg-grayScale-100" />
         </div>
       </div>
+      <div className="h-64 animate-pulse rounded-2xl bg-grayScale-100" />
     </div>
   );
 }
@@ -219,27 +220,30 @@ export function UserDetailPage() {
     void loadLearningActivity();
   }, [id]);
 
+  const refreshSubscriptions = async () => {
+    const userId = Number(id);
+    if (!Number.isFinite(userId) || userId <= 0) return;
+
+    setSubscriptionsLoading(true);
+    setSubscriptionsError(null);
+    try {
+      const res = await getUserSubscriptions(userId);
+      setSubscriptions(res.data.data);
+    } catch (err) {
+      console.error("Failed to load subscriptions", err);
+      setSubscriptions(null);
+      setSubscriptionsError(getApiErrorMessage(err, "Failed to load subscriptions."));
+    } finally {
+      setSubscriptionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
     const userId = Number(id);
     if (Number.isNaN(userId)) return;
-
-    const loadSubscriptions = async () => {
-      setSubscriptionsLoading(true);
-      setSubscriptionsError(null);
-      try {
-        const res = await getUserSubscriptions(userId);
-        setSubscriptions(res.data.data);
-      } catch (err) {
-        console.error("Failed to load subscriptions", err);
-        setSubscriptions(null);
-        setSubscriptionsError(getApiErrorMessage(err, "Failed to load subscriptions."));
-      } finally {
-        setSubscriptionsLoading(false);
-      }
-    };
-
-    void loadSubscriptions();
+    void refreshSubscriptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -360,8 +364,8 @@ export function UserDetailPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="min-w-0 space-y-6">
           <Card className="overflow-hidden shadow-soft">
             <CardContent className="space-y-5 p-5">
               <div className="flex items-center gap-4">
@@ -407,7 +411,7 @@ export function UserDetailPage() {
 
               <Separator />
 
-              <div className="grid gap-3 text-sm">
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <InfoRow label="Joined" value={formatDate(user.created_at)} />
                 <InfoRow label="Last login" value={formatDateTime(user.last_login, "Never")} />
                 <InfoRow label="Gender" value={displayValue(user.gender)} />
@@ -440,12 +444,6 @@ export function UserDetailPage() {
               />
             </CardContent>
           </Card>
-
-          <UserSubscriptionsSection
-            subscriptions={subscriptions}
-            loading={subscriptionsLoading}
-            error={subscriptionsError}
-          />
         </div>
 
         <div className="min-w-0 space-y-6">
@@ -459,7 +457,7 @@ export function UserDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                 <InfoItem label="Education level" value={displayValue(user.education_level)} />
                 <InfoItem label="Age group" value={formatAgeGroup(user.age_group)} />
                 <InfoItem label="Favorite topic" value={displayValue(user.favoutite_topic)} />
@@ -551,6 +549,16 @@ export function UserDetailPage() {
           </Card>
         </div>
       </div>
+
+      <UserSubscriptionsSection
+        userId={Number(id)}
+        userRole={user.role}
+        userName={[user.first_name, user.last_name].filter(Boolean).join(" ") || user.email}
+        subscriptions={subscriptions}
+        loading={subscriptionsLoading}
+        error={subscriptionsError}
+        onRefresh={() => void refreshSubscriptions()}
+      />
 
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

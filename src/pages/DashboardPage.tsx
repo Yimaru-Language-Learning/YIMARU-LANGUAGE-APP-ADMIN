@@ -33,6 +33,7 @@ import { StatCard } from "../components/dashboard/StatCard"
 import alertSrc from "../assets/Alert.svg"
 import { Badge } from "../components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { SensitiveRevealProvider, SensitiveValue } from "../components/ui/sensitive-value"
 import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
 import { getDashboard } from "../api/analytics.api"
@@ -175,6 +176,7 @@ export function DashboardPage() {
     : null
 
   return (
+    <SensitiveRevealProvider>
     <div className="mx-auto w-full min-w-0 max-w-6xl">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm font-semibold text-grayScale-500">Dashboard</div>
@@ -252,7 +254,11 @@ export function DashboardPage() {
               <StatCard
                 icon={DollarSign}
                 label="Total Revenue (ETB)"
-                value={dashboard.payments.total_revenue.toLocaleString()}
+                value={
+                  <SensitiveValue>
+                    {dashboard.payments.total_revenue.toLocaleString()}
+                  </SensitiveValue>
+                }
                 deltaLabel={`${dashboard.payments.total_payments} payments`}
                 deltaPositive={dashboard.payments.total_revenue > 0}
               />
@@ -596,5 +602,6 @@ export function DashboardPage() {
         </>
       )}
     </div>
+    </SensitiveRevealProvider>
   )
 }

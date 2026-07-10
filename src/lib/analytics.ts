@@ -5,6 +5,21 @@ import type {
   LabelCount,
 } from "../types/analytics.types"
 
+/** Canonical subscription row statuses shown in analytics breakdowns. */
+export const SUBSCRIPTION_STATUS_BREAKDOWN = [
+  "ACTIVE",
+  "PENDING",
+  "EXPIRED",
+  "CANCELLED",
+] as const
+
+const SUBSCRIPTION_STATUS_COLORS: Record<string, string> = {
+  ACTIVE: "#9E2891",
+  PENDING: "#FFD23F",
+  EXPIRED: "#F97316",
+  CANCELLED: "#EF4444",
+}
+
 const INACTIVE_SUBSCRIPTION_STATUSES = new Set([
   "INACTIVE",
   "CANCELLED",
@@ -18,6 +33,51 @@ export interface SubscriptionMetrics {
   total: number
   active: number
   inactive: number
+}
+
+export interface SubscriptionStatusPieSlice {
+  name: string
+  value: number
+  color: string
+}
+
+/**
+ * Ensures every canonical subscription status appears in the pie/legend,
+ * including statuses with a count of 0.
+ */
+export function buildSubscriptionStatusPie(
+  byStatus: LabelCount[] | null | undefined,
+  fallbackColors: string[] = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0"],
+): SubscriptionStatusPieSlice[] {
+  const counts = new Map<string, number>()
+  for (const row of byStatus ?? []) {
+    const key = row.label.trim().toUpperCase()
+    if (!key) continue
+    counts.set(key, (counts.get(key) ?? 0) + row.count)
+  }
+
+  const known = new Set<string>(SUBSCRIPTION_STATUS_BREAKDOWN)
+  const slices: SubscriptionStatusPieSlice[] = SUBSCRIPTION_STATUS_BREAKDOWN.map(
+    (status, index) => ({
+      name: status,
+      value: counts.get(status) ?? 0,
+      color:
+        SUBSCRIPTION_STATUS_COLORS[status] ??
+        fallbackColors[index % fallbackColors.length],
+    }),
+  )
+
+  // Preserve any unexpected statuses from the API after the canonical set.
+  for (const [status, value] of counts) {
+    if (known.has(status)) continue
+    slices.push({
+      name: status,
+      value,
+      color: fallbackColors[slices.length % fallbackColors.length],
+    })
+  }
+
+  return slices
 }
 
 /** Derives inactive count from by_status when present, else total − active. */

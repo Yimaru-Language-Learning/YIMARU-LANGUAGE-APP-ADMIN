@@ -47,6 +47,7 @@ import {
   getSeriesPeriodLabel,
   getSubscriptionMetrics,
   getVideoLessonsSummary,
+  buildSubscriptionStatusPie,
 } from "../lib/analytics"
 import type { DashboardData, DashboardFilters } from "../types/analytics.types"
 import { formatAverageStars } from "../lib/ratingsDisplay"
@@ -156,13 +157,10 @@ export function DashboardPage() {
       count: d.count,
     })) ?? []
 
-  const subscriptionStatusData =
-    dashboard?.subscriptions.by_status.map((s, i) => ({
-      name: s.label,
-      value: s.count,
-      color: PIE_COLORS[i % PIE_COLORS.length],
-    })) ?? []
-
+  const subscriptionStatusData = buildSubscriptionStatusPie(
+    dashboard?.subscriptions.by_status,
+    PIE_COLORS,
+  )
   const issueStatusData =
     dashboard?.issues.by_status.map((s, i) => ({
       name: s.label,

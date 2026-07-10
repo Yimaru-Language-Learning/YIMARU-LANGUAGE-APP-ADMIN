@@ -56,6 +56,7 @@ import {
   getSubscriptionMetrics,
   getVideoLessonsSummary,
   formatPercentRate,
+  buildSubscriptionStatusPie,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
 
@@ -400,12 +401,10 @@ export function AnalyticsPage() {
     color: PIE_COLORS[i % PIE_COLORS.length],
   }))
 
-  const subscriptionStatusPie = subscriptions.by_status.map((s, i) => ({
-    name: s.label,
-    value: s.count,
-    color: PIE_COLORS[i % PIE_COLORS.length],
-  }))
-
+  const subscriptionStatusPie = buildSubscriptionStatusPie(
+    subscriptions.by_status,
+    PIE_COLORS,
+  )
   const notifByTypePie = notifications.by_type.slice(0, 8).map((s, i) => ({
     name: s.label,
     value: s.count,

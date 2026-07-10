@@ -189,11 +189,11 @@ function SubscriptionManageCard({
         </div>
       </div>
 
-      <div className="mt-6 space-y-2.5">
+      <div className="mt-6 flex flex-col gap-2">
         {canExtend ? (
           <Button
             type="button"
-            className="h-11 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!extendEnabled}
             title={
               !extendEnabled
@@ -208,16 +208,11 @@ function SubscriptionManageCard({
         ) : null}
 
         {(canGrant || canCancel) && (
-          <div
-            className={cn(
-              "grid gap-2.5",
-              canGrant && canCancel ? "grid-cols-2" : "grid-cols-1",
-            )}
-          >
+          <div className="flex flex-wrap gap-2">
             {canGrant ? (
               <Button
                 type="button"
-                className="h-11 rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 min-w-0 flex-1 rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!markAsPaidEnabled}
                 title={
                   !markAsPaidEnabled
@@ -233,7 +228,7 @@ function SubscriptionManageCard({
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 hover:bg-grayScale-50 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 min-w-0 flex-1 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 hover:bg-grayScale-50 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!cancelEnabled}
                 title={
                   !cancelEnabled
@@ -281,11 +276,11 @@ function EmptySubscriptionCard({
       <div className="mt-4 border-t border-grayScale-100 pt-4">
         <p className="text-sm text-grayScale-500">No active subscription for this learner.</p>
       </div>
-      <div className="mt-6 space-y-2.5">
+      <div className="mt-6 flex flex-col gap-2">
         {canExtend ? (
           <Button
             type="button"
-            className="h-11 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
             disabled
             title="Extend is only available when this learner has an active subscription."
           >
@@ -294,16 +289,11 @@ function EmptySubscriptionCard({
           </Button>
         ) : null}
         {(canGrant || canCancel) && (
-          <div
-            className={cn(
-              "grid gap-2.5",
-              canGrant && canCancel ? "grid-cols-2" : "grid-cols-1",
-            )}
-          >
+          <div className="flex flex-wrap gap-2">
             {canGrant ? (
               <Button
                 type="button"
-                className="h-11 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600"
+                className="h-10 min-w-0 flex-1 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600"
                 onClick={onGrant}
               >
                 Mark as Paid
@@ -313,7 +303,7 @@ function EmptySubscriptionCard({
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 min-w-0 flex-1 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                 disabled
                 title="Cancel is only available when this learner has an active subscription."
               >
@@ -375,7 +365,7 @@ export function UserSubscriptionsSection({
 
   return (
     <>
-      <div className="w-full max-w-md space-y-4">
+      <div className="w-full space-y-4">
         {loading ? (
           <Card className="rounded-2xl border border-grayScale-200 shadow-sm">
             <CardContent className="flex items-center gap-2 p-6 text-sm text-grayScale-400">

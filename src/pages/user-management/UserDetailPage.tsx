@@ -147,7 +147,6 @@ function LoadingSkeleton() {
           <div className="h-72 animate-pulse rounded-2xl bg-grayScale-100" />
         </div>
       </div>
-      <div className="h-64 animate-pulse rounded-2xl bg-grayScale-100" />
     </div>
   );
 }
@@ -444,6 +443,16 @@ export function UserDetailPage() {
               />
             </CardContent>
           </Card>
+
+          <UserSubscriptionsSection
+            userId={Number(id)}
+            userRole={user.role}
+            userName={[user.first_name, user.last_name].filter(Boolean).join(" ") || user.email}
+            subscriptions={subscriptions}
+            loading={subscriptionsLoading}
+            error={subscriptionsError}
+            onRefresh={() => void refreshSubscriptions()}
+          />
         </div>
 
         <div className="min-w-0 space-y-6">
@@ -549,16 +558,6 @@ export function UserDetailPage() {
           </Card>
         </div>
       </div>
-
-      <UserSubscriptionsSection
-        userId={Number(id)}
-        userRole={user.role}
-        userName={[user.first_name, user.last_name].filter(Boolean).join(" ") || user.email}
-        subscriptions={subscriptions}
-        loading={subscriptionsLoading}
-        error={subscriptionsError}
-        onRefresh={() => void refreshSubscriptions()}
-      />
 
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

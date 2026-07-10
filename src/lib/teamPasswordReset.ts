@@ -1,4 +1,5 @@
 import axios from "axios"
+import type { TeamVerifyPasswordResetData } from "../types/team.types"
 
 /** Prefer API `error` detail over generic `message` for auth recovery flows. */
 export function getTeamAuthErrorMessage(error: unknown, fallback: string): string {
@@ -44,4 +45,34 @@ export function mapTeamPasswordResetError(error: unknown): string {
   }
   if (detail) return detail
   return "Something went wrong. Please try again."
+}
+
+export function getInvalidResetLinkTitle(
+  data: TeamVerifyPasswordResetData | null,
+): string {
+  switch (data?.reason) {
+    case "used":
+      return "This reset link was already used"
+    case "expired":
+      return "This reset link has expired"
+    case "missing":
+      return "Reset link is incomplete"
+    default:
+      return "This reset link is invalid"
+  }
+}
+
+export function getInvalidResetLinkDescription(
+  data: TeamVerifyPasswordResetData | null,
+): string {
+  switch (data?.reason) {
+    case "used":
+      return "Each reset link can only be used once. Request a new link to set a new password."
+    case "expired":
+      return "Reset links are valid for 5 minutes. Request a new one to continue."
+    case "missing":
+      return "Open the full link from your email, or request a new reset link."
+    default:
+      return "The link may be expired, invalid, or already used. Request a new one from Forgot password."
+  }
 }

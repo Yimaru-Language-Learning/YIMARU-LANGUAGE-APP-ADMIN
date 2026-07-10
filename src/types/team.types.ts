@@ -157,3 +157,21 @@ export interface TeamPasswordResetResponse {
   success?: boolean
   data?: unknown
 }
+
+/** GET /team/verifyResetCode — public; checks link without consuming OTP */
+export type TeamVerifyPasswordResetReason =
+  | "missing"
+  | "invalid"
+  | "used"
+  | "expired"
+
+export interface TeamVerifyPasswordResetData {
+  valid: boolean
+  reason?: TeamVerifyPasswordResetReason | string
+}
+
+export interface TeamVerifyPasswordResetResponse {
+  message?: string
+  success?: boolean
+  data?: TeamVerifyPasswordResetData
+}

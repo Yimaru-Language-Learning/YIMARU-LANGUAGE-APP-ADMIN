@@ -69,6 +69,7 @@ const isAuthEndpointRequest = (url?: string) => {
     url.includes("/team/invitations/verify") ||
     url.includes("/team/invitations/accept") ||
     url.includes("/team/sendResetCode") ||
+    url.includes("/team/verifyResetCode") ||
     url.includes("/team/resetPassword")
   );
 };

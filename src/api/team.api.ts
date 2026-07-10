@@ -21,6 +21,8 @@ import type {
   TeamResetPasswordRequest,
   TeamPasswordResetResponse,
   TeamSendPasswordResetRequest,
+  TeamVerifyPasswordResetData,
+  TeamVerifyPasswordResetResponse,
 } from "../types/team.types"
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -161,6 +163,23 @@ export const sendTeamPasswordReset = (data: TeamSendPasswordResetRequest) =>
   http.post<TeamPasswordResetResponse>("/team/sendResetCode", data, {
     skipErrorToast: true,
   })
+
+/** GET /team/verifyResetCode — public; validates email+otp without consuming. */
+export const verifyTeamPasswordReset = (email: string, otp: string) =>
+  http.get<TeamVerifyPasswordResetResponse>("/team/verifyResetCode", {
+    params: { email, otp },
+    skipErrorToast: true,
+  })
+
+export function parseVerifyPasswordReset(
+  response: Awaited<ReturnType<typeof verifyTeamPasswordReset>>,
+): TeamVerifyPasswordResetData | null {
+  const body = response.data
+  if (body?.data && typeof body.data === "object" && "valid" in body.data) {
+    return body.data
+  }
+  return null
+}
 
 /** POST /team/resetPassword — public; completes reset with email + OTP from the link. */
 export const resetTeamPassword = (data: TeamResetPasswordRequest) =>

@@ -139,3 +139,21 @@ export interface ChangeTeamMemberPasswordResponse {
   status_code?: number
   metadata?: unknown
 }
+
+/** POST /team/sendResetCode — public forgot-password */
+export interface TeamSendPasswordResetRequest {
+  email: string
+}
+
+/** POST /team/resetPassword — public complete reset from email link */
+export interface TeamResetPasswordRequest {
+  email: string
+  otp: string
+  password: string
+}
+
+export interface TeamPasswordResetResponse {
+  message?: string
+  success?: boolean
+  data?: unknown
+}

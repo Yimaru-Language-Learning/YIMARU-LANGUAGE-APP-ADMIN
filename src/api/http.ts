@@ -67,7 +67,9 @@ const isAuthEndpointRequest = (url?: string) => {
     url.includes("/team/google-login") ||
     url.includes("/team/refresh") ||
     url.includes("/team/invitations/verify") ||
-    url.includes("/team/invitations/accept")
+    url.includes("/team/invitations/accept") ||
+    url.includes("/team/sendResetCode") ||
+    url.includes("/team/resetPassword")
   );
 };
 

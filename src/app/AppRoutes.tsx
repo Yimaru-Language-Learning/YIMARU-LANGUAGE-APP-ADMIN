@@ -66,6 +66,7 @@ import { AddTeamMemberPage } from "../pages/team/AddTeamMemberPage";
 import { TeamMemberDetailPage } from "../pages/team/TeamMemberDetailPage";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { VerificationPage } from "../pages/auth/VerificationPage";
 import { AcceptInvitePage } from "../pages/auth/AcceptInvitePage";
 import { AboutPage } from "../pages/AboutPage";
@@ -82,6 +83,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verification" element={<VerificationPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route path="/about" element={<AboutPage />} />

@@ -131,6 +131,11 @@ export function getSeriesPeriodLabel(dateFilter?: DashboardDateFilter): string {
   }
 }
 
+export function formatPercentRate(rate: number, fractionDigits = 1): string {
+  if (!Number.isFinite(rate)) return "0%"
+  return `${(rate * 100).toFixed(fractionDigits)}%`
+}
+
 /** Display label for dashboard breakdown rows (regions, enums, free text). */
 export function formatAnalyticsLabel(label: string): string {
   const text = label?.trim() ?? ""

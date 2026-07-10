@@ -49,14 +49,23 @@ export function parseSubscriptionPlanMutation(body: unknown): SubscriptionPlan |
   return normalizeSubscriptionPlan(body)
 }
 
-export const getSubscriptionPlans = () =>
-  http.get<SubscriptionPlansListResponse | SubscriptionPlan[]>("/subscription-plans").then((res) => {
-    const plans = parseSubscriptionPlansList(res.data)
-    return {
-      ...res,
-      data: plans,
-    }
-  })
+export interface GetSubscriptionPlansOptions {
+  /** When false, returns active and inactive plans. Defaults to false for admin views. */
+  active_only?: boolean
+}
+
+export const getSubscriptionPlans = (options?: GetSubscriptionPlansOptions) =>
+  http
+    .get<SubscriptionPlansListResponse | SubscriptionPlan[]>("/subscription-plans", {
+      params: { active_only: options?.active_only ?? false },
+    })
+    .then((res) => {
+      const plans = parseSubscriptionPlansList(res.data)
+      return {
+        ...res,
+        data: plans,
+      }
+    })
 
 function mutationResult(res: { data: unknown }) {
   const plan = parseSubscriptionPlanMutation(res.data)

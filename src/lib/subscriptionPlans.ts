@@ -2,6 +2,7 @@ import type {
   SubscriptionPlan,
   SubscriptionPlanCategory,
   SubscriptionPlanDurationUnit,
+  UpdateSubscriptionPlanPayload,
 } from "../types/subscription.types"
 
 export const SUBSCRIPTION_PLAN_CATEGORIES: {
@@ -58,4 +59,20 @@ export function formatPlanCreatedAt(iso: string): string {
     month: "short",
     day: "numeric",
   })
+}
+
+export function planToUpdatePayload(
+  plan: SubscriptionPlan,
+  overrides?: Partial<UpdateSubscriptionPlanPayload>,
+): UpdateSubscriptionPlanPayload {
+  return {
+    name: plan.name,
+    description: plan.description,
+    duration_value: plan.duration_value,
+    duration_unit: plan.duration_unit,
+    price: plan.price,
+    currency: plan.currency,
+    is_active: plan.is_active,
+    ...overrides,
+  }
 }

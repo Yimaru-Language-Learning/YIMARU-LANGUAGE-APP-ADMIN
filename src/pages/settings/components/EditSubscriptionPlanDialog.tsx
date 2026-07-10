@@ -74,6 +74,13 @@ function draftToPayload(draft: EditDraft): UpdateSubscriptionPlanPayload | null 
   }
 }
 
+function mergePlanWithPayload(
+  plan: SubscriptionPlan,
+  payload: UpdateSubscriptionPlanPayload,
+): SubscriptionPlan {
+  return { ...plan, ...payload }
+}
+
 type EditSubscriptionPlanDialogProps = {
   plan: SubscriptionPlan | null
   open: boolean
@@ -114,18 +121,15 @@ export function EditSubscriptionPlanDialog({
     setSaving(true)
     try {
       const res = await updateSubscriptionPlan(plan.id, payload)
-      if (!res.data) {
-        toast.error("Plan was updated but the response could not be read.")
-        return
-      }
+      const updated = res.data ?? mergePlanWithPayload(plan, payload)
       toast.success(res.message || "Subscription plan updated successfully")
       onUpdated({
-        ...res.data,
-        category: res.data.category || plan.category,
-        created_at: res.data.created_at || plan.created_at,
+        ...updated,
+        category: updated.category || plan.category,
+        created_at: updated.created_at || plan.created_at,
       })
       onOpenChange(false)
-    } catch {
+    } catch (err) {
       notifyApiError(err, "Failed to update subscription plan.")
     } finally {
       setSaving(false)

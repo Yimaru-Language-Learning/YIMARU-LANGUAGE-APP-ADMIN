@@ -114,7 +114,7 @@ export function CreateSubscriptionPlanDialog({
       toast.success(res.message || "Subscription plan created successfully")
       onCreated(res.data)
       onOpenChange(false)
-    } catch {
+    } catch (err) {
       notifyApiError(err, "Failed to create subscription plan.")
     } finally {
       setSaving(false)

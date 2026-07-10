@@ -12,13 +12,14 @@ import {
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
-import { getSubscriptionPlans } from "../../api/subscription-plans.api"
+import { getSubscriptionPlans, updateSubscriptionPlan } from "../../api/subscription-plans.api"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { ToggleSwitch } from "../../components/ui/toggle-switch"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import {
@@ -26,6 +27,7 @@ import {
   formatPlanCreatedAt,
   formatPlanDuration,
   formatPlanPrice,
+  planToUpdatePayload,
 } from "../../lib/subscriptionPlans"
 import type { SubscriptionPlan } from "../../types/subscription.types"
 import { CreateSubscriptionPlanDialog } from "./components/CreateSubscriptionPlanDialog"
@@ -41,12 +43,13 @@ export function SubscriptionPlansTab() {
   const [createOpen, setCreateOpen] = useState(false)
   const [planToEdit, setPlanToEdit] = useState<SubscriptionPlan | null>(null)
   const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(false)
     try {
-      const res = await getSubscriptionPlans()
+      const res = await getSubscriptionPlans({ active_only: false })
       setPlans(res.data)
     } catch (e) {
       console.error(e)
@@ -92,6 +95,28 @@ export function SubscriptionPlansTab() {
 
   const handleDeleted = (id: number) => {
     setPlans((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  const handleToggleActive = async (plan: SubscriptionPlan) => {
+    const nextActive = !plan.is_active
+    setTogglingId(plan.id)
+    try {
+      const res = await updateSubscriptionPlan(
+        plan.id,
+        planToUpdatePayload(plan, { is_active: nextActive }),
+      )
+      const updated = res.data ?? { ...plan, is_active: nextActive }
+      handleUpdated({
+        ...updated,
+        category: updated.category || plan.category,
+        created_at: updated.created_at || plan.created_at,
+      })
+      toast.success(`Package ${nextActive ? "activated" : "deactivated"} successfully`)
+    } catch (err) {
+      notifyApiError(err, `Failed to ${nextActive ? "activate" : "deactivate"} package`)
+    } finally {
+      setTogglingId(null)
+    }
   }
 
   const activeFilterCount = countActiveFilters([
@@ -261,8 +286,8 @@ export function SubscriptionPlansTab() {
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Duration</th>
                     <th className="px-4 py-3">Price</th>
-                    <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Created</th>
+                    <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -286,16 +311,19 @@ export function SubscriptionPlansTab() {
                       <td className="px-4 py-4 font-semibold text-grayScale-900">
                         {formatPlanPrice(plan)}
                       </td>
-                      <td className="px-4 py-4">
-                        <Badge variant={plan.is_active ? "success" : "secondary"}>
-                          {plan.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
                       <td className="px-4 py-4 text-grayScale-500">
                         <span className="inline-flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 shrink-0" />
                           {formatPlanCreatedAt(plan.created_at)}
                         </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <ToggleSwitch
+                          checked={plan.is_active}
+                          disabled={togglingId === plan.id}
+                          aria-label={plan.is_active ? `Deactivate ${plan.name}` : `Activate ${plan.name}`}
+                          onCheckedChange={() => void handleToggleActive(plan)}
+                        />
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-1">

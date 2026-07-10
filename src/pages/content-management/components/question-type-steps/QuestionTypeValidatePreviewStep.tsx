@@ -69,10 +69,10 @@ export function QuestionTypeValidatePreviewStep({
 
   return (
     <div className="space-y-8 pb-32">
-      <Card className="max-w-4xl mx-auto overflow-hidden border-grayScale-100 shadow-sm rounded-2xl bg-white">
+      <Card className="max-w-4xl mx-auto overflow-hidden border-grayScale-100 shadow-sm rounded-2xl bg-white dark:bg-grayScale-50">
         <div className="p-10 border-b border-grayScale-200">
-          <h2 className="text-[20px] font-medium text-grayScale-900">STEP 3: Validate</h2>
-          <p className="text-grayScale-500 font-medium mt-1">
+          <h2 className="text-[20px] font-medium text-grayScale-900 dark:text-grayScale-600">STEP 3: Validate</h2>
+          <p className="text-grayScale-500 dark:text-grayScale-400 font-medium mt-1">
             We check that your stimulus and response selections are valid before you continue. You must pass
             validation before review.
           </p>

@@ -46,7 +46,7 @@ function SlotLabelGroup({
 
   return (
     <div className="space-y-3">
-      <h4 className="text-[12px] font-bold uppercase tracking-wide text-grayScale-500">{title}</h4>
+      <h4 className="text-[12px] font-bold uppercase tracking-wide text-grayScale-500 dark:text-grayScale-400">{title}</h4>
       <div className="space-y-2">
         {rows.map((row, index) => {
           const presentation =
@@ -57,11 +57,11 @@ function SlotLabelGroup({
           return (
             <div
               key={`${side}-${row.id}-${index}`}
-              className="rounded-xl border border-grayScale-200 bg-white p-3 space-y-2"
+              className="rounded-xl border border-grayScale-200 bg-white dark:bg-grayScale-100 p-3 space-y-2"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-grayScale-500">
-                  <span className="font-semibold text-grayScale-700">{presentation.label}</span>
+                  <span className="font-semibold text-grayScale-700 dark:text-grayScale-500">{presentation.label}</span>
                   <span className="text-grayScale-300">·</span>
                   <span className="font-mono text-[11px]">{row.id}</span>
                 </div>
@@ -91,7 +91,7 @@ function SlotLabelGroup({
                       value={row.label ?? ""}
                       onChange={(e) => onChange(updateRowLabel(rows, index, e.target.value))}
                       placeholder={defaultLabelForKind(row.kind)}
-                      className="h-10 bg-white"
+                      className="h-10 bg-white dark:bg-grayScale-50"
                     />
                     <p className="text-[11px] text-grayScale-400">
                       Shown to authors when they create questions from this type.
@@ -118,10 +118,10 @@ export function SchemaSlotLabelsPanel({
   if (!stimulusRows.length && !responseRows.length) return null
 
   return (
-    <div className="rounded-xl border border-grayScale-200 bg-[#F8FAFC] p-5 space-y-6">
+    <div className="rounded-xl border border-grayScale-200 bg-[#F8FAFC] dark:bg-grayScale-100 p-5 space-y-6">
       <div>
-        <h3 className="text-[16px] font-bold text-grayScale-900">Field labels</h3>
-        <p className="text-[13px] text-grayScale-500 mt-0.5">
+        <h3 className="text-[16px] font-bold text-grayScale-900 dark:text-grayScale-600">Field labels</h3>
+        <p className="text-[13px] text-grayScale-500 dark:text-grayScale-400 mt-0.5">
           Name each schema slot for question authors, or remove slots you no longer need. Labels are stored on
           the definition and are not sent inside question payloads.
         </p>

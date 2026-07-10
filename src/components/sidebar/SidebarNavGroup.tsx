@@ -39,6 +39,7 @@ export function SidebarNavGroup({
 
   useEffect(() => {
     if (isSectionActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExpanded(true);
     }
   }, [isSectionActive]);
@@ -50,10 +51,10 @@ export function SidebarNavGroup({
         onClick={onNavigate}
         className={({ isActive }) =>
           cn(
-            "group flex items-center justify-center rounded-lg px-2 py-2.5 text-sm font-medium text-grayScale-600 transition",
-            "hover:bg-grayScale-100 hover:text-brand-600",
+            "group flex items-center justify-center rounded-lg p-2 text-sm font-medium text-grayScale-600 transition",
+            "hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
             isActive &&
-              "bg-brand-100/40 text-brand-600 shadow-[0_1px_0_rgba(0,0,0,0.02)] ring-1 ring-brand-100",
+              "bg-brand-500/50 text-brand-600 hover:bg-brand-500/50 hover:text-brand-600 dark:bg-brand-500/30 dark:text-brand-400 dark:hover:bg-brand-500/30 dark:hover:text-brand-400",
           )
         }
         title={label}
@@ -61,8 +62,8 @@ export function SidebarNavGroup({
         {({ isActive }) => (
           <span
             className={cn(
-              "relative grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
-              isActive && "bg-brand-500/90 text-white",
+              "relative flex h-9 w-9 items-center justify-center rounded-lg bg-grayScale-50 text-grayScale-500 transition dark:bg-grayScale-200/10 dark:text-grayScale-400",
+              isActive && "bg-brand-500/20 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400",
             )}
           >
             <Icon className="h-4 w-4" />
@@ -81,15 +82,15 @@ export function SidebarNavGroup({
         aria-controls={panelId}
         onClick={() => setExpanded((open) => !open)}
         className={cn(
-          "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-grayScale-600 transition",
-          "hover:bg-grayScale-100 hover:text-brand-600",
-          isSectionActive && "text-brand-600",
+          "group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-grayScale-600 transition",
+          "hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
+          isSectionActive && "text-brand-600 dark:text-brand-400",
         )}
       >
         <span
           className={cn(
-            "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
-            isSectionActive && "bg-brand-500/90 text-white",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-50 text-grayScale-500 transition dark:bg-grayScale-200/10 dark:text-grayScale-400",
+            isSectionActive && "bg-brand-500/20 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400",
           )}
         >
           <Icon className="h-4 w-4" />
@@ -98,7 +99,7 @@ export function SidebarNavGroup({
         {trailing}
         <ChevronDown
           className={cn(
-            "h-4 w-4 shrink-0 text-grayScale-400 transition-transform duration-300 ease-in-out",
+            "h-4 w-4 shrink-0 text-grayScale-400 transition-transform duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]",
             expanded && "rotate-180",
           )}
         />
@@ -107,12 +108,12 @@ export function SidebarNavGroup({
       <div
         id={panelId}
         className={cn(
-          "grid transition-[grid-template-rows] duration-300 ease-in-out",
+          "grid transition-[grid-template-rows] duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]",
           expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
         <div className="overflow-hidden">
-          <div className="ml-4 space-y-0.5 border-l border-grayScale-200 pl-2 pt-0.5 pb-0.5">
+          <div className="ml-3 space-y-0.5 border-l-2 border-grayScale-100 pl-3 pt-0.5 pb-0.5 dark:border-grayScale-200/20">
             {children.map((child) => (
               <NavLink
                 key={child.to}
@@ -121,10 +122,10 @@ export function SidebarNavGroup({
                 onClick={onNavigate}
                 className={({ isActive }) =>
                   cn(
-                    "block rounded-lg px-3 py-2 text-sm font-medium transition",
+                    "block rounded-lg px-3 py-1.5 text-sm font-medium transition",
                     isActive
-                      ? "bg-brand-100/40 text-brand-600"
-                      : "text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600",
+                      ? "bg-brand-500/50 text-brand-600 font-medium hover:bg-brand-500/50 hover:text-brand-600 dark:bg-brand-500/30 dark:text-brand-400 dark:hover:bg-brand-500/30 dark:hover:text-brand-400"
+                      : "text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
                   )
                 }
               >

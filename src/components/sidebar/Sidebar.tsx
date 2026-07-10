@@ -20,7 +20,7 @@ import {
 import { type ComponentType, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "../../lib/utils";
-import { BrandLogo } from "../brand/BrandLogo";
+import { SidebarLogo } from "./SidebarLogo";
 import { getUnreadCount } from "../../api/notifications.api";
 import { useTeamPermissions } from "../../hooks/useTeamPermissions";
 import { hasFaqPermission } from "../../lib/faqPermissions";
@@ -118,7 +118,13 @@ const navEntries: NavEntry[] = [
     icon: CreditCard,
     permission: "subscriptions.export",
   },
-  { kind: "link", label: "Activity log", to: "/user-log", icon: ClipboardList, permission: "activity_logs.list" },
+  {
+    kind: "link",
+    label: "Activity log",
+    to: "/user-log",
+    icon: ClipboardList,
+    permission: "activity_logs.list",
+  },
   { kind: "link", label: "Issue reports", to: "/issues", icon: CircleAlert },
   {
     kind: "link",
@@ -153,7 +159,11 @@ export function Sidebar({
   onToggleCollapse,
   onClose,
 }: SidebarProps) {
-  const { permissions, hasPermission, loading: permissionsLoading } = useTeamPermissions();
+  const {
+    permissions,
+    hasPermission,
+    loading: permissionsLoading,
+  } = useTeamPermissions();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -196,7 +206,8 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "group fixed left-0 top-0 z-50 flex h-screen flex-col border-r bg-grayScale-50 py-5 transition-all duration-300",
+          "group fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-grayScale-200 bg-white py-5 shadow-[inset_-1px_0_0_rgba(0,0,0,0.04)] transition-all duration-300",
+          "dark:bg-grayScale-50 dark:border-grayScale-200/20",
           "w-[264px] px-4 lg:translate-x-0",
           isCollapsed && "lg:w-[88px] lg:px-2",
           isOpen ? "translate-x-0" : "-translate-x-full",
@@ -205,49 +216,48 @@ export function Sidebar({
         <div
           className={cn(
             "flex items-center justify-between px-2",
-            isCollapsed && "justify-center",
+            isCollapsed && "flex-col items-center gap-2",
           )}
         >
-          {isCollapsed ? (
-            <span className="h-10 w-10 overflow-hidden">
-              <BrandLogo className="h-10 w-auto max-w-none" />
-            </span>
-          ) : (
-            <BrandLogo />
+          <SidebarLogo collapsed={isCollapsed} />
+          {isCollapsed && (
+            <button
+              type="button"
+              className="grid h-10 w-10 place-items-center rounded-md border border-grayScale-200 text-grayScale-400 transition-all hover:bg-grayScale-100 hover:text-brand-600 dark:border-grayScale-200/20 dark:hover:bg-white/5 dark:hover:text-brand-400"
+              onClick={onToggleCollapse}
+              aria-label="Expand sidebar"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
+          {!isCollapsed && (
+            <button
+              type="button"
+              className="hidden h-10 w-10 rounded-md place-items-center border border-grayScale-200 text-grayScale-400 transition-all hover:bg-grayScale-100 hover:text-brand-600 lg:grid dark:border-grayScale-200/20 dark:hover:bg-white/5 dark:hover:text-brand-400"
+              onClick={onToggleCollapse}
+              aria-label="Collapse sidebar"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
           )}
           <button
             type="button"
-            className={cn(
-              "hidden h-8 w-8 place-items-center rounded-lg text-grayScale-500 transition-opacity hover:bg-grayScale-100 hover:text-brand-600 lg:grid lg:opacity-0 lg:pointer-events-none lg:group-hover:opacity-100 lg:group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-              isCollapsed && "translate-x-2",
-            )}
-            onClick={onToggleCollapse}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </button>
-          <button
-            type="button"
-            className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600 lg:hidden"
+            className="grid h-7 w-7 place-items-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-brand-600 lg:hidden dark:hover:bg-white/5 dark:hover:text-brand-400"
             onClick={onClose}
             aria-label="Close sidebar"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <nav className="mt-6 flex-1 space-y-0.5 overflow-y-auto">
+        <nav className="mt-6 flex-1 space-y-0.5 overflow-y-auto scrollbar-none">
           {navEntries.map((entry, index) => {
             if (entry.kind === "section") {
               if (isCollapsed) {
                 return index > 0 ? (
                   <div
                     key={`section-gap-${entry.label}`}
-                    className="mx-auto my-2 h-px w-6 bg-grayScale-200"
+                    className="mx-auto my-2 h-px w-8 bg-grayScale-200 dark:bg-grayScale-200/20"
                     aria-hidden
                   />
                 ) : null;
@@ -256,7 +266,7 @@ export function Sidebar({
                 <p
                   key={`section-${entry.label}`}
                   className={cn(
-                    "mb-1 px-3 pt-3 text-[10px] font-bold uppercase tracking-wider text-grayScale-400",
+                    "mb-1 px-3 pt-4 text-[11px] font-bold uppercase tracking-[0.08em] text-grayScale-400 dark:text-grayScale-400/70",
                     index === 0 && "pt-0",
                   )}
                 >
@@ -346,11 +356,11 @@ export function Sidebar({
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
-                    "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-grayScale-600 transition",
-                    isCollapsed && "justify-center px-2",
-                    "hover:bg-grayScale-100 hover:text-brand-600",
+                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-600 transition",
+                    isCollapsed && "justify-center gap-0 p-2",
+                    "hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
                     isActive &&
-                      "bg-brand-100/40 text-brand-600 shadow-[0_1px_0_rgba(0,0,0,0.02)] ring-1 ring-brand-100",
+                      "bg-brand-500/50 text-brand-600 hover:bg-brand-500/50 hover:text-brand-600 dark:bg-brand-500/30 dark:text-brand-400 dark:hover:bg-brand-500/30 dark:hover:text-brand-400",
                   )
                 }
                 title={isCollapsed ? entry.label : undefined}
@@ -359,8 +369,8 @@ export function Sidebar({
                   <>
                     <span
                       className={cn(
-                        "grid h-8 w-8 place-items-center rounded-lg bg-grayScale-100 text-grayScale-500 transition group-hover:bg-brand-100 group-hover:text-brand-600",
-                        isActive && "bg-brand-500/90 text-white",
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-50 text-grayScale-500 transition dark:bg-grayScale-200/10 dark:text-grayScale-400",
+                        isActive && "bg-brand-500/20 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400",
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -368,9 +378,6 @@ export function Sidebar({
                     {!isCollapsed && (
                       <span className="truncate">{entry.label}</span>
                     )}
-                    {!isCollapsed && isActive ? (
-                      <span className="ml-auto h-6 w-1 rounded-full bg-brand-500/80" />
-                    ) : null}
                   </>
                 )}
               </NavLink>
@@ -378,7 +385,12 @@ export function Sidebar({
           })}
         </nav>
 
-        <div className="px-2 pt-6">
+        <div
+          className={cn(
+            "border-t border-grayScale-200 px-2 pt-4 mt-4 dark:border-grayScale-200/20",
+            isCollapsed && "border-t-0 px-0 mt-0 pt-2",
+          )}
+        >
           <button
             type="button"
             onClick={() => {
@@ -386,12 +398,14 @@ export function Sidebar({
               window.location.href = "/login";
             }}
             className={cn(
-              "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600",
-              isCollapsed && "justify-center px-2",
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-500 transition hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
+              isCollapsed && "justify-center gap-0 p-2",
             )}
             title={isCollapsed ? "Logout" : undefined}
           >
-            <LogOut className="h-4 w-4" />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-50 text-grayScale-500 transition dark:bg-grayScale-200/10 dark:text-grayScale-400">
+              <LogOut className="h-4 w-4" />
+            </span>
             {!isCollapsed && "Logout"}
           </button>
         </div>

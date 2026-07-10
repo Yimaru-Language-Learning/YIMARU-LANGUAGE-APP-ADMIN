@@ -17,7 +17,7 @@ export function QuestionTypeStepFooter({
   nextDisabled = false,
 }: QuestionTypeStepFooterProps) {
   return (
-    <div className="px-4 py-4 border border-grayScale-200 flex flex-wrap items-center justify-between gap-3 bg-[#F8FAFC]">
+    <div className="px-4 py-4 border border-grayScale-200 flex flex-wrap items-center justify-between gap-3 bg-[#F8FAFC] dark:bg-grayScale-100">
       <div className="flex items-center gap-2">
         {onBack ? (
           <Button

@@ -103,10 +103,10 @@ export function QuestionTypeReviewPublishStep({
 
   return (
     <div className="space-y-8 pb-32">
-      <Card className="max-w-4xl mx-auto overflow-hidden border-grayScale-100 shadow-sm rounded-2xl bg-white">
+      <Card className="max-w-4xl mx-auto overflow-hidden border-grayScale-100 shadow-sm rounded-2xl bg-white dark:bg-grayScale-50">
         <div className="p-10 border-b border-grayScale-200">
-          <h2 className="text-[20px] font-medium text-grayScale-900">STEP 4: Review &amp; publish</h2>
-          <p className="text-grayScale-500 font-medium mt-1">
+          <h2 className="text-[20px] font-medium text-grayScale-900 dark:text-grayScale-600">STEP 4: Review &amp; publish</h2>
+          <p className="text-grayScale-500 dark:text-grayScale-400 font-medium mt-1">
             {isEdit
               ? "Confirm your changes and save. The definition key cannot be changed."
               : "Confirm your definition, then save it for use when authoring practice questions."}
@@ -123,35 +123,35 @@ export function QuestionTypeReviewPublishStep({
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Key</dt>
-              <dd className="font-medium text-grayScale-900 mt-1 font-mono text-[13px]">{payload.key}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1 font-mono text-[13px]">{payload.key}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Display name</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{payload.display_name}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{payload.display_name}</dd>
             </div>
             <div className="sm:col-span-2">
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Description</dt>
-              <dd className="font-medium text-grayScale-800 mt-1">{payload.description || "—"}</dd>
+              <dd className="font-medium text-grayScale-800 dark:text-grayScale-500 mt-1">{payload.description || "—"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Groups</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{groupName || "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{groupName || "—"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Status</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{draft.status}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{draft.status}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Runtime type</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{runtime ?? "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{runtime ?? "—"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Stimulus kinds</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{payload.stimulus_component_kinds.join(", ") || "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{payload.stimulus_component_kinds.join(", ") || "—"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Response kinds</dt>
-              <dd className="font-medium text-grayScale-900 mt-1">{payload.response_component_kinds.join(", ") || "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{payload.response_component_kinds.join(", ") || "—"}</dd>
             </div>
           </dl>
 
@@ -193,7 +193,7 @@ export function QuestionTypeReviewPublishStep({
           </div>
         </div>
 
-        <div className="px-4 py-4 border border-grayScale-200 flex items-center justify-start bg-[#F8FAFC]">
+        <div className="px-4 py-4 border border-grayScale-200 flex items-center justify-start bg-[#F8FAFC] dark:bg-grayScale-100">
           <Button
             type="button"
             variant="outline"
@@ -218,14 +218,14 @@ function SchemaSlotSummary({
   rows: { id: string; kind: string; label?: string; required: boolean }[]
 }) {
   return (
-    <div className="rounded-xl border border-grayScale-100 bg-grayScale-50/50 p-4">
+    <div className="rounded-xl border border-grayScale-100 bg-grayScale-100 dark:bg-grayScale-100 p-4">
       <h4 className="text-[12px] font-bold uppercase tracking-wide text-grayScale-500">{title}</h4>
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-grayScale-500">No slots</p>
       ) : (
         <ul className="mt-2 space-y-1.5 text-sm">
           {rows.map((r) => (
-            <li key={`${r.kind}-${r.id}`} className="flex flex-wrap gap-x-2 text-grayScale-800">
+            <li key={`${r.kind}-${r.id}`} className="flex flex-wrap gap-x-2 text-grayScale-800 dark:text-grayScale-500">
               <span className="font-medium">{slotLabel(r)}</span>
               <span className="text-grayScale-400">·</span>
               <span className="font-mono text-[11px] text-grayScale-500">{r.id}</span>

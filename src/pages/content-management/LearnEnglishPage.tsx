@@ -1,4 +1,4 @@
-import { notifyApiError } from "../../lib/apiErrors"
+import { notifyApiError } from "../../lib/apiErrors";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, ArrowRight, Pencil, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -31,7 +31,10 @@ import {
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
-import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import type {
+  ContentAccessTier,
+  PracticePublishStatus,
+} from "../../types/course.types";
 import {
   filterBySearchAndPublishStatus,
   hasActiveContentFilters,
@@ -43,7 +46,8 @@ import type { LearningProgramListItem } from "../../types/course.types";
 /** Presigned MinIO/S3 URLs and our storage hosts — safe to send to POST /files/refresh-url. */
 function looksLikeRefreshableFileUrl(url: string): boolean {
   const trimmed = url.trim();
-  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return false;
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://"))
+    return false;
   try {
     const u = new URL(trimmed);
     const q = u.search.toLowerCase();
@@ -78,7 +82,8 @@ export function LearnEnglishPage() {
   const [createSortOrder, setCreateSortOrder] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
-  const [createUploadingThumbnail, setCreateUploadingThumbnail] = useState(false);
+  const [createUploadingThumbnail, setCreateUploadingThumbnail] =
+    useState(false);
   const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
 
   const [deletingProgram, setDeletingProgram] =
@@ -120,7 +125,8 @@ export function LearnEnglishPage() {
     setEditSortOrder("");
     setEditThumbnail("");
     setUploadingEditThumbnail(false);
-    if (editThumbnailFileInputRef.current) editThumbnailFileInputRef.current.value = "";
+    if (editThumbnailFileInputRef.current)
+      editThumbnailFileInputRef.current.value = "";
   };
 
   const handleEditThumbnailFile = async (
@@ -135,7 +141,9 @@ export function LearnEnglishPage() {
     }
     const maxBytes = 5 * 1024 * 1024;
     if (file.size > maxBytes) {
-      toast.error("Image is too large", { description: "Maximum size is 5 MB." });
+      toast.error("Image is too large", {
+        description: "Maximum size is 5 MB.",
+      });
       return;
     }
     setUploadingEditThumbnail(true);
@@ -183,7 +191,9 @@ export function LearnEnglishPage() {
     }
     const maxBytes = 5 * 1024 * 1024;
     if (file.size > maxBytes) {
-      toast.error("Image is too large", { description: "Maximum size is 5 MB." });
+      toast.error("Image is too large", {
+        description: "Maximum size is 5 MB.",
+      });
       return;
     }
     setCreateUploadingThumbnail(true);
@@ -291,7 +301,9 @@ export function LearnEnglishPage() {
         ),
       );
       toast.success(
-        nextStatus === "PUBLISHED" ? "Program published" : "Program saved as draft",
+        nextStatus === "PUBLISHED"
+          ? "Program published"
+          : "Program saved as draft",
       );
     } catch (e: unknown) {
       notifyApiError(e, "Failed to update program status");
@@ -313,7 +325,9 @@ export function LearnEnglishPage() {
         ),
       );
       toast.success(
-        nextTier === "PREMIUM" ? "Program set to Premium" : "Program set to Free",
+        nextTier === "PREMIUM"
+          ? "Program set to Premium"
+          : "Program set to Free",
       );
     } catch (e: unknown) {
       notifyApiError(e, "Failed to update program access tier");
@@ -394,7 +408,10 @@ export function LearnEnglishPage() {
 
   return (
     <div className="space-y-8">
-      <PageBackLink fallbackTo="/new-content" label="Back to Content Management" />
+      <PageBackLink
+        fallbackTo="/new-content"
+        label="Back to Content Management"
+      />
       {/* Header section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -402,7 +419,7 @@ export function LearnEnglishPage() {
             Learn English
           </h1>
           <p className="mt-1 text-sm text-grayScale-500">
-            Manage learning content by program — cards load from the server
+            Manage learning content by program
           </p>
         </div>
 
@@ -420,8 +437,8 @@ export function LearnEnglishPage() {
                   Add New Program
                 </DialogTitle>
                 <DialogDescription className="text-sm text-grayScale-400">
-                  Create a new learning program. Add a thumbnail as an image URL or by uploading a
-                  file.
+                  Create a new learning program. Add a thumbnail as an image URL
+                  or by uploading a file.
                 </DialogDescription>
               </DialogHeader>
               {/* Gradient Divider */}
@@ -479,7 +496,10 @@ export function LearnEnglishPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="create-program-sort-order" className="text-[15px] text-grayScale-700">
+                  <label
+                    htmlFor="create-program-sort-order"
+                    className="text-[15px] text-grayScale-700"
+                  >
                     Sort Order
                   </label>
                   <Input
@@ -519,15 +539,13 @@ export function LearnEnglishPage() {
                   >
                     <div className="flex flex-col items-center justify-center">
                       <div className="mb-4">
-                        <img
-                          src={uploadIcon}
-                          alt=""
-                          className="h-10 w-10"
-                        />
+                        <img src={uploadIcon} alt="" className="h-10 w-10" />
                       </div>
                       <p className="text-sm">
                         <span className="font-bold text-[#9E2891]">
-                          {createUploadingThumbnail ? "Uploading…" : "Click to upload"}
+                          {createUploadingThumbnail
+                            ? "Uploading…"
+                            : "Click to upload"}
                         </span>{" "}
                         <span className="text-grayScale-500">
                           or paste a URL below
@@ -644,92 +662,93 @@ export function LearnEnglishPage() {
               ) : null}
             </div>
           ) : (
-        <div className="flex flex-wrap gap-10">
-          {filteredPrograms.map((program) => (
-            <Card
-              key={program.id}
-              className="group relative w-[290px] overflow-hidden border-none shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div
-                className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto"
-              >
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
-                  aria-label={`Edit ${program.name}`}
-                  onClick={() => openEdit(program)}
+            <div className="flex flex-wrap gap-10">
+              {filteredPrograms.map((program) => (
+                <Card
+                  key={program.id}
+                  className="group relative w-[320px] overflow-hidden border-none shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
-                  aria-label={`Delete ${program.name}`}
-                  onClick={() => setDeletingProgram(program)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div
-                className="h-32 w-full bg-cover bg-center"
-                style={
-                  program.thumbnail?.trim()
-                    ? {
-                        backgroundImage: `url(${program.thumbnail.trim()})`,
-                      }
-                    : {
-                        background:
-                          "linear-gradient(135deg, #9E289180 0%, #9E2891 100%)",
-                      }
-                }
-              />
-              <CardContent className="bg-white p-6 flex flex-col h-[280px]">
-                <div className="flex-1 min-h-0">
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    <ContentPublishStatusChip
-                      publishStatus={program.publish_status}
-                      updating={publishStatusUpdatingId === program.id}
-                      contentLabel="program"
-                      onToggle={(nextStatus) =>
-                        void handleProgramPublishStatus(program.id, nextStatus)
-                      }
-                    />
-                    <ContentAccessTierChip
-                      accessTier={program.access_tier}
-                      updating={accessTierUpdatingId === program.id}
-                      contentLabel="program"
-                      onToggle={(nextTier) =>
-                        void handleProgramAccessTier(program.id, nextTier)
-                      }
-                    />
+                  <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                      aria-label={`Edit ${program.name}`}
+                      onClick={() => openEdit(program)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                      aria-label={`Delete ${program.name}`}
+                      onClick={() => setDeletingProgram(program)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <h3 className="text-xl font-bold text-grayScale-700 line-clamp-2">
-                    {program.name}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-grayScale-500 line-clamp-4">
-                    {program.description?.trim()
-                      ? program.description
-                      : "—"}
-                  </p>
-                </div>
-                <Link
-                  to={`/new-content/learn-english/${program.id}/courses`}
-                  className="mt-4 block"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button className="h-11 w-full rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600">
-                    View Courses
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <div
+                    className="h-32 w-full bg-cover bg-center"
+                    style={
+                      program.thumbnail?.trim()
+                        ? {
+                            backgroundImage: `url(${program.thumbnail.trim()})`,
+                          }
+                        : {
+                            background:
+                              "linear-gradient(135deg, #9E289180 0%, #9E2891 100%)",
+                          }
+                    }
+                  />
+                  <CardContent className="bg-white p-6 flex flex-col h-[280px]">
+                    <div className="flex-1 min-h-0">
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <ContentPublishStatusChip
+                          publishStatus={program.publish_status}
+                          updating={publishStatusUpdatingId === program.id}
+                          contentLabel="program"
+                          onToggle={(nextStatus) =>
+                            void handleProgramPublishStatus(
+                              program.id,
+                              nextStatus,
+                            )
+                          }
+                        />
+                        <ContentAccessTierChip
+                          accessTier={program.access_tier}
+                          updating={accessTierUpdatingId === program.id}
+                          contentLabel="program"
+                          onToggle={(nextTier) =>
+                            void handleProgramAccessTier(program.id, nextTier)
+                          }
+                        />
+                      </div>
+                      <h3 className="text-xl font-bold text-grayScale-700 line-clamp-2">
+                        {program.name}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-grayScale-500 line-clamp-4">
+                        {program.description?.trim()
+                          ? program.description
+                          : "—"}
+                      </p>
+                    </div>
+                    <Link
+                      to={`/new-content/learn-english/${program.id}/courses`}
+                      className="mt-4 block"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button className="h-11 w-full rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600">
+                        View Courses
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -745,102 +764,107 @@ export function LearnEnglishPage() {
           <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
             <DialogTitle>Edit program</DialogTitle>
             <DialogDescription>
-              Update name, description, sort order, and thumbnail. Upload an image
-              from your computer (via file storage) or paste a URL. Changes are
-              saved to the server.
+              Update name, description, sort order, and thumbnail. Upload an
+              image from your computer (via file storage) or paste a URL.
+              Changes are saved to the server.
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Name
-              </label>
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="rounded-xl"
-                placeholder="Program name"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Description
-              </label>
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={4}
-                className="rounded-xl resize-y min-h-[100px]"
-                placeholder="Short summary of the program"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="edit-program-sort-order" className="text-sm font-medium text-grayScale-700">
-                Sort Order
-              </label>
-              <Input
-                id="edit-program-sort-order"
-                type="number"
-                min={0}
-                step={1}
-                inputMode="numeric"
-                value={editSortOrder}
-                onChange={(e) => setEditSortOrder(e.target.value)}
-                className="rounded-xl"
-                placeholder="e.g. 5"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-              <p className="text-xs text-grayScale-500">
-                Lower numbers appear first when programs are listed.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Thumbnail
-              </label>
-              <input
-                ref={editThumbnailFileInputRef}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => void handleEditThumbnailFile(e)}
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 shrink-0 rounded-xl border-grayScale-200 font-semibold"
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">
+                  Name
+                </label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="rounded-xl"
+                  placeholder="Program name"
                   disabled={savingEdit || uploadingEditThumbnail}
-                  onClick={() => editThumbnailFileInputRef.current?.click()}
-                >
-                  {uploadingEditThumbnail ? "Uploading…" : "Upload from computer"}
-                </Button>
-                {editThumbnail.trim() ? (
-                  <div className="flex-1 overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
-                    <img
-                      src={editThumbnail.trim()}
-                      alt=""
-                      className="h-24 w-full object-cover"
-                    />
-                  </div>
-                ) : null}
+                />
               </div>
-              <Input
-                value={editThumbnail}
-                onChange={(e) => setEditThumbnail(e.target.value)}
-                className="rounded-xl"
-                placeholder="Or paste image URL (https://…)"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-              <p className="text-xs text-grayScale-500">
-                Uploaded images are stored and used as the program thumbnail.
-              </p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">
+                  Description
+                </label>
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={4}
+                  className="rounded-xl resize-y min-h-[100px]"
+                  placeholder="Short summary of the program"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="edit-program-sort-order"
+                  className="text-sm font-medium text-grayScale-700"
+                >
+                  Sort Order
+                </label>
+                <Input
+                  id="edit-program-sort-order"
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={editSortOrder}
+                  onChange={(e) => setEditSortOrder(e.target.value)}
+                  className="rounded-xl"
+                  placeholder="e.g. 5"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+                <p className="text-xs text-grayScale-500">
+                  Lower numbers appear first when programs are listed.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">
+                  Thumbnail
+                </label>
+                <input
+                  ref={editThumbnailFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => void handleEditThumbnailFile(e)}
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 shrink-0 rounded-xl border-grayScale-200 font-semibold"
+                    disabled={savingEdit || uploadingEditThumbnail}
+                    onClick={() => editThumbnailFileInputRef.current?.click()}
+                  >
+                    {uploadingEditThumbnail
+                      ? "Uploading…"
+                      : "Upload from computer"}
+                  </Button>
+                  {editThumbnail.trim() ? (
+                    <div className="flex-1 overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                      <img
+                        src={editThumbnail.trim()}
+                        alt=""
+                        className="h-24 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                <Input
+                  value={editThumbnail}
+                  onChange={(e) => setEditThumbnail(e.target.value)}
+                  className="rounded-xl"
+                  placeholder="Or paste image URL (https://…)"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+                <p className="text-xs text-grayScale-500">
+                  Uploaded images are stored and used as the program thumbnail.
+                </p>
+              </div>
             </div>
-          </div>
           </div>
           <DialogFooter className="shrink-0 gap-2 border-t border-grayScale-100 bg-white px-6 py-4 sm:gap-0">
             <Button
@@ -867,7 +891,9 @@ export function LearnEnglishPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
-              <h2 className="text-lg font-bold text-grayScale-700">Delete program</h2>
+              <h2 className="text-lg font-bold text-grayScale-700">
+                Delete program
+              </h2>
               <button
                 type="button"
                 onClick={() => !deleting && setDeletingProgram(null)}
@@ -884,8 +910,11 @@ export function LearnEnglishPage() {
               </div>
               <p className="text-center text-sm leading-relaxed text-grayScale-600">
                 Are you sure you want to delete{" "}
-                <span className="font-semibold text-grayScale-700">{deletingProgram.name}</span>? This action cannot be
-                undone. Courses under this program may be affected depending on your backend.
+                <span className="font-semibold text-grayScale-700">
+                  {deletingProgram.name}
+                </span>
+                ? This action cannot be undone. Courses under this program may
+                be affected depending on your backend.
               </p>
             </div>
 

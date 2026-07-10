@@ -335,7 +335,7 @@ export function CreateQuestionTypeFlow() {
   if (isEdit && !definitionReady) {
     return (
       <div className="min-h-screen pb-20 flex items-center justify-center px-6">
-        <Card className="p-10 max-w-md w-full text-center border-grayScale-200">
+        <Card className="p-10 max-w-md w-full text-center border-grayScale-200 dark:bg-grayScale-50">
           <p className="text-grayScale-600 font-medium">Loading definition…</p>
         </Card>
       </div>
@@ -344,7 +344,7 @@ export function CreateQuestionTypeFlow() {
 
   return (
     <div className="min-h-screen pb-20 overflow-x-hidden">
-      <div className=" border-b border-grayScale-100 sticky top-0 z-50 bg-white/95 backdrop-blur">
+      <div className=" border-b border-grayScale-100 sticky top-0 z-50 bg-white/95 dark:bg-grayScale-50 backdrop-blur">
         <div className="max-w-[1440px] mx-auto py-6 px-4 sm:px-6">
           <div className="flex items-center justify-between mb-8">
             <PageBackLink
@@ -356,10 +356,10 @@ export function CreateQuestionTypeFlow() {
 
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             <div className="space-y-1">
-              <h1 className="text-[28px] font-bold text-grayScale-900 tracking-tight">
+              <h1 className="text-[28px] font-bold text-grayScale-900 dark:text-grayScale-600 tracking-tight">
                 {isEdit ? "Edit question type definition" : "Create question type definition"}
               </h1>
-              <p className="text-grayScale-500 text-[14px] font-medium max-w-2xl">
+              <p className="text-grayScale-500 dark:text-grayScale-400 text-[14px] font-medium max-w-2xl">
                 {isEdit
                   ? `Update reusable question type definition #${editDefinitionId}.`
                   : "Build a reusable question type template for dynamic practice and assessment questions."}
@@ -368,7 +368,7 @@ export function CreateQuestionTypeFlow() {
             <div className="flex items-center gap-4 shrink-0">
               <Button
                 variant="outline"
-                className="h-10 px-8 rounded-[6px] border-grayScale-200 text-grayScale-900 font-medium hover:bg-grayScale-50"
+                className="h-10 px-8 rounded-[6px] border-grayScale-200 text-grayScale-900 dark:text-grayScale-600 font-medium hover:bg-grayScale-50 dark:hover:bg-grayScale-100"
                 onClick={() => navigate("/new-content/question-types")}
               >
                 Cancel

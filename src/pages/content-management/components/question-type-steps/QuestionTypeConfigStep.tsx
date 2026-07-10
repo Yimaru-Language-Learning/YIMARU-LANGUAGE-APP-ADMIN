@@ -242,10 +242,10 @@ export function QuestionTypeConfigStep({
 
   return (
     <div className="space-y-8 pb-32">
-      <Card className="max-w-6xl mx-auto overflow-hidden border border-grayScale-200 shadow-sm rounded-2xl bg-white">
+      <Card className="max-w-6xl mx-auto overflow-hidden border border-grayScale-200 shadow-sm rounded-2xl bg-white dark:bg-grayScale-50">
         <div className="p-10 border-b border-grayScale-200">
-          <h2 className="text-[20px] font-medium text-grayScale-900">STEP 2: Input &amp; answer types</h2>
-          <p className="text-grayScale-500 font-medium mt-1">
+          <h2 className="text-[20px] font-medium text-grayScale-900 dark:text-grayScale-600">STEP 2: Input &amp; answer types</h2>
+          <p className="text-grayScale-500 dark:text-grayScale-400 font-medium mt-1">
             Choose what learners see in the question and how they respond. Add or remove slots for each type
             as needed.
           </p>
@@ -268,7 +268,7 @@ export function QuestionTypeConfigStep({
                       how many fields of each type you need.
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     {stimulusCatalogKinds.map((kind) => {
                       const { label, Icon } = getStimulusKindPresentation(kind)
                       const selected = draft.stimulus_component_kinds.includes(kind)
@@ -282,35 +282,33 @@ export function QuestionTypeConfigStep({
                             onClick={() => handleStimulusKindClick(kind)}
                           />
                           {selected && !isNoInputComponentKind(kind) ? (
-                            <div className="flex items-center justify-between gap-2 px-0.5 min-h-[32px]">
-                              <span className="text-[12px] text-grayScale-500 font-medium">
-                                {slotCount} slot{slotCount === 1 ? "" : "s"}
+                            <div className="flex items-center justify-center gap-1.5 px-1 pt-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[10px] font-semibold border-grayScale-200 dark:border-grayScale-300 text-grayScale-600 dark:text-grayScale-500 hover:bg-grayScale-100 dark:hover:bg-grayScale-200/50"
+                                onClick={() => removeStimulusSlot(kind)}
+                                disabled={slotCount === 0}
+                                aria-label={`Remove ${label} slot`}
+                              >
+                                <Minus className="h-3 w-3 mr-1" />
+                                Remove
+                              </Button>
+                              <span className="text-[11px] font-bold text-grayScale-700 dark:text-grayScale-500 tabular-nums min-w-[20px] text-center">
+                                {slotCount}
                               </span>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 shrink-0 text-[12px] font-bold text-grayScale-600 hover:bg-grayScale-100"
-                                  onClick={() => removeStimulusSlot(kind)}
-                                  disabled={slotCount === 0}
-                                  aria-label={`Remove ${label} slot`}
-                                >
-                                  <Minus className="h-3.5 w-3.5 mr-1" />
-                                  Remove
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
-                                  onClick={() => addStimulusSlot(kind)}
-                                  aria-label={`Add ${label} slot`}
-                                >
-                                  <Plus className="h-3.5 w-3.5 mr-1" />
-                                  Add
-                                </Button>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[10px] font-semibold border-grayScale-200 dark:border-grayScale-300 text-grayScale-600 dark:text-grayScale-500 hover:bg-grayScale-100 dark:hover:bg-grayScale-200/50"
+                                onClick={() => addStimulusSlot(kind)}
+                                aria-label={`Add ${label} slot`}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add
+                              </Button>
                             </div>
                           ) : null}
                         </div>
@@ -332,7 +330,7 @@ export function QuestionTypeConfigStep({
                       each type needs.
                     </p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     {responseCatalogKinds.map((kind) => {
                       const { label, Icon } = getResponseKindPresentation(kind)
                       const selected = draft.response_component_kinds.includes(kind)
@@ -346,35 +344,33 @@ export function QuestionTypeConfigStep({
                             onClick={() => handleResponseKindClick(kind)}
                           />
                           {selected && !isNoInputComponentKind(kind) ? (
-                            <div className="flex items-center justify-between gap-2 px-0.5 min-h-[32px]">
-                              <span className="text-[12px] text-grayScale-500 font-medium">
-                                {slotCount} slot{slotCount === 1 ? "" : "s"}
+                            <div className="flex items-center justify-center gap-1.5 px-1 pt-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[10px] font-semibold border-grayScale-200 dark:border-grayScale-300 text-grayScale-600 dark:text-grayScale-500 hover:bg-grayScale-100 dark:hover:bg-grayScale-200/50"
+                                onClick={() => removeResponseSlot(kind)}
+                                disabled={slotCount === 0}
+                                aria-label={`Remove ${label} slot`}
+                              >
+                                <Minus className="h-3 w-3 mr-1" />
+                                Remove
+                              </Button>
+                              <span className="text-[11px] font-bold text-grayScale-700 dark:text-grayScale-500 tabular-nums min-w-[20px] text-center">
+                                {slotCount}
                               </span>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 shrink-0 text-[12px] font-bold text-grayScale-600 hover:bg-grayScale-100"
-                                  onClick={() => removeResponseSlot(kind)}
-                                  disabled={slotCount === 0}
-                                  aria-label={`Remove ${label} slot`}
-                                >
-                                  <Minus className="h-3.5 w-3.5 mr-1" />
-                                  Remove
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 shrink-0 text-[12px] font-bold text-[#9E2891] hover:text-[#8A237E] hover:bg-violet-50"
-                                  onClick={() => addResponseSlot(kind)}
-                                  aria-label={`Add ${label} slot`}
-                                >
-                                  <Plus className="h-3.5 w-3.5 mr-1" />
-                                  Add
-                                </Button>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[10px] font-semibold border-grayScale-200 dark:border-grayScale-300 text-grayScale-600 dark:text-grayScale-500 hover:bg-grayScale-100 dark:hover:bg-grayScale-200/50"
+                                onClick={() => addResponseSlot(kind)}
+                                aria-label={`Add ${label} slot`}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add
+                              </Button>
                             </div>
                           ) : null}
                         </div>
@@ -396,11 +392,11 @@ export function QuestionTypeConfigStep({
               errors={errors}
             />
 
-            <div className="rounded-xl border border-grayScale-200 bg-grayScale-50/50 overflow-hidden">
+            <div className="rounded-xl border border-grayScale-200 bg-grayScale-100 dark:bg-grayScale-100 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setAdvancedOpen((o) => !o)}
-                className="w-full flex items-center justify-between px-4 py-3 text-left text-[14px] font-bold text-grayScale-700 hover:bg-grayScale-100/80 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 text-left text-[14px] font-bold text-grayScale-700 dark:text-grayScale-500 hover:bg-grayScale-100/80 dark:hover:bg-grayScale-200/50 transition-colors"
               >
                 Advanced: edit schema rows (optional)
                 {advancedOpen ? (
@@ -410,7 +406,7 @@ export function QuestionTypeConfigStep({
                 )}
               </button>
               {advancedOpen ? (
-                <div className="px-4 pb-6 pt-2 space-y-10 border-t border-grayScale-200 bg-white">
+                <div className="px-4 pb-6 pt-2 space-y-10 border-t border-grayScale-200 bg-white dark:bg-grayScale-50">
                   <SchemaBuilderSection
                     title="Stimulus schema"
                     side="stimulus"

@@ -91,8 +91,8 @@ export function SchemaBuilderSection({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-[16px] font-bold text-grayScale-900">{title}</h3>
-          <p className="text-[13px] text-grayScale-500 mt-0.5">
+          <h3 className="text-[16px] font-bold text-grayScale-900 dark:text-grayScale-600">{title}</h3>
+          <p className="text-[13px] text-grayScale-500 dark:text-grayScale-400 mt-0.5">
             Fine-tune slot ids, labels, required flags, and optional config. Labels are the field titles
             authors see when creating questions.
           </p>
@@ -125,10 +125,10 @@ export function SchemaBuilderSection({
           return (
           <div
             key={`${side}-${index}`}
-            className="rounded-xl border border-grayScale-200 bg-[#F8FAFC] p-4 space-y-3"
+            className="rounded-xl border border-grayScale-200 bg-[#F8FAFC] dark:bg-grayScale-100 p-4 space-y-3"
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="text-[12px] font-bold uppercase tracking-wide text-grayScale-400">
+              <span className="text-[12px] font-bold uppercase tracking-wide text-grayScale-400 dark:text-grayScale-500">
                 Row {index + 1}
               </span>
               <Button
@@ -153,7 +153,7 @@ export function SchemaBuilderSection({
                   value={row.id}
                   onChange={(e) => updateRow(index, { id: e.target.value })}
                   placeholder="e.g. prompt"
-                  className="h-10 bg-white"
+                  className="h-10 bg-white dark:bg-grayScale-50"
                 />
               </div>
               <div className="space-y-1.5">
@@ -161,7 +161,7 @@ export function SchemaBuilderSection({
                   Kind <span className="text-red-500">*</span>
                 </label>
                 <Select
-                  className="h-10 bg-white"
+                  className="h-10 bg-white dark:bg-grayScale-50"
                   value={row.kind}
                   onChange={(e) => updateRow(index, { kind: e.target.value })}
                 >
@@ -190,7 +190,7 @@ export function SchemaBuilderSection({
                   value={row.label ?? ""}
                   onChange={(e) => updateRow(index, { label: e.target.value })}
                   placeholder={defaultLabelForKind(row.kind)}
-                  className="h-10 bg-white"
+                  className="h-10 bg-white dark:bg-grayScale-50"
                 />
               </div>
               <label className="flex items-center gap-2 pt-6 md:pt-8">
@@ -207,7 +207,7 @@ export function SchemaBuilderSection({
             <div className="space-y-1.5">
               <label className="text-[12px] font-semibold text-grayScale-600">Config (JSON object)</label>
               <Textarea
-                className="min-h-[72px] font-mono text-[13px] bg-white"
+                className="min-h-[72px] font-mono text-[13px] bg-white dark:bg-grayScale-50"
                 placeholder='{"max_length": 1000}'
                 defaultValue={row.config ? JSON.stringify(row.config, null, 2) : ""}
                 key={`${side}-cfg-${index}-${rows.length}`}

@@ -113,7 +113,7 @@ function SortableItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center justify-between px-4 py-3 border border-grayScale-200 rounded-[6px] mb-2 bg-white transition-all duration-200 group/item",
+        "flex items-center justify-between px-4 py-3 border border-grayScale-200 rounded-[6px] mb-2 bg-white dark:bg-grayScale-50 transition-all duration-200 group/item",
         isDragging && "opacity-50 border-dashed z-50 shadow-sm",
         !isDragging && "hover:border-brand-200 hover:shadow-sm",
       )}
@@ -232,7 +232,7 @@ function DraggableList({
       </SortableContext>
       <DragOverlay>
         {activeItem ? (
-          <div className="flex items-center justify-between px-4 py-3 bg-white border border-brand-300 shadow-lg rounded-[6px] opacity-90 cursor-grabbing">
+          <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-grayScale-50 border border-brand-300 shadow-lg rounded-[6px] opacity-90 cursor-grabbing">
             <div className="flex items-center gap-4">
               <div className="p-1 ">
                 <GripVertical className="h-4 w-4" />
@@ -277,7 +277,7 @@ function HierarchySection({
   children,
 }: SectionProps) {
   return (
-    <div className="border border-grayScale-100 rounded-xl mb-3 overflow-hidden transition-all duration-300 bg-white">
+    <div className="border border-grayScale-100 rounded-xl mb-3 overflow-hidden transition-all duration-300 bg-white dark:bg-grayScale-50">
       <button
         onClick={onToggle}
         className={cn(

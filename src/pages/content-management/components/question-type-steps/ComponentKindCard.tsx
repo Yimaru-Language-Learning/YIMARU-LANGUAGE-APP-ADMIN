@@ -15,17 +15,17 @@ export function ComponentKindCard({ label, Icon, selected, onClick }: ComponentK
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-start justify-between p-4 min-h-[132px] rounded-[16px] border text-left transition-all group relative",
+        "w-full flex flex-col items-start justify-between p-4 min-h-[132px] rounded-[16px] border text-left transition-all group relative",
         selected
-          ? "border-[#9E2891] bg-white shadow-[0_4px_12px_rgba(158,40,145,0.08)] ring-1 ring-[#9E2891]"
-          : "border-grayScale-200 bg-white hover:border-grayScale-300 hover:bg-grayScale-50/80",
+          ? "border-[#9E2891] bg-white dark:bg-grayScale-100 shadow-[0_4px_12px_rgba(158,40,145,0.08)] ring-1 ring-[#9E2891]"
+          : "border-grayScale-200 bg-white dark:bg-grayScale-50 hover:border-grayScale-300 hover:bg-grayScale-50/80 dark:hover:bg-grayScale-100/80",
       )}
     >
       <div className="w-full flex items-start justify-between gap-2">
         <div
           className={cn(
             "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-colors",
-            selected ? "bg-[#9E2891] text-white" : "bg-[#F1F5F9] text-grayScale-600 group-hover:bg-grayScale-100",
+            selected ? "bg-[#9E2891] text-white" : "bg-[#F1F5F9] dark:bg-grayScale-200 text-grayScale-600 group-hover:bg-grayScale-100 dark:group-hover:bg-grayScale-200/80",
           )}
         >
           <Icon className="h-6 w-6" />
@@ -33,7 +33,7 @@ export function ComponentKindCard({ label, Icon, selected, onClick }: ComponentK
         <div
           className={cn(
             "h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-            selected ? "border-[#9E2891] bg-white" : "border-grayScale-300 bg-white",
+            selected ? "border-[#9E2891] bg-white dark:bg-grayScale-50" : "border-grayScale-300 bg-white dark:bg-grayScale-50",
           )}
         >
           {selected ? <Check className="h-3.5 w-3.5 text-[#9E2891] stroke-[3]" /> : null}

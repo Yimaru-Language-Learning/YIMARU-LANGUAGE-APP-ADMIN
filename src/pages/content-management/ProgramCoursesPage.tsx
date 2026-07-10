@@ -1,4 +1,4 @@
-import { notifyApiError } from "../../lib/apiErrors"
+import { notifyApiError } from "../../lib/apiErrors";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -58,14 +58,12 @@ export function ProgramCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [deletingCourse, setDeletingCourse] = useState<ProgramCourseListItem | null>(
-    null,
-  );
+  const [deletingCourse, setDeletingCourse] =
+    useState<ProgramCourseListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const [editingCourse, setEditingCourse] = useState<ProgramCourseListItem | null>(
-    null,
-  );
+  const [editingCourse, setEditingCourse] =
+    useState<ProgramCourseListItem | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("");
@@ -80,7 +78,8 @@ export function ProgramCoursesPage() {
   const [createSortOrder, setCreateSortOrder] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
-  const [createUploadingThumbnail, setCreateUploadingThumbnail] = useState(false);
+  const [createUploadingThumbnail, setCreateUploadingThumbnail] =
+    useState(false);
   const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
   const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
     number | null
@@ -120,7 +119,9 @@ export function ProgramCoursesPage() {
         ),
       );
       toast.success(
-        nextStatus === "PUBLISHED" ? "Course published" : "Course saved as draft",
+        nextStatus === "PUBLISHED"
+          ? "Course published"
+          : "Course saved as draft",
       );
     } catch (e: unknown) {
       notifyApiError(e, "Failed to update course status");
@@ -243,7 +244,9 @@ export function ProgramCoursesPage() {
     }
     const maxBytes = 5 * 1024 * 1024;
     if (file.size > maxBytes) {
-      toast.error("Image is too large", { description: "Maximum size is 5 MB." });
+      toast.error("Image is too large", {
+        description: "Maximum size is 5 MB.",
+      });
       return;
     }
     setUploadingEditThumbnail(true);
@@ -328,7 +331,9 @@ export function ProgramCoursesPage() {
     }
     const maxBytes = 5 * 1024 * 1024;
     if (file.size > maxBytes) {
-      toast.error("Image is too large", { description: "Maximum size is 5 MB." });
+      toast.error("Image is too large", {
+        description: "Maximum size is 5 MB.",
+      });
       return;
     }
     setCreateUploadingThumbnail(true);
@@ -397,7 +402,11 @@ export function ProgramCoursesPage() {
   return (
     <div className="space-y-8 pt-10">
       {/* Navigation */}
-      <PageBackLink fallbackTo="/new-content/learn-english" label="Back to Programs" className="text-sm text-grayScale-500" />
+      <PageBackLink
+        fallbackTo="/new-content/learn-english"
+        label="Back to Programs"
+        className="text-sm text-grayScale-500"
+      />
 
       {/* Header section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -411,11 +420,7 @@ export function ProgramCoursesPage() {
             </ContentPageDescription>
           ) : loading ? (
             <div className="flex items-center gap-2 pt-1">
-              <img
-                src={spinnerSrc}
-                alt=""
-                className="h-6 w-6 animate-spin"
-              />
+              <img src={spinnerSrc} alt="" className="h-6 w-6 animate-spin" />
             </div>
           ) : null}
         </div>
@@ -443,8 +448,8 @@ export function ProgramCoursesPage() {
                         Add New Course
                       </DialogTitle>
                       <DialogDescription className="text-sm text-grayScale-400">
-                        Add a new course to this program. Use an image URL or upload a file for the
-                        thumbnail.
+                        Add a new course to this program. Use an image URL or
+                        upload a file for the thumbnail.
                       </DialogDescription>
                     </DialogHeader>
 
@@ -535,7 +540,9 @@ export function ProgramCoursesPage() {
                           type="file"
                           accept="image/*"
                           className="sr-only"
-                          onChange={(e) => void handleCreateCourseThumbnailFile(e)}
+                          onChange={(e) =>
+                            void handleCreateCourseThumbnailFile(e)
+                          }
                           disabled={createSaving || createUploadingThumbnail}
                         />
                         <button
@@ -594,7 +601,9 @@ export function ProgramCoursesPage() {
                         variant="outline"
                         className="h-12 min-w-[120px] rounded-xl border-grayScale-200 font-semibold"
                         disabled={createSaving || createUploadingThumbnail}
-                        onClick={() => handleCreateCourseDialogOpenChange(false)}
+                        onClick={() =>
+                          handleCreateCourseDialogOpenChange(false)
+                        }
                       >
                         Cancel
                       </Button>
@@ -673,133 +682,136 @@ export function ProgramCoursesPage() {
               </p>
             </div>
           ) : (
-        <div className="flex flex-wrap gap-10">
-          {filteredCourses.map((course) => {
-            const modules =
-              course.module_count ?? course.modules_count ?? 0;
-            const lessons = course.lesson_count ?? course.videos_count ?? 0;
-            const practices =
-              course.practice_count ?? course.practices_count ?? 0;
-            const thumbnailSrc =
-              course.thumbnail?.trim() || course.thumbnail_url?.trim() || "";
-            return (
-              <Card
-                key={course.id}
-                className="group relative w-[290px] overflow-hidden border border-grayScale-100 shadow-soft transition-all duration-300 hover:shadow-lg"
-              >
-                <div
-                  className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto"
-                >
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
-                    aria-label={`Edit ${course.name}`}
-                    onClick={() => openEditCourse(course)}
+            <div className="flex flex-wrap gap-10">
+              {filteredCourses.map((course) => {
+                const modules =
+                  course.module_count ?? course.modules_count ?? 0;
+                const lessons = course.lesson_count ?? course.videos_count ?? 0;
+                const practices =
+                  course.practice_count ?? course.practices_count ?? 0;
+                const thumbnailSrc =
+                  course.thumbnail?.trim() ||
+                  course.thumbnail_url?.trim() ||
+                  "";
+                return (
+                  <Card
+                    key={course.id}
+                    className="group relative w-[350px] overflow-hidden border border-grayScale-100 shadow-soft transition-all duration-300 hover:shadow-lg"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
-                    aria-label={`Delete ${course.name}`}
-                    onClick={() => setDeletingCourse(course)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div
-                  className="h-32 w-full bg-cover bg-center"
-                  style={
-                    thumbnailSrc
-                      ? {
-                          backgroundImage: `url(${thumbnailSrc})`,
-                        }
-                      : {
-                          background:
-                            "linear-gradient(135deg, #9E289180 0%, #9E2891 100%)",
-                        }
-                  }
-                />
-                <CardContent className="p-6">
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    <ContentPublishStatusChip
-                      publishStatus={course.publish_status}
-                      updating={publishStatusUpdatingId === course.id}
-                      contentLabel="course"
-                      onToggle={(nextStatus) =>
-                        void handleCoursePublishStatus(course.id, nextStatus)
+                    <div className="absolute right-2 top-2 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                        aria-label={`Edit ${course.name}`}
+                        onClick={() => openEditCourse(course)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                        aria-label={`Delete ${course.name}`}
+                        onClick={() => setDeletingCourse(course)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div
+                      className="h-32 w-full bg-cover bg-center"
+                      style={
+                        thumbnailSrc
+                          ? {
+                              backgroundImage: `url(${thumbnailSrc})`,
+                            }
+                          : {
+                              background:
+                                "linear-gradient(135deg, #9E289180 0%, #9E2891 100%)",
+                            }
                       }
                     />
-                    <ContentAccessTierChip
-                      accessTier={course.access_tier}
-                      updating={accessTierUpdatingId === course.id}
-                      contentLabel="course"
-                      onToggle={(nextTier) =>
-                        void handleCourseAccessTier(course.id, nextTier)
-                      }
-                    />
-                  </div>
-                  <h3 className="text-xl font-bold text-grayScale-700">
-                    {course.name}
-                  </h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-grayScale-500 line-clamp-2">
-                    {course.description?.trim() ? course.description : "—"}
-                  </p>
+                    <CardContent className="p-6">
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <ContentPublishStatusChip
+                          publishStatus={course.publish_status}
+                          updating={publishStatusUpdatingId === course.id}
+                          contentLabel="course"
+                          onToggle={(nextStatus) =>
+                            void handleCoursePublishStatus(
+                              course.id,
+                              nextStatus,
+                            )
+                          }
+                        />
+                        <ContentAccessTierChip
+                          accessTier={course.access_tier}
+                          updating={accessTierUpdatingId === course.id}
+                          contentLabel="course"
+                          onToggle={(nextTier) =>
+                            void handleCourseAccessTier(course.id, nextTier)
+                          }
+                        />
+                      </div>
+                      <h3 className="text-xl font-bold text-grayScale-700">
+                        {course.name}
+                      </h3>
+                      <p className="mt-2 text-[13px] leading-relaxed text-grayScale-500 line-clamp-2">
+                        {course.description?.trim() ? course.description : "—"}
+                      </p>
 
-                  <div className="my-6 grid grid-cols-3 gap-4 border-y border-grayScale-50 py-4">
-                    <div className="text-center">
-                      <p className="text-base font-bold text-grayScale-700">
-                        {modules}
-                      </p>
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-grayScale-400">
-                        Modules
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-base font-bold text-grayScale-700">
-                        {lessons}
-                      </p>
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-grayScale-400">
-                        Lessons
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-base font-bold text-grayScale-700">
-                        {practices}
-                      </p>
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-grayScale-400">
-                        Practices
-                      </p>
-                    </div>
-                  </div>
+                      <div className="my-6 grid grid-cols-3 gap-4 border-y border-grayScale-50 py-4">
+                        <div className="text-center">
+                          <p className="text-base font-bold text-grayScale-700">
+                            {modules}
+                          </p>
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-grayScale-400">
+                            Modules
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-bold text-grayScale-700">
+                            {lessons}
+                          </p>
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-grayScale-400">
+                            Lessons
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-bold text-grayScale-700">
+                            {practices}
+                          </p>
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-grayScale-400">
+                            Practices
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      className="h-10 flex-1 rounded-[6px] border-brand-500 text-[13px] font-semibold text-brand-500 "
-                      onClick={() =>
-                        navigate(
-                          `/new-content/learn-english/${programIdParam}/courses/${course.id}`,
-                        )
-                      }
-                    >
-                      View Detail
-                    </Button>
-                    <PublishPracticeButton
-                      parentKind="COURSE"
-                      parentId={course.id}
-                      className="h-10 flex-1 rounded-[6px] bg-brand-500 text-[13px] font-semibold hover:bg-brand-600 disabled:opacity-60"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="h-10 flex-1 rounded-[6px] border-brand-500 text-[13px] font-semibold text-brand-500 "
+                          onClick={() =>
+                            navigate(
+                              `/new-content/learn-english/${programIdParam}/courses/${course.id}`,
+                            )
+                          }
+                        >
+                          View Detail
+                        </Button>
+                        <PublishPracticeButton
+                          parentKind="COURSE"
+                          parentId={course.id}
+                          className="h-10 flex-1 rounded-[6px] bg-brand-500 text-[13px] font-semibold hover:bg-brand-600 disabled:opacity-60"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -819,96 +831,98 @@ export function ProgramCoursesPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Name
-              </label>
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="rounded-xl"
-                placeholder="Course name"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Description
-              </label>
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={4}
-                className="min-h-[100px] resize-y rounded-xl"
-                placeholder="Short summary of the course"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-            </div>
-            <div className="space-y-2">
-              <label
-                htmlFor="edit-course-sort-order"
-                className="text-sm font-medium text-grayScale-700"
-              >
-                Sort Order
-              </label>
-              <Input
-                id="edit-course-sort-order"
-                type="number"
-                min={0}
-                step={1}
-                inputMode="numeric"
-                value={editSortOrder}
-                onChange={(e) => setEditSortOrder(e.target.value)}
-                className="rounded-xl"
-                placeholder="e.g. 5"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-              <p className="text-xs text-grayScale-500">
-                Lower numbers appear first when courses are listed.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Thumbnail
-              </label>
-              <input
-                ref={editThumbnailFileInputRef}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => void handleEditCourseThumbnailFile(e)}
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 shrink-0 rounded-xl border-grayScale-200 font-semibold"
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">
+                  Name
+                </label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="rounded-xl"
+                  placeholder="Course name"
                   disabled={savingEdit || uploadingEditThumbnail}
-                  onClick={() => editThumbnailFileInputRef.current?.click()}
-                >
-                  {uploadingEditThumbnail ? "Uploading…" : "Upload from computer"}
-                </Button>
-                {editThumbnail.trim() ? (
-                  <div className="flex-1 overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
-                    <img
-                      src={editThumbnail.trim()}
-                      alt=""
-                      className="h-24 w-full object-cover"
-                    />
-                  </div>
-                ) : null}
+                />
               </div>
-              <Input
-                value={editThumbnail}
-                onChange={(e) => setEditThumbnail(e.target.value)}
-                className="rounded-xl"
-                placeholder="Or paste image URL (https://…)"
-                disabled={savingEdit || uploadingEditThumbnail}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">
+                  Description
+                </label>
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={4}
+                  className="min-h-[100px] resize-y rounded-xl"
+                  placeholder="Short summary of the course"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="edit-course-sort-order"
+                  className="text-sm font-medium text-grayScale-700"
+                >
+                  Sort Order
+                </label>
+                <Input
+                  id="edit-course-sort-order"
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={editSortOrder}
+                  onChange={(e) => setEditSortOrder(e.target.value)}
+                  className="rounded-xl"
+                  placeholder="e.g. 5"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+                <p className="text-xs text-grayScale-500">
+                  Lower numbers appear first when courses are listed.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-grayScale-700">
+                  Thumbnail
+                </label>
+                <input
+                  ref={editThumbnailFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => void handleEditCourseThumbnailFile(e)}
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 shrink-0 rounded-xl border-grayScale-200 font-semibold"
+                    disabled={savingEdit || uploadingEditThumbnail}
+                    onClick={() => editThumbnailFileInputRef.current?.click()}
+                  >
+                    {uploadingEditThumbnail
+                      ? "Uploading…"
+                      : "Upload from computer"}
+                  </Button>
+                  {editThumbnail.trim() ? (
+                    <div className="flex-1 overflow-hidden rounded-xl border border-grayScale-200 bg-grayScale-50">
+                      <img
+                        src={editThumbnail.trim()}
+                        alt=""
+                        className="h-24 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                <Input
+                  value={editThumbnail}
+                  onChange={(e) => setEditThumbnail(e.target.value)}
+                  className="rounded-xl"
+                  placeholder="Or paste image URL (https://…)"
+                  disabled={savingEdit || uploadingEditThumbnail}
+                />
+              </div>
             </div>
-          </div>
           </div>
           <DialogFooter className="shrink-0 gap-2 border-t border-grayScale-100 bg-white px-6 py-4 sm:gap-0">
             <Button
@@ -935,7 +949,9 @@ export function ProgramCoursesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm animate-in fade-in zoom-in-95 rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-grayScale-100 px-4 py-4 sm:px-6">
-              <h2 className="text-lg font-bold text-grayScale-700">Delete course</h2>
+              <h2 className="text-lg font-bold text-grayScale-700">
+                Delete course
+              </h2>
               <button
                 type="button"
                 onClick={() => !deleting && setDeletingCourse(null)}

@@ -8,8 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog"
 import type { FAQ } from "../../../types/faq.types"
@@ -52,23 +50,27 @@ export function FaqDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl border-grayScale-200 sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-grayScale-900">
-            <Trash2 className="h-5 w-5 shrink-0 text-destructive" aria-hidden />
-            Delete FAQ?
-          </DialogTitle>
-          <DialogDescription className="text-left text-grayScale-600">
-            This permanently removes the FAQ from the help center. This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md overflow-hidden p-0">
+        <div className="flex items-center gap-3 border-b border-grayScale-100 px-6 py-5 pr-14">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-red-50 dark:bg-red-500/10">
+            <Trash2 className="h-5 w-5 text-red-500" />
+          </div>
+          <div>
+            <DialogTitle className="text-[15px] font-semibold text-grayScale-900">
+              Delete FAQ?
+            </DialogTitle>
+            <DialogDescription className="mt-0.5 text-xs text-grayScale-500">
+              This permanently removes the FAQ from the help center.
+            </DialogDescription>
+          </div>
+        </div>
         {faq ? (
-          <div className="space-y-1 rounded-xl border border-grayScale-200 bg-grayScale-50 px-4 py-3">
-            <p className="text-sm font-semibold text-grayScale-900">{faq.question}</p>
-            <p className="text-xs text-grayScale-500">#{faq.id}</p>
+          <div className="mx-6 mt-4 rounded-[8px] border border-grayScale-100 bg-grayScale-50 px-4 py-3">
+            <p className="text-sm font-medium text-grayScale-900">{faq.question}</p>
+            <p className="mt-0.5 text-[11px] text-grayScale-400">#{faq.id}</p>
           </div>
         ) : null}
-        <DialogFooter className="gap-2 sm:gap-2">
+        <div className="flex items-center justify-end gap-2 border-t border-grayScale-100 px-6 py-4">
           <Button
             variant="outline"
             disabled={deleting}
@@ -83,7 +85,7 @@ export function FaqDeleteDialog({
           >
             {deleting ? "Deleting…" : "Delete FAQ"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )

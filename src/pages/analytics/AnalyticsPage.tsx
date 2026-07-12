@@ -94,7 +94,7 @@ function KpiCard({
             <div className="text-xs font-semibold uppercase tracking-wide text-grayScale-400">{label}</div>
             <div className="mt-1.5 text-[1.75rem] font-semibold leading-none tracking-tight text-grayScale-800">{value}</div>
           </div>
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-brand-600 ring-1 ring-brand-100">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
             <Icon className="h-5 w-5" />
           </div>
         </div>
@@ -121,28 +121,22 @@ function BreakdownList({
   title,
   data,
   total,
-  scrollable,
 }: {
   title: string
   data: LabelCount[]
   total?: number
-  /** Enable vertical scroll for long breakdowns (e.g. occupation). */
-  scrollable?: boolean
 }) {
   const computedTotal = total ?? data.reduce((s, d) => s + d.count, 0)
   const sorted = [...data].sort((a, b) => b.count - a.count)
   return (
-    <Card className="shadow-none">
+    <Card className="shadow-none flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
+      <CardContent className="p-4 pt-0 flex-1 flex flex-col">
         {sorted.length > 0 ? (
           <div
-            className={cn(
-              "space-y-2.5",
-              scrollable && "max-h-64 overflow-y-auto overscroll-contain pr-1",
-            )}
+            className="space-y-2.5 flex-1 overflow-y-auto overscroll-contain pr-1 max-h-[320px]"
           >
             {sorted.map((item, i) => {
               const pct = computedTotal > 0 ? (item.count / computedTotal) * 100 : 0
@@ -279,7 +273,7 @@ function Section({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-3 px-6 py-4 text-left transition-colors hover:bg-grayScale-50/80"
       >
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-brand-50 to-brand-100 text-brand-600 ring-1 ring-brand-100">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-100/60 text-brand-600">
           <Icon className="h-4 w-4" />
         </div>
         <span className="flex-1 text-sm font-semibold tracking-wide text-grayScale-800">{title}</span>
@@ -667,17 +661,21 @@ export function AnalyticsPage() {
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-grayScale-400">
                 Profile & demographics
               </p>
-              <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <BreakdownList
-                  title="Education level"
-                  data={users.by_education_level ?? []}
+                  title="Learning goal"
+                  data={users.by_learning_goal ?? []}
+                  total={users.total_users}
+                />
+                <BreakdownList
+                  title="Language challenge"
+                  data={users.by_language_challange ?? []}
                   total={users.total_users}
                 />
                 <BreakdownList
                   title="Occupation"
                   data={users.by_occupation ?? []}
                   total={users.total_users}
-                  scrollable
                 />
                 <BreakdownList
                   title="Age group"
@@ -693,7 +691,6 @@ export function AnalyticsPage() {
                   title="Region"
                   data={users.by_region ?? []}
                   total={users.total_users}
-                  scrollable
                 />
                 <BreakdownList
                   title="Account role"

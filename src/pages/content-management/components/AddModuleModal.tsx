@@ -1,4 +1,4 @@
-import { notifyApiError } from "../../../lib/apiErrors"
+import { notifyApiError } from "../../../lib/apiErrors";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "../../../components/ui/button";
 import {
@@ -196,7 +196,7 @@ export function AddModuleModal({
             onUploadBusyChange={setIconUploadBusy}
           />
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 border-t border-grayScale-100  pt-4 pb-6">
             <DialogClose asChild>
               <Button
                 type="button"

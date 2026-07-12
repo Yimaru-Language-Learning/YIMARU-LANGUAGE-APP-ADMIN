@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Download, FileSpreadsheet, Filter } from "lucide-react"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { ExportCsvButton } from "../../components/export/ExportCsvButton"
 import { Input } from "../../components/ui/input"
@@ -177,6 +177,34 @@ export function SubscriptionsExportPage() {
             </label>
           </div>
         </AdminFiltersPanel>
+      </div>
+
+      {/* Empty state */}
+      <div className="flex flex-col items-center justify-center rounded-[12px] border border-dashed border-grayScale-200 bg-white py-16 text-center">
+        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-grayScale-50">
+          <FileSpreadsheet className="h-7 w-7 text-grayScale-300" />
+        </div>
+        <p className="mt-4 text-sm font-semibold text-grayScale-700">Ready to export</p>
+        <p className="mt-1 max-w-sm text-xs text-grayScale-400">
+          {activeFilterCount > 0
+            ? `${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} applied. Hit export to download matching subscriptions.`
+            : "Set filters above to narrow down which subscriptions to include, or export everything."}
+        </p>
+        {activeFilterCount > 0 ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-4 flex items-center gap-1.5 rounded-lg border border-grayScale-200 bg-white px-3 py-1.5 text-xs font-medium text-grayScale-600 transition-colors hover:border-grayScale-300 hover:text-grayScale-800"
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Clear filters
+          </button>
+        ) : (
+          <div className="mt-4 flex items-center gap-1.5 text-xs text-grayScale-300">
+            <Download className="h-3.5 w-3.5" />
+            Exports limited to 50,000 rows
+          </div>
+        )}
       </div>
 
       <p className="text-xs text-grayScale-400">

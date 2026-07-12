@@ -95,7 +95,7 @@ export function PracticeMembersPage() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>

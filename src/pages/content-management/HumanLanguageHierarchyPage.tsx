@@ -1120,7 +1120,7 @@ export function HumanLanguageHierarchyPage() {
             </div>
           </div>
 
-          <DialogFooter className="mt-2">
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button
               type="button"
               variant="outline"
@@ -1225,7 +1225,7 @@ export function HumanLanguageHierarchyPage() {
             </div>
           </div>
 
-          <DialogFooter className="mt-2">
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button
               type="button"
               variant="outline"
@@ -1266,7 +1266,7 @@ export function HumanLanguageHierarchyPage() {
               <span className="font-medium text-grayScale-700">{deleteModuleTarget?.levelTitle ?? "this level"}</span>.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button
               type="button"
               variant="outline"

@@ -315,7 +315,7 @@ export function InviteTeamMemberDialog({
             </div>
           ) : null}
 
-          <DialogFooter className="gap-2 pt-2 sm:gap-2">
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
             <Button
               type="button"
               variant="outline"

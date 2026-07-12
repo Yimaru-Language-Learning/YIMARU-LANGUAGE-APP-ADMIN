@@ -393,14 +393,14 @@ export function UsersListPage() {
 
       {/* Platform-wide user summary (same metrics as former User Management dashboard) */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="border-none bg-brand-50 shadow-sm">
+        <Card className="border-none shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
-              <Users className="h-6 w-6" />
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
+              <Users className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white/80">Total Users</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-sm font-medium text-grayScale-500">Total Users</p>
+              <p className="text-2xl font-bold text-grayScale-900">
                 {userSummaryLoading ? (
                   <SpinnerIcon className="h-5 w-5" />
                 ) : userSummary ? (
@@ -413,14 +413,14 @@ export function UsersListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none bg-brand-50 shadow-sm">
+        <Card className="border-none shadow-sm">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
-              <UserCheck className="h-6 w-6" />
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
+              <UserCheck className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white/80">Active Users</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-sm font-medium text-grayScale-500">Active Users</p>
+              <p className="text-2xl font-bold text-grayScale-900">
                 {userSummaryLoading ? (
                   <SpinnerIcon className="h-5 w-5" />
                 ) : activeUsersTotal !== null ? (
@@ -433,14 +433,14 @@ export function UsersListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none bg-brand-50 shadow-sm sm:col-span-2 lg:col-span-1">
+        <Card className="border-none shadow-sm sm:col-span-2 lg:col-span-1">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
-              <TrendingUp className="h-6 w-6" />
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
+              <TrendingUp className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white/80">New This Month</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-sm font-medium text-grayScale-500">New This Month</p>
+              <p className="text-2xl font-bold text-grayScale-900">
                 {userSummaryLoading ? (
                   <SpinnerIcon className="h-5 w-5" />
                 ) : userSummary ? (

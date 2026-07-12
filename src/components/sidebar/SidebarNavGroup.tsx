@@ -1,5 +1,11 @@
 import { ChevronDown } from "lucide-react";
-import { type ComponentType, type ReactNode, useEffect, useId, useState } from "react";
+import {
+  type ComponentType,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "../../lib/utils";
 
@@ -34,7 +40,9 @@ export function SidebarNavGroup({
   const location = useLocation();
   const panelId = useId();
   const paths = activePaths?.length ? activePaths : [basePath];
-  const isSectionActive = paths.some((path) => location.pathname.startsWith(path));
+  const isSectionActive = paths.some((path) =>
+    location.pathname.startsWith(path),
+  );
   const [expanded, setExpanded] = useState(isSectionActive);
 
   useEffect(() => {
@@ -51,10 +59,10 @@ export function SidebarNavGroup({
         onClick={onNavigate}
         className={({ isActive }) =>
           cn(
-            "group flex items-center justify-center rounded-lg p-2 text-sm font-medium text-grayScale-600 transition",
+            "relative group flex items-center justify-center rounded-lg p-2 text-sm font-medium text-grayScale-600 transition",
             "hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
             isActive &&
-              "bg-brand-500/50 text-brand-600 hover:bg-brand-500/50 hover:text-brand-600 dark:bg-brand-500/30 dark:text-brand-400 dark:hover:bg-brand-500/30 dark:hover:text-brand-400",
+              "bg-brand-500/10 text-brand-600 hover:bg-brand-500/10 hover:text-brand-600 dark:bg-brand-500/15 dark:text-brand-400 dark:hover:bg-brand-500/15 dark:hover:text-brand-400",
           )
         }
         title={label}
@@ -63,7 +71,8 @@ export function SidebarNavGroup({
           <span
             className={cn(
               "relative flex h-9 w-9 items-center justify-center rounded-lg bg-grayScale-50 text-grayScale-500 transition dark:bg-grayScale-200/10 dark:text-grayScale-400",
-              isActive && "bg-brand-500/20 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400",
+              isActive &&
+                "bg-brand-500 text-white dark:bg-brand-500 dark:text-white",
             )}
           >
             <Icon className="h-4 w-4" />
@@ -82,20 +91,29 @@ export function SidebarNavGroup({
         aria-controls={panelId}
         onClick={() => setExpanded((open) => !open)}
         className={cn(
-          "group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-grayScale-600 transition",
+          "relative group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-grayScale-600 transition",
           "hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
-          isSectionActive && "text-brand-600 dark:text-brand-400",
+          isSectionActive &&
+            "bg-brand-500/10 text-black dark:bg-brand-500/15 dark:text-white",
         )}
       >
         <span
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-50 text-grayScale-500 transition dark:bg-grayScale-200/10 dark:text-grayScale-400",
-            isSectionActive && "bg-brand-500/20 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400",
+            isSectionActive &&
+              "bg-brand-500 text-white dark:bg-brand-500 dark:text-white",
           )}
         >
           <Icon className="h-4 w-4" />
         </span>
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate",
+            isSectionActive ? "text-[#000]/80 dark:text-white" : "",
+          )}
+        >
+          {label}
+        </span>
         {trailing}
         <ChevronDown
           className={cn(
@@ -103,6 +121,9 @@ export function SidebarNavGroup({
             expanded && "rotate-180",
           )}
         />
+        {isSectionActive && (
+          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-brand-500" />
+        )}
       </button>
 
       <div
@@ -124,7 +145,7 @@ export function SidebarNavGroup({
                   cn(
                     "block rounded-lg px-3 py-1.5 text-sm font-medium transition",
                     isActive
-                      ? "bg-brand-500/50 text-brand-600 font-medium hover:bg-brand-500/50 hover:text-brand-600 dark:bg-brand-500/30 dark:text-brand-400 dark:hover:bg-brand-500/30 dark:hover:text-brand-400"
+                      ? "bg-brand-500/10 text-black font-medium hover:bg-brand-500/10 hover:text-black dark:bg-brand-500/15 dark:text-white dark:hover:bg-brand-500/15 dark:hover:text-white"
                       : "text-grayScale-500 hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
                   )
                 }

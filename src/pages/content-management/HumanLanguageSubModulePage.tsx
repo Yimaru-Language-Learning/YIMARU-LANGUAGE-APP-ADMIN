@@ -1302,7 +1302,7 @@ export function HumanLanguageSubModulePage() {
               You can reactivate it later by setting status back to active.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button
               type="button"
               variant="outline"

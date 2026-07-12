@@ -356,11 +356,12 @@ export function Sidebar({
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
-                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-600 transition",
+                    "relative group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-600 transition",
                     isCollapsed && "justify-center gap-0 p-2",
                     "hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
                     isActive &&
-                      "bg-brand-500/50 text-brand-600 hover:bg-brand-500/50 hover:text-brand-600 dark:bg-brand-500/30 dark:text-brand-400 dark:hover:bg-brand-500/30 dark:hover:text-brand-400",
+                      "bg-brand-500/10 hover:bg-brand-500/10 dark:bg-brand-500/15 dark:hover:bg-brand-500/15",
+                    isActive ? "text-[#000] dark:text-white" : "",
                   )
                 }
                 title={isCollapsed ? entry.label : undefined}
@@ -370,13 +371,24 @@ export function Sidebar({
                     <span
                       className={cn(
                         "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-grayScale-50 text-grayScale-500 transition dark:bg-grayScale-200/10 dark:text-grayScale-400",
-                        isActive && "bg-brand-500/20 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400",
+                        isActive &&
+                          "bg-brand-500 text-white dark:bg-brand-500 dark:text-white",
                       )}
                     >
                       <Icon className="h-4 w-4" />
                     </span>
                     {!isCollapsed && (
-                      <span className="truncate">{entry.label}</span>
+                      <span
+                        className={cn(
+                          "truncate",
+                          isActive ? "text-[#000]/80 dark:text-white" : "",
+                        )}
+                      >
+                        {entry.label}
+                      </span>
+                    )}
+                    {isActive && (
+                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-brand-500" />
                     )}
                   </>
                 )}

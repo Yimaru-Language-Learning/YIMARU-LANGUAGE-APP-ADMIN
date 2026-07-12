@@ -140,7 +140,7 @@ export function EditSubscriptionPlanDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto rounded-[12px] border border-grayScale-100 p-0">
         <form onSubmit={handleSubmit}>
-          <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6">
+          <DialogHeader className="border-b border-grayScale-100 px-4 py-4 pr-14 sm:px-6">
             <DialogTitle className="text-lg font-bold text-grayScale-900">
               Edit subscription package
             </DialogTitle>

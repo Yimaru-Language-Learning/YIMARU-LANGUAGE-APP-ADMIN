@@ -64,10 +64,7 @@ import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tabl
 
 const STATUS_FILTERS: { value: PaymentStatus; label: string }[] = [
   { value: "PENDING", label: "Pending" },
-  { value: "PROCESSING", label: "Processing" },
   { value: "SUCCESS", label: "Success" },
-  { value: "FAILED", label: "Failed" },
-  { value: "CANCELLED", label: "Cancelled" },
   { value: "EXPIRED", label: "Expired" },
 ]
 

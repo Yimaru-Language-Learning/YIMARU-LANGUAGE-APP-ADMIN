@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ElementType, type ReactNode } from "react"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import {
   Area,
@@ -38,6 +38,12 @@ import {
   CheckCircle2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import {
+  SensitiveChart,
+  SensitiveRevealProvider,
+  SensitiveRevealToggle,
+  SensitiveValue,
+} from "../../components/ui/sensitive-value"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { cn } from "../../lib/utils"
@@ -50,6 +56,7 @@ import {
   getSubscriptionMetrics,
   getVideoLessonsSummary,
   formatPercentRate,
+  buildSubscriptionStatusPie,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
 
@@ -74,10 +81,10 @@ function KpiCard({
   trend,
   className,
 }: {
-  icon: React.ElementType
+  icon: ElementType
   label: string
-  value: string
-  sub?: string
+  value: ReactNode
+  sub?: ReactNode
   trend?: "up" | "down" | "neutral"
   className?: string
 }) {
@@ -388,12 +395,10 @@ export function AnalyticsPage() {
     color: PIE_COLORS[i % PIE_COLORS.length],
   }))
 
-  const subscriptionStatusPie = subscriptions.by_status.map((s, i) => ({
-    name: s.label,
-    value: s.count,
-    color: PIE_COLORS[i % PIE_COLORS.length],
-  }))
-
+  const subscriptionStatusPie = buildSubscriptionStatusPie(
+    subscriptions.by_status,
+    PIE_COLORS,
+  )
   const notifByTypePie = notifications.by_type.slice(0, 8).map((s, i) => ({
     name: s.label,
     value: s.count,
@@ -424,6 +429,7 @@ export function AnalyticsPage() {
   })
 
   return (
+    <SensitiveRevealProvider>
     <div className="mx-auto w-full max-w-[1280px] px-2 pb-6 sm:px-4">
       {/* Header */}
       <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
@@ -515,8 +521,19 @@ export function AnalyticsPage() {
                 <KpiCard
                   icon={DollarSign}
                   label="Total Revenue"
-                  value={`ETB ${formatNumber(payments.total_revenue)}`}
-                  sub={`${payments.successful_payments}/${payments.total_payments} successful · Avg ETB ${payments.avg_transaction_value.toLocaleString()}`}
+                  value={
+                    <SensitiveValue>
+                      {`ETB ${formatNumber(payments.total_revenue)}`}
+                    </SensitiveValue>
+                  }
+                  sub={
+                    <>
+                      {payments.successful_payments}/{payments.total_payments} successful · Avg{" "}
+                      <SensitiveValue showToggle={false}>
+                        ETB {payments.avg_transaction_value.toLocaleString()}
+                      </SensitiveValue>
+                    </>
+                  }
                   trend={payments.total_revenue > 0 ? "up" : "neutral"}
                 />
                 <KpiCard
@@ -781,9 +798,14 @@ export function AnalyticsPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Revenue</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <CardTitle>Revenue</CardTitle>
+                      <SensitiveRevealToggle />
+                    </div>
                     <div className="mt-1 text-2xl font-semibold tracking-tight">
-                      ETB {payments.total_revenue.toLocaleString()}
+                      <SensitiveValue showToggle={false}>
+                        ETB {payments.total_revenue.toLocaleString()}
+                      </SensitiveValue>
                     </div>
                     <div className="text-xs text-grayScale-400">Daily revenue over last 30 days</div>
                   </div>
@@ -791,23 +813,25 @@ export function AnalyticsPage() {
                 </div>
               </CardHeader>
               <CardContent className="h-[240px] p-6 pt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueData} margin={{ left: 8, right: 8, top: 8 }}>
-                    <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={11} width={42} />
-                    <Tooltip
-                      formatter={(v) => [`ETB ${Number(v).toLocaleString()}`, "Revenue"]}
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #E0E0E0",
-                        boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                        fontSize: 12,
-                      }}
-                    />
-                    <Bar dataKey="revenue" radius={[6, 6, 0, 0]} fill="#9E2891" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <SensitiveChart>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueData} margin={{ left: 8, right: 8, top: 8 }}>
+                      <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} />
+                      <YAxis tickLine={false} axisLine={false} fontSize={11} width={42} />
+                      <Tooltip
+                        formatter={(v) => [`ETB ${Number(v).toLocaleString()}`, "Revenue"]}
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: "1px solid #E0E0E0",
+                          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="revenue" radius={[6, 6, 0, 0]} fill="#9E2891" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </SensitiveChart>
               </CardContent>
             </Card>
           </div>
@@ -1059,5 +1083,6 @@ export function AnalyticsPage() {
         </Section>
       </div>
     </div>
+    </SensitiveRevealProvider>
   )
 }

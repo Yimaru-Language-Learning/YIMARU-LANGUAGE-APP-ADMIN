@@ -50,6 +50,9 @@ const ACTION_LABELS: Record<string, string> = {
   PAYMENT_VERIFIED: "Payment verified",
   PAYMENT_CANCELLED: "Payment cancelled",
   PAYMENT_WEBHOOK_RECEIVED: "Payment webhook received",
+  SUBSCRIPTION_CREATED: "Subscription created",
+  SUBSCRIPTION_EXTENDED: "Subscription extended",
+  SUBSCRIPTION_CANCELLED: "Subscription cancelled",
   NOTIFICATION_BULK_SENT: "Bulk notification sent",
   NOTIFICATION_CREATED: "Notification created",
   NOTIFICATION_UPDATED: "Notification updated",
@@ -80,6 +83,7 @@ const ACTION_CATEGORY: Record<string, ActionBadgeTone> = {
   PAYMENT_CANCELLED: "billing",
   PAYMENT_WEBHOOK_RECEIVED: "billing",
   SUBSCRIPTION_CREATED: "billing",
+  SUBSCRIPTION_EXTENDED: "billing",
   SUBSCRIPTION_CANCELLED: "billing",
 }
 
@@ -166,6 +170,7 @@ export const ACTION_FILTER_GROUPS: { label: string; actions: string[] }[] = [
       "SUBSCRIPTION_PLAN_CREATED",
       "SUBSCRIPTION_PLAN_UPDATED",
       "SUBSCRIPTION_CREATED",
+      "SUBSCRIPTION_EXTENDED",
       "SUBSCRIPTION_CANCELLED",
       "PAYMENT_INITIATED",
       "PAYMENT_VERIFIED",

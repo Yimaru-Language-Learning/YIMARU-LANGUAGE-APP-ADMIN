@@ -50,14 +50,18 @@ export function parseSubscriptionPlanMutation(body: unknown): SubscriptionPlan |
 }
 
 export interface GetSubscriptionPlansOptions {
-  /** When false, returns active and inactive plans. Defaults to false for admin views. */
+  /**
+   * When true or omitted, returns active plans only (`GET /subscription-plans`).
+   * Pass false for admin settings/dashboard to include inactive plans.
+   */
   active_only?: boolean
 }
 
-export const getSubscriptionPlans = (options?: GetSubscriptionPlansOptions) =>
-  http
+export const getSubscriptionPlans = (options?: GetSubscriptionPlansOptions) => {
+  const activeOnly = options?.active_only ?? true
+  return http
     .get<SubscriptionPlansListResponse | SubscriptionPlan[]>("/subscription-plans", {
-      params: { active_only: options?.active_only ?? false },
+      params: activeOnly ? undefined : { active_only: false },
     })
     .then((res) => {
       const plans = parseSubscriptionPlansList(res.data)
@@ -66,6 +70,7 @@ export const getSubscriptionPlans = (options?: GetSubscriptionPlansOptions) =>
         data: plans,
       }
     })
+}
 
 function mutationResult(res: { data: unknown }) {
   const plan = parseSubscriptionPlanMutation(res.data)

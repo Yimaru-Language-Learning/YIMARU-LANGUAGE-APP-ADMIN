@@ -18,6 +18,11 @@ import type {
   UpdateTeamMeRequest,
   TeamMember,
   TeamMemberDetail,
+  TeamResetPasswordRequest,
+  TeamPasswordResetResponse,
+  TeamSendPasswordResetRequest,
+  TeamVerifyPasswordResetData,
+  TeamVerifyPasswordResetResponse,
 } from "../types/team.types"
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -152,6 +157,35 @@ export const updateTeamMember = (id: number, data: UpdateTeamMemberRequest) =>
 /** POST /team/members/:id/change-password — change the signed-in member's password. */
 export const changeTeamMemberPassword = (id: number, data: ChangeTeamMemberPasswordRequest) =>
   http.post<ChangeTeamMemberPasswordResponse>(`/team/members/${id}/change-password`, data)
+
+/** POST /team/sendResetCode — public; emails a password-reset link. */
+export const sendTeamPasswordReset = (data: TeamSendPasswordResetRequest) =>
+  http.post<TeamPasswordResetResponse>("/team/sendResetCode", data, {
+    skipErrorToast: true,
+  })
+
+/** GET /team/verifyResetCode — public; validates email+otp without consuming. */
+export const verifyTeamPasswordReset = (email: string, otp: string) =>
+  http.get<TeamVerifyPasswordResetResponse>("/team/verifyResetCode", {
+    params: { email, otp },
+    skipErrorToast: true,
+  })
+
+export function parseVerifyPasswordReset(
+  response: Awaited<ReturnType<typeof verifyTeamPasswordReset>>,
+): TeamVerifyPasswordResetData | null {
+  const body = response.data
+  if (body?.data && typeof body.data === "object" && "valid" in body.data) {
+    return body.data
+  }
+  return null
+}
+
+/** POST /team/resetPassword — public; completes reset with email + OTP from the link. */
+export const resetTeamPassword = (data: TeamResetPasswordRequest) =>
+  http.post<TeamPasswordResetResponse>("/team/resetPassword", data, {
+    skipErrorToast: true,
+  })
 
 /** POST /team/members/invite — send invitation email (permission: team.members.invite). */
 export const inviteTeamMember = (data: InviteTeamMemberRequest) =>

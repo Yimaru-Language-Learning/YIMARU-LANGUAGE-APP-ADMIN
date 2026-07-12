@@ -79,6 +79,14 @@ export function LoginPage() {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
+    if (searchParams.get("reset") !== "1") return;
+    toast.success("Password reset", {
+      description: "Sign in with your new password.",
+    });
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
     if (searchParams.get("account_inactive") !== "1") return;
     toast.error("Account inactive", {
       description: "Your team account is no longer active. Contact an administrator.",

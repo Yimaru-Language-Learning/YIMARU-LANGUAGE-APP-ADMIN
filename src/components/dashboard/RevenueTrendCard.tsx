@@ -4,6 +4,7 @@ import { getDashboard } from "../../api/analytics.api"
 import { getYearOptions } from "../analytics/AnalyticsTimeRangeFilter"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Select } from "../ui/select"
+import { SensitiveChart, SensitiveRevealToggle, SensitiveValue } from "../ui/sensitive-value"
 import { aggregateRevenueByMonth, formatRevenueAxisTick } from "../../lib/analytics"
 import type { DateRevenue } from "../../types/analytics.types"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
@@ -63,9 +64,12 @@ export function RevenueTrendCard() {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Revenue Trend</CardTitle>
+            <div className="flex items-center gap-1">
+              <CardTitle>Revenue Trend</CardTitle>
+              <SensitiveRevealToggle />
+            </div>
             <div className="mt-2 text-2xl font-semibold tracking-tight">
-              ETB {totalRevenue.toLocaleString()}
+              <SensitiveValue showToggle={false}>ETB {totalRevenue.toLocaleString()}</SensitiveValue>
             </div>
             <div className="text-xs font-medium text-grayScale-500">Monthly · {year} (ETB)</div>
           </div>
@@ -89,40 +93,42 @@ export function RevenueTrendCard() {
             <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ left: 4, right: 8, top: 8, bottom: 0 }} barGap={-28}>
-              <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                fontSize={12}
-                width={44}
-                tickFormatter={formatRevenueAxisTick}
-              />
-              <Tooltip
-                formatter={(value, name) => {
-                  if (name !== "revenue") return null
-                  return [`ETB ${Number(value).toLocaleString()}`, "Revenue"]
-                }}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid #E0E0E0",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                }}
-              />
-              <Bar dataKey="track" barSize={28} radius={[8, 8, 0, 0]} isAnimationActive={false}>
-                {chartData.map((entry) => (
-                  <Cell key={`track-${entry.month}`} fill={TRACK_COLOR} />
-                ))}
-              </Bar>
-              <Bar dataKey="revenue" barSize={28} radius={[8, 8, 0, 0]}>
-                {chartData.map((entry) => (
-                  <Cell key={`revenue-${entry.month}`} fill={BAR_COLOR} />
-                ))}
-              </Bar>
-            </ComposedChart>
-          </ResponsiveContainer>
+          <SensitiveChart>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ left: 4, right: 8, top: 8, bottom: 0 }} barGap={-28}>
+                <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  fontSize={12}
+                  width={44}
+                  tickFormatter={formatRevenueAxisTick}
+                />
+                <Tooltip
+                  formatter={(value, name) => {
+                    if (name !== "revenue") return null
+                    return [`ETB ${Number(value).toLocaleString()}`, "Revenue"]
+                  }}
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "1px solid #E0E0E0",
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                  }}
+                />
+                <Bar dataKey="track" barSize={28} radius={[8, 8, 0, 0]} isAnimationActive={false}>
+                  {chartData.map((entry) => (
+                    <Cell key={`track-${entry.month}`} fill={TRACK_COLOR} />
+                  ))}
+                </Bar>
+                <Bar dataKey="revenue" barSize={28} radius={[8, 8, 0, 0]}>
+                  {chartData.map((entry) => (
+                    <Cell key={`revenue-${entry.month}`} fill={BAR_COLOR} />
+                  ))}
+                </Bar>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </SensitiveChart>
         )}
       </CardContent>
     </Card>

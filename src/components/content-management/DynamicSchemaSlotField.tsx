@@ -135,7 +135,8 @@ function writeSecondsFieldValue(raw: string): string {
   if (!t) return ""
   const n = Number.parseInt(t, 10)
   if (!Number.isFinite(n) || n < 0) return ""
-  return JSON.stringify({ seconds: n })
+  // Store plain digits in the form; buildDynamicQuestionPayload emits { seconds: N }.
+  return String(n)
 }
 
 function isHttpUrl(s: string): boolean {
@@ -900,7 +901,9 @@ export function DynamicSchemaSlotField({
           className="h-11 max-w-[200px] rounded-lg border-grayScale-200"
           disabled={disabled}
         />
-        <p className="text-[11px] text-grayScale-500">Stored as seconds (e.g. {`{"seconds": 30}`}).</p>
+        <p className="text-[11px] text-grayScale-500">
+          Saved as {`{"seconds": N}`} in the question payload.
+        </p>
       </div>
     )
   }

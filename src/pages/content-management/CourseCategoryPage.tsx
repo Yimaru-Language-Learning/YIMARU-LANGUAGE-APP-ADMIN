@@ -395,7 +395,7 @@ export function CourseCategoryPage() {
                 : ""}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>

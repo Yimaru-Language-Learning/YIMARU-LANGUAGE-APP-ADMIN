@@ -27,3 +27,4 @@ dist-ssr
 *.sw?
 AGENTS.md
 design-system.md
+.opencode/

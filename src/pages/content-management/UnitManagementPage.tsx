@@ -611,7 +611,7 @@ export function UnitManagementPage() {
           </DialogTrigger>
           <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
             <div className="flex min-h-0 flex-1 flex-col bg-white">
-              <DialogHeader className="px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
+              <DialogHeader className="px-8 py-6 pr-14 border-b border-grayScale-200 flex flex-row items-center justify-between">
                 <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
                   Create Modules
                 </DialogTitle>
@@ -1014,7 +1014,7 @@ export function UnitManagementPage() {
       >
         <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-[600px] flex-col gap-0 overflow-hidden rounded-[16px] border-none p-0">
           <div className="flex min-h-0 flex-1 flex-col bg-white">
-            <DialogHeader className="px-8 py-6 border-b border-grayScale-200 flex flex-row items-center justify-between">
+            <DialogHeader className="px-8 py-6 pr-14 border-b border-grayScale-200 flex flex-row items-center justify-between">
               <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
                 Edit Module
               </DialogTitle>
@@ -1182,7 +1182,7 @@ export function UnitManagementPage() {
       >
         <DialogContent className="max-w-md rounded-[16px] border-none p-0 overflow-hidden">
           <div className="bg-white">
-            <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6">
+            <DialogHeader className="border-b border-grayScale-100 px-4 py-4 pr-14 sm:px-6">
               <DialogTitle className="text-lg font-bold text-grayScale-900">
                 Delete Module
               </DialogTitle>

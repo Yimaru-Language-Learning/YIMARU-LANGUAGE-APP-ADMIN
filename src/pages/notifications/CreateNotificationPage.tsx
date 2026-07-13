@@ -1,7 +1,7 @@
 import { notifyApiError } from "../../lib/apiErrors"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Bell, CalendarClock, Mail, MailOpen, Megaphone, Search, Smartphone } from "lucide-react"
+import { Bell, CalendarClock, ChevronDown, ChevronLeft, ChevronRight, Mail, MailOpen, Megaphone, Search, Smartphone, Users } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent } from "../../components/ui/card"
 import { Button } from "../../components/ui/button"
@@ -13,6 +13,7 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { NotificationSchedulePicker } from "../../components/notifications/NotificationSchedulePicker"
 import { EmailComposeFields } from "../../components/notifications/EmailComposeFields"
 import { cn } from "../../lib/utils"
+import { Stepper } from "../../components/ui/stepper"
 import {
   sendBulkEmail,
   sendBulkInApp,
@@ -52,6 +53,8 @@ import type { UserApiDTO } from "../../types/user.types"
 import type { TeamMember } from "../../types/team.types"
 
 type SendMode = "now" | "schedule"
+
+const NOTIFICATION_STEPS = ["Channel", "Content", "Audience", "Preview"]
 
 const CHANNELS: {
   value: NotificationChannel
@@ -157,6 +160,7 @@ export function CreateNotificationPage() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([])
   const [emailTemplatesLoading, setEmailTemplatesLoading] = useState(false)
   const [sendSummary, setSendSummary] = useState<BulkSendSummary | null>(null)
+  const [currentStep, setCurrentStep] = useState(1)
 
   useEffect(() => {
     setRecipientsLoading(true)
@@ -304,6 +308,52 @@ export function CreateNotificationPage() {
     selectedEmailTemplate,
     emailTemplateVariables,
   ])
+
+  const validateStep = useCallback(
+    (step: number): boolean => {
+      if (step === 2) {
+        if (channel === "email") {
+          const emailError = validateEmailComposeInput({
+            templateSlug: emailTemplateSlug,
+            subject: title,
+            message,
+            htmlBody,
+            template: selectedEmailTemplate,
+            templateVariables: emailTemplateVariables,
+          })
+          if (emailError) {
+            toast.error(emailError)
+            return false
+          }
+        } else if (channel !== "sms" && !title.trim()) {
+          toast.error("Title is required")
+          return false
+        }
+        if (channel !== "email" && !message.trim()) {
+          toast.error("Message is required")
+          return false
+        }
+        if (isScheduling && !scheduledAt) {
+          toast.error("Choose a schedule date and time")
+          return false
+        }
+      }
+      if (step === 3) {
+        return validateTargeting()
+      }
+      return true
+    },
+    [channel, title, message, htmlBody, emailTemplateSlug, emailTemplateVariables, selectedEmailTemplate, isScheduling, scheduledAt],
+  )
+
+  const goNext = useCallback(() => {
+    if (!validateStep(currentStep)) return
+    setCurrentStep((s) => Math.min(s + 1, 4))
+  }, [currentStep, validateStep])
+
+  const goPrev = useCallback(() => {
+    setCurrentStep((s) => Math.max(s - 1, 1))
+  }, [])
 
   const validateTargeting = (): boolean => {
     if (audienceMode === "platform_role" || audienceMode === "team_role") return true
@@ -513,46 +563,27 @@ export function CreateNotificationPage() {
     }
   }
 
+  const activeStep = currentStep
+  const isLastStep = currentStep === 4
+
   const previewIcon = CHANNELS.find((c) => c.value === channel)?.icon ?? Bell
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5">
       <div className="space-y-2">
-        <nav className="flex items-center gap-1 text-xs text-grayScale-400">
-          <button
-            type="button"
-            className="hover:text-grayScale-600"
-            onClick={() => navigate("/dashboard")}
-          >
-            Dashboard
-          </button>
-          <span>/</span>
-          <button
-            type="button"
-            className="hover:text-grayScale-600"
-            onClick={() => navigate("/notifications")}
-          >
-            Notifications
-          </button>
-          <span>/</span>
-          <span className="text-grayScale-500">Send</span>
-        </nav>
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-grayScale-400">
-              Notifications
-            </p>
-            <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-grayScale-700">
-              Send notification
-              <span className="inline-flex h-7 items-center gap-1 rounded-full bg-brand-500/90 px-2 text-[11px] font-medium text-white">
-                <Megaphone className="h-3.5 w-3.5" />
-                Composer
-              </span>
-            </h1>
-            <p className="mt-1 text-xs text-grayScale-400">
-              Send or schedule bulk SMS, email, push, or in-app notifications.
-            </p>
+          <div className="flex items-start gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
+              <Megaphone className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-grayScale-900">
+                Send notification
+              </h1>
+              <p className="mt-0.5 text-xs text-grayScale-400">
+                Send or schedule bulk SMS, email, push, or in-app notifications.
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
@@ -574,185 +605,186 @@ export function CreateNotificationPage() {
         <BulkSendSummaryPanel summary={sendSummary} onDismiss={() => setSendSummary(null)} />
       ) : null}
 
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)]"
-      >
-        <div className="space-y-4">
-          <Card className="border border-grayScale-100 shadow-none">
-            <CardContent className="space-y-4 p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
-                    Channel
-                  </p>
-                  <div className="flex flex-wrap gap-1 rounded-full border border-grayScale-200 bg-grayScale-50 p-0.5 text-xs font-medium">
-                    {CHANNELS.map(({ value, label, icon: Icon }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => {
-                          setChannel(value)
-                          if (!isAudienceModeValidForChannel(audienceMode, value)) {
-                            setAudienceMode("platform_role")
-                          }
-                          if (value === "sms") setTitle("")
-                        }}
-                        className={cn(
-                          "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                          channel === value
-                            ? "bg-brand-500 text-white shadow-sm"
-                            : "text-grayScale-500 hover:text-grayScale-700",
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+      <div className="rounded-2xl border border-grayScale-100 bg-white px-6 py-5 shadow-sm">
+        <Stepper steps={NOTIFICATION_STEPS} currentStep={activeStep} />
+      </div>
 
-                <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
-                    Delivery
-                  </p>
-                  <div className="inline-flex rounded-full border border-grayScale-200 bg-grayScale-50 p-0.5 text-xs font-medium">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSendMode("now")
-                        setScheduledAt("")
-                      }}
-                      className={cn(
-                        "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                        sendMode === "now"
-                          ? "bg-brand-500 text-white shadow-sm"
-                          : "text-grayScale-500 hover:text-grayScale-700",
-                      )}
-                    >
-                      Send now
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSendMode("schedule")}
-                      className={cn(
-                        "flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors",
-                        sendMode === "schedule"
-                          ? "bg-brand-500 text-white shadow-sm"
-                          : "text-grayScale-500 hover:text-grayScale-700",
-                      )}
-                    >
-                      <CalendarClock className="h-3.5 w-3.5" />
-                      Schedule
-                    </button>
-                  </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!isLastStep) {
+            goNext()
+            return
+          }
+          void handleSubmit(e)
+        }}
+        className="space-y-5"
+      >
+        {/* Step 1: Channel & Delivery */}
+        {currentStep === 1 && (
+          <div className="rounded-2xl border border-grayScale-100 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] font-bold text-white">1</span>
+              <p className="text-sm font-semibold text-grayScale-800">Channel & delivery</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
+                  Channel
+                </label>
+                <div className="relative">
+                  <select
+                    value={channel}
+                    onChange={(e) => {
+                      const v = e.target.value as NotificationChannel
+                      setChannel(v)
+                      if (!isAudienceModeValidForChannel(audienceMode, v)) {
+                        setAudienceMode("platform_role")
+                      }
+                      if (v === "sms") setTitle("")
+                    }}
+                    className="h-10 w-full appearance-none rounded-lg border border-grayScale-200 bg-white pl-3 pr-9 text-sm font-medium text-grayScale-700 transition-colors focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                  >
+                    {CHANNELS.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
                 </div>
               </div>
 
-              {isScheduling && (
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                    Scheduled at (UTC)
-                  </label>
-                  <NotificationSchedulePicker value={scheduledAt} onChange={setScheduledAt} />
-                  <p className="mt-1 text-[10px] text-grayScale-400">
-                    Attachments and push images are not supported for scheduled sends.
-                  </p>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-grayScale-400">
+                  Delivery
+                </label>
+                <div className="relative">
+                  <select
+                    value={sendMode}
+                    onChange={(e) => {
+                      const v = e.target.value as SendMode
+                      setSendMode(v)
+                      if (v === "now") setScheduledAt("")
+                    }}
+                    className="h-10 w-full appearance-none rounded-lg border border-grayScale-200 bg-white pl-3 pr-9 text-sm font-medium text-grayScale-700 transition-colors focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                  >
+                    <option value="now">Send now</option>
+                    <option value="schedule">Schedule</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
                 </div>
-              )}
+              </div>
+            </div>
 
-              <div className="space-y-3">
-                {channel === "email" ? (
-                  <EmailComposeFields
-                    templates={emailTemplates}
-                    templatesLoading={emailTemplatesLoading}
-                    subject={title}
-                    message={message}
-                    htmlBody={htmlBody}
-                    templateSlug={emailTemplateSlug}
-                    templateVariables={emailTemplateVariables}
-                    onSubjectChange={setTitle}
-                    onMessageChange={setMessage}
-                    onHtmlBodyChange={setHtmlBody}
-                    onTemplateSlugChange={setEmailTemplateSlug}
-                    onTemplateVariablesChange={setEmailTemplateVariables}
-                  />
-                ) : (
-                  <>
-                    {needsTitle && (
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                          {titleLabel}
-                        </label>
-                        <Input
-                          placeholder={
-                            channel === "sms"
-                              ? "Optional headline"
-                              : "Short headline for this notification"
-                          }
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                        />
-                      </div>
-                    )}
+            {isScheduling && (
+              <div className="mt-4 border-t border-grayScale-100 pt-4">
+                <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                  Scheduled at (UTC)
+                </label>
+                <NotificationSchedulePicker value={scheduledAt} onChange={setScheduledAt} />
+                <p className="mt-1 text-[10px] text-grayScale-400">
+                  Attachments and push images are not supported for scheduled sends.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 2: Content */}
+        {currentStep === 2 && (
+          <div className="rounded-2xl border border-grayScale-100 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] font-bold text-white">2</span>
+              <p className="text-sm font-semibold text-grayScale-800">Content</p>
+            </div>
+            <div className="space-y-3">
+              {channel === "email" ? (
+                <EmailComposeFields
+                  templates={emailTemplates}
+                  templatesLoading={emailTemplatesLoading}
+                  subject={title}
+                  message={message}
+                  htmlBody={htmlBody}
+                  templateSlug={emailTemplateSlug}
+                  templateVariables={emailTemplateVariables}
+                  onSubjectChange={setTitle}
+                  onMessageChange={setMessage}
+                  onHtmlBodyChange={setHtmlBody}
+                  onTemplateSlugChange={setEmailTemplateSlug}
+                  onTemplateVariablesChange={setEmailTemplateVariables}
+                />
+              ) : (
+                <>
+                  {needsTitle && (
                     <div>
                       <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                        Message
+                        {titleLabel}
                       </label>
-                      <Textarea
-                        rows={4}
+                      <Input
                         placeholder={
                           channel === "sms"
-                            ? "SMS body text."
-                            : "Notification body shown to recipients."
+                            ? "Optional headline"
+                            : "Short headline for this notification"
                         }
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
                       />
                     </div>
-                  </>
-                )}
-                {channel === "in_app" && (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                        Type
-                      </label>
-                      <Select value={inAppType} onChange={(e) => setInAppType(e.target.value)}>
-                        {IN_APP_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                        Level
-                      </label>
-                      <Select
-                        value={inAppLevel}
-                        onChange={(e) =>
-                          setInAppLevel(e.target.value as InAppNotificationLevel)
-                        }
-                      >
-                        {IN_APP_LEVELS.map((l) => (
-                          <option key={l.value} value={l.value}>
-                            {l.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
+                  )}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                      Message
+                    </label>
+                    <Textarea
+                      rows={4}
+                      placeholder={
+                        channel === "sms"
+                          ? "SMS body text."
+                          : "Notification body shown to recipients."
+                      }
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                    />
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </>
+              )}
+              {channel === "in_app" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                      Type
+                    </label>
+                    <Select value={inAppType} onChange={(e) => setInAppType(e.target.value)}>
+                      {IN_APP_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                      Level
+                    </label>
+                    <Select
+                      value={inAppLevel}
+                      onChange={(e) =>
+                        setInAppLevel(e.target.value as InAppNotificationLevel)
+                      }
+                    >
+                      {IN_APP_LEVELS.map((l) => (
+                        <option key={l.value} value={l.value}>
+                          {l.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
 
-          {supportsAttachment && (
-            <Card className="border border-grayScale-100 shadow-none">
-              <CardContent className="space-y-2 p-4">
-                <p className="mb-1 block text-xs font-medium text-grayScale-500">
+            {supportsAttachment && (
+              <div className="mt-4 border-t border-grayScale-100 pt-4">
+                <p className="mb-2 block text-xs font-medium text-grayScale-500">
                   {channel === "push" ? "Image (push only)" : "Attachment (email only)"}
                 </p>
                 <FileUpload
@@ -767,23 +799,480 @@ export function CreateNotificationPage() {
                   }
                   className="min-h-[110px] rounded-lg border-2 border-dashed border-grayScale-300 transition-colors hover:border-brand-400 hover:bg-brand-50/30"
                 />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 3: Audience */}
+        {currentStep === 3 && (
+          <div className="rounded-2xl border border-grayScale-100 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] font-bold text-white">3</span>
+              <p className="text-sm font-semibold text-grayScale-800">Audience</p>
+            </div>
+            <div className="space-y-4">
+
+          <Card
+              className={cn(
+                "border shadow-none",
+                audienceMode === "platform_role" ||
+                  audienceMode === "platform_selected" ||
+                  audienceMode === "direct"
+                  ? "border-brand-200 ring-1 ring-brand-100"
+                  : "border-grayScale-100",
+              )}
+            >
+              <CardContent className="space-y-3 p-5">
+                <div className="flex items-center gap-2">
+                  <div className="grid h-7 w-7 place-items-center rounded-md bg-brand-100/60 text-brand-600">
+                    <Users className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-grayScale-700">Platform recipients</p>
+                    <p className="text-[10px] text-grayScale-400">Learners and platform users</p>
+                  </div>
+                </div>
+                <div className="inline-flex flex-wrap gap-1.5 text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setAudienceMode("platform_role")}
+                    className={cn(
+                      "rounded-lg px-3 py-2 transition-all",
+                      audienceMode === "platform_role"
+                        ? "bg-brand-500 text-white shadow-sm"
+                        : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
+                    )}
+                  >
+                    Platform role
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAudienceMode("platform_selected")
+                      setUserSearchQuery("")
+                    }}
+                    className={cn(
+                      "rounded-lg px-3 py-2 transition-all",
+                      audienceMode === "platform_selected"
+                        ? "bg-brand-500 text-white shadow-sm"
+                        : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
+                    )}
+                  >
+                    Platform users
+                  </button>
+                  {supportsDirect && (
+                    <button
+                      type="button"
+                      onClick={() => setAudienceMode("direct")}
+                      className={cn(
+                        "rounded-lg px-3 py-2 transition-all",
+                        audienceMode === "direct"
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
+                      )}
+                    >
+                      Direct {channel === "sms" ? "phones" : "emails"}
+                    </button>
+                  )}
+                </div>
+
+                {audienceMode === "platform_role" && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                      Platform role
+                    </label>
+                    <Select
+                      value={platformRole}
+                      onChange={(e) => setPlatformRole(e.target.value as PlatformRole)}
+                    >
+                      {PLATFORM_ROLES.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </Select>
+                    <p className="mt-1 text-[10px] text-grayScale-400">
+                      Sends to all learners/users with this platform role.
+                    </p>
+                  </div>
+                )}
+
+                {audienceMode === "direct" && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                      {channel === "sms" ? "Phone numbers" : "Email addresses"}
+                    </label>
+                    <Textarea
+                      rows={4}
+                      placeholder={
+                        channel === "sms"
+                          ? "+251911000000\n+251922000000"
+                          : "user@example.com\nadmin@example.com"
+                      }
+                      value={directRecipients}
+                      onChange={(e) => setDirectRecipients(e.target.value)}
+                    />
+                    <p className="mt-1 text-[10px] text-grayScale-400">
+                      One per line or comma-separated.
+                    </p>
+                  </div>
+                )}
+
+                {audienceMode === "platform_selected" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-grayScale-500">Select users</p>
+                      <span className="text-[10px] text-grayScale-400">
+                        {selectedUsers.length} selected
+                      </span>
+                    </div>
+                    <div className="overflow-hidden rounded-lg border border-grayScale-100 bg-grayScale-50/60">
+                    <div className="sticky top-0 z-10 space-y-2 border-b border-grayScale-100 bg-grayScale-50/95 p-2 backdrop-blur-sm">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-grayScale-400" />
+                        <Input
+                          type="search"
+                          placeholder="Search by name, email, or phone…"
+                          value={userSearchQuery}
+                          onChange={(e) => setUserSearchQuery(e.target.value)}
+                          className="h-8 border-grayScale-200 bg-white pl-8 text-xs"
+                          disabled={recipientsLoading}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={recipientsLoading || filteredUsers.length === 0}
+                          onClick={() => {
+                            const ids = filteredUsers.map((u) => u.id)
+                            setSelectedUserIds((prev) => [...new Set([...prev, ...ids])])
+                          }}
+                          className="text-[11px] font-medium text-brand-600 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Select all
+                        </button>
+                        <span className="text-grayScale-300">·</span>
+                        <button
+                          type="button"
+                          disabled={recipientsLoading || filteredSelectedCount === 0}
+                          onClick={() => {
+                            const filteredIds = new Set(filteredUsers.map((u) => u.id))
+                            setSelectedUserIds((prev) => prev.filter((id) => !filteredIds.has(id)))
+                          }}
+                          className="text-[11px] font-medium text-grayScale-500 hover:text-grayScale-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Unselect all
+                        </button>
+                        {userSearchQuery.trim() && filteredUsers.length > 0 && (
+                          <span className="ml-auto text-[10px] text-grayScale-400">
+                            {filteredUsers.length} shown
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-64 space-y-1.5 overflow-y-auto p-2">
+                      {recipientsLoading && (
+                        <div className="flex items-center justify-center py-6 text-xs text-grayScale-400">
+                          <SpinnerIcon className="mr-2 h-4 w-4" alt="" />
+                          Loading users…
+                        </div>
+                      )}
+                      {!recipientsLoading && users.length === 0 && (
+                        <div className="py-4 text-center text-xs text-grayScale-400">
+                          No users available to select.
+                        </div>
+                      )}
+                      {!recipientsLoading && users.length > 0 && filteredUsers.length === 0 && (
+                        <div className="py-4 text-center text-xs text-grayScale-400">
+                          No users match &ldquo;{userSearchQuery.trim()}&rdquo;.
+                        </div>
+                      )}
+                      {!recipientsLoading &&
+                        filteredUsers.map((user) => {
+                          const checked = selectedUserIds.includes(user.id)
+                          return (
+                            <label
+                              key={user.id}
+                              className={cn(
+                                "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs",
+                                checked ? "bg-brand-50 text-brand-700" : "hover:bg-grayScale-100",
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5 rounded border-grayScale-300"
+                                checked={checked}
+                                onChange={(e) => {
+                                  setSelectedUserIds((prev) =>
+                                    e.target.checked
+                                      ? [...prev, user.id]
+                                      : prev.filter((id) => id !== user.id),
+                                  )
+                                }}
+                              />
+                              <span className="truncate">
+                                {user.first_name} {user.last_name}
+                                <span className="ml-1 text-[10px] text-grayScale-400">
+                                  · {user.email ?? user.phone_number ?? `ID ${user.id}`}
+                                </span>
+                              </span>
+                            </label>
+                          )
+                        })}
+                    </div>
+                  </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <p className="text-[11px] text-grayScale-400">
-              {isScheduling
-                ? "Creates a scheduled job processed by the backend worker."
-                : "Delivers immediately with sent/failed counts returned."}
+            {supportsTeamTargeting && (
+              <Card
+                className={cn(
+                  "border shadow-none",
+                  audienceMode === "team_role" || audienceMode === "team_selected"
+                    ? "border-brand-200 ring-1 ring-brand-100"
+                    : "border-grayScale-100",
+                )}
+              >
+                <CardContent className="space-y-3 p-5">
+                  <div className="flex items-center gap-2">
+                    <div className="grid h-7 w-7 place-items-center rounded-md bg-brand-100/60 text-brand-600">
+                      <Users className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-grayScale-700">Team recipients</p>
+                      <p className="text-[10px] text-grayScale-400">Staff and team members</p>
+                    </div>
+                  </div>
+                  <div className="inline-flex flex-wrap gap-1.5 text-xs font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setAudienceMode("team_role")}
+                      className={cn(
+                        "rounded-lg px-3 py-2 transition-all",
+                        audienceMode === "team_role"
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
+                      )}
+                    >
+                      Team role
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAudienceMode("team_selected")
+                        setTeamSearchQuery("")
+                      }}
+                      className={cn(
+                        "rounded-lg px-3 py-2 transition-all",
+                        audienceMode === "team_selected"
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
+                      )}
+                    >
+                      Team members
+                    </button>
+                  </div>
+
+                  {audienceMode === "team_role" && (
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-grayScale-500">
+                        Team role
+                      </label>
+                      <Select
+                        value={teamRole}
+                        onChange={(e) => setTeamRole(e.target.value as TeamRole)}
+                      >
+                        {TEAM_ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <p className="mt-1 text-[10px] text-grayScale-400">
+                        Sends to all staff with this team role.
+                      </p>
+                    </div>
+                  )}
+
+                  {audienceMode === "team_selected" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-grayScale-500">Select team members</p>
+                        <span className="text-[10px] text-grayScale-400">
+                          {selectedTeamMemberIds.length} selected
+                        </span>
+                      </div>
+                      <div className="overflow-hidden rounded-lg border border-grayScale-100 bg-grayScale-50/60">
+                    <div className="sticky top-0 z-10 space-y-2 border-b border-grayScale-100 bg-grayScale-50/95 p-2 backdrop-blur-sm">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-grayScale-400" />
+                        <Input
+                          type="search"
+                          placeholder="Search by name or email…"
+                          value={teamSearchQuery}
+                          onChange={(e) => setTeamSearchQuery(e.target.value)}
+                          className="h-8 border-grayScale-200 bg-white pl-8 text-xs"
+                          disabled={teamRecipientsLoading}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={teamRecipientsLoading || filteredTeamMembers.length === 0}
+                          onClick={() => {
+                            const ids = filteredTeamMembers.map((m) => m.id)
+                            setSelectedTeamMemberIds((prev) => [...new Set([...prev, ...ids])])
+                          }}
+                          className="text-[11px] font-medium text-brand-600 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Select all
+                        </button>
+                        <span className="text-grayScale-300">·</span>
+                        <button
+                          type="button"
+                          disabled={teamRecipientsLoading || filteredSelectedTeamCount === 0}
+                          onClick={() => {
+                            const filteredIds = new Set(filteredTeamMembers.map((m) => m.id))
+                            setSelectedTeamMemberIds((prev) =>
+                              prev.filter((id) => !filteredIds.has(id)),
+                            )
+                          }}
+                          className="text-[11px] font-medium text-grayScale-500 hover:text-grayScale-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Unselect all
+                        </button>
+                      </div>
+                    </div>
+                    <div className="max-h-64 space-y-1.5 overflow-y-auto p-2">
+                      {teamRecipientsLoading && (
+                        <div className="flex items-center justify-center py-6 text-xs text-grayScale-400">
+                          <SpinnerIcon className="mr-2 h-4 w-4" alt="" />
+                          Loading team members…
+                        </div>
+                      )}
+                      {!teamRecipientsLoading && teamMembers.length === 0 && (
+                        <div className="py-4 text-center text-xs text-grayScale-400">
+                          No team members available to select.
+                        </div>
+                      )}
+                      {!teamRecipientsLoading &&
+                        filteredTeamMembers.map((member) => {
+                          const checked = selectedTeamMemberIds.includes(member.id)
+                          return (
+                            <label
+                              key={member.id}
+                              className={cn(
+                                "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs",
+                                checked ? "bg-brand-50 text-brand-700" : "hover:bg-grayScale-100",
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5 rounded border-grayScale-300"
+                                checked={checked}
+                                onChange={(e) => {
+                                  setSelectedTeamMemberIds((prev) =>
+                                    e.target.checked
+                                      ? [...prev, member.id]
+                                      : prev.filter((id) => id !== member.id),
+                                  )
+                                }}
+                              />
+                              <span className="truncate">
+                                {member.first_name} {member.last_name}
+                                <span className="ml-1 text-[10px] text-grayScale-400">
+                                  · {member.email || `ID ${member.id}`}
+                                </span>
+                              </span>
+                            </label>
+                          )
+                        })}
+                    </div>
+                  </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Preview */}
+        {currentStep === 4 && (
+          <div className="rounded-2xl border border-grayScale-100 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] font-bold text-white">4</span>
+              <p className="text-sm font-semibold text-grayScale-800">Preview</p>
+            </div>
+            <div className="space-y-1 rounded-xl border border-grayScale-200 bg-grayScale-50/50 p-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-500/90 text-white">
+                  {(() => {
+                    const Icon = previewIcon
+                    return <Icon className="h-3.5 w-3.5" />
+                  })()}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-grayScale-800">
+                    {title ||
+                      (channel === "sms"
+                        ? "SMS message"
+                        : channel === "email" && emailTemplateSlug
+                          ? `Template: ${emailTemplateSlug}`
+                          : "Notification title")}
+                  </p>
+                  <p className="truncate text-[11px] text-grayScale-500">
+                    {channel === "email" && !emailTemplateSlug && htmlBody.trim()
+                      ? "HTML email body"
+                      : message || "Message preview will appear here."}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-grayScale-400">
+              Channel: {channel.toUpperCase().replace("_", "-")}
+              {channel === "email" && emailTemplateSlug
+                ? ` · Template: ${emailTemplateSlug}`
+                : channel === "email" && htmlBody.trim()
+                  ? " · Free-form HTML"
+                  : ""}
+              {isScheduling && scheduledAt
+                ? ` · Scheduled ${formatScheduledAtLabel(scheduledAt)}`
+                : ""}
             </p>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={resetForm} disabled={sending}>
-                Clear
+          </div>
+        )}
+
+        {/* Navigation bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-grayScale-100 bg-white px-5 py-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            {currentStep > 1 && (
+              <Button type="button" variant="outline" size="sm" onClick={goPrev} disabled={sending}>
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Back
               </Button>
+            )}
+            <Button type="button" variant="ghost" size="sm" onClick={resetForm} disabled={sending}>
+              Clear
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] text-grayScale-400">
+              {isLastStep
+                ? isScheduling
+                  ? "Creates a scheduled job processed by the backend worker."
+                  : "Delivers immediately with sent/failed counts returned."
+                : "Step " + currentStep + " of 4"}
+            </p>
+            {isLastStep ? (
               <Button
                 type="submit"
                 size="sm"
+                className="bg-brand-600 hover:bg-brand-500"
                 disabled={sending || (channel === "email" ? !emailContentReady : !message.trim())}
               >
                 {sending ? (
@@ -798,427 +1287,13 @@ export function CreateNotificationPage() {
                   </>
                 )}
               </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <Card
-            className={cn(
-              "border shadow-none",
-              audienceMode === "platform_role" ||
-                audienceMode === "platform_selected" ||
-                audienceMode === "direct"
-                ? "border-brand-200 ring-1 ring-brand-100"
-                : "border-grayScale-100",
+            ) : (
+              <Button type="submit" size="sm" className="bg-brand-600 hover:bg-brand-500">
+                Continue
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
             )}
-          >
-            <CardContent className="space-y-3 p-4">
-              <div>
-                <p className="text-xs font-semibold text-grayScale-600">Platform recipients</p>
-                <p className="text-[10px] text-grayScale-400">Learners and platform users</p>
-              </div>
-              <div className="inline-flex flex-wrap gap-1 rounded-full border border-grayScale-200 bg-grayScale-50 p-0.5 text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => setAudienceMode("platform_role")}
-                  className={cn(
-                    "rounded-full px-3 py-1.5 transition-colors",
-                    audienceMode === "platform_role"
-                      ? "bg-brand-500 text-white shadow-sm"
-                      : "text-grayScale-500 hover:text-grayScale-700",
-                  )}
-                >
-                  Platform role
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAudienceMode("platform_selected")
-                    setUserSearchQuery("")
-                  }}
-                  className={cn(
-                    "rounded-full px-3 py-1.5 transition-colors",
-                    audienceMode === "platform_selected"
-                      ? "bg-brand-500 text-white shadow-sm"
-                      : "text-grayScale-500 hover:text-grayScale-700",
-                  )}
-                >
-                  Platform users
-                </button>
-                {supportsDirect && (
-                  <button
-                    type="button"
-                    onClick={() => setAudienceMode("direct")}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 transition-colors",
-                      audienceMode === "direct"
-                        ? "bg-brand-500 text-white shadow-sm"
-                        : "text-grayScale-500 hover:text-grayScale-700",
-                    )}
-                  >
-                    Direct {channel === "sms" ? "phones" : "emails"}
-                  </button>
-                )}
-              </div>
-
-              {audienceMode === "platform_role" && (
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                    Platform role
-                  </label>
-                  <Select
-                    value={platformRole}
-                    onChange={(e) => setPlatformRole(e.target.value as PlatformRole)}
-                  >
-                    {PLATFORM_ROLES.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <p className="mt-1 text-[10px] text-grayScale-400">
-                    Sends to all learners/users with this platform role.
-                  </p>
-                </div>
-              )}
-
-              {audienceMode === "direct" && (
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                    {channel === "sms" ? "Phone numbers" : "Email addresses"}
-                  </label>
-                  <Textarea
-                    rows={4}
-                    placeholder={
-                      channel === "sms"
-                        ? "+251911000000\n+251922000000"
-                        : "user@example.com\nadmin@example.com"
-                    }
-                    value={directRecipients}
-                    onChange={(e) => setDirectRecipients(e.target.value)}
-                  />
-                  <p className="mt-1 text-[10px] text-grayScale-400">
-                    One per line or comma-separated.
-                  </p>
-                </div>
-              )}
-
-              {audienceMode === "platform_selected" && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-medium text-grayScale-500">Select users</p>
-                    <span className="text-[10px] text-grayScale-400">
-                      {selectedUsers.length} selected
-                    </span>
-                  </div>
-                  <div className="overflow-hidden rounded-lg border border-grayScale-100 bg-grayScale-50/60">
-                  <div className="sticky top-0 z-10 space-y-2 border-b border-grayScale-100 bg-grayScale-50/95 p-2 backdrop-blur-sm">
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-grayScale-400" />
-                      <Input
-                        type="search"
-                        placeholder="Search by name, email, or phone…"
-                        value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                        className="h-8 border-grayScale-200 bg-white pl-8 text-xs"
-                        disabled={recipientsLoading}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={recipientsLoading || filteredUsers.length === 0}
-                        onClick={() => {
-                          const ids = filteredUsers.map((u) => u.id)
-                          setSelectedUserIds((prev) => [...new Set([...prev, ...ids])])
-                        }}
-                        className="text-[11px] font-medium text-brand-600 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Select all
-                      </button>
-                      <span className="text-grayScale-300">·</span>
-                      <button
-                        type="button"
-                        disabled={recipientsLoading || filteredSelectedCount === 0}
-                        onClick={() => {
-                          const filteredIds = new Set(filteredUsers.map((u) => u.id))
-                          setSelectedUserIds((prev) => prev.filter((id) => !filteredIds.has(id)))
-                        }}
-                        className="text-[11px] font-medium text-grayScale-500 hover:text-grayScale-700 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Unselect all
-                      </button>
-                      {userSearchQuery.trim() && filteredUsers.length > 0 && (
-                        <span className="ml-auto text-[10px] text-grayScale-400">
-                          {filteredUsers.length} shown
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="max-h-64 space-y-1.5 overflow-y-auto p-2">
-                    {recipientsLoading && (
-                      <div className="flex items-center justify-center py-6 text-xs text-grayScale-400">
-                        <SpinnerIcon className="mr-2 h-4 w-4" alt="" />
-                        Loading users…
-                      </div>
-                    )}
-                    {!recipientsLoading && users.length === 0 && (
-                      <div className="py-4 text-center text-xs text-grayScale-400">
-                        No users available to select.
-                      </div>
-                    )}
-                    {!recipientsLoading && users.length > 0 && filteredUsers.length === 0 && (
-                      <div className="py-4 text-center text-xs text-grayScale-400">
-                        No users match &ldquo;{userSearchQuery.trim()}&rdquo;.
-                      </div>
-                    )}
-                    {!recipientsLoading &&
-                      filteredUsers.map((user) => {
-                        const checked = selectedUserIds.includes(user.id)
-                        return (
-                          <label
-                            key={user.id}
-                            className={cn(
-                              "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs",
-                              checked ? "bg-brand-50 text-brand-700" : "hover:bg-grayScale-100",
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-3.5 w-3.5 rounded border-grayScale-300"
-                              checked={checked}
-                              onChange={(e) => {
-                                setSelectedUserIds((prev) =>
-                                  e.target.checked
-                                    ? [...prev, user.id]
-                                    : prev.filter((id) => id !== user.id),
-                                )
-                              }}
-                            />
-                            <span className="truncate">
-                              {user.first_name} {user.last_name}
-                              <span className="ml-1 text-[10px] text-grayScale-400">
-                                · {user.email ?? user.phone_number ?? `ID ${user.id}`}
-                              </span>
-                            </span>
-                          </label>
-                        )
-                      })}
-                  </div>
-                </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {supportsTeamTargeting && (
-            <Card
-              className={cn(
-                "border shadow-none",
-                audienceMode === "team_role" || audienceMode === "team_selected"
-                  ? "border-brand-200 ring-1 ring-brand-100"
-                  : "border-grayScale-100",
-              )}
-            >
-              <CardContent className="space-y-3 p-4">
-                <div>
-                  <p className="text-xs font-semibold text-grayScale-600">Team recipients</p>
-                  <p className="text-[10px] text-grayScale-400">Staff and team members</p>
-                </div>
-                <div className="inline-flex flex-wrap gap-1 rounded-full border border-grayScale-200 bg-grayScale-50 p-0.5 text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setAudienceMode("team_role")}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 transition-colors",
-                      audienceMode === "team_role"
-                        ? "bg-brand-500 text-white shadow-sm"
-                        : "text-grayScale-500 hover:text-grayScale-700",
-                    )}
-                  >
-                    Team role
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAudienceMode("team_selected")
-                      setTeamSearchQuery("")
-                    }}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 transition-colors",
-                      audienceMode === "team_selected"
-                        ? "bg-brand-500 text-white shadow-sm"
-                        : "text-grayScale-500 hover:text-grayScale-700",
-                    )}
-                  >
-                    Team members
-                  </button>
-                </div>
-
-                {audienceMode === "team_role" && (
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                      Team role
-                    </label>
-                    <Select
-                      value={teamRole}
-                      onChange={(e) => setTeamRole(e.target.value as TeamRole)}
-                    >
-                      {TEAM_ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <p className="mt-1 text-[10px] text-grayScale-400">
-                      Sends to all staff with this team role.
-                    </p>
-                  </div>
-                )}
-
-                {audienceMode === "team_selected" && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-medium text-grayScale-500">Select team members</p>
-                      <span className="text-[10px] text-grayScale-400">
-                        {selectedTeamMemberIds.length} selected
-                      </span>
-                    </div>
-                    <div className="overflow-hidden rounded-lg border border-grayScale-100 bg-grayScale-50/60">
-                  <div className="sticky top-0 z-10 space-y-2 border-b border-grayScale-100 bg-grayScale-50/95 p-2 backdrop-blur-sm">
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-grayScale-400" />
-                      <Input
-                        type="search"
-                        placeholder="Search by name or email…"
-                        value={teamSearchQuery}
-                        onChange={(e) => setTeamSearchQuery(e.target.value)}
-                        className="h-8 border-grayScale-200 bg-white pl-8 text-xs"
-                        disabled={teamRecipientsLoading}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={teamRecipientsLoading || filteredTeamMembers.length === 0}
-                        onClick={() => {
-                          const ids = filteredTeamMembers.map((m) => m.id)
-                          setSelectedTeamMemberIds((prev) => [...new Set([...prev, ...ids])])
-                        }}
-                        className="text-[11px] font-medium text-brand-600 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Select all
-                      </button>
-                      <span className="text-grayScale-300">·</span>
-                      <button
-                        type="button"
-                        disabled={teamRecipientsLoading || filteredSelectedTeamCount === 0}
-                        onClick={() => {
-                          const filteredIds = new Set(filteredTeamMembers.map((m) => m.id))
-                          setSelectedTeamMemberIds((prev) =>
-                            prev.filter((id) => !filteredIds.has(id)),
-                          )
-                        }}
-                        className="text-[11px] font-medium text-grayScale-500 hover:text-grayScale-700 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Unselect all
-                      </button>
-                    </div>
-                  </div>
-                  <div className="max-h-64 space-y-1.5 overflow-y-auto p-2">
-                    {teamRecipientsLoading && (
-                      <div className="flex items-center justify-center py-6 text-xs text-grayScale-400">
-                        <SpinnerIcon className="mr-2 h-4 w-4" alt="" />
-                        Loading team members…
-                      </div>
-                    )}
-                    {!teamRecipientsLoading && teamMembers.length === 0 && (
-                      <div className="py-4 text-center text-xs text-grayScale-400">
-                        No team members available to select.
-                      </div>
-                    )}
-                    {!teamRecipientsLoading &&
-                      filteredTeamMembers.map((member) => {
-                        const checked = selectedTeamMemberIds.includes(member.id)
-                        return (
-                          <label
-                            key={member.id}
-                            className={cn(
-                              "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs",
-                              checked ? "bg-brand-50 text-brand-700" : "hover:bg-grayScale-100",
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-3.5 w-3.5 rounded border-grayScale-300"
-                              checked={checked}
-                              onChange={(e) => {
-                                setSelectedTeamMemberIds((prev) =>
-                                  e.target.checked
-                                    ? [...prev, member.id]
-                                    : prev.filter((id) => id !== member.id),
-                                )
-                              }}
-                            />
-                            <span className="truncate">
-                              {member.first_name} {member.last_name}
-                              <span className="ml-1 text-[10px] text-grayScale-400">
-                                · {member.email || `ID ${member.id}`}
-                              </span>
-                            </span>
-                          </label>
-                        )
-                      })}
-                  </div>
-                </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          <Card className="border border-dashed border-grayScale-200 bg-grayScale-50/40 shadow-none">
-            <CardContent className="space-y-2 p-4">
-              <p className="text-xs font-semibold text-grayScale-600">Preview</p>
-              <div className="space-y-1 rounded-xl border border-grayScale-200 bg-white p-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-500/90 text-white">
-                    {(() => {
-                      const Icon = previewIcon
-                      return <Icon className="h-3.5 w-3.5" />
-                    })()}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-grayScale-800">
-                      {title ||
-                        (channel === "sms"
-                          ? "SMS message"
-                          : channel === "email" && emailTemplateSlug
-                            ? `Template: ${emailTemplateSlug}`
-                            : "Notification title")}
-                    </p>
-                    <p className="truncate text-[11px] text-grayScale-500">
-                      {channel === "email" && !emailTemplateSlug && htmlBody.trim()
-                        ? "HTML email body"
-                        : message || "Message preview will appear here."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[10px] text-grayScale-400">
-                Channel: {channel.toUpperCase().replace("_", "-")}
-                {channel === "email" && emailTemplateSlug
-                  ? ` · Template: ${emailTemplateSlug}`
-                  : channel === "email" && htmlBody.trim()
-                    ? " · Free-form HTML"
-                    : ""}
-                {isScheduling && scheduledAt
-                  ? ` · Scheduled ${formatScheduledAtLabel(scheduledAt)}`
-                  : ""}
-              </p>
-            </CardContent>
-          </Card>
+          </div>
         </div>
       </form>
     </div>

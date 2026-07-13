@@ -69,7 +69,7 @@ export function PersonaDeleteDialog({
             <p className="text-xs text-grayScale-500">#{persona.id}</p>
           </div>
         ) : null}
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
           <Button variant="outline" disabled={deleting} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

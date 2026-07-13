@@ -161,7 +161,7 @@ export function QuestionTypeGroupFormDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
           <Button
             type="button"
             variant="outline"

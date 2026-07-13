@@ -127,8 +127,8 @@ export function QuestionTypeDefinitionPracticesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-hidden rounded-2xl border-grayScale-200 p-0 sm:max-w-3xl">
-        <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6 text-left">
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden rounded-2xl border-grayScale-200 p-0 sm:max-w-3xl">
+        <DialogHeader className="shrink-0 border-b border-grayScale-100 px-4 py-4 pr-14 sm:px-6 text-left">
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-grayScale-900">
             <GraduationCap className="h-5 w-5 text-brand-600 shrink-0" aria-hidden />
             Practices using this definition
@@ -157,7 +157,7 @@ export function QuestionTypeDefinitionPracticesDialog({
           ) : null}
         </DialogHeader>
 
-        <div className="flex max-h-[calc(90vh-8rem)] flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 px-6 py-16">
               <SpinnerIcon className="h-8 w-8 text-brand-500" />
@@ -246,10 +246,12 @@ export function QuestionTypeDefinitionPracticesDialog({
               )})}
             </ul>
           )}
+        </div>
 
-          {!loading && totalCount > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-grayScale-100 bg-grayScale-50/60 px-6 py-4">
-              <div className="flex flex-wrap items-center gap-3 text-xs text-grayScale-500">
+        {!loading && totalCount > 0 ? (
+          <div className="shrink-0 border-t border-grayScale-200 bg-grayScale-50/80 px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-grayScale-500">
                 <span>
                   Showing {pageStart}–{pageEnd} of {totalCount}
                 </span>
@@ -301,8 +303,8 @@ export function QuestionTypeDefinitionPracticesDialog({
                 </Button>
               </div>
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   )

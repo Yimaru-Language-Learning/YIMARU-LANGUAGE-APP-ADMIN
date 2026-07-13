@@ -718,7 +718,7 @@ export function LessonPracticesPage() {
               ? " The practice will be unlinked until you attach it again. Questions are kept."
               : " Other locations are unaffected."}
           </p>
-          <DialogFooter>
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button
               type="button"
               variant="outline"
@@ -754,7 +754,7 @@ export function LessonPracticesPage() {
             </span>{" "}
             and all of its questions will be deleted. This cannot be undone.
           </p>
-          <DialogFooter>
+          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
             <Button
               type="button"
               variant="outline"

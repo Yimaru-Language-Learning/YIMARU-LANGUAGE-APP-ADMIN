@@ -1099,7 +1099,7 @@ export function PracticeDetailsPage() {
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={savePracticeLoading}>
               Cancel
             </Button>
@@ -1120,7 +1120,7 @@ export function PracticeDetailsPage() {
             This permanently removes the practice for this {parentTabCopy[parentTab].label.toLowerCase()}. The linked
             question set may remain unless you remove it separately.
           </p>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
             <Button
               type="button"
               variant="outline"

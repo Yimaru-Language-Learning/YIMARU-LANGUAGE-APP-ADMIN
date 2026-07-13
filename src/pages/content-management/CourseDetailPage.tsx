@@ -603,7 +603,7 @@ export function CourseDetailPage() {
             }}
           >
             <DialogContent className="flex max-h-[min(90vh,calc(100dvh-2rem))] max-w-lg flex-col gap-0 overflow-hidden p-0">
-              <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-12">
+              <DialogHeader className="shrink-0 space-y-1.5 border-b border-grayScale-100 px-6 pb-4 pt-6 pr-14">
                 <DialogTitle>Edit module</DialogTitle>
                 <DialogDescription>
                   Update name, description, sort order, and icon (upload or URL).

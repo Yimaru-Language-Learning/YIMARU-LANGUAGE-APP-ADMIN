@@ -364,6 +364,7 @@ export function NotificationsPage() {
 
     try {
       const resolved = await resolveNotificationDetail(notification)
+      console.log("[NotificationDetail]", resolved)
       if (!hasNotificationContent(resolved)) {
         setDetailError(true)
         toast.error("Notification not found")
@@ -496,7 +497,7 @@ export function NotificationsPage() {
                   {totalCount.toLocaleString()}
                 </p>
               </div>
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/90 text-white">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
                 <Bell className="h-5 w-5" />
               </div>
             </CardContent>
@@ -509,7 +510,7 @@ export function NotificationsPage() {
                   {globalUnread.toLocaleString()}
                 </p>
               </div>
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
                 <BellOff className="h-5 w-5" />
               </div>
             </CardContent>
@@ -522,7 +523,7 @@ export function NotificationsPage() {
                   {Array.from(new Set(notifications.map((n) => n.delivery_channel))).length || "—"}
                 </p>
               </div>
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-grayScale-50 text-grayScale-500">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">
                 <MailOpen className="h-5 w-5" />
               </div>
             </CardContent>

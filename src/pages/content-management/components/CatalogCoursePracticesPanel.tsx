@@ -286,7 +286,7 @@ export function CatalogCoursePracticesPanel({
               ? " The practice will be unlinked until re-attached."
               : " Other locations are unaffected."}
           </p>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
             <Button variant="outline" onClick={() => setPracticeToUnlink(null)} disabled={unlinking}>
               Cancel
             </Button>
@@ -309,7 +309,7 @@ export function CatalogCoursePracticesPanel({
             </span>{" "}
             and all of its questions.
           </p>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
             <Button variant="outline" onClick={() => setPracticeToDelete(null)} disabled={deleting}>
               Cancel
             </Button>

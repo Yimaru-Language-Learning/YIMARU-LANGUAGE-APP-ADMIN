@@ -1,5 +1,5 @@
 import { notifyApiError } from "../../lib/apiErrors"
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ChevronDown,
   ChevronLeft,
@@ -7,6 +7,7 @@ import {
   Copy,
   CreditCard,
   Eye,
+  MoreHorizontal,
   RefreshCw,
   Search,
   TrendingUp,
@@ -25,8 +26,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog"
 import { Input } from "../../components/ui/input"
@@ -34,6 +33,12 @@ import { Select } from "../../components/ui/select"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu"
 import {
   formatPaymentAmount,
   formatPaymentDate,
@@ -84,6 +89,11 @@ function copyText(value: string, label: string) {
   if (!value) return
   void navigator.clipboard.writeText(value)
   toast.success(`${label} copied`)
+}
+
+const PROVIDER_LOGOS: Record<string, string> = {
+  CHAPA: "https://avatars.githubusercontent.com/u/72302147?v=4",
+  ARIFPAY: "https://avatars.githubusercontent.com/u/72302147?v=4",
 }
 
 const EMPTY_PAYMENT_STATS: PaymentAggregateStats = {
@@ -487,17 +497,17 @@ export function PaymentsPage() {
             </div>
           ) : (
             <div className="min-w-0 w-full max-w-full overflow-x-auto rounded-[8px] border border-grayScale-100">
-              <table className="w-full min-w-[900px] text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-grayScale-100 bg-grayScale-50/80 text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                    <th className="whitespace-nowrap px-3 py-3 sm:px-4">Transaction</th>
-                    <th className="whitespace-nowrap px-3 py-3 sm:px-4">Customer</th>
-                    <th className="whitespace-nowrap px-3 py-3 sm:px-4">Plan</th>
-                    <th className="whitespace-nowrap px-3 py-3 sm:px-4">Amount</th>
-                    <th className="whitespace-nowrap px-3 py-3 sm:px-4">Method</th>
-                    <th className="whitespace-nowrap px-3 py-3 sm:px-4">Status</th>
-                    <th className="whitespace-nowrap px-3 py-3 sm:px-4">Paid</th>
-                    <th className="sticky right-0 z-10 whitespace-nowrap bg-grayScale-50/95 px-3 py-3 text-right sm:px-4">
+                    <th className="whitespace-nowrap px-3 py-2.5 sm:px-4">Transaction</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 sm:px-4">Customer</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 sm:px-4">Plan</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 sm:px-4">Amount</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 sm:px-4">Method</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 sm:px-4">Status</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 sm:px-4">Paid</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 text-right sm:px-4">
                       Actions
                     </th>
                   </tr>
@@ -505,71 +515,84 @@ export function PaymentsPage() {
                 <tbody className="divide-y divide-grayScale-50">
                   {payments.map((payment) => (
                     <tr key={payment.id} className="group transition-colors hover:bg-grayScale-50/60">
-                      <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4">
+                      <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
                         <p className="font-semibold text-grayScale-900">#{payment.id}</p>
-                        <p className="mt-0.5 max-w-[160px] truncate font-mono text-[11px] text-grayScale-500">
+                        <p className="mt-0.5 max-w-[140px] truncate font-mono text-[11px] text-grayScale-500">
                           {payment.transaction_id || payment.session_id || "—"}
                         </p>
                       </td>
-                      <td className="px-3 py-3 sm:px-4 sm:py-4">
-                        <p className="font-medium text-grayScale-900">
+                      <td className="px-3 py-2.5 sm:px-4">
+                        <p className="max-w-[150px] truncate font-medium text-grayScale-900">
                           {paymentCustomerName(payment)}
                         </p>
-                        <p className="mt-0.5 truncate text-xs text-grayScale-500">
+                        <p className="mt-0.5 max-w-[150px] truncate text-xs text-grayScale-500">
                           {payment.user_email || `User #${payment.user_id}`}
                         </p>
                       </td>
-                      <td className="px-3 py-3 sm:px-4 sm:py-4">
-                        <p className="max-w-[180px] truncate font-medium text-grayScale-800">
+                      <td className="px-3 py-2.5 sm:px-4">
+                        <p className="max-w-[160px] truncate font-medium text-grayScale-800">
                           {payment.plan_name || `Plan #${payment.plan_id}`}
                         </p>
-                        {payment.plan_category ? (
-                          <Badge variant="secondary" className="mt-1 text-[10px]">
+                        {payment.plan_category && (
+                          <p className="mt-0.5 truncate text-[11px] text-grayScale-400">
                             {formatPaymentPlanCategory(payment.plan_category)}
-                          </Badge>
-                        ) : null}
+                          </p>
+                        )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 font-semibold text-grayScale-900 sm:px-4 sm:py-4">
+                      <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-grayScale-900 sm:px-4">
                         {formatPaymentAmount(payment)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4">
-                        <Badge variant="info">{formatPaymentMethod(payment.payment_method)}</Badge>
+                      <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                        <div className="flex items-center gap-1.5">
+                          {PROVIDER_LOGOS[payment.payment_method?.toUpperCase()] && (
+                            <img
+                              src={PROVIDER_LOGOS[payment.payment_method.toUpperCase()]}
+                              alt=""
+                              className="h-4 w-4 rounded-full object-cover"
+                            />
+                          )}
+                          <Badge variant="info" className="text-[10px]">{formatPaymentMethod(payment.payment_method)}</Badge>
+                        </div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4">
-                        <Badge variant={paymentStatusBadgeVariant(payment.status)}>
+                      <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                        <Badge variant={paymentStatusBadgeVariant(payment.status)} className="text-[10px]">
                           {formatPaymentStatus(payment.status)}
                         </Badge>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-grayScale-600 sm:px-4 sm:py-4">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-xs text-grayScale-600 sm:px-4">
                         {formatPaymentDate(payment.paid_at ?? payment.created_at)}
                       </td>
-                      <td className="sticky right-0 z-10 whitespace-nowrap bg-white px-3 py-3 shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)] group-hover:bg-grayScale-50/60 sm:px-4 sm:py-4">
-                        <div className="flex justify-end gap-0.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 rounded-[6px] p-0 text-grayScale-500 hover:text-brand-600"
-                            aria-label="View payment details"
-                            onClick={() => setSelected(payment)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 rounded-[6px] p-0 text-grayScale-500 hover:text-brand-600"
-                            aria-label="Copy transaction ID"
-                            onClick={() =>
-                              copyText(
-                                payment.transaction_id || payment.session_id,
-                                "Transaction ID",
-                              )
-                            }
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
+                      <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
+                        <div className="flex justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 rounded-[6px] p-0 text-grayScale-400 hover:text-grayScale-700"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem onClick={() => setSelected(payment)}>
+                                <Eye className="mr-2 h-3.5 w-3.5" />
+                                View details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  copyText(
+                                    payment.transaction_id || payment.session_id,
+                                    "Transaction ID",
+                                  )
+                                }
+                              >
+                                <Copy className="mr-2 h-3.5 w-3.5" />
+                                Copy transaction ID
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -638,54 +661,99 @@ export function PaymentsPage() {
       </Card>
 
       <Dialog open={selected != null} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto rounded-[12px]">
+        <DialogContent className="max-w-lg gap-0 overflow-hidden rounded-2xl border-0 p-0 shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25)]">
           {selected ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Payment #{selected.id}</DialogTitle>
-                <DialogDescription>
-                  {formatPaymentStatus(selected.status)} · {formatPaymentAmount(selected)}
-                </DialogDescription>
-              </DialogHeader>
-              <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <Detail label="Customer" value={paymentCustomerName(selected)} />
-                <Detail label="Email" value={selected.user_email || "—"} />
-                <Detail
-                  label="User"
-                  value={
-                    <Link
-                      to={`/users/${selected.user_id}`}
-                      className="font-medium text-brand-500 hover:text-brand-600"
-                    >
-                      View user #{selected.user_id}
-                    </Link>
-                  }
-                />
-                <Detail label="Plan" value={selected.plan_name || `Plan #${selected.plan_id}`} />
-                <Detail
-                  label="Category"
-                  value={formatPaymentPlanCategory(selected.plan_category)}
-                />
-                <Detail label="Method" value={formatPaymentMethod(selected.payment_method)} />
-                <Detail label="Status" value={formatPaymentStatus(selected.status)} />
-                <Detail label="Transaction ID" value={selected.transaction_id || "—"} mono />
-                <Detail label="Session ID" value={selected.session_id || "—"} mono />
-                <Detail label="Subscription" value={`#${selected.subscription_id}`} />
-                <Detail label="Paid at" value={formatPaymentDate(selected.paid_at)} />
-                <Detail label="Expires at" value={formatPaymentDate(selected.expires_at)} />
-                <Detail label="Created" value={formatPaymentDate(selected.created_at)} />
-                <Detail label="Updated" value={formatPaymentDate(selected.updated_at)} />
-              </dl>
-              {selected.payment_url ? (
-                <a
-                  href={selected.payment_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex text-sm font-semibold text-brand-500 hover:text-brand-600"
-                >
-                  Open checkout URL
-                </a>
-              ) : null}
+              {/* Header */}
+              <div className="px-6 pt-6 pb-5 pr-14">
+                <div className="flex items-start gap-3.5">
+                  {PROVIDER_LOGOS[selected.payment_method?.toUpperCase()] ? (
+                    <img
+                      src={PROVIDER_LOGOS[selected.payment_method.toUpperCase()]}
+                      alt={formatPaymentMethod(selected.payment_method)}
+                      className="h-12 w-12 shrink-0 rounded-2xl object-cover"
+                    />
+                  ) : (
+                    <div className={cn(
+                      "grid h-12 w-12 shrink-0 place-items-center rounded-2xl",
+                      selected.status === "SUCCESS" ? "bg-green-50 text-green-600"
+                        : selected.status === "FAILED" ? "bg-red-50 text-red-600"
+                        : selected.status === "PENDING" ? "bg-amber-50 text-amber-600"
+                        : "bg-grayScale-100 text-grayScale-500",
+                    )}>
+                      <CreditCard className="h-6 w-6" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <DialogTitle className="text-base font-bold leading-snug text-grayScale-900">
+                      Payment #{selected.id}
+                    </DialogTitle>
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-grayScale-400">
+                      <Badge variant={paymentStatusBadgeVariant(selected.status)} className="text-[10px]">
+                        {formatPaymentStatus(selected.status)}
+                      </Badge>
+                      <span>·</span>
+                      <span>{formatPaymentAmount(selected)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 pb-8 pt-1">
+                {/* Amount highlight */}
+                <div className="rounded-xl bg-grayScale-50/70 px-4 py-4 text-center">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-grayScale-300">Amount</p>
+                  <p className="mt-1 text-2xl font-bold text-grayScale-900">
+                    {formatPaymentAmount(selected)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-grayScale-400">
+                    {formatPaymentMethod(selected.payment_method)}
+                  </p>
+                </div>
+
+                {/* Metadata */}
+                <div className="mt-5 space-y-0 divide-y divide-grayScale-100">
+                  {[
+                    { k: "Customer", v: paymentCustomerName(selected) },
+                    { k: "Email", v: selected.user_email || "—" },
+                    { k: "Plan", v: selected.plan_name || `Plan #${selected.plan_id}` },
+                    { k: "Category", v: formatPaymentPlanCategory(selected.plan_category) },
+                    { k: "Transaction", v: selected.transaction_id || "—", mono: true },
+                    { k: "Session", v: selected.session_id || "—", mono: true },
+                    { k: "Subscription", v: `#${selected.subscription_id}` },
+                    { k: "Paid", v: formatPaymentDate(selected.paid_at ?? selected.created_at) },
+                    ...(selected.expires_at ? [{ k: "Expires", v: formatPaymentDate(selected.expires_at) }] : []),
+                  ].map((row) => (
+                    <div key={row.k} className="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                      <span className="text-xs text-grayScale-400">{row.k}</span>
+                      {row.k === "Customer" ? (
+                        <span className="text-xs font-medium text-grayScale-600">
+                          <Link to={`/users/${selected.user_id}`} className="text-brand-500 hover:text-brand-600">
+                            {row.v}
+                          </Link>
+                        </span>
+                      ) : (
+                        <span className={cn("text-xs font-medium text-grayScale-600", row.mono && "font-mono text-[11px]")}>
+                          {row.v}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                {selected.payment_url && (
+                  <div className="mt-5 border-t border-grayScale-100 pt-4">
+                    <Button size="sm" className="h-9 rounded-lg bg-brand-600 px-4 text-xs font-medium text-white hover:bg-brand-500" asChild>
+                      <a href={selected.payment_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                        Open checkout
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
             </>
           ) : null}
         </DialogContent>
@@ -720,29 +788,5 @@ function FilterChip({
     >
       {label}
     </button>
-  )
-}
-
-function Detail({
-  label,
-  value,
-  mono,
-}: {
-  label: string
-  value: ReactNode
-  mono?: boolean
-}) {
-  return (
-    <div className="rounded-[8px] border border-grayScale-100 bg-grayScale-50/50 px-3 py-2">
-      <dt className="text-[10px] font-bold uppercase tracking-wider text-grayScale-400">{label}</dt>
-      <dd
-        className={cn(
-          "mt-0.5 font-medium text-grayScale-800 break-all",
-          mono && "font-mono text-xs",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
   )
 }

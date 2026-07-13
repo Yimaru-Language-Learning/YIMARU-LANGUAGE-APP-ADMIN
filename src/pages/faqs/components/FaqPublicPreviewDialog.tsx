@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
@@ -63,26 +62,30 @@ export function FaqPublicPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5 text-brand-500" />
-            Preview as learner
-          </DialogTitle>
-          <DialogDescription>
-            Published FAQs from GET /faqs (ACTIVE only, no authentication).
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-hidden p-0">
+        <div className="flex items-center gap-3 border-b border-grayScale-100 px-6 py-5 pr-14">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-brand-100/60">
+            <Eye className="h-5 w-5 text-brand-600" />
+          </div>
+          <div>
+            <DialogTitle className="text-[15px] font-semibold text-grayScale-900">
+              Preview as learner
+            </DialogTitle>
+            <DialogDescription className="mt-0.5 text-xs text-grayScale-500">
+              Published FAQs from GET /faqs (ACTIVE only, no authentication).
+            </DialogDescription>
+          </div>
+        </div>
 
-        <div className="flex items-center gap-2">
-          <label htmlFor="preview-category" className="text-xs font-semibold text-grayScale-500">
+        <div className="flex items-center gap-2 px-6 pt-4">
+          <label htmlFor="preview-category" className="text-xs font-medium text-grayScale-600">
             Category
           </label>
           <select
             id="preview-category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="h-9 rounded-lg border border-grayScale-200 bg-white px-3 text-sm"
+            className="h-8 rounded-lg border border-grayScale-200 bg-white px-3 text-xs dark:border-grayScale-200 dark:bg-grayScale-100 dark:text-grayScale-900"
           >
             <option value="">All categories</option>
             {categories.map((category) => (
@@ -96,7 +99,7 @@ export function FaqPublicPreviewDialog({
           </Button>
         </div>
 
-        <div className="max-h-[55vh] space-y-4 overflow-y-auto pr-1">
+        <div className="max-h-[55vh] space-y-4 overflow-y-auto px-6 py-5">
           {loading ? (
             <div className="flex justify-center py-12">
               <SpinnerIcon className="h-6 w-6" />
@@ -118,10 +121,10 @@ export function FaqPublicPreviewDialog({
                   {rows.map((faq) => (
                     <div
                       key={faq.id}
-                      className="rounded-xl border border-grayScale-200 bg-grayScale-50 px-4 py-3"
+                      className="rounded-[8px] border border-grayScale-100 bg-grayScale-50 px-4 py-3"
                     >
-                      <p className="text-sm font-semibold text-grayScale-900">{faq.question}</p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-grayScale-600">
+                      <p className="text-sm font-medium text-grayScale-900">{faq.question}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-grayScale-600">
                         {faq.answer}
                       </p>
                     </div>

@@ -3,7 +3,7 @@ import { parseTableSlotValue } from "./dynamicTableValue"
 import {
   finalizeMatchingAnswerPayload,
   finalizeMatchingInputsPayload,
-  findMatchingInputsInFieldValues,
+  findMatchingInputsForAnswerRow,
   matchingAnswerSlotHasContent,
   matchingInputsSlotHasContent,
   parseMatchingAnswerSlotValue,
@@ -12,7 +12,7 @@ import {
 import {
   finalizeSelectMissingWordsResponsePayload,
   finalizeSelectMissingWordsStimulusPayload,
-  findSelectMissingWordsStimulusInFieldValues,
+  findSelectMissingWordsStimulusForResponseRow,
   parseSelectMissingWordsResponseSlotValue,
   parseSelectMissingWordsStimulusSlotValue,
   selectMissingWordsResponseHasContent,
@@ -192,10 +192,12 @@ function slotValueForRow(
   }
 
   if (isMatchingAnswerKind(row.kind)) {
-    const matchingInputs = findMatchingInputsInFieldValues(
+    const matchingInputs = findMatchingInputsForAnswerRow(
       fieldValues,
       stimulusRows,
       responseRows,
+      side,
+      row.id,
     )
     const fromField = parseMatchingAnswerSlotValue(rawField, matchingInputs)
     if (matchingAnswerSlotHasContent(fromField)) {
@@ -212,9 +214,12 @@ function slotValueForRow(
       }
       return { segments: [], word_bank: [], allow_reuse: false }
     }
-    const clozeStimulus = findSelectMissingWordsStimulusInFieldValues(
+    const clozeStimulus = findSelectMissingWordsStimulusForResponseRow(
       fieldValues,
       stimulusRows,
+      responseRows,
+      side,
+      row.id,
     )
     const fromField = parseSelectMissingWordsResponseSlotValue(
       rawField,

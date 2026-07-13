@@ -352,3 +352,50 @@ export function findMatchingInputsInFieldValues(
   }
   return null
 }
+
+type SchemaSideRow = {
+  side: "stimulus" | "response"
+  row: { id: string; kind: string }
+}
+
+function matchingFamilyRows(
+  stimulusSchema: { id: string; kind: string }[],
+  responseSchema: { id: string; kind: string }[],
+  kind: "MATCHING_INPUTS" | "MATCHING_ANSWER",
+): SchemaSideRow[] {
+  const want = kind
+  const out: SchemaSideRow[] = []
+  for (const row of stimulusSchema) {
+    if (row.kind.trim().toUpperCase() === want) out.push({ side: "stimulus", row })
+  }
+  for (const row of responseSchema) {
+    if (row.kind.trim().toUpperCase() === want) out.push({ side: "response", row })
+  }
+  return out
+}
+
+/**
+ * Pair the Nth MATCHING_ANSWER slot with the Nth MATCHING_INPUTS slot (schema order:
+ * stimulus then response). Falls back to first-of-kind when the positional target is empty.
+ */
+export function findMatchingInputsForAnswerRow(
+  fieldValues: Record<string, string>,
+  stimulusSchema: { id: string; kind: string }[],
+  responseSchema: { id: string; kind: string }[],
+  answerSide: "stimulus" | "response",
+  answerRowId: string,
+): MatchingInputsSlotValue | null {
+  const inputRows = matchingFamilyRows(stimulusSchema, responseSchema, "MATCHING_INPUTS")
+  const answerRows = matchingFamilyRows(stimulusSchema, responseSchema, "MATCHING_ANSWER")
+  const idx = answerRows.findIndex(
+    (x) => x.side === answerSide && x.row.id === answerRowId,
+  )
+  const target = idx >= 0 ? inputRows[idx] : undefined
+  if (target) {
+    const parsed = parseMatchingInputsSlotValue(
+      fieldValues[`${target.side}:${target.row.id}`],
+    )
+    if (matchingInputsSlotHasContent(parsed)) return parsed
+  }
+  return findMatchingInputsInFieldValues(fieldValues, stimulusSchema, responseSchema)
+}

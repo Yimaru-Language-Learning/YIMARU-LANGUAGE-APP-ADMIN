@@ -11,7 +11,7 @@ import {
 } from "./multipleChoiceSlotValue"
 import {
   defaultMatchingInputsSlotValue,
-  findMatchingInputsInFieldValues,
+  findMatchingInputsForAnswerRow,
   matchingAnswerSlotHasContent,
   matchingInputsSlotHasContent,
   parseMatchingAnswerSlotValue,
@@ -23,7 +23,7 @@ import {
 } from "./matchingSlotValue"
 import {
   defaultSelectMissingWordsStimulusSlotValue,
-  findSelectMissingWordsStimulusInFieldValues,
+  findSelectMissingWordsStimulusForResponseRow,
   parseSelectMissingWordsResponseSlotValue,
   parseSelectMissingWordsStimulusSlotValue,
   selectMissingWordsResponseHasContent,
@@ -453,15 +453,6 @@ export function validateDefinitionQuestion(
       if (!v)
         return `Question ${n}: fill required response "${row.label || row.id}" (${row.kind}).`
     }
-    const matchingInputs = findMatchingInputsInFieldValues(
-      fieldValues,
-      def.stimulus_schema,
-      def.response_schema,
-    )
-    const clozeStimulus = findSelectMissingWordsStimulusInFieldValues(
-      fieldValues,
-      def.stimulus_schema,
-    )
     for (const row of def.stimulus_schema) {
       if (isNoInputComponentKind(row.kind)) continue
       if (isMultipleChoiceKind(row.kind)) {
@@ -491,6 +482,13 @@ export function validateDefinitionQuestion(
         }
       }
       if (isMatchingAnswerKind(row.kind)) {
+        const matchingInputs = findMatchingInputsForAnswerRow(
+          fieldValues,
+          def.stimulus_schema,
+          def.response_schema,
+          "stimulus",
+          row.id,
+        )
         const val = parseMatchingAnswerSlotValue(
           fieldValues[`stimulus:${row.id}`],
           matchingInputs,
@@ -551,6 +549,13 @@ export function validateDefinitionQuestion(
         }
       }
       if (isMatchingAnswerKind(row.kind)) {
+        const matchingInputs = findMatchingInputsForAnswerRow(
+          fieldValues,
+          def.stimulus_schema,
+          def.response_schema,
+          "response",
+          row.id,
+        )
         const val = parseMatchingAnswerSlotValue(
           fieldValues[`response:${row.id}`],
           matchingInputs,
@@ -567,6 +572,13 @@ export function validateDefinitionQuestion(
         }
       }
       if (isSelectMissingWordsKind(row.kind)) {
+        const clozeStimulus = findSelectMissingWordsStimulusForResponseRow(
+          fieldValues,
+          def.stimulus_schema,
+          def.response_schema,
+          "response",
+          row.id,
+        )
         const val = parseSelectMissingWordsResponseSlotValue(
           fieldValues[`response:${row.id}`],
           clozeStimulus,

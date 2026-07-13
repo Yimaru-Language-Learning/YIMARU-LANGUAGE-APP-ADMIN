@@ -32,7 +32,7 @@ import {
   DynamicMatchingInputsSlot,
 } from "./DynamicMatchingSlotField"
 import {
-  findMatchingInputsInFieldValues,
+  findMatchingInputsForAnswerRow,
   type MatchingInputsSlotValue,
 } from "../../lib/matchingSlotValue"
 import {
@@ -41,7 +41,7 @@ import {
 } from "./DynamicSelectMissingWordsSlotField"
 import { DynamicSequenceOrderSlot } from "./DynamicSequenceOrderSlotField"
 import {
-  findSelectMissingWordsStimulusInFieldValues,
+  findSelectMissingWordsStimulusForResponseRow,
   type SelectMissingWordsStimulusValue,
 } from "../../lib/selectMissingWordsSlotValue"
 
@@ -643,11 +643,14 @@ function DynamicMultipleChoiceSlot({
   onChange,
   disabled,
   slotLabel: label,
+  groupName,
 }: {
   value: string
   onChange: (next: string) => void
   disabled: boolean
   slotLabel: string
+  /** Unique radio group name so multiple OPTION/MCQ slots do not share one Correct selection. */
+  groupName: string
 }) {
   const parsed = parseMultipleChoiceSlotValue(value)
 
@@ -700,7 +703,7 @@ function DynamicMultipleChoiceSlot({
             <label className="flex shrink-0 items-center gap-2 text-sm text-grayScale-600">
               <input
                 type="radio"
-                name={`mcq-correct-${label}`}
+                name={groupName}
                 checked={option.is_correct}
                 disabled={disabled}
                 onChange={() => {
@@ -861,17 +864,22 @@ export function DynamicSchemaSlotField({
   const fieldLabel = `${slotLabel(row)}${row.required ? " *" : ""}`
   const matchingInputs: MatchingInputsSlotValue | null =
     mode === "matching_answer" && allFieldValues
-      ? findMatchingInputsInFieldValues(
+      ? findMatchingInputsForAnswerRow(
           allFieldValues,
           stimulusSchema,
           responseSchema,
+          side,
+          row.id,
         )
       : null
   const clozeStimulus: SelectMissingWordsStimulusValue | null =
     mode === "select_missing_words_answer" && allFieldValues
-      ? findSelectMissingWordsStimulusInFieldValues(
+      ? findSelectMissingWordsStimulusForResponseRow(
           allFieldValues,
           stimulusSchema,
+          responseSchema,
+          side,
+          row.id,
         )
       : null
 
@@ -915,6 +923,7 @@ export function DynamicSchemaSlotField({
         onChange={onChange}
         disabled={disabled}
         slotLabel={fieldLabel}
+        groupName={`mcq-correct-${side}-${row.id}`}
       />
     )
   }

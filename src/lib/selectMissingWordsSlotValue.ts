@@ -516,3 +516,31 @@ export function findSelectMissingWordsStimulusInFieldValues(
   }
   return null
 }
+
+/**
+ * Pair the Nth response SELECT_MISSING_WORDS with the Nth stimulus SELECT_MISSING_WORDS.
+ * Falls back to first-of-kind when the positional target is empty.
+ */
+export function findSelectMissingWordsStimulusForResponseRow(
+  fieldValues: Record<string, string>,
+  stimulusSchema: { id: string; kind: string }[],
+  responseSchema: { id: string; kind: string }[],
+  responseSide: "stimulus" | "response",
+  responseRowId: string,
+): SelectMissingWordsStimulusValue | null {
+  const isCloze = (k: string) => k.trim().toUpperCase() === "SELECT_MISSING_WORDS"
+  const stimulusClozes = stimulusSchema.filter((r) => isCloze(r.kind))
+  const responseClozes = responseSchema.filter((r) => isCloze(r.kind))
+  const idx =
+    responseSide === "response"
+      ? responseClozes.findIndex((r) => r.id === responseRowId)
+      : -1
+  const target = idx >= 0 ? stimulusClozes[idx] : undefined
+  if (target) {
+    const parsed = parseSelectMissingWordsStimulusSlotValue(
+      fieldValues[`stimulus:${target.id}`],
+    )
+    if (selectMissingWordsStimulusHasContent(parsed)) return parsed
+  }
+  return findSelectMissingWordsStimulusInFieldValues(fieldValues, stimulusSchema)
+}

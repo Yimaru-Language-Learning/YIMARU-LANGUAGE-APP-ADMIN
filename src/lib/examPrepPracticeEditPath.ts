@@ -279,5 +279,6 @@ export async function resolveExamPrepPracticeEditPath(
     if (path) return path
   }
 
-  return null
+  // Unlinked exam-prep shell — no hierarchy route; open the standalone editor.
+  return `/new-content/practices/${working.practice_id}/edit?kind=EXAM_PREP&backTo=question-types`
 }

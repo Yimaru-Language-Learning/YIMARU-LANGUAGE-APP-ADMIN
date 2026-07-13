@@ -74,11 +74,18 @@ export function EditPracticeFlow() {
   const practiceId = routePracticeId ? Number(routePracticeId) : NaN;
   const validPracticeId = Number.isFinite(practiceId) && practiceId > 0;
 
-  const isExamPrep = Boolean(programType?.trim());
+  const kindParam = (searchParams.get("kind") || "").trim().toUpperCase();
+  /** Edit opened without a hierarchy URL (e.g. unlinked practice from question-type list). */
+  const isStandalonePracticeEdit =
+    !level?.trim() && !programType?.trim() && !routeCourseId?.trim();
+  const isExamPrep =
+    kindParam === "EXAM_PREP" ||
+    (Boolean(programType?.trim()) && kindParam !== "LMS");
   const lessonId = routeLessonId ?? searchParams.get("lessonId");
 
   const effectiveBackTo = useMemo(() => {
     if (backToParam?.trim()) return backToParam.trim();
+    if (isStandalonePracticeEdit) return "question-types";
     if (routeLessonId) return "lesson";
     if (isExamPrep && routeModuleId) return "module";
     if (isExamPrep && routeUnitId && !routeModuleId) return "unit";
@@ -88,6 +95,7 @@ export function EditPracticeFlow() {
     return null;
   }, [
     backToParam,
+    isStandalonePracticeEdit,
     routeLessonId,
     isExamPrep,
     routeModuleId,
@@ -118,6 +126,8 @@ export function EditPracticeFlow() {
   const isCourseContext =
     effectiveBackTo === "courses" || effectiveBackTo === "modules";
   const isLessonContext = effectiveBackTo === "lesson" || Boolean(routeLessonId);
+  /** Allow optional parents when editing an unlinked shell (or exam-prep). */
+  const parentsOptional = isExamPrep || isStandalonePracticeEdit;
   const isLessonPractice = useMemo(() => {
     const lid = lessonId ? Number(lessonId) : NaN;
     return Number.isFinite(lid) && lid > 0;
@@ -155,7 +165,9 @@ export function EditPracticeFlow() {
       : null;
 
   const backLabel =
-    effectiveBackTo === "lesson"
+    effectiveBackTo === "question-types"
+      ? "Back to Question Types"
+      : effectiveBackTo === "lesson"
       ? "Back to lesson practices"
       : effectiveBackTo === "module"
         ? "Back to Module"
@@ -170,6 +182,9 @@ export function EditPracticeFlow() {
               : "Back to Courses";
 
   const backPath = useMemo(() => {
+    if (effectiveBackTo === "question-types" || isStandalonePracticeEdit) {
+      return "/new-content/question-types";
+    }
     if (isExamPrep) {
       if (routeLessonId && programType && courseId && unitId && moduleId) {
         const title = lessonTitleRaw
@@ -210,6 +225,7 @@ export function EditPracticeFlow() {
     if (level) return `/new-content/learn-english/${level}/courses`;
     return "/new-content";
   }, [
+    isStandalonePracticeEdit,
     isExamPrep,
     routeLessonId,
     programType,
@@ -441,7 +457,9 @@ export function EditPracticeFlow() {
       (lessonId ? `Lesson ${lessonId} practice` : "Lesson practice");
 
     if (!isExamPrep) {
-      const parentsErr = validatePracticeParents(formData.parents);
+      const parentsErr = validatePracticeParents(formData.parents, {
+        required: !parentsOptional,
+      });
       if (parentsErr) {
         toast.error("Check practice locations", { description: parentsErr });
         return;
@@ -543,7 +561,8 @@ export function EditPracticeFlow() {
       isModuleContext ||
       isCourseContext ||
       isLessonContext ||
-      isUnitContext;
+      isUnitContext ||
+      isStandalonePracticeEdit;
 
     if (useContextStep) {
       switch (currentStep) {
@@ -559,8 +578,8 @@ export function EditPracticeFlow() {
               parentSummary={reviewParentSummary}
               showParentsEditor={!isLearnEnglishLessonPractice}
               isExamPrepParents={isExamPrep}
-              parentsOptional={isExamPrep}
-              parentsCollapsedDefault={isExamPrep}
+              parentsOptional={parentsOptional}
+              parentsCollapsedDefault={parentsOptional}
               practiceId={practiceId}
               onParentsUnlinked={(parents) => {
                 setFormData((fd) => ({ ...fd, parents }));
@@ -617,6 +636,7 @@ export function EditPracticeFlow() {
               parentSummary={reviewParentSummary}
               typeDefinitions={typeDefinitions}
               canPublish
+              allowUnlinkedParents={isStandalonePracticeEdit}
               submitting={submitting}
               onSaveDraft={() => void submitPractice("DRAFT")}
               onPublish={() => void submitPractice("PUBLISHED")}
@@ -681,6 +701,7 @@ export function EditPracticeFlow() {
             parentSummary={parentSummary}
             typeDefinitions={typeDefinitions}
             canPublish
+            allowUnlinkedParents={isStandalonePracticeEdit}
             submitting={submitting}
             onSaveDraft={() => void submitPractice("DRAFT")}
             onPublish={() => void submitPractice("PUBLISHED")}

@@ -104,7 +104,10 @@ export function QuestionTypeDefinitionPracticesDialog({
     try {
       const path = await resolveQuestionTypeDefinitionPracticeEditPath(practice)
       if (!path) {
-        notifyApiError(e, "Could not open practice editor")
+        toast.error("Could not open practice editor", {
+          description:
+            "This practice has no editable location yet. Try again or open it from Content after attaching it.",
+        })
         return
       }
       onOpenChange(false)

@@ -336,7 +336,8 @@ async function resolveLearnEnglishPath(
     if (path) return path
   }
 
-  return null
+  // Unlinked LMS shell — no hierarchy route; open the standalone editor.
+  return `/new-content/practices/${working.practice_id}/edit?kind=LMS&backTo=question-types`
 }
 
 /**

@@ -197,6 +197,10 @@ export function AppRoutes() {
           element={<AddPracticeFlow />}
         />
         <Route
+          path="/new-content/practices/:practiceId/edit"
+          element={<EditPracticeFlow />}
+        />
+        <Route
           path="/new-content/question-types/:definitionId/edit"
           element={<CreateQuestionTypeFlow />}
         />

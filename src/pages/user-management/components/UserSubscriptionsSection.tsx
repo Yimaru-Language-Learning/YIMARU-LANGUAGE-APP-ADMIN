@@ -19,7 +19,7 @@ import {
   isLearnerRole,
   SUBSCRIPTION_ADMIN_PERMISSIONS,
 } from "../../../lib/subscriptionAdminPermissions"
-import { formatPlanCategory } from "../../../lib/subscriptionPlans"
+import { formatPlanCategory, isLifetimeExpiry, isLifetimePlanCategory } from "../../../lib/subscriptionPlans"
 import { cn } from "../../../lib/utils"
 import type { UserSubscriptionRecord, UserSubscriptionsData } from "../../../types/userAdmin.types"
 import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog"
@@ -29,6 +29,7 @@ import { GrantSubscriptionDialog } from "./GrantSubscriptionDialog"
 function formatPlanTitle(subscription: UserSubscriptionRecord): string {
   const name = subscription.plan_name?.trim()
   if (name) return name
+  if (isLifetimePlanCategory(subscription.plan_category)) return "One-time"
   if (subscription.duration_value && subscription.duration_unit) {
     const unit = subscription.duration_unit.toLowerCase().replace(/s$/, "")
     const plural = subscription.duration_value === 1 ? unit : `${unit}s`
@@ -37,7 +38,8 @@ function formatPlanTitle(subscription: UserSubscriptionRecord): string {
   return NOT_ASSIGNED_LABEL
 }
 
-function formatExpiryDate(value?: string | null): string {
+function formatExpiryDate(value?: string | null, category?: string | null): string {
+  if (isLifetimePlanCategory(category) || isLifetimeExpiry(value)) return "Never expires"
   if (!value?.trim()) return NOT_ASSIGNED_LABEL
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return NOT_ASSIGNED_LABEL
@@ -61,12 +63,17 @@ function formatDateTime(value?: string | null): string {
   })
 }
 
-function getDaysLeft(expiresAt?: string | null): number | null {
+function getDaysLeft(expiresAt?: string | null, category?: string | null): number | null {
+  if (isLifetimePlanCategory(category) || isLifetimeExpiry(expiresAt)) return null
   if (!expiresAt?.trim()) return null
   const expires = new Date(expiresAt)
   if (Number.isNaN(expires.getTime())) return null
   const ms = expires.getTime() - Date.now()
   return Math.ceil(ms / 86_400_000)
+}
+
+function canExtendSubscription(subscription: UserSubscriptionRecord): boolean {
+  return !isLifetimePlanCategory(subscription.plan_category) && !isLifetimeExpiry(subscription.expires_at)
 }
 
 function formatDaysLeftLabel(daysLeft: number): string {
@@ -138,11 +145,12 @@ function SubscriptionManageCard({
   onGrant: () => void
   onCancel: () => void
 }) {
-  const daysLeft = getDaysLeft(subscription.expires_at)
+  const daysLeft = getDaysLeft(subscription.expires_at, subscription.plan_category)
   const statusUpper = subscription.status.toUpperCase()
   const isActive = subscription.is_currently_active || statusUpper === "ACTIVE"
   const statusTone = isActive ? "active" : statusUpper === "PENDING" ? "pending" : "inactive"
-  const extendEnabled = canExtend && hasActiveSubscription && isActive
+  const isLifetime = !canExtendSubscription(subscription)
+  const extendEnabled = canExtend && hasActiveSubscription && isActive && !isLifetime
   const cancelEnabled = canCancel && hasActiveSubscription && isActive && statusUpper !== "CANCELLED"
   const markAsPaidEnabled = canGrant && !hasActiveSubscription
 
@@ -168,7 +176,7 @@ function SubscriptionManageCard({
             <p className="text-xs font-medium text-grayScale-400">Expires On</p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-lg font-bold tracking-tight text-grayScale-900">
-                {formatExpiryDate(subscription.expires_at)}
+                {formatExpiryDate(subscription.expires_at, subscription.plan_category)}
               </p>
               {daysLeft != null ? (
                 <span
@@ -190,7 +198,7 @@ function SubscriptionManageCard({
       </div>
 
       <div className="mt-6 flex flex-col gap-2">
-        {canExtend ? (
+        {canExtend && !isLifetime ? (
           <Button
             type="button"
             className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
@@ -469,7 +477,7 @@ export function UserSubscriptionsSection({
                               </p>
                               <p className="text-xs text-grayScale-500">
                                 {formatPlanCategory(subscription.plan_category)} ·{" "}
-                                {formatExpiryDate(subscription.expires_at)}
+                                {formatExpiryDate(subscription.expires_at, subscription.plan_category)}
                               </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
@@ -481,7 +489,7 @@ export function UserSubscriptionsSection({
                                     : "inactive"
                                 }
                               />
-                              {canExtend ? (
+                              {canExtend && canExtendSubscription(subscription) ? (
                                 <Button
                                   type="button"
                                   variant="outline"

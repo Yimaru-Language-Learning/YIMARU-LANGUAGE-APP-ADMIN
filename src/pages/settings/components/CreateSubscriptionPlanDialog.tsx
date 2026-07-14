@@ -17,8 +17,9 @@ import { Select } from "../../../components/ui/select"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 import { Textarea } from "../../../components/ui/textarea"
 import { ToggleSwitch } from "../../../components/ui/toggle-switch"
-import { cn } from "../../../lib/utils"
 import {
+  isLifetimePlanCategory,
+  LIFETIME_DURATION_DEFAULT,
   SUBSCRIPTION_CURRENCIES,
   SUBSCRIPTION_DURATION_UNITS,
   SUBSCRIPTION_PLAN_CATEGORIES,
@@ -55,8 +56,12 @@ export const EMPTY_SUBSCRIPTION_PLAN_DRAFT: CreateSubscriptionPlanDraft = {
 function draftToPayload(draft: CreateSubscriptionPlanDraft): CreateSubscriptionPlanPayload | null {
   const name = draft.name.trim()
   const description = draft.description.trim()
-  const duration_value = Number(draft.duration_value)
   const price = Number(draft.price)
+  const isLifetime = isLifetimePlanCategory(draft.category)
+  const duration_value = isLifetime
+    ? LIFETIME_DURATION_DEFAULT.duration_value
+    : Number(draft.duration_value)
+  const duration_unit = isLifetime ? LIFETIME_DURATION_DEFAULT.duration_unit : draft.duration_unit
 
   if (!name) return null
   if (!description) return null
@@ -68,7 +73,7 @@ function draftToPayload(draft: CreateSubscriptionPlanDraft): CreateSubscriptionP
     description,
     category: draft.category,
     duration_value,
-    duration_unit: draft.duration_unit,
+    duration_unit,
     price,
     currency: draft.currency,
     is_active: draft.is_active,
@@ -95,6 +100,8 @@ export function CreateSubscriptionPlanDialog({
       setSaving(false)
     }
   }, [open])
+
+  const isLifetime = isLifetimePlanCategory(draft.category)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -167,9 +174,19 @@ export function CreateSubscriptionPlanDialog({
               </label>
               <Select
                 value={draft.category}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, category: e.target.value as SubscriptionPlanCategory }))
-                }
+                onChange={(e) => {
+                  const category = e.target.value as SubscriptionPlanCategory
+                  setDraft((d) => ({
+                    ...d,
+                    category,
+                    ...(isLifetimePlanCategory(category)
+                      ? {
+                          duration_value: String(LIFETIME_DURATION_DEFAULT.duration_value),
+                          duration_unit: LIFETIME_DURATION_DEFAULT.duration_unit,
+                        }
+                      : {}),
+                  }))
+                }}
                 className="rounded-[6px]"
               >
                 {SUBSCRIPTION_PLAN_CATEGORIES.map((opt) => (
@@ -180,43 +197,55 @@ export function CreateSubscriptionPlanDialog({
               </Select>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                  Duration <span className="text-destructive">*</span>
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={draft.duration_value}
-                  onChange={(e) => setDraft((d) => ({ ...d, duration_value: e.target.value }))}
-                  className="rounded-[6px]"
-                  required
-                />
+            {isLifetime ? (
+              <div className="rounded-[8px] border border-grayScale-100 bg-grayScale-50/50 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
+                  Duration
+                </p>
+                <p className="mt-1 text-sm font-medium text-grayScale-800">One-time · Never expires</p>
+                <p className="mt-0.5 text-xs text-grayScale-500">
+                  IELTS and Duolingo packages are one-time purchases with lifetime access.
+                </p>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                  Duration unit
-                </label>
-                <Select
-                  value={draft.duration_unit}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      duration_unit: e.target.value as SubscriptionPlanDurationUnit,
-                    }))
-                  }
-                  className="rounded-[6px]"
-                >
-                  {SUBSCRIPTION_DURATION_UNITS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </Select>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
+                    Duration <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={draft.duration_value}
+                    onChange={(e) => setDraft((d) => ({ ...d, duration_value: e.target.value }))}
+                    className="rounded-[6px]"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
+                    Duration unit
+                  </label>
+                  <Select
+                    value={draft.duration_unit}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        duration_unit: e.target.value as SubscriptionPlanDurationUnit,
+                      }))
+                    }
+                    className="rounded-[6px]"
+                  >
+                    {SUBSCRIPTION_DURATION_UNITS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">

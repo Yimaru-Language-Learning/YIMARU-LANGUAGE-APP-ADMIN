@@ -14,6 +14,27 @@ export const SUBSCRIPTION_PLAN_CATEGORIES: {
   { value: "DUOLINGO", label: "Duolingo" },
 ]
 
+export const LIFETIME_SUBSCRIPTION_CATEGORIES: SubscriptionPlanCategory[] = ["IELTS", "DUOLINGO"]
+
+export const LIFETIME_DURATION_DEFAULT = {
+  duration_value: 1,
+  duration_unit: "YEAR" as SubscriptionPlanDurationUnit,
+}
+
+export function isLifetimePlanCategory(category: string | null | undefined): boolean {
+  if (!category) return false
+  const normalized = category.trim().toUpperCase()
+  return LIFETIME_SUBSCRIPTION_CATEGORIES.includes(normalized as SubscriptionPlanCategory)
+}
+
+/** True when expires_at is the far-future lifetime sentinel (year >= 9000). */
+export function isLifetimeExpiry(expiresAt: string | null | undefined): boolean {
+  if (!expiresAt?.trim()) return false
+  const d = new Date(expiresAt)
+  if (Number.isNaN(d.getTime())) return false
+  return d.getUTCFullYear() >= 9000
+}
+
 export const SUBSCRIPTION_DURATION_UNITS: {
   value: SubscriptionPlanDurationUnit
   label: string
@@ -26,7 +47,10 @@ export const SUBSCRIPTION_DURATION_UNITS: {
 
 export const SUBSCRIPTION_CURRENCIES = ["ETB", "USD"] as const
 
-export function formatPlanDuration(plan: Pick<SubscriptionPlan, "duration_value" | "duration_unit">): string {
+export function formatPlanDuration(
+  plan: Pick<SubscriptionPlan, "duration_value" | "duration_unit"> & { category?: string },
+): string {
+  if (plan.category && isLifetimePlanCategory(plan.category)) return "One-time"
   const v = plan.duration_value
   const u = String(plan.duration_unit).toUpperCase()
   const word =

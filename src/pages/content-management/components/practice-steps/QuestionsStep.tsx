@@ -1031,6 +1031,7 @@ export function QuestionsStep({
               questionText: String(row.text ?? "").trim(),
               questionTypeDefinitionId: Number(row.questionTypeDefinitionId),
               dynamicFieldValues: { ...(row.dynamicFieldValues ?? {}) },
+              sourceDynamicPayload: row.sourceDynamicPayload ?? null,
               displayOrder: row.displayOrder,
               associatedQuestionId: row.associatedQuestionId ?? null,
               associatedAnchorRowId: row.associatedAnchorRowId ?? null,

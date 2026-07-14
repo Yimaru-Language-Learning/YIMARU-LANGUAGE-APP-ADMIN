@@ -1,5 +1,5 @@
 import type { CreateQuestionRequest, QuestionOption } from "../types/course.types"
-import type { QuestionTypeDefinition } from "../types/questionTypeDefinition.types"
+import type { QuestionTypeDefinition, DynamicQuestionPayload } from "../types/questionTypeDefinition.types"
 import { createEmptyTable, serializeTableSlotValue } from "./dynamicTableValue"
 import { buildDynamicQuestionPayload } from "./practiceDynamicQuestionPayload"
 import {
@@ -188,6 +188,8 @@ export interface LearnEnglishDefinitionQuestionInput {
   questionText: string
   questionTypeDefinitionId: number
   dynamicFieldValues: Record<string, string>
+  /** Original payload from API — used to preserve slot kinds when rebuilding on edit. */
+  sourceDynamicPayload?: DynamicQuestionPayload | null
   difficultyLevel?: QuestionDifficultyLevel
   points?: number
   associatedQuestionId?: number | null
@@ -346,6 +348,7 @@ export function buildCreateQuestionFromDefinition(
       responseRows: def.response_schema.map((r) => ({ id: r.id, kind: r.kind })),
       fieldValues,
       mcqOptions: q.mcqOptions,
+      existingPayload: q.sourceDynamicPayload ?? null,
     })
     return {
       question_type: "DYNAMIC",

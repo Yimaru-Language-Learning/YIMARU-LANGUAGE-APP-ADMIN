@@ -1,4 +1,4 @@
-import type { DynamicQuestionPayload } from "../types/questionTypeDefinition.types"
+import type { DynamicQuestionPayload, DynamicElementInstance } from "../types/questionTypeDefinition.types"
 import { parseTableSlotValue } from "./dynamicTableValue"
 import {
   finalizeMatchingAnswerPayload,
@@ -69,6 +69,51 @@ const MEDIA_URL_KINDS = new Set([
 function isSecondsKind(kind: string): boolean {
   const upper = kind.trim().toUpperCase()
   return upper === "PREP_TIME" || upper === "ANSWER_TIMER"
+}
+
+function isTimerValueShape(value: unknown): boolean {
+  if (value == null) return false
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return true
+  if (typeof value === "string") {
+    const t = value.trim()
+    if (/^\d+$/.test(t)) return true
+    if (t.startsWith("{") && t.includes("seconds")) return true
+  }
+  if (typeof value === "object" && !Array.isArray(value) && "seconds" in value) return true
+  return false
+}
+
+function resolveRowKind(
+  row: { id: string; kind: string },
+  side: "stimulus" | "response",
+  existingPayload?: DynamicQuestionPayload | null,
+): string {
+  const fromRow = row.kind?.trim()
+  if (fromRow) return fromRow
+  const slots = side === "stimulus" ? existingPayload?.stimulus : existingPayload?.response
+  const fromPayload = slots?.find((slot) => slot.id === row.id)?.kind?.trim()
+  return fromPayload ?? fromRow ?? ""
+}
+
+function mergeSchemaRowsWithPayload(
+  schemaRows: { id: string; kind: string }[],
+  payloadSlots: DynamicElementInstance[] | undefined,
+): { id: string; kind: string }[] {
+  const merged = schemaRows.map((row) => ({ ...row }))
+  const byId = new Map(merged.map((row) => [row.id, row]))
+  for (const slot of payloadSlots ?? []) {
+    const id = slot.id?.trim()
+    if (!id) continue
+    const existing = byId.get(id)
+    if (existing) {
+      if (!existing.kind?.trim() && slot.kind?.trim()) {
+        existing.kind = slot.kind.trim()
+      }
+      continue
+    }
+    merged.push({ id, kind: slot.kind?.trim() ?? "" })
+  }
+  return merged
 }
 
 function isTableKind(kind: string): boolean {
@@ -147,23 +192,25 @@ function slotValueForRow(
   mcqOptionsConsumed: { current: boolean },
   stimulusRows: { id: string; kind: string }[],
   responseRows: { id: string; kind: string }[],
+  existingPayload?: DynamicQuestionPayload | null,
 ): unknown {
   const fieldKey = `${side}:${row.id}`
   const rawField = fieldValues[fieldKey]
-  const upperKind = row.kind.trim().toUpperCase()
+  const effectiveKind = resolveRowKind(row, side, existingPayload)
+  const upperKind = effectiveKind.trim().toUpperCase()
 
-  if (isSecondsKind(row.kind)) {
+  if (isSecondsKind(effectiveKind)) {
     return finalizeSecondsPayload(rawField)
   }
 
-  if (isTableKind(row.kind)) {
+  if (isTableKind(effectiveKind)) {
     const t = (rawField ?? "").trim()
     if (!t) return { columns: [], rows: [] }
     const table = parseTableSlotValue(rawField)
     return { columns: table.columns, rows: table.rows }
   }
 
-  if (isMultipleChoiceKind(row.kind)) {
+  if (isMultipleChoiceKind(effectiveKind)) {
     const fromField = parseMultipleChoiceSlotValue(rawField)
     if (multipleChoiceSlotHasContent(fromField)) {
       return {
@@ -183,7 +230,7 @@ function slotValueForRow(
     return { options: [] }
   }
 
-  if (isMatchingInputsKind(row.kind)) {
+  if (isMatchingInputsKind(effectiveKind)) {
     const fromField = parseMatchingInputsSlotValue(rawField)
     if (matchingInputsSlotHasContent(fromField)) {
       return finalizeMatchingInputsPayload(fromField)
@@ -191,7 +238,7 @@ function slotValueForRow(
     return { left: [], right: [] }
   }
 
-  if (isMatchingAnswerKind(row.kind)) {
+  if (isMatchingAnswerKind(effectiveKind)) {
     const matchingInputs = findMatchingInputsForAnswerRow(
       fieldValues,
       stimulusRows,
@@ -206,7 +253,7 @@ function slotValueForRow(
     return { pairs: [] }
   }
 
-  if (isSelectMissingWordsKind(row.kind)) {
+  if (isSelectMissingWordsKind(effectiveKind)) {
     if (side === "stimulus") {
       const fromField = parseSelectMissingWordsStimulusSlotValue(rawField)
       if (selectMissingWordsStimulusHasContent(fromField)) {
@@ -231,7 +278,7 @@ function slotValueForRow(
     return { blanks: [] }
   }
 
-  if (isSequenceOrderKind(row.kind)) {
+  if (isSequenceOrderKind(effectiveKind)) {
     const fromField = parseSequenceOrderSlotValue(rawField)
     if (sequenceOrderSlotHasContent(fromField)) {
       return finalizeSequenceOrderPayload(fromField)
@@ -248,10 +295,9 @@ function slotValueForRow(
 }
 
 export function slotApiValueToFieldString(value: unknown, kind: string): string {
-  const upperKind = kind.trim().toUpperCase()
   if (value == null) return ""
 
-  if (isSecondsKind(kind)) {
+  if (isSecondsKind(kind) || (!kind.trim() && isTimerValueShape(value))) {
     const seconds = extractSecondsForField(value)
     // Plain digits in the form; buildDynamicQuestionPayload rewraps to { seconds }.
     return seconds == null ? "" : String(seconds)
@@ -285,38 +331,49 @@ export function buildDynamicQuestionPayload(input: {
   responseRows: { id: string; kind: string }[]
   fieldValues: Record<string, string>
   mcqOptions?: { option_text: string; is_correct: boolean }[]
+  existingPayload?: DynamicQuestionPayload | null
 }): DynamicQuestionPayload {
   const mcqOptionsConsumed = { current: false }
+  const stimulusRows = mergeSchemaRowsWithPayload(
+    input.stimulusRows,
+    input.existingPayload?.stimulus,
+  )
+  const responseRows = mergeSchemaRowsWithPayload(
+    input.responseRows,
+    input.existingPayload?.response,
+  )
 
   return {
-    stimulus: input.stimulusRows
-      .filter((row) => !isNoInputComponentKind(row.kind))
+    stimulus: stimulusRows
+      .filter((row) => !isNoInputComponentKind(resolveRowKind(row, "stimulus", input.existingPayload)))
       .map((row) => ({
         id: row.id,
-        kind: row.kind,
+        kind: resolveRowKind(row, "stimulus", input.existingPayload),
         value: slotValueForRow(
           row,
           "stimulus",
           input.fieldValues,
           input.mcqOptions,
           mcqOptionsConsumed,
-          input.stimulusRows,
-          input.responseRows,
+          stimulusRows,
+          responseRows,
+          input.existingPayload,
         ),
       })),
-    response: input.responseRows
-      .filter((row) => !isNoInputComponentKind(row.kind))
+    response: responseRows
+      .filter((row) => !isNoInputComponentKind(resolveRowKind(row, "response", input.existingPayload)))
       .map((row) => ({
         id: row.id,
-        kind: row.kind,
+        kind: resolveRowKind(row, "response", input.existingPayload),
         value: slotValueForRow(
           row,
           "response",
           input.fieldValues,
           input.mcqOptions,
           mcqOptionsConsumed,
-          input.stimulusRows,
-          input.responseRows,
+          stimulusRows,
+          responseRows,
+          input.existingPayload,
         ),
       })),
   }

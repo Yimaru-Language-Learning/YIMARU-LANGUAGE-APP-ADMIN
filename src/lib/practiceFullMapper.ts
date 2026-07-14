@@ -60,6 +60,7 @@ export interface PracticeFormQuestionRow {
   difficultyLevel: "EASY" | "MEDIUM" | "HARD"
   points: number
   dynamicFieldValues: Record<string, string>
+  sourceDynamicPayload?: DynamicQuestionPayload | null
   mcqOptions: { text: string; isCorrect: boolean }[]
   trueFalseCorrect: boolean
   shortAnswers: string[]
@@ -560,6 +561,7 @@ function mapFullQuestionToFormRow(
       ? Number(q.points)
       : 1,
     dynamicFieldValues,
+    sourceDynamicPayload: q.dynamic_payload ?? null,
     mcqOptions,
     trueFalseCorrect,
     shortAnswers,

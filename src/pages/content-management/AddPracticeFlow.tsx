@@ -397,6 +397,7 @@ export function AddPracticeFlow() {
         associatedAnchorRowId: q.associatedAnchorRowId ?? null,
         stimulusBlockKey: q.stimulusBlockKey ?? null,
         dynamicFieldValues: { ...(q.dynamicFieldValues ?? {}) },
+        sourceDynamicPayload: q.sourceDynamicPayload ?? null,
         mcqOptions: (q.mcqOptions ?? []).map(
           (o: { text?: string; isCorrect?: boolean }) => ({
             option_text: String(o.text ?? ""),

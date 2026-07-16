@@ -32,8 +32,6 @@ import {
   slotApiValueToFieldString,
 } from "./practiceDynamicQuestionPayload"
 import {
-  filterQuestionStimulusForBlock,
-  getBlockStimulusByKey,
   isIeltsSharedStimulusMode,
   mapApiStimulusBlocksToForm,
   mapFormStimulusBlocksToApi,
@@ -682,12 +680,7 @@ function buildFullUpdateQuestion(
     item.question_type_definition_id = created.question_type_definition_id
   }
   if (created.dynamic_payload) {
-    item.dynamic_payload = q.stimulusBlockKey?.trim()
-      ? filterQuestionStimulusForBlock(
-          created.dynamic_payload,
-          q.dynamicFieldValues ?? {},
-        )
-      : created.dynamic_payload
+    item.dynamic_payload = created.dynamic_payload
   }
   if (q.stimulusBlockKey?.trim()) {
     item.stimulus_block_key = q.stimulusBlockKey.trim()

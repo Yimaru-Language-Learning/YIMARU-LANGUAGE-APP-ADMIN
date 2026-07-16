@@ -5,7 +5,6 @@ import type {
   QuestionTypeDefinition,
 } from "../types/questionTypeDefinition.types"
 import { buildDynamicQuestionPayload } from "./practiceDynamicQuestionPayload"
-import { dynamicPayloadToFieldValues } from "./practiceDynamicQuestionPayload"
 import {
   validateDefinitionQuestion,
   questionRowHasContent,
@@ -178,76 +177,10 @@ export function mergeEffectivePayload(
   blockStimulus: DynamicElementInstance[],
   questionPayload?: DynamicQuestionPayload | null,
 ): DynamicQuestionPayload {
-  const stimulus = [...blockStimulus]
-  const byId = new Map(stimulus.map((el, i) => [el.id?.trim(), i]))
-  for (const el of questionPayload?.stimulus ?? []) {
-    const id = el.id?.trim()
-    if (id && byId.has(id)) {
-      stimulus[byId.get(id)!] = el
-    } else {
-      stimulus.push(el)
-    }
-  }
   return {
-    stimulus,
+    stimulus: [...blockStimulus, ...(questionPayload?.stimulus ?? [])],
     response: questionPayload?.response ?? [],
   }
-}
-
-export function mergeBlockStimulusIntoFieldValues(
-  def: QuestionTypeDefinition,
-  blockStimulus: DynamicElementInstance[],
-  questionFieldValues: Record<string, string>,
-): Record<string, string> {
-  const merged = { ...(questionFieldValues ?? {}) }
-  const blockByKind = new Map<string, DynamicElementInstance>()
-  const blockFieldValues = dynamicPayloadToFieldValues({ stimulus: blockStimulus, response: [] })
-
-  for (const el of blockStimulus) {
-    const kind = el.kind.trim().toUpperCase()
-    if (!blockByKind.has(kind)) blockByKind.set(kind, el)
-  }
-
-  for (const row of def.stimulus_schema) {
-    const key = `stimulus:${row.id}`
-    if (merged[key]?.trim()) continue
-    const kind = row.kind.trim().toUpperCase()
-    const blockEl = blockByKind.get(kind)
-    if (blockEl) {
-      merged[key] = blockFieldValues[`stimulus:${blockEl.id}`] ?? ""
-    }
-  }
-
-  for (const el of blockStimulus) {
-    const key = `stimulus:${el.id}`
-    const qVal = merged[key]?.trim()
-    if (!qVal) {
-      merged[key] = blockFieldValues[key] ?? ""
-    }
-  }
-
-  return merged
-}
-
-export function validateDefinitionQuestionWithBlock(
-  def: QuestionTypeDefinition,
-  q: LearnEnglishDefinitionQuestionInput,
-  index1Based: number,
-  blockStimulus: DynamicElementInstance[] | null,
-): string | null {
-  if (!blockStimulus?.length) {
-    return validateDefinitionQuestion(def, q, index1Based)
-  }
-  const mergedFieldValues = mergeBlockStimulusIntoFieldValues(
-    def,
-    blockStimulus,
-    q.dynamicFieldValues ?? {},
-  )
-  return validateDefinitionQuestion(
-    def,
-    { ...q, dynamicFieldValues: mergedFieldValues },
-    index1Based,
-  )
 }
 
 export function validatePracticeStimulusBlocks(
@@ -273,22 +206,10 @@ export function validatePracticeStimulusBlocks(
     if (!def) {
       return `Question ${i + 1}: type definition #${q.questionTypeDefinitionId} was not found. Refresh and try again.`
     }
-    const blockStimulus = getBlockStimulusByKey(blocks, q.stimulusBlockKey)
-    const err = validateDefinitionQuestionWithBlock(def, q, i + 1, blockStimulus)
+    const err = validateDefinitionQuestion(def, q, i + 1)
     if (err) return err
   }
   return null
-}
-
-export function filterQuestionStimulusForBlock(
-  payload: DynamicQuestionPayload,
-  questionFieldValues: Record<string, string>,
-): DynamicQuestionPayload {
-  const stimulus = payload.stimulus.filter((slot) => {
-    const raw = questionFieldValues[`stimulus:${slot.id}`]
-    return Boolean(raw?.trim())
-  })
-  return { ...payload, stimulus }
 }
 
 export function countQuestionsReferencingBlock(

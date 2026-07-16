@@ -328,18 +328,16 @@ export function QuestionsStep({
     q: any,
     i: number,
     def: QuestionTypeDefinition,
-    options?: { responseOnly?: boolean },
   ) => {
-    const responseOnly = Boolean(options?.responseOnly);
     if (definitionUsesDynamicPayload(def)) {
       return (
         <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
           <p className="text-xs leading-snug text-grayScale-600">
-            {responseOnly ? (
+            {q.stimulusBlockKey ? (
               <>
-                Shared stimulus comes from the linked block. Edit{" "}
-                <span className="font-medium text-grayScale-800">response</span> fields below.
-                Use overrides only when this question needs different stimulus than the block.
+                This question also receives the shared stimulus from block{" "}
+                <span className="font-medium text-grayScale-800">{q.stimulusBlockKey}</span>.
+                Its own stimulus and response remain separate and are edited below.
               </>
             ) : (
               <>
@@ -349,58 +347,30 @@ export function QuestionsStep({
               </>
             )}
           </p>
-          {!responseOnly ? (
-            def.stimulus_schema.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">
-                  Stimulus
-                </p>
-                {def.stimulus_schema.map((row) => (
-                  <div
-                    key={`stimulus-${row.id}`}
-                    className="rounded-lg border border-grayScale-200 bg-white p-2.5"
-                  >
-                    <DynamicSchemaSlotField
-                      row={row}
-                      side="stimulus"
-                      value={q.dynamicFieldValues?.[`stimulus:${row.id}`] ?? ""}
-                      onChange={(next) =>
-                        setDynamicValue(i, `stimulus:${row.id}`, next)
-                      }
-                      allFieldValues={q.dynamicFieldValues}
-                      stimulusSchema={def.stimulus_schema}
-                      responseSchema={def.response_schema}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : null
-          ) : def.stimulus_schema.length > 0 ? (
-            <details className="rounded-lg border border-violet-100 bg-white/80 p-3">
-              <summary className="cursor-pointer text-xs font-semibold text-violet-900">
-                Override block stimulus for this question (optional)
-              </summary>
-              <div className="mt-3 space-y-2">
-                {def.stimulus_schema.map((row) => (
-                  <div
-                    key={`stimulus-${row.id}`}
-                    className="rounded-lg border border-grayScale-200 bg-white p-2.5"
-                  >
-                    <DynamicSchemaSlotField
-                      row={row}
-                      side="stimulus"
-                      value={q.dynamicFieldValues?.[`stimulus:${row.id}`] ?? ""}
-                      onChange={(next) =>
-                        setDynamicValue(i, `stimulus:${row.id}`, next)
-                      }
-                      allFieldValues={q.dynamicFieldValues}
-                      stimulusSchema={def.stimulus_schema}
-                      responseSchema={def.response_schema}
-                    />
-                  </div>
-                ))}
-              </div>
-            </details>
+          {def.stimulus_schema.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                Question stimulus
+              </p>
+              {def.stimulus_schema.map((row) => (
+                <div
+                  key={`stimulus-${row.id}`}
+                  className="rounded-lg border border-grayScale-200 bg-white p-2.5"
+                >
+                  <DynamicSchemaSlotField
+                    row={row}
+                    side="stimulus"
+                    value={q.dynamicFieldValues?.[`stimulus:${row.id}`] ?? ""}
+                    onChange={(next) =>
+                      setDynamicValue(i, `stimulus:${row.id}`, next)
+                    }
+                    allFieldValues={q.dynamicFieldValues}
+                    stimulusSchema={def.stimulus_schema}
+                    responseSchema={def.response_schema}
+                  />
+                </div>
+              ))}
+            </div>
           ) : null}
           {def.response_schema.length > 0 ? (
             <div className="space-y-2">
@@ -595,7 +565,7 @@ export function QuestionsStep({
         <h2 className="text-2xl font-bold text-grayScale-700">Questions</h2>
         <p className="text-grayScale-400 text-lg">
           {ieltsMode
-            ? "Create shared stimulus blocks, link questions to a block, then fill in each question's response fields."
+            ? "Create shared stimulus blocks, link questions to a block, then fill in each question's own stimulus and response fields."
             : "Choose a question type for each item, then fill in the fields that type requires."}{" "}
           Group questions into sections so learners complete earlier blocks before later ones unlock.
           Collapse cards to compare and drag them into order.
@@ -942,9 +912,7 @@ export function QuestionsStep({
                   </p>
                 ) : null}
 
-                            {def ? renderTypeSpecificFields(q, i, def, {
-                              responseOnly: ieltsMode && Boolean(q.stimulusBlockKey),
-                            }) : null}
+                            {def ? renderTypeSpecificFields(q, i, def) : null}
                           </div>
                         </QuestionCollapsibleBody>
                       </div>

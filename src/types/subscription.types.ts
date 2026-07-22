@@ -11,6 +11,7 @@ export interface SubscriptionPlan {
   duration_unit: SubscriptionPlanDurationUnit
   price: number
   currency: string
+  is_lifetime: boolean
   is_active: boolean
   created_at: string
 }
@@ -23,6 +24,7 @@ export interface CreateSubscriptionPlanPayload {
   duration_unit: SubscriptionPlanDurationUnit
   price: number
   currency: string
+  is_lifetime: boolean
   is_active: boolean
 }
 
@@ -33,6 +35,7 @@ export interface UpdateSubscriptionPlanPayload {
   duration_unit: SubscriptionPlanDurationUnit
   price: number
   currency: string
+  is_lifetime: boolean
   is_active: boolean
 }
 

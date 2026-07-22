@@ -25,6 +25,7 @@ function normalizeSubscriptionPlan(raw: unknown): SubscriptionPlan | null {
     duration_unit: String(raw.duration_unit ?? "MONTH"),
     price: Number(raw.price ?? 0),
     currency: String(raw.currency ?? "ETB"),
+    is_lifetime: Boolean(raw.is_lifetime ?? false),
     is_active: Boolean(raw.is_active ?? true),
     created_at: String(raw.created_at ?? ""),
   }

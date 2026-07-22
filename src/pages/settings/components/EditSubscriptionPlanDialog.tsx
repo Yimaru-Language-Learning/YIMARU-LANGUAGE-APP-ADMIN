@@ -20,7 +20,6 @@ import { Textarea } from "../../../components/ui/textarea"
 import { ToggleSwitch } from "../../../components/ui/toggle-switch"
 import {
   formatPlanCategory,
-  isLifetimePlanCategory,
   LIFETIME_DURATION_DEFAULT,
   SUBSCRIPTION_CURRENCIES,
   SUBSCRIPTION_DURATION_UNITS,
@@ -38,6 +37,7 @@ interface EditDraft {
   duration_unit: SubscriptionPlanDurationUnit
   price: string
   currency: string
+  is_lifetime: boolean
   is_active: boolean
 }
 
@@ -49,22 +49,21 @@ function planToDraft(plan: SubscriptionPlan): EditDraft {
     duration_unit: plan.duration_unit,
     price: String(plan.price),
     currency: plan.currency,
+    is_lifetime: Boolean(plan.is_lifetime),
     is_active: plan.is_active,
   }
 }
 
-function draftToPayload(
-  draft: EditDraft,
-  category: string,
-): UpdateSubscriptionPlanPayload | null {
+function draftToPayload(draft: EditDraft): UpdateSubscriptionPlanPayload | null {
   const name = draft.name.trim()
   const description = draft.description.trim()
   const price = Number(draft.price)
-  const isLifetime = isLifetimePlanCategory(category)
-  const duration_value = isLifetime
+  const duration_value = draft.is_lifetime
     ? LIFETIME_DURATION_DEFAULT.duration_value
     : Number(draft.duration_value)
-  const duration_unit = isLifetime ? LIFETIME_DURATION_DEFAULT.duration_unit : draft.duration_unit
+  const duration_unit = draft.is_lifetime
+    ? LIFETIME_DURATION_DEFAULT.duration_unit
+    : draft.duration_unit
 
   if (!name) return null
   if (!description) return null
@@ -78,6 +77,7 @@ function draftToPayload(
     duration_unit,
     price,
     currency: draft.currency,
+    is_lifetime: draft.is_lifetime,
     is_active: draft.is_active,
   }
 }
@@ -120,7 +120,7 @@ export function EditSubscriptionPlanDialog({
     e.preventDefault()
     if (!plan || !draft) return
 
-    const payload = draftToPayload(draft, plan.category)
+    const payload = draftToPayload(draft)
     if (!payload) {
       toast.error("Please fill in all required fields with valid values.")
       return
@@ -195,7 +195,37 @@ export function EditSubscriptionPlanDialog({
                 />
               </div>
 
-              {isLifetimePlanCategory(plan.category) ? (
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-[8px] border border-grayScale-100 bg-grayScale-50/50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-grayScale-800">One-time purchase</p>
+                  <p className="text-xs text-grayScale-500">
+                    Lifetime access with no expiration date
+                  </p>
+                </div>
+                <ToggleSwitch
+                  variant="plain"
+                  checked={draft.is_lifetime}
+                  aria-label="One-time purchase"
+                  onCheckedChange={() =>
+                    setDraft((d) =>
+                      d
+                        ? {
+                            ...d,
+                            is_lifetime: !d.is_lifetime,
+                            ...(!d.is_lifetime
+                              ? {
+                                  duration_value: String(LIFETIME_DURATION_DEFAULT.duration_value),
+                                  duration_unit: LIFETIME_DURATION_DEFAULT.duration_unit,
+                                }
+                              : {}),
+                          }
+                        : d,
+                    )
+                  }
+                />
+              </label>
+
+              {draft.is_lifetime ? (
                 <div className="rounded-[8px] border border-grayScale-100 bg-grayScale-50/50 px-4 py-3">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
                     Duration
@@ -204,7 +234,7 @@ export function EditSubscriptionPlanDialog({
                     One-time · Never expires
                   </p>
                   <p className="mt-0.5 text-xs text-grayScale-500">
-                    IELTS and Duolingo packages are one-time purchases with lifetime access.
+                    Related active subscriptions are kept non-expiring when this is enabled.
                   </p>
                 </div>
               ) : (

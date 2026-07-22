@@ -18,7 +18,6 @@ import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 import { Textarea } from "../../../components/ui/textarea"
 import { ToggleSwitch } from "../../../components/ui/toggle-switch"
 import {
-  isLifetimePlanCategory,
   LIFETIME_DURATION_DEFAULT,
   SUBSCRIPTION_CURRENCIES,
   SUBSCRIPTION_DURATION_UNITS,
@@ -39,6 +38,7 @@ export interface CreateSubscriptionPlanDraft {
   duration_unit: SubscriptionPlanDurationUnit
   price: string
   currency: string
+  is_lifetime: boolean
   is_active: boolean
 }
 
@@ -50,6 +50,7 @@ export const EMPTY_SUBSCRIPTION_PLAN_DRAFT: CreateSubscriptionPlanDraft = {
   duration_unit: "MONTH",
   price: "",
   currency: "ETB",
+  is_lifetime: false,
   is_active: true,
 }
 
@@ -57,11 +58,12 @@ function draftToPayload(draft: CreateSubscriptionPlanDraft): CreateSubscriptionP
   const name = draft.name.trim()
   const description = draft.description.trim()
   const price = Number(draft.price)
-  const isLifetime = isLifetimePlanCategory(draft.category)
-  const duration_value = isLifetime
+  const duration_value = draft.is_lifetime
     ? LIFETIME_DURATION_DEFAULT.duration_value
     : Number(draft.duration_value)
-  const duration_unit = isLifetime ? LIFETIME_DURATION_DEFAULT.duration_unit : draft.duration_unit
+  const duration_unit = draft.is_lifetime
+    ? LIFETIME_DURATION_DEFAULT.duration_unit
+    : draft.duration_unit
 
   if (!name) return null
   if (!description) return null
@@ -76,6 +78,7 @@ function draftToPayload(draft: CreateSubscriptionPlanDraft): CreateSubscriptionP
     duration_unit,
     price,
     currency: draft.currency,
+    is_lifetime: draft.is_lifetime,
     is_active: draft.is_active,
   }
 }
@@ -100,8 +103,6 @@ export function CreateSubscriptionPlanDialog({
       setSaving(false)
     }
   }, [open])
-
-  const isLifetime = isLifetimePlanCategory(draft.category)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -174,19 +175,12 @@ export function CreateSubscriptionPlanDialog({
               </label>
               <Select
                 value={draft.category}
-                onChange={(e) => {
-                  const category = e.target.value as SubscriptionPlanCategory
+                onChange={(e) =>
                   setDraft((d) => ({
                     ...d,
-                    category,
-                    ...(isLifetimePlanCategory(category)
-                      ? {
-                          duration_value: String(LIFETIME_DURATION_DEFAULT.duration_value),
-                          duration_unit: LIFETIME_DURATION_DEFAULT.duration_unit,
-                        }
-                      : {}),
+                    category: e.target.value as SubscriptionPlanCategory,
                   }))
-                }}
+                }
                 className="rounded-[6px]"
               >
                 {SUBSCRIPTION_PLAN_CATEGORIES.map((opt) => (
@@ -197,14 +191,40 @@ export function CreateSubscriptionPlanDialog({
               </Select>
             </div>
 
-            {isLifetime ? (
+            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-[8px] border border-grayScale-100 bg-grayScale-50/50 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-grayScale-800">One-time purchase</p>
+                <p className="text-xs text-grayScale-500">
+                  Lifetime access with no expiration date
+                </p>
+              </div>
+              <ToggleSwitch
+                variant="plain"
+                checked={draft.is_lifetime}
+                aria-label="One-time purchase"
+                onCheckedChange={() =>
+                  setDraft((d) => ({
+                    ...d,
+                    is_lifetime: !d.is_lifetime,
+                    ...(d.is_lifetime
+                      ? {}
+                      : {
+                          duration_value: String(LIFETIME_DURATION_DEFAULT.duration_value),
+                          duration_unit: LIFETIME_DURATION_DEFAULT.duration_unit,
+                        }),
+                  }))
+                }
+              />
+            </label>
+
+            {draft.is_lifetime ? (
               <div className="rounded-[8px] border border-grayScale-100 bg-grayScale-50/50 px-4 py-3">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
                   Duration
                 </p>
                 <p className="mt-1 text-sm font-medium text-grayScale-800">One-time · Never expires</p>
                 <p className="mt-0.5 text-xs text-grayScale-500">
-                  IELTS and Duolingo packages are one-time purchases with lifetime access.
+                  Related subscriptions stay active permanently after purchase.
                 </p>
               </div>
             ) : (

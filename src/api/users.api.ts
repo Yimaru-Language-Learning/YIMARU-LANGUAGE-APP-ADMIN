@@ -322,6 +322,7 @@ function normalizeUserSubscriptionRecord(raw: unknown): UserSubscriptionRecord |
     plan_id: planId,
     plan_name: String(raw.plan_name ?? ""),
     plan_category: String(raw.plan_category ?? ""),
+    is_lifetime: raw.is_lifetime === true,
     starts_at: String(raw.starts_at ?? ""),
     expires_at: String(raw.expires_at ?? ""),
     status: String(raw.status ?? ""),

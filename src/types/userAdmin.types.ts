@@ -98,6 +98,7 @@ export interface UserSubscriptionRecord {
   plan_id: number
   plan_name: string
   plan_category: string
+  is_lifetime: boolean
   starts_at: string
   expires_at: string
   status: string

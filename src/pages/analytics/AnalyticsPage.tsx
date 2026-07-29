@@ -7,7 +7,9 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  // Legend,
+  Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -128,10 +130,12 @@ function BreakdownList({
   title,
   data,
   total,
+  scrollable: _scrollable,
 }: {
   title: string
   data: LabelCount[]
   total?: number
+  scrollable?: boolean
 }) {
   const computedTotal = total ?? data.reduce((s, d) => s + d.count, 0)
   const sorted = [...data].sort((a, b) => b.count - a.count)
@@ -163,6 +167,68 @@ function BreakdownList({
                     <span className="font-semibold text-grayScale-700">
                       {item.count.toLocaleString()}
                       <span className="ml-1 font-normal text-grayScale-400">({pct.toFixed(0)}%)</span>
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-grayScale-100">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${pct}%`,
+                        backgroundColor: PIE_COLORS[i % PIE_COLORS.length],
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="py-4 text-center text-xs text-grayScale-400">No data available</div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function AmountBreakdownList({
+  title,
+  data,
+}: {
+  title: string
+  data: { label: string; count: number; amount: number }[]
+}) {
+  const totalAmount = data.reduce((s, d) => s + d.amount, 0)
+  const sorted = [...data].sort((a, b) => b.amount - a.amount)
+  return (
+    <Card className="shadow-none flex flex-col">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-0 flex-1 flex flex-col">
+        {sorted.length > 0 ? (
+          <div className="space-y-2.5 flex-1 overflow-y-auto overscroll-contain pr-1 max-h-[320px]">
+            {sorted.map((item, i) => {
+              const pct = totalAmount > 0 ? (item.amount / totalAmount) * 100 : 0
+              const displayLabel = formatAnalyticsLabel(item.label)
+              return (
+                <div key={`${item.label}-${i}`}>
+                  <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                      />
+                      <span className="truncate text-grayScale-600" title={displayLabel}>
+                        {displayLabel}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-grayScale-700">
+                      <SensitiveValue showToggle={false}>
+                        ETB {item.amount.toLocaleString()}
+                      </SensitiveValue>
+                      <span className="ml-1 font-normal text-grayScale-400">
+                        ({item.count.toLocaleString()} · {pct.toFixed(0)}%)
+                      </span>
                     </span>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-grayScale-100">
@@ -384,6 +450,49 @@ export function AnalyticsPage() {
     count: d.count,
   }))
 
+  const snapshot = subscriptions.snapshot
+  const renewal = subscriptions.renewal
+  const cancelByDate = new Map(
+    (subscriptions.cancellations_last_30_days ?? []).map((d) => [d.date, d.count]),
+  )
+  const expireByDate = new Map(
+    (subscriptions.expirations_last_30_days ?? []).map((d) => [d.date, d.count]),
+  )
+  const resubByDate = new Map(
+    (subscriptions.resubscriptions_last_30_days ?? []).map((d) => [d.date, d.count]),
+  )
+  const churnDates = [
+    ...new Set([
+      ...(subscriptions.cancellations_last_30_days ?? []).map((d) => d.date),
+      ...(subscriptions.expirations_last_30_days ?? []).map((d) => d.date),
+      ...(subscriptions.resubscriptions_last_30_days ?? []).map((d) => d.date),
+    ]),
+  ].sort()
+  const churnSeries = churnDates.map((date) => ({
+    date: formatDate(date),
+    cancellations: cancelByDate.get(date) ?? 0,
+    expirations: expireByDate.get(date) ?? 0,
+    resubscriptions: resubByDate.get(date) ?? 0,
+  }))
+
+  const activeCategoryPie = (subscriptions.active_by_category ?? []).map((s, i) => ({
+    name: formatAnalyticsLabel(s.label),
+    value: s.count,
+    color: PIE_COLORS[i % PIE_COLORS.length],
+  }))
+
+  const acquisitionPie = (subscriptions.acquisition_by_source ?? []).map((s, i) => ({
+    name: formatAnalyticsLabel(s.label),
+    value: s.count,
+    color: PIE_COLORS[i % PIE_COLORS.length],
+  }))
+
+  const cohortPie = (subscriptions.new_by_cohort ?? []).map((s, i) => ({
+    name: formatAnalyticsLabel(s.label),
+    value: s.count,
+    color: PIE_COLORS[i % PIE_COLORS.length],
+  }))
+
   const revenueData = payments.revenue_last_30_days.map((d) => ({
     date: formatDate(d.date),
     revenue: d.revenue,
@@ -513,9 +622,9 @@ export function AnalyticsPage() {
                 />
                 <KpiCard
                   icon={CreditCard}
-                  label="Total Subscriptions"
-                  value={formatNumber(subscriptionMetrics.total)}
-                  sub={`${subscriptionMetrics.active} active · ${subscriptionMetrics.inactive} inactive`}
+                  label="Active Learners"
+                  value={formatNumber(snapshot?.active_learners ?? subscriptionMetrics.active)}
+                  sub={`${formatNumber(snapshot?.active_now ?? subscriptionMetrics.active)} active subs · ${subscriptionMetrics.inactive} inactive`}
                   trend={subscriptions.new_month > 0 ? "up" : "neutral"}
                 />
                 <KpiCard
@@ -752,6 +861,75 @@ export function AnalyticsPage() {
 
         {/* ─── Subscriptions & Revenue ─── */}
         <Section title="Subscriptions & Revenue" icon={DollarSign} defaultOpen={false}>
+          {snapshot && (
+            <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                icon={BadgeCheck}
+                label="Active Now"
+                value={formatNumber(snapshot.active_now)}
+                sub={`${formatNumber(snapshot.active_learners)} learners · ${formatNumber(snapshot.lifetime_active)} lifetime · ${formatNumber(snapshot.term_active)} term`}
+                trend="neutral"
+              />
+              <KpiCard
+                icon={TrendingDown}
+                label="Expiring Soon"
+                value={formatNumber(snapshot.expiring_within_7_days)}
+                sub={`${formatNumber(snapshot.expiring_within_30_days)} within 30 days · ${formatNumber(snapshot.auto_renew_enabled)} auto-renew`}
+                trend={snapshot.expiring_within_7_days > 0 ? "down" : "neutral"}
+              />
+              <KpiCard
+                icon={RotateCcw}
+                label="Churn Stock"
+                value={formatNumber(snapshot.expired_now + snapshot.cancelled_now)}
+                sub={`${formatNumber(snapshot.expired_now)} expired · ${formatNumber(snapshot.cancelled_now)} cancelled · ${formatNumber(snapshot.pending_now)} pending`}
+                trend="neutral"
+              />
+              <KpiCard
+                icon={CreditCard}
+                label="New (period)"
+                value={formatNumber(subscriptions.total_subscriptions)}
+                sub={`+${subscriptions.new_today} today · +${subscriptions.new_week} week · +${subscriptions.new_month} month`}
+                trend={subscriptions.new_month > 0 ? "up" : "neutral"}
+              />
+            </div>
+          )}
+          {renewal && (
+            <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                icon={RotateCcw}
+                label="Renewal Rate"
+                value={formatPercentRate(renewal.renewal_rate)}
+                sub={`${formatNumber(renewal.renewed_after_expiry)} renewed of ${formatNumber(renewal.expired_in_period)} expired`}
+                trend={renewal.renewal_rate >= 0.3 ? "up" : renewal.expired_in_period > 0 ? "down" : "neutral"}
+              />
+              <KpiCard
+                icon={BadgeCheck}
+                label="Resubscribe After Expiry"
+                value={formatNumber(renewal.resubscribe_after_expiry)}
+                sub={`${formatNumber(renewal.returning_subscriptions)} returning · ${formatNumber(renewal.first_time_subscriptions)} first-time`}
+                trend={renewal.resubscribe_after_expiry > 0 ? "up" : "neutral"}
+              />
+              <KpiCard
+                icon={TrendingUp}
+                label="Avg Days to Resubscribe"
+                value={renewal.avg_days_to_resubscribe.toFixed(1)}
+                sub={`Median ${renewal.median_days_to_resubscribe.toFixed(1)} days after expiry`}
+                trend="neutral"
+              />
+              <KpiCard
+                icon={Users}
+                label="Returning Share"
+                value={formatPercentRate(
+                  renewal.first_time_subscriptions + renewal.returning_subscriptions > 0
+                    ? renewal.returning_subscriptions /
+                      (renewal.first_time_subscriptions + renewal.returning_subscriptions)
+                    : 0,
+                )}
+                sub={`${formatNumber(renewal.returning_subscriptions)} of ${formatNumber(renewal.first_time_subscriptions + renewal.returning_subscriptions)} new subs`}
+                trend={renewal.returning_subscriptions > 0 ? "up" : "neutral"}
+              />
+            </div>
+          )}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="shadow-none">
               <CardHeader className="pb-2">
@@ -835,6 +1013,65 @@ export function AnalyticsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {churnSeries.length > 0 && (
+            <Card className="mt-4 shadow-none">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Cancellations, Expirations & Resubscribes</CardTitle>
+                    <div className="text-xs text-grayScale-400">
+                      Churn vs win-back over {seriesPeriodLabel.toLowerCase()}
+                    </div>
+                  </div>
+                  <Badge variant="secondary">{seriesPeriodLabel}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[240px] p-6 pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={churnSeries} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} />
+                    <YAxis tickLine={false} axisLine={false} fontSize={11} width={30} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: 12,
+                        border: "1px solid #E0E0E0",
+                        boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                        fontSize: 12,
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="cancellations"
+                      name="Cancellations"
+                      stroke="#EF4444"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="expirations"
+                      name="Expirations"
+                      stroke="#F97316"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="resubscriptions"
+                      name="Resubscribes"
+                      stroke="#14B8A6"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="mt-4 grid items-start gap-4 lg:grid-cols-3">
             <DonutCard
               title="Subscription Status"
@@ -842,8 +1079,57 @@ export function AnalyticsPage() {
               centerValue={subscriptions.total_subscriptions.toString()}
               centerLabel="Total"
             />
+            <DonutCard
+              title="Active by Category"
+              data={activeCategoryPie}
+              centerValue={(snapshot?.active_now ?? subscriptionMetrics.active).toString()}
+              centerLabel="Active"
+            />
+            <DonutCard
+              title="First-time vs Returning"
+              data={cohortPie}
+              centerValue={(
+                (renewal?.first_time_subscriptions ?? 0) + (renewal?.returning_subscriptions ?? 0) ||
+                subscriptions.total_subscriptions
+              ).toString()}
+              centerLabel="New"
+            />
+          </div>
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-3">
+            <DonutCard
+              title="Acquisition Source"
+              data={acquisitionPie}
+              centerValue={(
+                (subscriptions.acquisition_by_source ?? []).reduce((s, r) => s + r.count, 0) ||
+                subscriptions.total_subscriptions
+              ).toString()}
+              centerLabel="Subs"
+            />
+            <BreakdownList
+              title="Active by Plan"
+              data={subscriptions.active_by_plan ?? []}
+              total={snapshot?.active_now}
+            />
+            <BreakdownList
+              title="Lifetime vs Term"
+              data={subscriptions.active_by_lifetime ?? []}
+              total={snapshot?.active_now}
+            />
+          </div>
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-3">
+            <AmountBreakdownList
+              title="Revenue by Category"
+              data={subscriptions.revenue_by_category ?? []}
+            />
             <BreakdownList title="Payments by Method" data={payments.by_method} total={payments.total_payments} />
             <BreakdownList title="Payments by Status" data={payments.by_status} total={payments.total_payments} />
+          </div>
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-3">
+            <BreakdownList
+              title="Subscriptions by Status"
+              data={subscriptions.by_status}
+              total={subscriptions.total_subscriptions}
+            />
           </div>
         </Section>
 

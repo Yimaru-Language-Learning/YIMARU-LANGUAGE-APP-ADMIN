@@ -199,7 +199,9 @@ export function formatPercentRate(rate: number, fractionDigits = 1): string {
 /** Display label for dashboard breakdown rows (regions, enums, free text). */
 export function formatAnalyticsLabel(label: string): string {
   const text = label?.trim() ?? ""
-  if (!text || text.toLowerCase() === "unknown") return "Unknown"
+  if (!text || text.toLowerCase() === "unknown" || text.toUpperCase() === "OTHER") {
+    return "Other"
+  }
   if (text.includes("_")) return text.replace(/_/g, " ")
   return text
 }

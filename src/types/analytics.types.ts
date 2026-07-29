@@ -37,6 +37,36 @@ export interface DashboardUsers {
   registrations_last_30_days: DateCount[]
 }
 
+export interface LabelAmount {
+  label: string
+  count: number
+  amount: number
+}
+
+export interface SubscriptionSnapshot {
+  active_now: number
+  active_learners: number
+  pending_now: number
+  expired_now: number
+  cancelled_now: number
+  expiring_within_7_days: number
+  expiring_within_30_days: number
+  auto_renew_enabled: number
+  lifetime_active: number
+  term_active: number
+}
+
+export interface SubscriptionRenewal {
+  first_time_subscriptions: number
+  returning_subscriptions: number
+  resubscribe_after_expiry: number
+  expired_in_period: number
+  renewed_after_expiry: number
+  renewal_rate: number
+  avg_days_to_resubscribe: number
+  median_days_to_resubscribe: number
+}
+
 export interface DashboardSubscriptions {
   total_subscriptions: number
   active_subscriptions: number
@@ -46,6 +76,17 @@ export interface DashboardSubscriptions {
   by_status: LabelCount[]
   revenue_by_plan: RevenuePlan[]
   new_subscriptions_last_30_days: DateCount[]
+  snapshot?: SubscriptionSnapshot
+  active_by_category?: LabelCount[]
+  active_by_plan?: LabelCount[]
+  active_by_lifetime?: LabelCount[]
+  acquisition_by_source?: LabelCount[]
+  revenue_by_category?: LabelAmount[]
+  cancellations_last_30_days?: DateCount[]
+  expirations_last_30_days?: DateCount[]
+  renewal?: SubscriptionRenewal
+  new_by_cohort?: LabelCount[]
+  resubscriptions_last_30_days?: DateCount[]
 }
 
 export interface DashboardPayments {

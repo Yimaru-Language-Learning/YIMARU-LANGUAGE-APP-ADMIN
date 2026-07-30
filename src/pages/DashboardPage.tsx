@@ -20,9 +20,6 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -30,6 +27,14 @@ import {
 } from "recharts"
 import { RevenueTrendCard } from "../components/dashboard/RevenueTrendCard"
 import { StatCard } from "../components/dashboard/StatCard"
+import {
+  ActivePlansBreakdownCard,
+  RenewalRateCard,
+  DonutBreakdownCard,
+  analyticsSoftCardClass,
+  labelCountsToPieSlices,
+  SUBSCRIPTION_CHART_COLORS,
+} from "../components/analytics/SubscriptionRevenueVisuals"
 import alertSrc from "../assets/Alert.svg"
 import { Badge } from "../components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
@@ -39,9 +44,9 @@ import { getTeamMemberById } from "../api/team.api"
 import { getDashboard } from "../api/analytics.api"
 import { getSubscriptionPlans } from "../api/subscription-plans.api"
 import { getRatingSummary, listRatingsByTarget } from "../api/ratings.api"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { AnalyticsTimeRangeFilter } from "../components/analytics/AnalyticsTimeRangeFilter"
+import { AnalyticsTimeRangeFilter, getDashboardFilterLabel } from "../components/analytics/AnalyticsTimeRangeFilter"
 import {
   getPrimaryQuestionTypeSummary,
   getSeriesPeriodLabel,
@@ -55,7 +60,20 @@ import { formatPlanDuration } from "../lib/subscriptionPlans"
 import type { SubscriptionPlan } from "../types/subscription.types"
 import type { Rating, RatingSummary } from "../types/ratings.types"
 
-const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444"]
+const PIE_COLORS = SUBSCRIPTION_CHART_COLORS
+const CHART_BRAND = SUBSCRIPTION_CHART_COLORS[0]
+const chartTooltipStyle = {
+  borderRadius: 10,
+  border: "1px solid #E8E8E8",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+  fontSize: 12,
+}
+
+function DashboardSectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="text-xs font-semibold uppercase tracking-wider text-grayScale-400">{children}</h2>
+  )
+}
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr)
@@ -173,31 +191,59 @@ export function DashboardPage() {
     ? getSubscriptionMetrics(dashboard.subscriptions)
     : null
 
+  const generatedAt = dashboard
+    ? new Date(dashboard.generated_at).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : ""
+
+  const registrationPeakIndex = registrationData.reduce((best, row, idx) => {
+    return row.count > (registrationData[best]?.count ?? 0) ? idx : best
+  }, 0)
+
   return (
     <SensitiveRevealProvider>
-    <div className="mx-auto w-full min-w-0 max-w-6xl">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm font-semibold text-grayScale-500">Dashboard</div>
-        <AnalyticsTimeRangeFilter value={filters} onChange={setFilters} />
-      </div>
-      <div className="mb-5 text-2xl font-semibold tracking-tight">
-        Welcome, {userFirstName || localStorage.getItem("user_first_name")}
+    <div className="mx-auto w-full min-w-0 max-w-[1280px] px-2 pb-8 sm:px-4">
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-grayScale-400">
+            Dashboard
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight text-grayScale-900">
+            Welcome back, {userFirstName || localStorage.getItem("user_first_name") || "there"}
+          </h1>
+          <p className="mt-1.5 text-sm text-grayScale-500">
+            Snapshot for {getDashboardFilterLabel(filters)}
+            {dashboard ? ` · Updated ${generatedAt}` : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/analytics"
+            className="text-xs font-semibold text-brand-600 transition-colors hover:text-brand-500"
+          >
+            Full analytics →
+          </Link>
+          <AnalyticsTimeRangeFilter value={filters} onChange={setFilters} />
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-20">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-grayScale-100 bg-white py-24 shadow-sm">
           <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
           <span className="text-sm font-medium text-grayScale-400">Loading dashboard…</span>
         </div>
       ) : !dashboard ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-20">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-red-100 bg-red-50/40 py-24">
           <img src={alertSrc} alt="" className="h-12 w-12" />
           <span className="text-sm font-medium text-destructive">Failed to load dashboard data.</span>
         </div>
       ) : (
         <>
-          {/* Stat tabs */}
-          <div className="mb-3 border-b border-grayScale-200">
+          <div className="mb-6 rounded-2xl border border-grayScale-100 bg-white px-5 pt-4 shadow-sm">
             <div className="-mb-px flex gap-6">
               <button
                 type="button"
@@ -234,7 +280,7 @@ export function DashboardPage() {
 
           {/* Stat Cards */}
           {activeStatTab === "primary" && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 icon={Users}
                 label="Total Users"
@@ -272,7 +318,7 @@ export function DashboardPage() {
 
           {/* Secondary Stats */}
           {activeStatTab === "secondary" && subscriptionMetrics && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 icon={CreditCard}
                 label="Total Subscriptions"
@@ -297,6 +343,7 @@ export function DashboardPage() {
                     : "Total minus active"
                 }
                 deltaPositive={subscriptionMetrics.inactive === 0}
+                trend="neutral"
               />
               <StatCard
                 icon={Video}
@@ -321,6 +368,7 @@ export function DashboardPage() {
                 value={dashboard.notifications.total_sent.toLocaleString()}
                 deltaLabel={`${dashboard.notifications.unread_count} unread`}
                 deltaPositive={dashboard.notifications.unread_count === 0}
+                trend={dashboard.notifications.unread_count > 0 ? "neutral" : "up"}
               />
               <StatCard
                 icon={UsersRound}
@@ -328,134 +376,157 @@ export function DashboardPage() {
                 value={dashboard.team.total_members.toLocaleString()}
                 deltaLabel={`${dashboard.team.by_role.length} roles`}
                 deltaPositive
+                trend="neutral"
               />
             </div>
           )}
 
-          {/* User Registrations Chart */}
-          <div className="mt-5 grid gap-4">
-            <Card className="shadow-none">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between gap-3">
+          <div className="space-y-8">
+            <section className="space-y-4">
+              <DashboardSectionTitle>Growth</DashboardSectionTitle>
+            <Card className={cn(analyticsSoftCardClass)}>
+              <CardHeader className="pb-2 pt-5">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <CardTitle>User Registrations</CardTitle>
-                    <div className="mt-1 text-2xl font-semibold tracking-tight">
+                    <CardTitle className="text-base font-bold text-grayScale-900">
+                      User Registrations
+                    </CardTitle>
+                    <p className="mt-1 text-xs text-grayScale-400">
+                      New sign-ups over {seriesPeriodLabel.toLowerCase()}
+                    </p>
+                    <div className="mt-3 text-2xl font-bold tracking-tight text-grayScale-900">
                       {dashboard.users.total_users.toLocaleString()}
                     </div>
-                    <div className="text-xs font-medium text-mint-500">
+                    <div className="mt-1 text-xs font-medium text-mint-500">
                       +{dashboard.users.new_today} today · +{dashboard.users.new_week} this week
                     </div>
                   </div>
-                  <div className="rounded-full bg-grayScale-100 px-3 py-1 text-xs font-semibold text-grayScale-500">
+                  <Badge variant="secondary" className="shrink-0 font-semibold">
                     {seriesPeriodLabel}
-                  </div>
+                  </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="h-[280px] p-6 pt-2">
+              <CardContent className="h-[280px] px-5 pb-5 pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={registrationData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+                  <AreaChart data={registrationData} margin={{ left: 4, right: 8, top: 12, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="fillBrand" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#9E2891" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#9E2891" stopOpacity={0.02} />
+                      <linearGradient id="dashboardRegFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_BRAND} stopOpacity={0.32} />
+                        <stop offset="100%" stopColor={CHART_BRAND} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={12} width={32} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #E0E0E0",
-                        boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                      }}
+                    <CartesianGrid vertical={false} stroke="#EEEEEE" strokeDasharray="4 4" />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      fontSize={11}
+                      tick={{ fill: "#9E9E9E" }}
                     />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      fontSize={11}
+                      width={36}
+                      allowDecimals={false}
+                      tick={{ fill: "#9E9E9E" }}
+                    />
+                    <Tooltip contentStyle={chartTooltipStyle} />
                     <Area
                       type="monotone"
                       dataKey="count"
-                      stroke="#9E2891"
-                      strokeWidth={2}
-                      fill="url(#fillBrand)"
+                      stroke={CHART_BRAND}
+                      strokeWidth={2.75}
+                      fill="url(#dashboardRegFill)"
+                      dot={(props) => {
+                        const { cx, cy, index } = props
+                        if (cx == null || cy == null) return null
+                        const highlight = index === registrationPeakIndex
+                        return (
+                          <circle
+                            key={`reg-dot-${index}`}
+                            cx={cx}
+                            cy={cy}
+                            r={highlight ? 5.5 : 3.5}
+                            fill={CHART_BRAND}
+                            stroke="#fff"
+                            strokeWidth={highlight ? 2 : 1}
+                          />
+                        )
+                      }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+            </section>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              {/* Subscription / Issue Status Pie */}
-              <Card className="shadow-none">
-                <CardHeader className="pb-2">
-                  <CardTitle>
-                    {subscriptionStatusData.length > 0 ? "Subscription Status" : "Issue Status"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 p-6 pt-2 md:grid-cols-2">
-                  {(subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData).length > 0 ? (
-                    <>
-                      <div className="h-[180px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData}
-                              dataKey="value"
-                              nameKey="name"
-                              innerRadius={55}
-                              outerRadius={80}
-                              paddingAngle={2}
-                            >
-                              {(subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData).map(
-                                (entry) => (
-                                  <Cell key={entry.name} fill={entry.color} />
-                                ),
-                              )}
-                            </Pie>
-                            <Tooltip
-                              contentStyle={{
-                                borderRadius: 12,
-                                border: "1px solid #E0E0E0",
-                                boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="space-y-3">
-                        {(subscriptionStatusData.length > 0 ? subscriptionStatusData : issueStatusData).map((s) => (
-                          <div key={s.name} className="flex items-center justify-between gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="h-2.5 w-2.5 rounded-full"
-                                style={{ backgroundColor: s.color }}
-                              />
-                              <span className="text-grayScale-600">{s.name}</span>
-                            </div>
-                            <span className="font-semibold text-grayScale-600">{s.value.toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="col-span-2 flex items-center justify-center py-10 text-sm text-grayScale-400">
-                      No data available
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
+            <section className="space-y-4">
+              <DashboardSectionTitle>Revenue &amp; subscriptions</DashboardSectionTitle>
+            <div className="grid gap-4">
               <RevenueTrendCard />
-            </div>
 
-            {/* Subscription plans (from catalog API) */}
-            <Card className="shadow-none">
-              <CardHeader className="pb-2">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ActivePlansBreakdownCard
+                  data={labelCountsToPieSlices(
+                    (dashboard.subscriptions.active_by_plan?.length
+                      ? dashboard.subscriptions.active_by_plan
+                      : dashboard.subscriptions.by_status
+                    ).map((row) => ({
+                      label: row.label,
+                      count: row.count,
+                    })),
+                  )}
+                />
+                <RenewalRateCard
+                  renewalRate={dashboard.subscriptions.renewal?.renewal_rate ?? 0}
+                  autoRenewCount={dashboard.subscriptions.snapshot?.auto_renew_enabled ?? 0}
+                  cancelledCount={dashboard.subscriptions.snapshot?.cancelled_now ?? 0}
+                  activeNow={
+                    dashboard.subscriptions.snapshot?.active_now ??
+                    subscriptionMetrics?.active ??
+                    0
+                  }
+                />
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                {subscriptionStatusData.length > 0 ? (
+                  <DonutBreakdownCard
+                    title="Subscription Status"
+                    data={subscriptionStatusData}
+                    countSuffix="Subscriptions"
+                  />
+                ) : null}
+                {issueStatusData.length > 0 ? (
+                  <DonutBreakdownCard
+                    title="Issue Status"
+                    data={issueStatusData}
+                    countSuffix="Issues"
+                  />
+                ) : null}
+              </div>
+            </div>
+            </section>
+
+            <section className="space-y-4">
+              <DashboardSectionTitle>Catalog &amp; feedback</DashboardSectionTitle>
+            <Card className={cn(analyticsSoftCardClass)}>
+              <CardHeader className="pb-2 pt-5">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-brand-500" />
-                  <CardTitle>Subscription plans</CardTitle>
+                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-100/60 text-brand-600">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-grayScale-900">
+                      Subscription plans
+                    </CardTitle>
+                    <p className="text-sm text-grayScale-500">Available billing plans for learners.</p>
+                  </div>
                 </div>
-                <p className="text-sm text-grayScale-500">Available billing plans for learners.</p>
               </CardHeader>
-              <CardContent className="p-6 pt-2">
+              <CardContent className="px-5 pb-5 pt-2">
                 {subscriptionPlansLoading ? (
                   <div className="flex items-center justify-center py-10">
                     <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
@@ -469,7 +540,7 @@ export function DashboardPage() {
                     {subscriptionPlans.map((plan) => (
                       <div
                         key={plan.id}
-                        className="flex flex-col rounded-xl border border-grayScale-200 bg-grayScale-50/50 p-4"
+                        className="flex flex-col rounded-xl border border-grayScale-200/80 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200/60 hover:shadow-md"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="font-semibold text-grayScale-700">{plan.name}</h3>
@@ -507,23 +578,26 @@ export function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* App Ratings */}
-            <Card className="shadow-none">
-              <CardHeader className="pb-2">
+            <Card className={cn(analyticsSoftCardClass)}>
+              <CardHeader className="pb-2 pt-5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-brand-500" />
-                    <CardTitle>Recent App Reviews</CardTitle>
+                    <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-100/60 text-brand-600">
+                      <MessageSquare className="h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-base font-bold text-grayScale-900">
+                      Recent App Reviews
+                    </CardTitle>
                   </div>
                   <Link
                     to="/app-reviews"
-                    className="text-xs font-medium text-brand-600 hover:underline"
+                    className="rounded-lg px-2.5 py-1 text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-100/40"
                   >
                     View all
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent className="p-6 pt-2">
+              <CardContent className="px-5 pb-5 pt-2">
                 {appRatingsLoading ? (
                   <div className="flex items-center justify-center py-10">
                     <img src={spinnerSrc} alt="" className="h-8 w-8 animate-spin" />
@@ -534,7 +608,7 @@ export function DashboardPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="mb-4 flex items-center gap-3 rounded-lg bg-grayScale-50 px-4 py-3">
+                    <div className="mb-4 flex items-center gap-3 rounded-xl border border-grayScale-100 bg-gradient-to-r from-amber-50/80 to-white px-4 py-3">
                       <div className="flex items-center gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
@@ -557,9 +631,9 @@ export function DashboardPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="divide-y divide-grayScale-100">
                       {appRatings.map((rating) => (
-                        <div key={rating.id} className="flex gap-3">
+                        <div key={rating.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-600">
                             U{rating.user_id}
                           </div>
@@ -596,6 +670,7 @@ export function DashboardPage() {
                 )}
               </CardContent>
             </Card>
+            </section>
           </div>
         </>
       )}

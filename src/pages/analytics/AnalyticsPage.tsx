@@ -43,7 +43,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import {
   SensitiveChart,
   SensitiveRevealProvider,
-  SensitiveRevealToggle,
   SensitiveValue,
 } from "../../components/ui/sensitive-value"
 import { Badge } from "../../components/ui/badge"
@@ -52,6 +51,15 @@ import { cn } from "../../lib/utils"
 import { getDashboard } from "../../api/analytics.api"
 import { AnalyticsTimeRangeFilter, getDashboardFilterLabel } from "../../components/analytics/AnalyticsTimeRangeFilter"
 import {
+  ActivePlansBreakdownCard,
+  MonthlyRevenueAreaChart,
+  MonthlyRevenueTrendPanel,
+  RenewalRateCard,
+  SensitiveYtdValue,
+  analyticsSoftCardClass,
+  labelCountsToPieSlices,
+} from "../../components/analytics/SubscriptionRevenueVisuals"
+import {
   getPrimaryQuestionTypeSummary,
   getSeriesPeriodLabel,
   formatAnalyticsLabel,
@@ -59,6 +67,8 @@ import {
   getVideoLessonsSummary,
   formatPercentRate,
   buildSubscriptionStatusPie,
+  aggregateRevenueByMonth,
+  formatRevenueAxisTick,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
 
@@ -498,6 +508,19 @@ export function AnalyticsPage() {
     revenue: d.revenue,
   }))
 
+  const dateFilter = dashboard.date_filter
+  const useMonthlyRevenueTrend =
+    dateFilter?.mode === "year" ||
+    dateFilter?.mode === "all_time" ||
+    (filters.mode === "year" || filters.mode === "all_time")
+  const monthlyTrendYear =
+    (dateFilter?.mode === "year" && dateFilter.year) ||
+    (filters.mode === "year" && filters.year) ||
+    new Date().getFullYear()
+  const monthlyRevenueTrendData = useMonthlyRevenueTrend
+    ? aggregateRevenueByMonth(payments.revenue_last_30_days, monthlyTrendYear)
+    : revenueData
+
   const issueStatusPie = issues.by_status.map((s, i) => ({
     name: s.label,
     value: s.count,
@@ -930,8 +953,45 @@ export function AnalyticsPage() {
               />
             </div>
           )}
+          <div className="mb-4 space-y-4">
+            <MonthlyRevenueTrendPanel
+              subtitle={
+                useMonthlyRevenueTrend
+                  ? `Revenue growth over ${monthlyTrendYear}`
+                  : `Revenue over ${seriesPeriodLabel.toLowerCase()}`
+              }
+              ytdValue={<SensitiveYtdValue amount={payments.total_revenue} />}
+              ytdLabel={useMonthlyRevenueTrend ? "YTD" : "Period"}
+            >
+              <MonthlyRevenueAreaChart
+                data={monthlyRevenueTrendData}
+                xKey={useMonthlyRevenueTrend ? "month" : "date"}
+                gradientId="analyticsMonthlyRevenueFill"
+                height={260}
+                yTickFormatter={formatRevenueAxisTick}
+              />
+            </MonthlyRevenueTrendPanel>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ActivePlansBreakdownCard
+                data={labelCountsToPieSlices(
+                  (subscriptions.active_by_plan?.length
+                    ? subscriptions.active_by_plan
+                    : subscriptions.by_status
+                  ).map((row) => ({ label: row.label, count: row.count })),
+                )}
+              />
+              <RenewalRateCard
+                renewalRate={renewal?.renewal_rate ?? 0}
+                autoRenewCount={snapshot?.auto_renew_enabled ?? 0}
+                cancelledCount={snapshot?.cancelled_now ?? 0}
+                activeNow={snapshot?.active_now ?? subscriptionMetrics.active}
+              />
+            </div>
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="shadow-none">
+            <Card className={analyticsSoftCardClass}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -951,41 +1011,42 @@ export function AnalyticsPage() {
                   <AreaChart data={subscriptionData} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gradSub" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366F1" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#6366F1" stopOpacity={0.02} />
+                        <stop offset="0%" stopColor="#8E248D" stopOpacity={0.22} />
+                        <stop offset="100%" stopColor="#8E248D" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={11} width={30} allowDecimals={false} />
+                    <CartesianGrid vertical={false} stroke="#EEEEEE" strokeDasharray="4 4" />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} tick={{ fill: "#9E9E9E" }} />
+                    <YAxis tickLine={false} axisLine={false} fontSize={11} width={30} allowDecimals={false} tick={{ fill: "#9E9E9E" }} />
                     <Tooltip
                       contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid #E0E0E0",
-                        boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                        borderRadius: 10,
+                        border: "1px solid #E8E8E8",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                         fontSize: 12,
                       }}
                     />
-                    <Area type="monotone" dataKey="count" stroke="#6366F1" strokeWidth={2} fill="url(#gradSub)" />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#8E248D"
+                      strokeWidth={2.5}
+                      fill="url(#gradSub)"
+                      dot={{ r: 3.5, fill: "#8E248D", strokeWidth: 0 }}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card className="shadow-none">
+            <Card className={analyticsSoftCardClass}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="flex items-center gap-1">
-                      <CardTitle>Revenue</CardTitle>
-                      <SensitiveRevealToggle />
+                    <CardTitle>Daily Revenue Detail</CardTitle>
+                    <div className="mt-1 text-xs text-grayScale-400">
+                      Same period as filters · ETB
                     </div>
-                    <div className="mt-1 text-2xl font-semibold tracking-tight">
-                      <SensitiveValue showToggle={false}>
-                        ETB {payments.total_revenue.toLocaleString()}
-                      </SensitiveValue>
-                    </div>
-                    <div className="text-xs text-grayScale-400">Daily revenue over last 30 days</div>
                   </div>
                   <Badge variant="secondary">{seriesPeriodLabel}</Badge>
                 </div>
@@ -994,19 +1055,19 @@ export function AnalyticsPage() {
                 <SensitiveChart>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revenueData} margin={{ left: 8, right: 8, top: 8 }}>
-                      <CartesianGrid vertical={false} stroke="#E0E0E0" strokeDasharray="4 4" />
-                      <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} />
-                      <YAxis tickLine={false} axisLine={false} fontSize={11} width={42} />
+                      <CartesianGrid vertical={false} stroke="#EEEEEE" strokeDasharray="4 4" />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} tick={{ fill: "#9E9E9E" }} />
+                      <YAxis tickLine={false} axisLine={false} fontSize={11} width={42} tick={{ fill: "#9E9E9E" }} />
                       <Tooltip
                         formatter={(v) => [`ETB ${Number(v).toLocaleString()}`, "Revenue"]}
                         contentStyle={{
-                          borderRadius: 12,
-                          border: "1px solid #E0E0E0",
-                          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                          borderRadius: 10,
+                          border: "1px solid #E8E8E8",
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                           fontSize: 12,
                         }}
                       />
-                      <Bar dataKey="revenue" radius={[6, 6, 0, 0]} fill="#9E2891" />
+                      <Bar dataKey="revenue" radius={[6, 6, 0, 0]} fill="#8E248D" />
                     </BarChart>
                   </ResponsiveContainer>
                 </SensitiveChart>

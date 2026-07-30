@@ -42,17 +42,28 @@ export function formatTeamRoleLabel(teamRole: string): string {
   return teamRole.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-/** Role name sent to POST /team/members/invite (used in invitation emails). */
+/**
+ * Role key/name sent to POST /team/members/invite.
+ * Must be a built-in team role (e.g. SUPER_ADMIN) or an exact RBAC role name/id —
+ * never a UI display label like "Super Admin".
+ */
 export function teamRoleNameForInvite(teamRole: string, explicitName?: string): string {
-  const named = explicitName?.trim()
-  if (named) return named
+  const raw = (teamRole || explicitName || "").trim()
+  if (!raw) return ""
 
-  const fromOptions = TEAM_ROLE_OPTIONS.find(
-    (o) => o.value === teamRole || o.value === teamRole.toUpperCase(),
+  // Accidental display labels from built-in options → API keys
+  const byLabel = TEAM_ROLE_OPTIONS.find(
+    (o) => o.label.toLowerCase() === raw.toLowerCase(),
   )
-  if (fromOptions) return fromOptions.label
+  if (byLabel) return byLabel.value
 
-  return teamRole.trim()
+  const byValue = TEAM_ROLE_OPTIONS.find(
+    (o) => o.value === raw || o.value === raw.toUpperCase(),
+  )
+  if (byValue) return byValue.value
+
+  // Custom RBAC roles: keep exact name (spaces allowed); numeric id strings pass through
+  return raw
 }
 
 export type TeamRoleOption = { value: string; label: string }
@@ -62,5 +73,8 @@ export function rbacRolesToTeamRoleOptions(roles: Role[]): TeamRoleOption[] {
     new Set(roles.map((role) => role.name.trim()).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b))
 
-  return names.map((name) => ({ value: name, label: name }))
+  return names.map((name) => ({
+    value: name,
+    label: formatTeamRoleLabel(name),
+  }))
 }

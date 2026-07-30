@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Mail, Shield } from "lucide-react"
 import { toast } from "sonner"
 import { fetchAllRoles } from "../../../api/rbac.api"
-import { inviteTeamMember } from "../../../api/team.api"
+import { fetchAllTeamMemberEmails, inviteTeamMember } from "../../../api/team.api"
 import { Button } from "../../../components/ui/button"
 import {
   Dialog,
@@ -54,6 +54,9 @@ export function InviteTeamMemberDialog({
   const [teamRole, setTeamRole] = useState(lockedRole)
   const [loadedRoleOptions, setLoadedRoleOptions] = useState<TeamRoleOption[]>([])
   const [rolesLoading, setRolesLoading] = useState(false)
+  const [existingEmails, setExistingEmails] = useState<Set<string>>(new Set())
+  const [existingEmailsLoading, setExistingEmailsLoading] = useState(false)
+  const [existingEmailsError, setExistingEmailsError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(
     null,
@@ -65,6 +68,14 @@ export function InviteTeamMemberDialog({
     () => parsedEmails.filter((e) => !isValidInviteEmail(e)),
     [parsedEmails],
   )
+  const alreadyRegisteredEmails = useMemo(
+    () =>
+      parsedEmails.filter(
+        (email) => isValidInviteEmail(email) && existingEmails.has(email.toLowerCase()),
+      ),
+    [parsedEmails, existingEmails],
+  )
+  const hasEmailConflicts = alreadyRegisteredEmails.length > 0
 
   const fallbackRoleOptions = useMemo<TeamRoleOption[]>(
     () => TEAM_ROLE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
@@ -98,6 +109,31 @@ export function InviteTeamMemberDialog({
       cancelled = true
     }
   }, [open, roleLocked, roleOptions])
+
+  useEffect(() => {
+    if (!open) return
+
+    let cancelled = false
+    setExistingEmailsLoading(true)
+    setExistingEmailsError(false)
+    void fetchAllTeamMemberEmails()
+      .then((emails) => {
+        if (cancelled) return
+        setExistingEmails(emails)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setExistingEmails(new Set())
+        setExistingEmailsError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setExistingEmailsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -142,8 +178,9 @@ export function InviteTeamMemberDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Always send the role key/name (SUPER_ADMIN), never the display label (Super Admin).
     const role = roleLocked ? lockedRole : teamRole
-    const roleName = teamRoleNameForInvite(role, presetRoleLabel)
+    const roleName = teamRoleNameForInvite(role)
 
     if (parsedEmails.length === 0) {
       toast.error("Enter at least one email address")
@@ -153,8 +190,20 @@ export function InviteTeamMemberDialog({
       toast.error(`Invalid email: ${invalidEmails.join(", ")}`)
       return
     }
+    if (hasEmailConflicts) {
+      toast.error(
+        alreadyRegisteredEmails.length === 1
+          ? `${alreadyRegisteredEmails[0]} is already a team member`
+          : `${alreadyRegisteredEmails.length} emails are already team members`,
+      )
+      return
+    }
     if (!role) {
       toast.error("Team role is required")
+      return
+    }
+    if (existingEmailsLoading) {
+      toast.error("Still checking existing team emails. Try again in a moment.")
       return
     }
 
@@ -176,6 +225,14 @@ export function InviteTeamMemberDialog({
         onOpenChange(false)
         onInvited?.()
         return
+      }
+
+      if (succeeded.length > 0) {
+        setExistingEmails((prev) => {
+          const next = new Set(prev)
+          for (const row of succeeded) next.add(row.email.toLowerCase())
+          return next
+        })
       }
 
       if (succeeded.length === 0) {
@@ -247,7 +304,28 @@ export function InviteTeamMemberDialog({
                   · {invalidEmails.length} invalid
                 </span>
               ) : null}
+              {existingEmailsLoading ? (
+                <span className="text-grayScale-400"> · Checking existing members…</span>
+              ) : null}
+              {existingEmailsError ? (
+                <span className="text-amber-600">
+                  {" "}
+                  · Couldn’t verify existing emails; server will reject duplicates
+                </span>
+              ) : null}
             </p>
+            {hasEmailConflicts ? (
+              <div className="mt-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                <p className="font-semibold">Already registered — remove before sending:</p>
+                <ul className="mt-1 list-inside list-disc space-y-0.5">
+                  {alreadyRegisteredEmails.map((email) => (
+                    <li key={email} className="font-mono">
+                      {email}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
 
           <div>
@@ -327,7 +405,13 @@ export function InviteTeamMemberDialog({
             <Button
               type="submit"
               className="bg-brand-500 text-white hover:bg-brand-600"
-              disabled={submitting || parsedEmails.length === 0}
+              disabled={
+                submitting ||
+                parsedEmails.length === 0 ||
+                invalidEmails.length > 0 ||
+                hasEmailConflicts ||
+                existingEmailsLoading
+              }
             >
               {submitting
                 ? progress

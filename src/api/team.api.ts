@@ -96,6 +96,29 @@ export const getTeamMembers = (page?: number, pageSize?: number) =>
     },
   })
 
+/** Lowercased emails for every team member (active, pending invite, etc.). */
+export async function fetchAllTeamMemberEmails(): Promise<Set<string>> {
+  const emails = new Set<string>()
+  const batchSize = 100
+  let page = 1
+  let totalPages = 1
+
+  do {
+    const res = await getTeamMembers(page, batchSize)
+    totalPages = res.data.metadata?.total_pages ?? 1
+    const members = (res.data.data ?? [])
+      .map((entry) => normalizeTeamMember(entry))
+      .filter((entry): entry is TeamMember => entry != null)
+    for (const member of members) {
+      const email = member.email.trim().toLowerCase()
+      if (email) emails.add(email)
+    }
+    page++
+  } while (page <= totalPages)
+
+  return emails
+}
+
 /** Permissions for the signed-in team member (from the members list payload). */
 export async function fetchCurrentTeamMemberPermissions(): Promise<string[]> {
   const memberId = Number(localStorage.getItem("member_id"))

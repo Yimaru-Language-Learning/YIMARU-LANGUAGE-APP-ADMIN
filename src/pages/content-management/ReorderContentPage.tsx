@@ -10,45 +10,50 @@ export function ReorderContentPage() {
   const [tab, setTab] = useState<ReorderTab>("learn_english");
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="space-y-6">
-        <PageBackLink fallbackTo="/new-content" label="Back to Content Management" iconClassName="h-5 w-5 group-hover:-translate-x-1" />
+    <div className="animate-in fade-in space-y-4 pb-10 duration-500">
+      <div className="space-y-3">
+        <PageBackLink
+          fallbackTo="/new-content"
+          label="Back to Content Management"
+          iconClassName="h-4 w-4 group-hover:-translate-x-1"
+        />
 
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">
-            Reorder Content
-          </h1>
-          <p className="max-w-2xl text-sm text-grayScale-500">
-            Drag and drop items to change their display order. Changes are saved
-            automatically when you drop an item.
-          </p>
-        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 space-y-0.5">
+            <h1 className="text-xl font-bold tracking-tight text-grayScale-700">
+              Reorder Content
+            </h1>
+            <p className="max-w-2xl text-xs text-grayScale-500">
+              Drag and drop to change order. Changes save automatically on drop.
+            </p>
+          </div>
 
-        <div className="flex gap-2 rounded-lg border border-grayScale-200 bg-grayScale-50 p-1 w-fit">
-          <button
-            type="button"
-            onClick={() => setTab("learn_english")}
-            className={cn(
-              "rounded-md px-4 py-2 text-sm font-semibold transition-colors",
-              tab === "learn_english"
-                ? "bg-white text-grayScale-900 shadow-sm"
-                : "text-grayScale-500 hover:text-grayScale-700",
-            )}
-          >
-            Learn English
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("exam_prep")}
-            className={cn(
-              "rounded-md px-4 py-2 text-sm font-semibold transition-colors",
-              tab === "exam_prep"
-                ? "bg-white text-grayScale-900 shadow-sm"
-                : "text-grayScale-500 hover:text-grayScale-700",
-            )}
-          >
-            Exam prep
-          </button>
+          <div className="flex w-fit shrink-0 gap-0.5 rounded-md border border-grayScale-200 bg-grayScale-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setTab("learn_english")}
+              className={cn(
+                "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                tab === "learn_english"
+                  ? "bg-white text-grayScale-900 shadow-sm"
+                  : "text-grayScale-500 hover:text-grayScale-700",
+              )}
+            >
+              Learn English
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("exam_prep")}
+              className={cn(
+                "rounded px-3 py-1.5 text-xs font-semibold transition-colors",
+                tab === "exam_prep"
+                  ? "bg-white text-grayScale-900 shadow-sm"
+                  : "text-grayScale-500 hover:text-grayScale-700",
+              )}
+            >
+              Duolingo/IELTS
+            </button>
+          </div>
         </div>
       </div>
 

@@ -33,7 +33,6 @@ import {
   RotateCcw,
   Edit2,
   Trash2,
-  Image as ImageIcon,
   Loader2,
 } from "lucide-react";
 import { cn } from "../../../lib/utils";
@@ -113,23 +112,22 @@ function SortableItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center justify-between px-4 py-3 border border-grayScale-200 rounded-[6px] mb-2 bg-white dark:bg-grayScale-50 transition-all duration-200 group/item",
-        isDragging && "opacity-50 border-dashed z-50 shadow-sm",
+        "group/item mb-1 flex items-center justify-between rounded border border-grayScale-200 bg-white px-2 py-1.5 transition-all duration-150 dark:bg-grayScale-50",
+        isDragging && "z-50 border-dashed opacity-50 shadow-sm",
         !isDragging && "hover:border-brand-200 hover:shadow-sm",
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-2">
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 text-grayScale-300 hover:text-brand-500 transition-colors"
+          className="cursor-grab p-0.5 text-grayScale-300 transition-colors hover:text-brand-500 active:cursor-grabbing"
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-3.5 w-3.5" />
         </button>
 
-        <div className="flex items-center gap-3">
-          {/* Thumbnail/Icon Container */}
-          <div className="h-10 w-10 shrink-0 rounded-[4px] bg-grayScale-50 border border-grayScale-100 flex items-center justify-center overflow-hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded border border-grayScale-100 bg-grayScale-50">
             {thumbnail ? (
               <img
                 src={thumbnail}
@@ -137,36 +135,40 @@ function SortableItem({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="text-grayScale-400 group-hover/item:text-brand-500 transition-colors">
+              <div className="text-grayScale-400 transition-colors group-hover/item:text-brand-500 [&>svg]:h-3.5 [&>svg]:w-3.5">
                 {icon}
               </div>
             )}
           </div>
 
-          <div className="flex flex-col">
-            <span className="text-[14px] font-bold text-grayScale-800 leading-tight">
-              {name}
-            </span>
-          </div>
+          <span className="truncate text-xs font-semibold leading-tight text-grayScale-800">
+            {name}
+          </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-        <button
-          onClick={() => onEdit?.(id)}
-          className="p-2 text-grayScale-400 rounded-[4px] transition-all"
-          title="Edit"
-        >
-          <Edit2 className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={() => onDelete?.(id)}
-          className="p-2 text-grayScale-400 rounded-[4px] transition-all"
-          title="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      {(onEdit || onDelete) && (
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/item:opacity-100">
+          {onEdit ? (
+            <button
+              onClick={() => onEdit(id)}
+              className="rounded p-1 text-grayScale-400 transition-all"
+              title="Edit"
+            >
+              <Edit2 className="h-3 w-3" />
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button
+              onClick={() => onDelete(id)}
+              className="rounded p-1 text-grayScale-400 transition-all"
+              title="Delete"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -216,7 +218,7 @@ export function DraggableList({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col">
           {items.map((item) => (
             <SortableItem
               key={item.id}
@@ -232,28 +234,22 @@ export function DraggableList({
       </SortableContext>
       <DragOverlay>
         {activeItem ? (
-          <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-grayScale-50 border border-brand-300 shadow-lg rounded-[6px] opacity-90 cursor-grabbing">
-            <div className="flex items-center gap-4">
-              <div className="p-1 ">
-                <GripVertical className="h-4 w-4" />
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 shrink-0 rounded-[4px] bg-grayScale-50 border border-grayScale-100 flex items-center justify-center overflow-hidden">
-                  {activeItem.thumbnail ? (
-                    <img
-                      src={activeItem.thumbnail}
-                      alt={activeItem.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-brand-500">{icon}</div>
-                  )}
-                </div>
-                <span className="text-[14px] font-bold text-grayScale-800">
-                  {activeItem.name}
-                </span>
-              </div>
+          <div className="flex cursor-grabbing items-center gap-2 rounded border border-brand-300 bg-white px-2 py-1.5 opacity-90 shadow-lg dark:bg-grayScale-50">
+            <GripVertical className="h-3.5 w-3.5 text-grayScale-400" />
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded border border-grayScale-100 bg-grayScale-50">
+              {activeItem.thumbnail ? (
+                <img
+                  src={activeItem.thumbnail}
+                  alt={activeItem.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="text-brand-500 [&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</div>
+              )}
             </div>
+            <span className="truncate text-xs font-semibold text-grayScale-800">
+              {activeItem.name}
+            </span>
           </div>
         ) : null}
       </DragOverlay>
@@ -277,18 +273,18 @@ export function HierarchySection({
   children,
 }: SectionProps) {
   return (
-    <div className="border border-grayScale-100 rounded-xl mb-3 overflow-hidden transition-all duration-300 bg-white dark:bg-grayScale-50">
+    <div className="mb-2 overflow-hidden rounded-lg border border-grayScale-100 bg-white transition-all duration-200 dark:bg-grayScale-50">
       <button
         onClick={onToggle}
         className={cn(
-          "w-full flex items-center justify-between px-5 py-4 transition-colors",
+          "flex w-full items-center justify-between px-3 py-2 transition-colors",
           isOpen ? "bg-grayScale-50" : "hover:bg-grayScale-25",
         )}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div
             className={cn(
-              "p-2 rounded-lg transition-colors",
+              "rounded p-1.5 transition-colors [&>svg]:h-3.5 [&>svg]:w-3.5",
               isOpen
                 ? "bg-brand-300 text-white"
                 : "bg-grayScale-50 text-grayScale-500",
@@ -298,7 +294,7 @@ export function HierarchySection({
           </div>
           <span
             className={cn(
-              "text-[15px] font-bold",
+              "text-sm font-semibold",
               isOpen ? "text-grayScale-900" : "text-grayScale-700",
             )}
           >
@@ -306,19 +302,14 @@ export function HierarchySection({
           </span>
         </div>
         {isOpen ? (
-          <ChevronDown className="h-5 w-5 text-grayScale-400" />
+          <ChevronDown className="h-4 w-4 text-grayScale-400" />
         ) : (
-          <ChevronRight className="h-5 w-5 text-grayScale-400" />
+          <ChevronRight className="h-4 w-4 text-grayScale-400" />
         )}
       </button>
-      <div
-        className={cn(
-          "transition-all duration-300 ease-in-out overflow-hidden",
-          isOpen ? "max-h-[1000px] opacity-100 p-5 pt-0" : "max-h-0 opacity-0",
-        )}
-      >
-        <div className="pt-4 border-t border-grayScale-200">{children}</div>
-      </div>
+      {isOpen ? (
+        <div className="border-t border-grayScale-100 px-3 py-2">{children}</div>
+      ) : null}
     </div>
   );
 }
@@ -559,36 +550,35 @@ export function ContentHierarchyList() {
   };
 
   return (
-    <div className="bg-[#ffffff] rounded-2xl p-6 border border-grayScale-100 mb-8 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-[16px] font-bold text-grayScale-900">
+    <div className="mb-4 rounded-xl border border-grayScale-100 bg-white p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-grayScale-900">
             Content Hierarchy
           </h3>
-          <p className="text-[12px] text-grayScale-500 mt-1">
-            Manage the ordering and structure of your educational content
+          <p className="text-[11px] text-grayScale-500">
+            Drag items to reorder Learn English content
           </p>
         </div>
         <button
           onClick={handleReset}
-          className="text-[13px] font-bold text-brand-300 hover:text-brand-400 transition-colors flex items-center gap-2 group"
+          className="group flex shrink-0 items-center gap-1.5 text-xs font-semibold text-brand-300 transition-colors hover:text-brand-400"
         >
-          <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-45deg]" />
-          Sync with API
+          <RotateCcw className="h-3.5 w-3.5 transition-transform group-hover:rotate-[-45deg]" />
+          Sync
         </button>
       </div>
 
-      <div className="space-y-4">
-        {/* Program Section */}
+      <div className="space-y-1.5">
         <HierarchySection
           title="Programs"
-          icon={<LayoutGrid className="h-5 w-5" />}
+          icon={<LayoutGrid className="h-3.5 w-3.5" />}
           isOpen={openSections.program}
           onToggle={() => toggleSection("program")}
         >
           {loading.program ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             <DraggableList
@@ -596,23 +586,22 @@ export function ContentHierarchyList() {
               onReorder={(active, over) =>
                 void handleProgramReorder(active, over)
               }
-              icon={<LayoutGrid className="h-4 w-4" />}
+              icon={<LayoutGrid className="h-3.5 w-3.5" />}
               onEdit={(id) => handleEdit("program", id)}
               onDelete={(id) => handleDelete("program", id)}
             />
           )}
         </HierarchySection>
 
-        {/* Course Section */}
         <HierarchySection
           title="Courses"
-          icon={<BookOpen className="h-5 w-5" />}
+          icon={<BookOpen className="h-3.5 w-3.5" />}
           isOpen={openSections.course}
           onToggle={() => toggleSection("course")}
         >
           {loading.course ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             programs.map((program) => {
@@ -621,8 +610,8 @@ export function ContentHierarchyList() {
               );
               if (programCourses.length === 0) return null;
               return (
-                <div key={program.id} className="mb-4 last:mb-0">
-                  <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
+                <div key={program.id} className="mb-2 last:mb-0">
+                  <h4 className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-grayScale-400">
                     {program.name}
                   </h4>
                   <DraggableList
@@ -630,7 +619,7 @@ export function ContentHierarchyList() {
                     onReorder={(active, over) =>
                       void handleCourseReorder(program.id, active, over)
                     }
-                    icon={<BookOpen className="h-4 w-4" />}
+                    icon={<BookOpen className="h-3.5 w-3.5" />}
                     onEdit={(id) => handleEdit("course", id)}
                     onDelete={(id) => handleDelete("course", id)}
                   />
@@ -640,16 +629,15 @@ export function ContentHierarchyList() {
           )}
         </HierarchySection>
 
-        {/* Module Section */}
         <HierarchySection
           title="Modules"
-          icon={<Layers className="h-5 w-5" />}
+          icon={<Layers className="h-3.5 w-3.5" />}
           isOpen={openSections.module}
           onToggle={() => toggleSection("module")}
         >
           {loading.module ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             courses.map((course) => {
@@ -658,8 +646,8 @@ export function ContentHierarchyList() {
               );
               if (courseModules.length === 0) return null;
               return (
-                <div key={course.id} className="mb-4 last:mb-0">
-                  <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
+                <div key={course.id} className="mb-2 last:mb-0">
+                  <h4 className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-grayScale-400">
                     {course.name}
                   </h4>
                   <DraggableList
@@ -667,7 +655,7 @@ export function ContentHierarchyList() {
                     onReorder={(active, over) =>
                       void handleModuleReorder(course.id, active, over)
                     }
-                    icon={<Layers className="h-4 w-4" />}
+                    icon={<Layers className="h-3.5 w-3.5" />}
                     onEdit={(id) => handleEdit("module", id)}
                     onDelete={(id) => handleDelete("module", id)}
                   />
@@ -677,16 +665,15 @@ export function ContentHierarchyList() {
           )}
         </HierarchySection>
 
-        {/* Lesson Section */}
         <HierarchySection
           title="Lessons"
-          icon={<PlayCircle className="h-5 w-5" />}
+          icon={<PlayCircle className="h-3.5 w-3.5" />}
           isOpen={openSections.lesson}
           onToggle={() => toggleSection("lesson")}
         >
           {loading.lesson ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             modules.map((module) => {
@@ -695,8 +682,8 @@ export function ContentHierarchyList() {
               );
               if (moduleLessons.length === 0) return null;
               return (
-                <div key={module.id} className="mb-4 last:mb-0">
-                  <h4 className="text-[12px] font-bold text-grayScale-400 uppercase tracking-wider mb-2 px-1">
+                <div key={module.id} className="mb-2 last:mb-0">
+                  <h4 className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-grayScale-400">
                     {module.name}
                   </h4>
                   <DraggableList
@@ -704,7 +691,7 @@ export function ContentHierarchyList() {
                     onReorder={(active, over) =>
                       void handleLessonReorder(module.id, active, over)
                     }
-                    icon={<PlayCircle className="h-4 w-4" />}
+                    icon={<PlayCircle className="h-3.5 w-3.5" />}
                     onEdit={(id) => handleEdit("lesson", id)}
                     onDelete={(id) => handleDelete("lesson", id)}
                   />

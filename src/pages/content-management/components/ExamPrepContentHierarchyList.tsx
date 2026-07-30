@@ -250,63 +250,63 @@ export function ExamPrepContentHierarchyList() {
   }
 
   return (
-    <div className="mb-8 rounded-2xl border border-grayScale-100 bg-[#ffffff] p-6 shadow-sm">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h3 className="text-[16px] font-bold text-grayScale-900">
-            Exam prep hierarchy
+    <div className="mb-4 rounded-xl border border-grayScale-100 bg-white p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-grayScale-900">
+            Duolingo/IELTS hierarchy
           </h3>
-          <p className="mt-1 text-[12px] text-grayScale-500">
-            Catalog courses, units, modules, and lessons (IELTS, Duolingo, etc.)
+          <p className="text-[11px] text-grayScale-500">
+            Drag items to reorder catalog courses, units, modules, and lessons
           </p>
         </div>
         <button
           type="button"
           onClick={() => void fetchHierarchy()}
-          className="group flex items-center gap-2 text-[13px] font-bold text-brand-300 transition-colors hover:text-brand-400"
+          className="group flex shrink-0 items-center gap-1.5 text-xs font-semibold text-brand-300 transition-colors hover:text-brand-400"
         >
-          <RotateCcw className="h-4 w-4 transition-transform group-hover:rotate-[-45deg]" />
-          Sync with API
+          <RotateCcw className="h-3.5 w-3.5 transition-transform group-hover:rotate-[-45deg]" />
+          Sync
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-1.5">
         <HierarchySection
           title="Catalog courses"
-          icon={<GraduationCap className="h-5 w-5" />}
+          icon={<GraduationCap className="h-3.5 w-3.5" />}
           isOpen={openSections.catalogCourse}
           onToggle={() => toggleSection("catalogCourse")}
         >
           {loading.catalogCourse ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             <DraggableList
               items={catalogCourses}
               onReorder={(active, over) => void handleCatalogCourseReorder(active, over)}
-              icon={<GraduationCap className="h-4 w-4" />}
+              icon={<GraduationCap className="h-3.5 w-3.5" />}
             />
           )}
         </HierarchySection>
 
         <HierarchySection
           title="Units"
-          icon={<BookOpen className="h-5 w-5" />}
+          icon={<BookOpen className="h-3.5 w-3.5" />}
           isOpen={openSections.unit}
           onToggle={() => toggleSection("unit")}
         >
           {loading.unit ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             catalogCourses.map((course) => {
               const courseUnits = units.filter((u) => u.catalogCourseId === course.id)
               if (courseUnits.length === 0) return null
               return (
-                <div key={course.id} className="mb-4 last:mb-0">
-                  <h4 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-wider text-grayScale-400">
+                <div key={course.id} className="mb-2 last:mb-0">
+                  <h4 className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-grayScale-400">
                     {course.name}
                   </h4>
                   <DraggableList
@@ -314,7 +314,7 @@ export function ExamPrepContentHierarchyList() {
                     onReorder={(active, over) =>
                       void handleUnitReorder(course.id, active, over)
                     }
-                    icon={<BookOpen className="h-4 w-4" />}
+                    icon={<BookOpen className="h-3.5 w-3.5" />}
                   />
                 </div>
               )
@@ -324,21 +324,21 @@ export function ExamPrepContentHierarchyList() {
 
         <HierarchySection
           title="Modules"
-          icon={<Layers className="h-5 w-5" />}
+          icon={<Layers className="h-3.5 w-3.5" />}
           isOpen={openSections.module}
           onToggle={() => toggleSection("module")}
         >
           {loading.module ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             units.map((unit) => {
               const unitModules = modules.filter((m) => m.unitId === unit.id)
               if (unitModules.length === 0) return null
               return (
-                <div key={unit.id} className="mb-4 last:mb-0">
-                  <h4 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-wider text-grayScale-400">
+                <div key={unit.id} className="mb-2 last:mb-0">
+                  <h4 className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-grayScale-400">
                     {unit.name}
                   </h4>
                   <DraggableList
@@ -346,7 +346,7 @@ export function ExamPrepContentHierarchyList() {
                     onReorder={(active, over) =>
                       void handleModuleReorder(unit.id, active, over)
                     }
-                    icon={<Layers className="h-4 w-4" />}
+                    icon={<Layers className="h-3.5 w-3.5" />}
                   />
                 </div>
               )
@@ -356,21 +356,21 @@ export function ExamPrepContentHierarchyList() {
 
         <HierarchySection
           title="Lessons"
-          icon={<PlayCircle className="h-5 w-5" />}
+          icon={<PlayCircle className="h-3.5 w-3.5" />}
           isOpen={openSections.lesson}
           onToggle={() => toggleSection("lesson")}
         >
           {loading.lesson ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-brand-500" />
             </div>
           ) : (
             modules.map((module) => {
               const moduleLessons = lessons.filter((l) => l.moduleId === module.id)
               if (moduleLessons.length === 0) return null
               return (
-                <div key={module.id} className="mb-4 last:mb-0">
-                  <h4 className="mb-2 px-1 text-[12px] font-bold uppercase tracking-wider text-grayScale-400">
+                <div key={module.id} className="mb-2 last:mb-0">
+                  <h4 className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-grayScale-400">
                     {module.name}
                   </h4>
                   <DraggableList
@@ -378,7 +378,7 @@ export function ExamPrepContentHierarchyList() {
                     onReorder={(active, over) =>
                       void handleLessonReorder(module.id, active, over)
                     }
-                    icon={<PlayCircle className="h-4 w-4" />}
+                    icon={<PlayCircle className="h-3.5 w-3.5" />}
                   />
                 </div>
               )

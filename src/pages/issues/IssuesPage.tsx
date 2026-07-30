@@ -53,7 +53,7 @@ import {
 import type { Issue } from "../../types/issue.types";
 
 // ── Status configuration ───────────────────────────────────────────
-const STATUSES = ["pending", "in_progress", "resolved", "closed"] as const;
+const STATUSES = ["pending", "in_progress", "resolved", "rejected"] as const;
 
 const ISSUE_TYPES = ["bug", "video", "course", "account", "payment", "other"] as const;
 
@@ -81,9 +81,10 @@ function getStatusConfig(status: string): {
         classes: "bg-emerald-50 text-emerald-700 border-emerald-200",
         icon: CheckCircle2,
       };
-    case "closed":
+    case "rejected":
+    case "closed": // legacy label; API status is rejected
       return {
-        label: "Closed",
+        label: status === "closed" ? "Closed" : "Rejected",
         classes: "bg-grayScale-100 text-grayScale-500 border-grayScale-200",
         icon: XCircle,
       };

@@ -104,6 +104,17 @@ function isRefreshableAccessTokenError(error: AxiosError): boolean {
   );
 }
 
+/** 401s that mean "not logged in" — redirect/silent, never toast on login. */
+function isUnauthenticatedClientError(error: AxiosError): boolean {
+  if (error.response?.status !== 401) return false;
+  const message = readApiResponseMessage(error.response.data).toLowerCase();
+  return (
+    message.includes("authorization header missing") ||
+    message.includes("missing authorization") ||
+    (!getAccessToken() && !getRefreshToken())
+  );
+}
+
 const refreshAccessToken = async (): Promise<string> => {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
@@ -198,7 +209,9 @@ http.interceptors.response.use(
     }
 
     const skipErrorToast =
-      originalRequest.skipErrorToast || isAuthEndpointRequest(originalRequest.url);
+      originalRequest.skipErrorToast ||
+      isAuthEndpointRequest(originalRequest.url) ||
+      isUnauthenticatedClientError(error);
     if (!skipErrorToast && error.response) {
       const message = readApiResponseMessage(error.response.data);
       if (message) {

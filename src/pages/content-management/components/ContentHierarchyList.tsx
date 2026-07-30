@@ -49,7 +49,7 @@ import {
   reorderModuleLessons,
 } from "../../../api/courses.api";
 
-function sortBySortOrder<T extends { sort_order?: number }>(items: T[]): T[] {
+export function sortBySortOrder<T extends { sort_order?: number }>(items: T[]): T[] {
   return [...items].sort(
     (a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0),
   );
@@ -179,7 +179,7 @@ interface DraggableListProps {
   onDelete?: (id: string) => void;
 }
 
-function DraggableList({
+export function DraggableList({
   items,
   onReorder,
   icon,
@@ -269,7 +269,7 @@ interface SectionProps {
   children: React.ReactNode;
 }
 
-function HierarchySection({
+export function HierarchySection({
   title,
   icon,
   isOpen,

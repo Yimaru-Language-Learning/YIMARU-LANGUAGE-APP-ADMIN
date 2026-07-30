@@ -510,6 +510,32 @@ export const reorderModuleLessons = (
   data: ReorderOrderedIdsRequest,
 ) => http.put(`/modules/${moduleId}/lessons/reorder`, data)
 
+/** PUT /exam-prep/catalog-courses/reorder */
+export const reorderExamPrepCatalogCourses = (data: ReorderOrderedIdsRequest) =>
+  http.put("/exam-prep/catalog-courses/reorder", data)
+
+/** PUT /exam-prep/catalog-courses/:catalogCourseId/units/reorder */
+export const reorderExamPrepUnitsInCatalogCourse = (
+  catalogCourseId: number,
+  data: ReorderOrderedIdsRequest,
+) =>
+  http.put(
+    `/exam-prep/catalog-courses/${catalogCourseId}/units/reorder`,
+    data,
+  )
+
+/** PUT /exam-prep/units/:unitId/modules/reorder */
+export const reorderExamPrepModulesInUnit = (
+  unitId: number,
+  data: ReorderOrderedIdsRequest,
+) => http.put(`/exam-prep/units/${unitId}/modules/reorder`, data)
+
+/** PUT /exam-prep/modules/:moduleId/lessons/reorder */
+export const reorderExamPrepLessonsInModule = (
+  moduleId: number,
+  data: ReorderOrderedIdsRequest,
+) => http.put(`/exam-prep/modules/${moduleId}/lessons/reorder`, data)
+
 export const createProgramCourse = (
   programId: number,
   data: CreateProgramCourseRequest,

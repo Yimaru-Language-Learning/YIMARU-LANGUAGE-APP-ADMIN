@@ -84,6 +84,7 @@ const navEntries: NavEntry[] = [
       { label: "Learning content", to: "/new-content", end: true },
       { label: "Reorder structure", to: "/new-content/reorder" },
       { label: "Question types", to: "/new-content/question-types" },
+      { label: "Initial assessment", to: "/new-content/initial-assessment" },
     ],
   },
   {

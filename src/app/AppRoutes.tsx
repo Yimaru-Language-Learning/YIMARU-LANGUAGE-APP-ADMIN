@@ -30,6 +30,7 @@ import { ProgramTypeSelectionPage } from "../pages/content-management/ProgramTyp
 import { ProgramDetailPage } from "../pages/content-management/ProgramDetailPage";
 import { CourseManagementPage } from "../pages/content-management/CourseManagementPage";
 import { UnitManagementPage } from "../pages/content-management/UnitManagementPage";
+import { InitialAssessmentPage } from "../pages/content-management/InitialAssessmentPage";
 import { QuestionTypeLibraryPage } from "../pages/content-management/QuestionTypeLibraryPage";
 import { QuestionTypeGroupDetailPage } from "../pages/content-management/QuestionTypeGroupDetailPage";
 import { CreateQuestionTypeFlow } from "../pages/content-management/CreateQuestionTypeFlow";
@@ -187,6 +188,10 @@ export function AppRoutes() {
         <Route
           path="/new-content/question-types"
           element={<QuestionTypeLibraryPage />}
+        />
+        <Route
+          path="/new-content/initial-assessment"
+          element={<InitialAssessmentPage />}
         />
         <Route
           path="/new-content/question-types/groups/:groupId"

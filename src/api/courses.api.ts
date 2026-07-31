@@ -1181,6 +1181,9 @@ export const updateQuestionSet = (questionSetId: number, data: Partial<CreateQue
 export const addQuestionToSet = (questionSetId: number, data: AddQuestionToSetRequest) =>
   http.post(`/question-sets/${questionSetId}/questions`, data)
 
+export const removeQuestionFromSet = (questionSetId: number, questionId: number) =>
+  http.delete(`/question-sets/${questionSetId}/questions/${questionId}`)
+
 export const createQuestion = (data: CreateQuestionRequest) =>
   http.post<CreateQuestionResponse>("/questions", data)
 

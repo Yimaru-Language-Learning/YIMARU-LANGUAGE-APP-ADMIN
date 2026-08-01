@@ -79,7 +79,7 @@ export function CourseModuleDetailPage() {
     [lessonPracticeChoice],
   );
   const [moduleTitle, setModuleTitle] = useState("Module");
-  const [moduleDescription, setModuleDescription] = useState("—");
+  const [moduleDescription, setModuleDescription] = useState("unassigned");
   const [modulePublishStatus, setModulePublishStatus] = useState<
     PracticePublishStatus | string | null
   >(null);
@@ -173,17 +173,17 @@ export function CourseModuleDetailPage() {
       const row = list.find((m) => Number(m.id) === parsedModuleId);
       if (row) {
         setModuleTitle(row.name?.trim() || `Module ${parsedModuleId}`);
-        setModuleDescription(row.description?.trim() || "—");
+        setModuleDescription(row.description?.trim() || "unassigned");
         setModulePublishStatus(row.publish_status ?? null);
       } else {
         setModuleTitle(`Module ${parsedModuleId}`);
-        setModuleDescription("—");
+        setModuleDescription("unassigned");
         setModulePublishStatus(null);
       }
     } catch (error) {
       console.error(error);
       setModuleTitle(`Module ${parsedModuleId}`);
-      setModuleDescription("—");
+      setModuleDescription("unassigned");
     }
   }, [parsedModuleId, parsedUnitId]);
 

@@ -68,10 +68,10 @@ function teamMemberToProfile(
   return {
     kind: "team",
     id: member.id,
-    name: [member.first_name, member.last_name].filter(Boolean).join(" ") || "—",
-    email: member.email || "—",
+    name: [member.first_name, member.last_name].filter(Boolean).join(" ") || "unassigned",
+    email: member.email || "unassigned",
     roleLabel: formatTeamRoleLabel(member.team_role),
-    status: member.status || "—",
+    status: member.status || "unassigned",
     emailVerified: Boolean(member.email_verified),
     createdAt: member.created_at,
   }
@@ -81,17 +81,17 @@ function userToProfile(user: UserProfileData): ActorProfile {
   return {
     kind: "user",
     id: user.id,
-    name: [user.first_name, user.last_name].filter(Boolean).join(" ") || "—",
-    email: user.email || "—",
+    name: [user.first_name, user.last_name].filter(Boolean).join(" ") || "unassigned",
+    email: user.email || "unassigned",
     roleLabel: user.role
       ? user.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-      : "—",
-    status: user.status || "—",
+      : "unassigned",
+    status: user.status || "unassigned",
     emailVerified: Boolean(user.email_verified),
-    country: user.country || "—",
-    region: user.region || "—",
+    country: user.country || "unassigned",
+    region: user.region || "unassigned",
     lastLogin: user.last_login,
-    subscriptionStatus: user.subscription_status?.trim() || "—",
+    subscriptionStatus: user.subscription_status?.trim() || "unassigned",
     createdAt: user.created_at,
   }
 }

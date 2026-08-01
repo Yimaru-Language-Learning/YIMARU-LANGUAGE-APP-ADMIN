@@ -15,7 +15,7 @@ export function faqStatusLabel(status: FAQStatus | string): string {
 
 export function formatFaqDate(raw: string | null | undefined): string {
   if (raw == null || String(raw).trim() === "") {
-    return "—"
+    return "unassigned"
   }
   const text = String(raw)
   const parsed = new Date(text)

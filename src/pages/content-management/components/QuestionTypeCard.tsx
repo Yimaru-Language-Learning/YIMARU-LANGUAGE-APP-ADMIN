@@ -33,7 +33,7 @@ export function QuestionTypeCard({
   onCreatePractice,
   deleteDisabled,
 }: QuestionTypeDefinitionCardModel) {
-  const statusLabel = (status || "—").toString()
+  const statusLabel = (status || "unassigned").toString()
   const isActive = statusLabel.toUpperCase() === "ACTIVE"
 
   return (

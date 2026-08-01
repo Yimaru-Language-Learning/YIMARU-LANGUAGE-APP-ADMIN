@@ -39,6 +39,6 @@ export function formatAdminPaymentMethod(method: string | null | undefined): str
   const value = String(method ?? "").trim().toUpperCase()
   if (value === "ADMIN_GRANT") return "Admin grant"
   if (value === "ADMIN_EXTEND") return "Admin extend"
-  if (!value) return "—"
+  if (!value) return "unassigned"
   return method!.trim()
 }

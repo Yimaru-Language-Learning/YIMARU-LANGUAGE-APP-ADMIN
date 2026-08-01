@@ -96,7 +96,7 @@ export function ReviewStep({
   const guidanceText =
     formData.tips?.trim() ||
     (!isLessonPractice ? formData.description?.trim() : "") ||
-    "—";
+    "unassigned";
 
   const thumbnailUrl = isLessonPractice
     ? null

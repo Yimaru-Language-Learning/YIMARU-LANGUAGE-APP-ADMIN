@@ -58,7 +58,7 @@ export function formatVersionStatus(status: string): string {
 }
 
 export function formatAppVersionCreatedAt(raw: string): string {
-  if (!raw) return "—"
+  if (!raw) return "unassigned"
   const normalized = raw.replace(" +0000 UTC", "Z").replace(/^(\d{4}-\d{2}-\d{2}) /, "$1T")
   const d = new Date(normalized)
   if (Number.isNaN(d.getTime())) {

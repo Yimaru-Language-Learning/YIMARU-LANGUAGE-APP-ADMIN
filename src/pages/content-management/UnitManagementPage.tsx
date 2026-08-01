@@ -209,7 +209,7 @@ export function UnitManagementPage() {
         list.map((row, index) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Module ${row.id}`,
-          description: row.description?.trim() || "—",
+          description: row.description?.trim() || "unassigned",
           thumbnail: row.thumbnail?.trim() || "",
           icon: row.icon?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
@@ -524,7 +524,7 @@ export function UnitManagementPage() {
     try {
       const existing = modules.find((m) => m.id === editingModuleId);
       const preservedDescription =
-        existing?.description && existing.description !== "—"
+        existing?.description && existing.description !== "unassigned"
           ? existing.description
           : null;
       const minioThumbnail = await resolveToMinioUrl(editThumbnail);

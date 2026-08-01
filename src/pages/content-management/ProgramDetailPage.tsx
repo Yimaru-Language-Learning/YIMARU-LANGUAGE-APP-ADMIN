@@ -116,7 +116,7 @@ export function ProgramDetailPage() {
         list.map((row) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Course ${row.id}`,
-          description: row.description?.trim() || "—",
+          description: row.description?.trim() || "unassigned",
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
           publishStatus: row.publish_status ?? null,
@@ -310,7 +310,7 @@ export function ProgramDetailPage() {
         {
           id: row.id,
           name: row.name ?? name,
-          description: row.description?.trim() || "—",
+          description: row.description?.trim() || "unassigned",
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
           unitsCount: Number(row.units_count ?? 0),
@@ -393,7 +393,7 @@ export function ProgramDetailPage() {
       const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
       const existing = createdCourses.find((c) => c.id === editingCourseId);
       const preservedDescription =
-        existing?.description && existing.description !== "—"
+        existing?.description && existing.description !== "unassigned"
           ? existing.description
           : null;
       const response = await updateExamPrepCatalogCourse(editingCourseId, {
@@ -409,7 +409,7 @@ export function ProgramDetailPage() {
             ? {
                 ...course,
                 name: row?.name ?? name,
-                description: row?.description?.trim() || preservedDescription || "—",
+                description: row?.description?.trim() || preservedDescription || "unassigned",
                 thumbnail: row?.thumbnail?.trim() || null,
                 sortOrder: Number(row?.sort_order ?? sortOrderNum),
                 unitsCount: Number(row?.units_count ?? course.unitsCount ?? 0),

@@ -490,7 +490,7 @@ export function CourseDetailPage() {
     (!loading && !course
       ? "This course could not be loaded."
       : !course?.description?.trim() && course
-        ? "—"
+        ? "unassigned"
         : "");
 
   return (
@@ -787,7 +787,7 @@ export function CourseDetailPage() {
                             <p className="text-[12px] font-medium leading-snug text-grayScale-400 line-clamp-3">
                               {module.description?.trim()
                                 ? module.description
-                                : "—"}
+                                : "unassigned"}
                             </p>
                           </div>
                         </div>

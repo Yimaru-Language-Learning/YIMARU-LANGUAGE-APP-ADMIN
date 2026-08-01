@@ -388,10 +388,10 @@ export function TeamManagementPage() {
                       </span>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-grayScale-600">
-                      {member.department || "—"}
+                      {member.department || "unassigned"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-grayScale-600">
-                      {member.job_title || "—"}
+                      {member.job_title || "unassigned"}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {member.last_login ? (
@@ -406,7 +406,7 @@ export function TeamManagementPage() {
                       ) : (
                         <div>
                           <div className="text-sm text-grayScale-600">Never</div>
-                          <div className="text-xs text-grayScale-400">—</div>
+                          <div className="text-xs text-grayScale-400">unassigned</div>
                         </div>
                       )}
                     </TableCell>

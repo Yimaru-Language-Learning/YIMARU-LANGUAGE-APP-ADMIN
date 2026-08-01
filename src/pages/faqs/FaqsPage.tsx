@@ -339,7 +339,7 @@ export function FaqsPage() {
                       {faq.category ? (
                         <Badge variant="secondary">{faq.category}</Badge>
                       ) : (
-                        <span className="text-xs text-grayScale-400">—</span>
+                        <span className="text-xs text-grayScale-400">unassigned</span>
                       )}
                     </TableCell>
                     <TableCell className="text-center text-sm text-grayScale-600">

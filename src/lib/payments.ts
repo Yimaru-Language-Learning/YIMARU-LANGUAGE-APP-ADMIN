@@ -10,7 +10,7 @@ export function formatPaymentAmount(payment: Pick<Payment, "amount" | "currency"
 }
 
 export function formatPaymentDate(iso: string | null | undefined): string {
-  if (!iso) return "—"
+  if (!iso) return "unassigned"
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleString(undefined, {
@@ -27,7 +27,7 @@ export function formatPaymentStatus(status: string): string {
 }
 
 export function formatPaymentMethod(method: string): string {
-  if (!method) return "—"
+  if (!method) return "unassigned"
   return method.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
 

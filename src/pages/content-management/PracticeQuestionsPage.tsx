@@ -647,7 +647,7 @@ export function PracticeQuestionsPage() {
                             Points: {question.points ?? 0}
                           </span>
                           <span className="rounded-md bg-grayScale-100 px-2 py-1">
-                            Difficulty: {question.difficulty_level || "—"}
+                            Difficulty: {question.difficulty_level || "unassigned"}
                           </span>
                         </div>
                       </div>

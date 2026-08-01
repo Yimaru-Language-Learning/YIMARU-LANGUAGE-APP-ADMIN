@@ -131,11 +131,11 @@ export function QuestionTypeReviewPublishStep({
             </div>
             <div className="sm:col-span-2">
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Description</dt>
-              <dd className="font-medium text-grayScale-800 dark:text-grayScale-500 mt-1">{payload.description || "—"}</dd>
+              <dd className="font-medium text-grayScale-800 dark:text-grayScale-500 mt-1">{payload.description || "unassigned"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Groups</dt>
-              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{groupName || "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{groupName || "unassigned"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Status</dt>
@@ -143,15 +143,15 @@ export function QuestionTypeReviewPublishStep({
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Runtime type</dt>
-              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{runtime ?? "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{runtime ?? "unassigned"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Stimulus kinds</dt>
-              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{payload.stimulus_component_kinds.join(", ") || "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{payload.stimulus_component_kinds.join(", ") || "unassigned"}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Response kinds</dt>
-              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{payload.response_component_kinds.join(", ") || "—"}</dd>
+              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{payload.response_component_kinds.join(", ") || "unassigned"}</dd>
             </div>
           </dl>
 

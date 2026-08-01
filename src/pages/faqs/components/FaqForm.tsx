@@ -127,10 +127,10 @@ export function FaqForm({
                   Preview
                 </p>
                 <p className="mt-2 text-sm font-medium text-grayScale-900">
-                  {draft.question || "—"}
+                  {draft.question || "unassigned"}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-grayScale-600">
-                  {draft.answer || "—"}
+                  {draft.answer || "unassigned"}
                 </p>
                 {(draft.category || draft.display_order) && (
                   <div className="mt-2.5 flex items-center gap-2 text-[11px] text-grayScale-400">
@@ -149,10 +149,10 @@ export function FaqForm({
               Preview
             </p>
             <p className="mt-2 text-sm font-medium text-grayScale-900">
-              {draft.question || "—"}
+              {draft.question || "unassigned"}
             </p>
             <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-grayScale-600">
-              {draft.answer || "—"}
+              {draft.answer || "unassigned"}
             </p>
             {(draft.category || draft.display_order) && (
               <div className="mt-2.5 flex items-center gap-2 text-[11px] text-grayScale-400">

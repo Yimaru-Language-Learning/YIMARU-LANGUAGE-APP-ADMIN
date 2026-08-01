@@ -77,7 +77,7 @@ export const mapUserApiToUser = (u: UserApiDTO): User => ({
   country: u.country ?? "",
   lastLogin: null,
   status: u.status,
-  subscriptionStatus: u.subscription_status?.trim() ? u.subscription_status.trim() : "—",
+  subscriptionStatus: u.subscription_status?.trim() ? u.subscription_status.trim() : "unassigned",
   createdAt: u.created_at ?? "",
 })
 

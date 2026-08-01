@@ -55,7 +55,7 @@ export function getNotificationLevelBadge(level: string) {
 
 export function formatNotificationTimestamp(ts: string) {
   const date = new Date(ts)
-  if (Number.isNaN(date.getTime())) return "—"
+  if (Number.isNaN(date.getTime())) return "unassigned"
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
@@ -83,7 +83,7 @@ export function formatNotificationTypeLabel(type: string) {
 
 export function formatNotificationDateTime(ts: string) {
   const date = new Date(ts)
-  if (Number.isNaN(date.getTime())) return "—"
+  if (Number.isNaN(date.getTime())) return "unassigned"
   return date.toLocaleString(undefined, {
     year: "numeric",
     month: "short",

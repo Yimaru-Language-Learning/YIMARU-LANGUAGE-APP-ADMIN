@@ -7,7 +7,7 @@ export function formatAverageStars(value: number): string {
 
 export function formatRatingDate(dateStr: string): string {
   const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr || "—"
+  if (Number.isNaN(d.getTime())) return dateStr || "unassigned"
   return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -17,7 +17,7 @@ export function formatRatingDate(dateStr: string): string {
 
 export function formatRatingDateTime(dateStr: string): string {
   const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr || "—"
+  if (Number.isNaN(d.getTime())) return dateStr || "unassigned"
   return d.toLocaleString(undefined, {
     year: "numeric",
     month: "short",

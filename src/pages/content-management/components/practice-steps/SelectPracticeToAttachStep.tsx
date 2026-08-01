@@ -254,7 +254,7 @@ export function SelectPracticeToAttachStep({
                         publishStatusClass(practice.publish_status),
                       )}
                     >
-                      {(practice.publish_status || "—").toString()}
+                      {(practice.publish_status || "unassigned").toString()}
                     </span>
                     {alreadyLinked ? (
                       <span className="text-[11px] font-semibold text-brand-600">

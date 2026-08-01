@@ -606,16 +606,16 @@ export function AddNewLessonPage() {
                     <div className="flex items-center justify-between px-4 py-3 text-sm">
                       <span className="text-grayScale-500">Description</span>
                       <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">
-                        {lessonDescription || "—"}
+                        {lessonDescription || "unassigned"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-3 text-sm">
                       <span className="text-grayScale-500">Intro video URL</span>
-                      <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">{introVideoUrl || "—"}</span>
+                      <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">{introVideoUrl || "unassigned"}</span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-3 text-sm">
                       <span className="text-grayScale-500">Sub-module</span>
-                      <span className="font-medium text-grayScale-800">{subModuleId ?? "—"}</span>
+                      <span className="font-medium text-grayScale-800">{subModuleId ?? "unassigned"}</span>
                     </div>
                   </div>
                 </div>

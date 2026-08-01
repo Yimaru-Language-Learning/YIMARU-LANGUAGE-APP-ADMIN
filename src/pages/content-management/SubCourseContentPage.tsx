@@ -625,7 +625,7 @@ export function SubModuleContentPage() {
                                 day: "numeric",
                                 year: "numeric",
                               })
-                            : "—"}
+                            : "unassigned"}
                         </span>
                         <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                           <button

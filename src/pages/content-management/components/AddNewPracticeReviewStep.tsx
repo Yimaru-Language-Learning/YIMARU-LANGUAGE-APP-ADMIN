@@ -67,7 +67,7 @@ export function AddNewPracticeReviewStep({
       .map((q) => q.tips?.trim() ?? "")
       .filter(Boolean)
       .join(" ");
-    return tips || "—";
+    return tips || "unassigned";
   }, [practiceDescription, questions]);
 
   const thumbnailKind =

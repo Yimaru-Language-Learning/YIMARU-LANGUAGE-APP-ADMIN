@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { cn } from "../../../lib/utils"
 
-const PLACEHOLDER_VALUES = new Set(["—", "-", "Loading…", "Loading..."])
+const PLACEHOLDER_VALUES = new Set(["unassigned", "—", "-", "Not assigned", "Loading…", "Loading..."])
 
 type ContentPageDescriptionProps = {
   children: ReactNode

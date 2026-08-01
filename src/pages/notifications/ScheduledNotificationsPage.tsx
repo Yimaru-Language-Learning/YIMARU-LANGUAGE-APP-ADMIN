@@ -133,7 +133,7 @@ export function ScheduledNotificationsPage() {
     if (job.target_raw?.emails?.length) {
       return `${job.target_raw.emails.length} email(s)`
     }
-    return "—"
+    return "unassigned"
   }
 
   const activeFilterCount = countActiveFilters([
@@ -261,7 +261,7 @@ export function ScheduledNotificationsPage() {
                         <TableCell>{channelLabel(job.channel)}</TableCell>
                         <TableCell className="max-w-[240px]">
                           <p className="truncate text-sm font-medium text-grayScale-700">
-                            {job.title || "—"}
+                            {job.title || "unassigned"}
                           </p>
                           <p className="truncate text-xs text-grayScale-400">{job.message}</p>
                           {job.channel === "email" && job.email_template_slug ? (

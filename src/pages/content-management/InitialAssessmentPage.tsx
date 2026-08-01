@@ -817,7 +817,7 @@ export function InitialAssessmentPage() {
                         >
                           {(() => {
                             const value = String(q.difficultyLevel ?? "").trim()
-                            if (!value || value === "—" || value === "-") return "unassigned"
+                            if (!value || value === "unassigned" || value === "-") return "unassigned"
                             return value.toLowerCase()
                           })()}
                         </span>

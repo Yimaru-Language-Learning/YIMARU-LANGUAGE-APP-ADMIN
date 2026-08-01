@@ -542,21 +542,21 @@ export function DeletionRequestsPage() {
                           {item.first_name} {item.last_name}
                         </p>
                         <p className="text-xs text-grayScale-500">{item.email}</p>
-                        <p className="text-xs text-grayScale-500">{item.phone_number || "—"}</p>
+                        <p className="text-xs text-grayScale-500">{item.phone_number || "unassigned"}</p>
                       </TableCell>
                       <TableCell className="py-3.5">
-                        <p className="text-sm text-grayScale-700">{item.role || "—"}</p>
-                        <p className="text-xs text-grayScale-500">{item.status || "—"}</p>
+                        <p className="text-sm text-grayScale-700">{item.role || "unassigned"}</p>
+                        <p className="text-xs text-grayScale-500">{item.status || "unassigned"}</p>
                       </TableCell>
                       <TableCell className="hidden py-3.5 text-sm text-grayScale-600 md:table-cell">
-                        {item.deletion_requested_at || "—"}
+                        {item.deletion_requested_at || "unassigned"}
                       </TableCell>
                       <TableCell className="hidden py-3.5 text-sm text-grayScale-600 md:table-cell">
-                        {item.deletion_scheduled_at || "—"}
+                        {item.deletion_scheduled_at || "unassigned"}
                       </TableCell>
                       <TableCell className="py-3.5">
                         <Badge className={stateBadge[item.deletion_state] || "bg-grayScale-200 text-grayScale-600"}>
-                          {item.deletion_state || "—"}
+                          {item.deletion_state || "unassigned"}
                         </Badge>
                       </TableCell>
                     </TableRow>

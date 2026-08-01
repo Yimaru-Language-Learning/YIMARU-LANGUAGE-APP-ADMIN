@@ -166,7 +166,7 @@ export function CourseManagementPage() {
         list.map((row, index) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Unit ${row.id}`,
-          description: row.description?.trim() || "—",
+          description: row.description?.trim() || "unassigned",
           thumbnail: row.thumbnail?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
           publishStatus: row.publish_status ?? null,
@@ -466,7 +466,7 @@ export function CourseManagementPage() {
     try {
       const existing = units.find((u) => u.id === editingUnitId);
       const preservedDescription =
-        existing?.description && existing.description !== "—"
+        existing?.description && existing.description !== "unassigned"
           ? existing.description
           : null;
       const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);

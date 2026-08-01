@@ -278,7 +278,7 @@ export function PracticeSequentialReview({
         </div>
         <div className="rounded-xl border border-grayScale-200 bg-white px-5 py-4 shadow-sm">
           <p className="text-sm leading-relaxed text-grayScale-600">
-            {guidanceText.trim() || "—"}
+            {guidanceText.trim() || "unassigned"}
           </p>
         </div>
       </div>
@@ -303,7 +303,7 @@ export function PracticeSequentialReview({
                       Text prompt
                     </p>
                     <p className="text-sm leading-relaxed text-grayScale-800">
-                      {question.questionText.trim() || "—"}
+                      {question.questionText.trim() || "unassigned"}
                     </p>
                   </div>
                   {question.voicePrompt.trim() ? (
@@ -358,7 +358,7 @@ export function PracticeSequentialReview({
                       />
                     </div>
                   ) : (
-                    <p className="text-xs text-grayScale-400">—</p>
+                    <p className="text-xs text-grayScale-400">unassigned</p>
                   )}
                 </div>
               ))}

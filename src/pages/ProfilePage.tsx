@@ -26,7 +26,7 @@ import { ProfileAvatarUpload } from "../components/profile/ProfileAvatarUpload";
 import { PersonaProfilePictureUploadField } from "./personas/components/PersonaProfilePictureUploadField";
 
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "unassigned";
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleDateString(undefined, {
@@ -37,7 +37,7 @@ function formatDate(dateStr: string | null | undefined): string {
 }
 
 function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "unassigned";
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleString(undefined, {
@@ -51,7 +51,7 @@ function formatDateTime(dateStr: string | null | undefined): string {
 
 function formatRoleLabel(role: string): string {
   const value = role.trim();
-  if (!value) return "—";
+  if (!value) return "unassigned";
   return value
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -60,7 +60,7 @@ function formatRoleLabel(role: string): string {
 
 function displayValue(value: string | null | undefined): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : "—";
+  return trimmed ? trimmed : "unassigned";
 }
 
 function FieldGroup({

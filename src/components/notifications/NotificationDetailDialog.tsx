@@ -187,9 +187,9 @@ function DetailsTab({
       <div className="space-y-0 divide-y divide-grayScale-100">
         {[
           { k: "Type", v: formatNotificationTypeLabel(notification.type) },
-          { k: "Channel", v: notification.delivery_channel || "—" },
+          { k: "Channel", v: notification.delivery_channel || "unassigned" },
           { k: "Status", v: notification.is_read ? "Read" : "Unread" },
-          { k: "Delivery", v: notification.delivery_status || "—" },
+          { k: "Delivery", v: notification.delivery_status || "unassigned" },
           ...(notification.receiver_type
             ? [{ k: "Receiver", v: notification.receiver_type }]
             : []),

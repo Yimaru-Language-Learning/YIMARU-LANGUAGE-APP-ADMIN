@@ -732,7 +732,7 @@ export function LearnEnglishPage() {
                       <p className="mt-2 text-sm leading-relaxed text-grayScale-500 line-clamp-4">
                         {program.description?.trim()
                           ? program.description
-                          : "—"}
+                          : "unassigned"}
                       </p>
                     </div>
                     <Link

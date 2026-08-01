@@ -44,7 +44,7 @@ function formatTableDate(dateStr: string) {
 }
 
 function formatVideoDuration(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds < 0) return "—"
+  if (!Number.isFinite(seconds) || seconds < 0) return "unassigned"
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
   return m > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `${s}s`
@@ -526,12 +526,12 @@ export function HumanLanguageSubModulePage() {
                   <TableCell>{questionSetStatusBadge(item.status)}</TableCell>
                   <TableCell>
                     <p className="max-w-[280px] truncate text-sm text-grayScale-600">
-                      {item.description?.trim() ? item.description : "—"}
+                      {item.description?.trim() ? item.description : "unassigned"}
                     </p>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <p className="max-w-[140px] truncate text-sm text-grayScale-600">
-                      {item.persona?.trim() ? item.persona : "—"}
+                      {item.persona?.trim() ? item.persona : "unassigned"}
                     </p>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -673,7 +673,7 @@ export function HumanLanguageSubModulePage() {
                   <TableCell>{lessonStatusBadge(lesson.is_active)}</TableCell>
                   <TableCell>
                     <p className="max-w-[280px] truncate text-sm text-grayScale-600">
-                      {lesson.description?.trim() ? lesson.description : "—"}
+                      {lesson.description?.trim() ? lesson.description : "unassigned"}
                     </p>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
@@ -985,7 +985,7 @@ export function HumanLanguageSubModulePage() {
                     </TableCell>
                     <TableCell>
                       <p className="max-w-[280px] truncate text-sm text-grayScale-600">
-                        {v.description?.trim() ? v.description : "—"}
+                        {v.description?.trim() ? v.description : "unassigned"}
                       </p>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
@@ -1031,7 +1031,7 @@ export function HumanLanguageSubModulePage() {
                           </a>
                         </Button>
                       ) : (
-                        <span className="text-sm text-grayScale-400">—</span>
+                        <span className="text-sm text-grayScale-400">unassigned</span>
                       )}
                     </TableCell>
                   </TableRow>

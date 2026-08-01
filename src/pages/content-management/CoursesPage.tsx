@@ -415,7 +415,7 @@ export function CoursesPage() {
                     </TableCell>
                     <TableCell>
                       <p className="max-w-md truncate text-sm text-grayScale-600" title={sub.description || undefined}>
-                        {sub.description?.trim() ? sub.description : "—"}
+                        {sub.description?.trim() ? sub.description : "unassigned"}
                       </p>
                     </TableCell>
                     <TableCell className="hidden xl:table-cell tabular-nums text-sm text-grayScale-600">

@@ -90,7 +90,7 @@ export function mapPersonaToCard(persona: PersonaListItem): PersonaCardModel {
 }
 
 export function formatPersonaDate(dateStr: string | null | undefined): string {
-  if (!dateStr?.trim()) return "—"
+  if (!dateStr?.trim()) return "unassigned"
   const d = new Date(dateStr)
   if (Number.isNaN(d.getTime())) return dateStr
   return d.toLocaleDateString(undefined, {
@@ -106,7 +106,7 @@ export function personaStatusLabel(isActive: boolean): string {
 
 export function personaGenderLabel(gender: string | null | undefined): string {
   const value = gender?.trim()
-  return value ? value : "—"
+  return value ? value : "unassigned"
 }
 
 export function unwrapPersonasList(

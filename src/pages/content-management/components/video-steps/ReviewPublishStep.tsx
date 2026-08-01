@@ -115,7 +115,7 @@ export function ReviewPublishStep({
                   </div>
                 </div>
               ) : (
-                <p className="text-grayScale-400 text-sm">—</p>
+                <p className="text-grayScale-400 text-sm">unassigned</p>
               )}
             </div>
 
@@ -148,7 +148,7 @@ export function ReviewPublishStep({
                   </p>
                 </div>
               ) : (
-                <p className="text-grayScale-400 text-sm">—</p>
+                <p className="text-grayScale-400 text-sm">unassigned</p>
               )}
             </div>
           </div>
@@ -176,7 +176,7 @@ export function ReviewPublishStep({
               Title
             </span>
             <p className="text-[15px] font-medium text-grayScale-900">
-              {formData.title || "—"}
+              {formData.title || "unassigned"}
             </p>
           </div>
 
@@ -187,7 +187,7 @@ export function ReviewPublishStep({
             <p className="text-[15px] font-medium text-grayScale-900">
               {formData.sortOrder.trim() !== ""
                 ? formData.sortOrder.trim()
-                : "—"}
+                : "unassigned"}
             </p>
           </div>
 
@@ -199,7 +199,7 @@ export function ReviewPublishStep({
               className="text-[14px] text-grayScale-600 leading-relaxed max-w-4xl"
               dangerouslySetInnerHTML={{
                 __html:
-                  formData.description || "<p class='text-grayScale-400'>—</p>",
+                  formData.description || "<p class='text-grayScale-400'>unassigned</p>",
               }}
             />
           </div>

@@ -236,7 +236,7 @@ export function DynamicTableBuilder({
                       key={`preview-c-${ri}-${ci}`}
                       className="border border-grayScale-100 px-3 py-2 text-sm"
                     >
-                      {cell || <span className="text-grayScale-300">—</span>}
+                      {cell || <span className="text-grayScale-300">unassigned</span>}
                     </td>
                   ))}
                 </tr>

@@ -518,7 +518,7 @@ export function PaymentsPage() {
                       <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
                         <p className="font-semibold text-grayScale-900">#{payment.id}</p>
                         <p className="mt-0.5 max-w-[140px] truncate font-mono text-[11px] text-grayScale-500">
-                          {payment.transaction_id || payment.session_id || "—"}
+                          {payment.transaction_id || payment.session_id || "unassigned"}
                         </p>
                       </td>
                       <td className="px-3 py-2.5 sm:px-4">
@@ -716,11 +716,11 @@ export function PaymentsPage() {
                 <div className="mt-5 space-y-0 divide-y divide-grayScale-100">
                   {[
                     { k: "Customer", v: paymentCustomerName(selected) },
-                    { k: "Email", v: selected.user_email || "—" },
+                    { k: "Email", v: selected.user_email || "unassigned" },
                     { k: "Plan", v: selected.plan_name || `Plan #${selected.plan_id}` },
                     { k: "Category", v: formatPaymentPlanCategory(selected.plan_category) },
-                    { k: "Transaction", v: selected.transaction_id || "—", mono: true },
-                    { k: "Session", v: selected.session_id || "—", mono: true },
+                    { k: "Transaction", v: selected.transaction_id || "unassigned", mono: true },
+                    { k: "Session", v: selected.session_id || "unassigned", mono: true },
                     { k: "Subscription", v: `#${selected.subscription_id}` },
                     { k: "Paid", v: formatPaymentDate(selected.paid_at ?? selected.created_at) },
                     ...(selected.expires_at ? [{ k: "Expires", v: formatPaymentDate(selected.expires_at) }] : []),

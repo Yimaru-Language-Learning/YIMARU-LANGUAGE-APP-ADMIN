@@ -520,7 +520,7 @@ export function NotificationsPage() {
               <div>
                 <p className="text-xs font-medium text-grayScale-500">Channels used</p>
                 <p className="mt-1 text-xl font-semibold text-grayScale-700">
-                  {Array.from(new Set(notifications.map((n) => n.delivery_channel))).length || "—"}
+                  {Array.from(new Set(notifications.map((n) => n.delivery_channel))).length || "unassigned"}
                 </p>
               </div>
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100/60 text-brand-600">

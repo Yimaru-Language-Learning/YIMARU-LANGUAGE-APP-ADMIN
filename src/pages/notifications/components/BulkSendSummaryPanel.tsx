@@ -177,9 +177,9 @@ export function BulkSendSummaryPanel({ summary, onDismiss }: BulkSendSummaryPane
               Content
             </p>
             <p className="mt-1 truncate text-sm font-medium text-grayScale-800">
-              {summary.titlePreview || "—"}
+              {summary.titlePreview || "unassigned"}
             </p>
-            <p className="truncate text-xs text-grayScale-500">{summary.messagePreview || "—"}</p>
+            <p className="truncate text-xs text-grayScale-500">{summary.messagePreview || "unassigned"}</p>
             {!isImmediate && summary.emailTemplateSlug ? (
               <p className="mt-1 text-[10px] text-grayScale-400">
                 Template: {summary.emailTemplateSlug}

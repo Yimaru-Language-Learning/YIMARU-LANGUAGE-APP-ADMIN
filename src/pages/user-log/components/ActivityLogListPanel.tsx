@@ -281,7 +281,7 @@ export function ActivityLogListPanel({
             </div>
             <div>
               <p className="text-2xl font-bold text-grayScale-600">
-                {logs[0]?.created_at ? getRelativeActivityTime(logs[0].created_at) : "—"}
+                {logs[0]?.created_at ? getRelativeActivityTime(logs[0].created_at) : "unassigned"}
               </p>
               <p className="text-xs text-grayScale-400">Latest on this page</p>
             </div>
@@ -450,7 +450,7 @@ export function ActivityLogListPanel({
                         scrollable ? "whitespace-nowrap" : "max-w-[280px] truncate",
                       )}
                     >
-                      {log.message || "—"}
+                      {log.message || "unassigned"}
                     </p>
                   </TableCell>
                   {showActorColumn ? (
@@ -583,7 +583,7 @@ export function ActivityLogListPanel({
                   icon={<Shield className="h-4 w-4" />}
                   label="Role"
                   value={
-                    selectedLog.actor_role ? formatRoleLabel(selectedLog.actor_role) : "—"
+                    selectedLog.actor_role ? formatRoleLabel(selectedLog.actor_role) : "unassigned"
                   }
                 />
                 <DetailItem
@@ -601,13 +601,13 @@ export function ActivityLogListPanel({
                 <DetailItem
                   icon={<Globe className="h-4 w-4" />}
                   label="IP address"
-                  value={selectedLog.ip_address || "—"}
+                  value={selectedLog.ip_address || "unassigned"}
                 />
                 <DetailItem
                   icon={<Monitor className="h-4 w-4" />}
                   label="User agent"
                   value={
-                    selectedLog.user_agent ? truncateUA(selectedLog.user_agent) : "—"
+                    selectedLog.user_agent ? truncateUA(selectedLog.user_agent) : "unassigned"
                   }
                   title={selectedLog.user_agent ?? undefined}
                 />

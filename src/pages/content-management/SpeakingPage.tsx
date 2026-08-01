@@ -1498,13 +1498,13 @@ export function SpeakingPage() {
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                           <span className="rounded-md bg-brand-100 px-2 py-0.5 font-medium text-brand-800">AUDIO</span>
                           <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
-                            Difficulty: {question.difficulty_level || "—"}
+                            Difficulty: {question.difficulty_level || "unassigned"}
                           </span>
                           <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
                             Points: {question.points ?? 0}
                           </span>
                           <span className="rounded-md bg-grayScale-100 px-2 py-1 text-grayScale-600">
-                            Status: {question.status || "—"}
+                            Status: {question.status || "unassigned"}
                           </span>
                         </div>
                         {question.image_url && imagePreviewByQuestionId[question.id] ? (
@@ -1788,19 +1788,19 @@ export function SpeakingPage() {
                   <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <div>
                       <p className="text-xs font-medium text-grayScale-500">Status</p>
-                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.status || "—"}</p>
+                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.status || "unassigned"}</p>
                     </div>
                     <div>
                       <p className="text-xs font-medium text-grayScale-500">Points</p>
-                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.points ?? "—"}</p>
+                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.points ?? "unassigned"}</p>
                     </div>
                     <div>
                       <p className="text-xs font-medium text-grayScale-500">Difficulty</p>
-                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.difficulty_level || "—"}</p>
+                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.difficulty_level || "unassigned"}</p>
                     </div>
                     <div>
                       <p className="text-xs font-medium text-grayScale-500">Type</p>
-                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.question_type || "—"}</p>
+                      <p className="mt-1 text-grayScale-700">{selectedQuestionDetail.question_type || "unassigned"}</p>
                     </div>
                   </div>
                   {selectedQuestionDetail.audio_correct_answer_text ? (
@@ -2440,11 +2440,11 @@ export function SpeakingPage() {
                 <div className="rounded-xl border border-grayScale-200 bg-white p-5 shadow-sm">
                   <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-grayScale-500">Practice</h3>
                   <div className="grid grid-cols-1 gap-3 text-sm text-grayScale-600 sm:grid-cols-2">
-                    <p><span className="font-medium">Title:</span> {setTitle || "—"}</p>
-                    <p><span className="font-medium">Course ID:</span> {subCourseId || "—"}</p>
-                    <p className="sm:col-span-2"><span className="font-medium">Description:</span> {setDescription || "—"}</p>
+                    <p><span className="font-medium">Title:</span> {setTitle || "unassigned"}</p>
+                    <p><span className="font-medium">Course ID:</span> {subCourseId || "unassigned"}</p>
+                    <p className="sm:col-span-2"><span className="font-medium">Description:</span> {setDescription || "unassigned"}</p>
                     <p className="sm:col-span-2 break-all">
-                      <span className="font-medium">Intro video URL:</span> {introVideoUrl.trim() || "—"}
+                      <span className="font-medium">Intro video URL:</span> {introVideoUrl.trim() || "unassigned"}
                     </p>
                     <p><span className="font-medium">Status:</span> {setStatus}</p>
                   </div>
@@ -2467,27 +2467,27 @@ export function SpeakingPage() {
                           <p><span className="font-medium text-grayScale-700">Status:</span> {setStatus}</p>
                           <p className="sm:col-span-2">
                             <span className="font-medium text-grayScale-700">Voice Prompt:</span>{" "}
-                            {draft.voicePrompt.trim() || "—"}
+                            {draft.voicePrompt.trim() || "unassigned"}
                           </p>
                           <p className="sm:col-span-2">
                             <span className="font-medium text-grayScale-700">Sample Answer Voice Prompt:</span>{" "}
-                            {draft.sampleAnswerVoicePrompt.trim() || "—"}
+                            {draft.sampleAnswerVoicePrompt.trim() || "unassigned"}
                           </p>
                           <p className="sm:col-span-2">
                             <span className="font-medium text-grayScale-700">Image URL:</span>{" "}
-                            {draft.imageUrl.trim() || "—"}
+                            {draft.imageUrl.trim() || "unassigned"}
                           </p>
                           <p className="sm:col-span-2">
                             <span className="font-medium text-grayScale-700">Audio Correct Answer Text:</span>{" "}
-                            {draft.audioCorrectAnswerText.trim() || "—"}
+                            {draft.audioCorrectAnswerText.trim() || "unassigned"}
                           </p>
                           <p className="sm:col-span-2">
                             <span className="font-medium text-grayScale-700">Tips:</span>{" "}
-                            {draft.tips.trim() || "—"}
+                            {draft.tips.trim() || "unassigned"}
                           </p>
                           <p className="sm:col-span-2">
                             <span className="font-medium text-grayScale-700">Explanation:</span>{" "}
-                            {draft.explanation.trim() || "—"}
+                            {draft.explanation.trim() || "unassigned"}
                           </p>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-3">

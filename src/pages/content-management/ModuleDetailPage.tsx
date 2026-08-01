@@ -157,15 +157,15 @@ export function ModuleDetailPage() {
 
   const displayModuleDescription = (() => {
     if (hasNavName) {
-      return navState?.moduleDescription?.trim() || "—";
+      return navState?.moduleDescription?.trim() || "unassigned";
     }
     if (!moduleListResolved) {
       return "Loading…";
     }
     if (loadedModuleDescription !== null) {
-      return loadedModuleDescription.trim() || "—";
+      return loadedModuleDescription.trim() || "unassigned";
     }
-    return "—";
+    return "unassigned";
   })();
 
   useEffect(() => {

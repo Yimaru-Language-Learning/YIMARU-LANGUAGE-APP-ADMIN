@@ -17,9 +17,9 @@ type ExtendSubscriptionDialogProps = {
 }
 
 function formatDateTime(value?: string | null): string {
-  if (!value?.trim()) return "—"
+  if (!value?.trim()) return "unassigned"
   const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return "—"
+  if (Number.isNaN(parsed.getTime())) return "unassigned"
   return parsed.toLocaleString(undefined, {
     month: "short",
     day: "numeric",

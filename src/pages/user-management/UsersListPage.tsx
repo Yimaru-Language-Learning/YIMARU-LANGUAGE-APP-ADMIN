@@ -28,9 +28,9 @@ import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
 import { usersExportQuery } from "../../lib/csvExportFilters"
 
 function formatJoinedAt(iso: string): string {
-  if (!iso?.trim()) return "—"
+  if (!iso?.trim()) return "unassigned"
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return "—"
+  if (Number.isNaN(d.getTime())) return "unassigned"
   return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
 }
 
@@ -365,7 +365,7 @@ export function UsersListPage() {
     const hasPhone = Boolean(phone?.trim())
     const hasEmail = Boolean(email?.trim())
     if (!hasPhone && !hasEmail) {
-      return <span className="text-grayScale-400">—</span>
+      return <span className="text-grayScale-400">unassigned</span>
     }
     return (
       <div className="space-y-1 text-sm text-grayScale-600">
@@ -406,7 +406,7 @@ export function UsersListPage() {
                 ) : userSummary ? (
                   formatSummaryNum(userSummary.total_users)
                 ) : (
-                  "—"
+                  "unassigned"
                 )}
               </p>
             </div>
@@ -426,7 +426,7 @@ export function UsersListPage() {
                 ) : activeUsersTotal !== null ? (
                   formatSummaryNum(activeUsersTotal)
                 ) : (
-                  "—"
+                  "unassigned"
                 )}
               </p>
             </div>
@@ -446,7 +446,7 @@ export function UsersListPage() {
                 ) : userSummary ? (
                   formatSummaryNum(userSummary.new_month)
                 ) : (
-                  "—"
+                  "unassigned"
                 )}
               </p>
             </div>
@@ -665,15 +665,15 @@ export function UsersListPage() {
                     <TableCell className="hidden md:table-cell align-top">
                       {renderContactDetails(u.phoneNumber, u.email)}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.country || "-"}</TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.region || "-"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.country || "unassigned"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.region || "unassigned"}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-grayScale-500 whitespace-nowrap">
                       {formatJoinedAt(u.createdAt)}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell align-top text-sm text-grayScale-600">
                       <span
                         className={cn(
-                          u.subscriptionStatus === "—" ||
+                          u.subscriptionStatus === "unassigned" ||
                             u.subscriptionStatus.toLowerCase() === "unsubscribed"
                             ? "text-grayScale-400"
                             : undefined,

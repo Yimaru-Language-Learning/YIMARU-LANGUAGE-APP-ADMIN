@@ -35,7 +35,7 @@ export function renderEmailTemplatePreview(
 
 export function formatEmailTemplateDate(raw: string | null | undefined) {
   if (raw == null || String(raw).trim() === "") {
-    return "—"
+    return "unassigned"
   }
   const text = String(raw)
   const parsed = new Date(text)

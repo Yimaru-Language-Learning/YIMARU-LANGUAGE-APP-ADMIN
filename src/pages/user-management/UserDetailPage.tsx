@@ -102,7 +102,7 @@ function formatDateTime(value?: string | null, emptyLabel = NOT_ASSIGNED_LABEL):
 
 function formatActivityOccurredAt(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "unassigned";
 
   const now = new Date();
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();

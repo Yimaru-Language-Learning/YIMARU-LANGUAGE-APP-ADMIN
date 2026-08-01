@@ -178,7 +178,7 @@ function getRelativeTime(dateStr: string): string {
 
 function formatRoleLabel(role: string | null | undefined): string {
   const r = String(role ?? "").trim();
-  if (!r) return "—";
+  if (!r) return "unassigned";
   return r
     .split("_")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -532,7 +532,7 @@ export function IssuesPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-grayScale-600 truncate">
-                            {issue.subject?.trim() ? issue.subject : "—"}
+                            {issue.subject?.trim() ? issue.subject : "unassigned"}
                           </p>
                           <p className="text-xs text-grayScale-400 truncate mt-0.5">
                             {issue.description?.trim() ? issue.description : "No description"}

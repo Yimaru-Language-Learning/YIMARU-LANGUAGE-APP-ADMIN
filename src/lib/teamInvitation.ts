@@ -1,7 +1,7 @@
 import type { VerifyInvitationData } from "../types/teamInvitation.types"
 
 export function formatTeamRoleLabel(role: string | undefined): string {
-  if (!role) return "—"
+  if (!role) return "unassigned"
   return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
 

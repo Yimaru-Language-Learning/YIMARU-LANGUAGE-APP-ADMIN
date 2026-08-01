@@ -994,7 +994,7 @@ export function PracticeDetailsPage() {
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-grayScale-500">Story</p>
                   <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-grayScale-700">
-                    {practice.story_description?.trim() || "—"}
+                    {practice.story_description?.trim() || "unassigned"}
                   </p>
                 </div>
                 {quickTipParts.length > 0 && (

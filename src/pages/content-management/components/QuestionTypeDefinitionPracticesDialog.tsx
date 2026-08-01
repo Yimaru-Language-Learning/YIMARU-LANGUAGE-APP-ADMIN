@@ -27,7 +27,7 @@ import type {
 } from "../../../types/questionTypeDefinition.types"
 
 function formatDate(iso?: string): string {
-  if (!iso) return "—"
+  if (!iso) return "unassigned"
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
 }
@@ -234,7 +234,7 @@ export function QuestionTypeDefinitionPracticesDialog({
                           publishStatusClass(practice.publish_status),
                         )}
                       >
-                        {practice.publish_status || "—"}
+                        {practice.publish_status || "unassigned"}
                       </Badge>
                       <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
                         {practice.matching_question_count} matching question

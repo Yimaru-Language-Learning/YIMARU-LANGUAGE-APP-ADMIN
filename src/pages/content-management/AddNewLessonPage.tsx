@@ -16,6 +16,7 @@ import { Card } from "../../components/ui/card"
 import { Input } from "../../components/ui/input"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import type { QuestionOption } from "../../types/course.types"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type Step = 1 | 2 | 3 | 4
 type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO" | "DYNAMIC"
@@ -606,16 +607,16 @@ export function AddNewLessonPage() {
                     <div className="flex items-center justify-between px-4 py-3 text-sm">
                       <span className="text-grayScale-500">Description</span>
                       <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">
-                        {lessonDescription || "unassigned"}
+                        {lessonDescription || <UnassignedLabel />}
                       </span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-3 text-sm">
                       <span className="text-grayScale-500">Intro video URL</span>
-                      <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">{introVideoUrl || "unassigned"}</span>
+                      <span className="max-w-[55%] truncate text-right font-medium text-grayScale-800">{introVideoUrl || <UnassignedLabel />}</span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-3 text-sm">
                       <span className="text-grayScale-500">Sub-module</span>
-                      <span className="font-medium text-grayScale-800">{subModuleId ?? "unassigned"}</span>
+                      <span className="font-medium text-grayScale-800">{subModuleId ?? <UnassignedLabel />}</span>
                     </div>
                   </div>
                 </div>

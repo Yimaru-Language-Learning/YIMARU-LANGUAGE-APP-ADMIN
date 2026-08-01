@@ -3,6 +3,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { cn } from "../../lib/utils"
+import { UnassignedLabel } from "../../lib/displayValue"
 import {
   createEmptyTable,
   parseTableSlotValue,
@@ -236,7 +237,7 @@ export function DynamicTableBuilder({
                       key={`preview-c-${ri}-${ci}`}
                       className="border border-grayScale-100 px-3 py-2 text-sm"
                     >
-                      {cell || <span className="text-grayScale-300">unassigned</span>}
+                      {cell || <span className="text-grayScale-300"><UnassignedLabel /></span>}
                     </td>
                   ))}
                 </tr>

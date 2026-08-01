@@ -18,6 +18,7 @@ import {
   type Notification,
 } from "../../types/notification.types";
 import { cn } from "../../lib/utils";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type NotificationDetailDialogProps = {
   open: boolean;
@@ -187,9 +188,9 @@ function DetailsTab({
       <div className="space-y-0 divide-y divide-grayScale-100">
         {[
           { k: "Type", v: formatNotificationTypeLabel(notification.type) },
-          { k: "Channel", v: notification.delivery_channel || "unassigned" },
+          { k: "Channel", v: notification.delivery_channel || <UnassignedLabel /> },
           { k: "Status", v: notification.is_read ? "Read" : "Unread" },
-          { k: "Delivery", v: notification.delivery_status || "unassigned" },
+          { k: "Delivery", v: notification.delivery_status || <UnassignedLabel /> },
           ...(notification.receiver_type
             ? [{ k: "Receiver", v: notification.receiver_type }]
             : []),

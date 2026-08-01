@@ -48,6 +48,7 @@ import { CreateFaqDialog } from "./components/CreateFaqDialog"
 import { FaqDeleteDialog } from "./components/FaqDeleteDialog"
 import { FaqAccessDenied } from "./components/FaqAccessDenied"
 import { FaqPublicPreviewDialog } from "./components/FaqPublicPreviewDialog"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type StatusFilter = "all" | FAQStatus
 
@@ -339,7 +340,7 @@ export function FaqsPage() {
                       {faq.category ? (
                         <Badge variant="secondary">{faq.category}</Badge>
                       ) : (
-                        <span className="text-xs text-grayScale-400">unassigned</span>
+                        <span className="text-xs text-grayScale-400"><UnassignedLabel /></span>
                       )}
                     </TableCell>
                     <TableCell className="text-center text-sm text-grayScale-600">

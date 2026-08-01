@@ -24,6 +24,7 @@ import {
   softDeleteSubModuleLesson,
   updateSubModuleLesson,
 } from "../../api/courses.api"
+import { UnassignedLabel } from "../../lib/displayValue"
 import type {
   QuestionSet,
   QuestionSetStatus,
@@ -526,12 +527,12 @@ export function HumanLanguageSubModulePage() {
                   <TableCell>{questionSetStatusBadge(item.status)}</TableCell>
                   <TableCell>
                     <p className="max-w-[280px] truncate text-sm text-grayScale-600">
-                      {item.description?.trim() ? item.description : "unassigned"}
+                      {item.description?.trim() ? item.description : <UnassignedLabel />}
                     </p>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <p className="max-w-[140px] truncate text-sm text-grayScale-600">
-                      {item.persona?.trim() ? item.persona : "unassigned"}
+                      {item.persona?.trim() ? item.persona : <UnassignedLabel />}
                     </p>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -673,7 +674,7 @@ export function HumanLanguageSubModulePage() {
                   <TableCell>{lessonStatusBadge(lesson.is_active)}</TableCell>
                   <TableCell>
                     <p className="max-w-[280px] truncate text-sm text-grayScale-600">
-                      {lesson.description?.trim() ? lesson.description : "unassigned"}
+                      {lesson.description?.trim() ? lesson.description : <UnassignedLabel />}
                     </p>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
@@ -985,7 +986,7 @@ export function HumanLanguageSubModulePage() {
                     </TableCell>
                     <TableCell>
                       <p className="max-w-[280px] truncate text-sm text-grayScale-600">
-                        {v.description?.trim() ? v.description : "unassigned"}
+                        {v.description?.trim() ? v.description : <UnassignedLabel />}
                       </p>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
@@ -1031,7 +1032,7 @@ export function HumanLanguageSubModulePage() {
                           </a>
                         </Button>
                       ) : (
-                        <span className="text-sm text-grayScale-400">unassigned</span>
+                        <span className="text-sm text-grayScale-400"><UnassignedLabel /></span>
                       )}
                     </TableCell>
                   </TableRow>

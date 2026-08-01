@@ -20,7 +20,7 @@ import { Separator } from "../../components/ui/separator"
 import { cn } from "../../lib/utils"
 import { notifyApiError } from "../../lib/apiErrors"
 import { formatTeamRoleLabel } from "../../lib/teamRoles"
-import { displayValue, NOT_ASSIGNED_LABEL } from "../../lib/displayValue"
+import { DisplayValue, NOT_ASSIGNED_LABEL, UnassignedLabel, displayValue, isUnassignedLabel } from "../../lib/displayValue"
 import { getTeamMemberById, updateTeamMemberStatus } from "../../api/team.api"
 import type { TeamMemberDetail } from "../../types/team.types"
 import { ActivityLogListPanel } from "../user-log/components/ActivityLogListPanel"
@@ -132,22 +132,26 @@ function LoadingSkeleton() {
   )
 }
 
-function InfoItem({ label, value }: { label: string; value: string }) {
+function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
         {label}
       </p>
-      <p className="text-sm text-grayScale-700">{value}</p>
+      <p className="text-sm text-grayScale-700">
+        {typeof value === "string" && isUnassignedLabel(value) ? <UnassignedLabel /> : value}
+      </p>
     </div>
   )
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-sm text-grayScale-500">{label}</span>
-      <span className="text-right text-sm font-medium text-grayScale-700">{value}</span>
+      <span className="text-right text-sm font-medium text-grayScale-700">
+        {typeof value === "string" && isUnassignedLabel(value) ? <UnassignedLabel /> : value}
+      </span>
     </div>
   )
 }
@@ -159,7 +163,7 @@ function ContactField({
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
-  value: string
+  value: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-3">
@@ -170,7 +174,9 @@ function ContactField({
         <p className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
           {label}
         </p>
-        <p className="truncate text-sm text-grayScale-700">{value}</p>
+        <p className="truncate text-sm text-grayScale-700">
+          {typeof value === "string" && isUnassignedLabel(value) ? <UnassignedLabel /> : value}
+        </p>
       </div>
     </div>
   )
@@ -312,7 +318,7 @@ export function TeamMemberDetailPage() {
                 <div className="min-w-0">
                   <h2 className="truncate text-lg font-semibold text-grayScale-800">{fullName}</h2>
                   <p className="truncate text-sm text-grayScale-500">
-                    {displayValue(member.job_title)}
+                    <DisplayValue value={member.job_title} />
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span
@@ -334,8 +340,8 @@ export function TeamMemberDetailPage() {
               <Separator />
 
               <div className="space-y-3">
-                <ContactField icon={Mail} label="Email" value={displayValue(member.email)} />
-                <ContactField icon={Phone} label="Phone" value={displayValue(member.phone_number)} />
+                <ContactField icon={Mail} label="Email" value={<DisplayValue value={member.email} />} />
+                <ContactField icon={Phone} label="Phone" value={<DisplayValue value={member.phone_number} />} />
               </div>
 
               <Separator />
@@ -383,8 +389,8 @@ export function TeamMemberDetailPage() {
             <CardContent className="space-y-5">
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
                 <InfoItem label="Team role" value={roleLabel} />
-                <InfoItem label="Department" value={displayValue(member.department)} />
-                <InfoItem label="Job title" value={displayValue(member.job_title)} />
+                <InfoItem label="Department" value={<DisplayValue value={member.department} />} />
+                <InfoItem label="Job title" value={<DisplayValue value={member.job_title} />} />
                 <InfoItem label="Member ID" value={String(member.id)} />
                 <InfoItem label="Joined" value={formatDate(member.created_at)} />
                 <InfoItem

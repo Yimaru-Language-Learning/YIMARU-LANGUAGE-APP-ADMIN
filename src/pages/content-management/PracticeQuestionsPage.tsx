@@ -21,6 +21,7 @@ import { Select } from "../../components/ui/select"
 import { Textarea } from "../../components/ui/textarea"
 import type { PracticeQuestion, QuestionSetQuestion, QuestionDetail } from "../../types/course.types"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type QuestionType = "MCQ" | "TRUE_FALSE" | "SHORT" | "AUDIO"
 type DifficultyLevel = "EASY" | "MEDIUM" | "HARD"
@@ -647,7 +648,7 @@ export function PracticeQuestionsPage() {
                             Points: {question.points ?? 0}
                           </span>
                           <span className="rounded-md bg-grayScale-100 px-2 py-1">
-                            Difficulty: {question.difficulty_level || "unassigned"}
+                            Difficulty: {question.difficulty_level || <UnassignedLabel />}
                           </span>
                         </div>
                       </div>

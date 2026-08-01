@@ -41,6 +41,7 @@ import { CreatePracticeWizard } from "./components/CreatePracticeWizard"
 import type { PracticeParentKind } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { PageBackLink } from "../../components/navigation/PageBackLink"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type ParentTab = "course" | "module" | "lesson"
 
@@ -994,7 +995,7 @@ export function PracticeDetailsPage() {
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-grayScale-500">Story</p>
                   <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-grayScale-700">
-                    {practice.story_description?.trim() || "unassigned"}
+                    {practice.story_description?.trim() || <UnassignedLabel />}
                   </p>
                 </div>
                 {quickTipParts.length > 0 && (

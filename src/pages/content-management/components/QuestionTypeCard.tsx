@@ -3,6 +3,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Card } from "../../../components/ui/card"
 import { Button } from "../../../components/ui/button"
 import { cn } from "../../../lib/utils"
+import { UnassignedLabel, isUnassignedLabel } from "../../../lib/displayValue"
 
 export interface QuestionTypeDefinitionCardModel {
   id: number
@@ -70,7 +71,7 @@ export function QuestionTypeCard({
               isActive ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-grayScale-50 text-grayScale-600",
             )}
           >
-            {statusLabel}
+            {isUnassignedLabel(statusLabel) ? <UnassignedLabel /> : statusLabel}
           </Badge>
           <div className="flex items-center gap-1">
             {onCreatePractice ? (

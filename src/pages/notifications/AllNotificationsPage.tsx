@@ -32,6 +32,7 @@ import { cn } from "../../lib/utils"
 import {
   DEFAULT_TABLE_PAGE_SIZE,
 } from "../../lib/tablePagination"
+import { UnassignedLabel } from "../../lib/displayValue"
 import {
   getNotificationMessage,
   getNotificationTitle,
@@ -72,7 +73,7 @@ function recipientLabel(notification: Notification): string {
   if (notification.reciever) {
     parts.push(notification.reciever)
   }
-  return parts.length > 0 ? parts.join(" · ") : "unassigned"
+  return parts.length > 0 ? parts.join(" · ") : <UnassignedLabel />
 }
 
 export function AllNotificationsPage() {
@@ -355,14 +356,14 @@ export function AllNotificationsPage() {
                         </TableCell>
                         <TableCell className="max-w-[260px]">
                           <p className="truncate text-sm font-medium text-grayScale-700">
-                            {getNotificationTitle(notification) || "unassigned"}
+                            {getNotificationTitle(notification) || <UnassignedLabel />}
                           </p>
                           <p className="truncate text-xs text-grayScale-400">
-                            {getNotificationMessage(notification) || "unassigned"}
+                            {getNotificationMessage(notification) || <UnassignedLabel />}
                           </p>
                         </TableCell>
                         <TableCell className="text-xs capitalize text-grayScale-600">
-                          {channelLabel(notification.delivery_channel) || "unassigned"}
+                          {channelLabel(notification.delivery_channel) || <UnassignedLabel />}
                         </TableCell>
                         <TableCell className="hidden text-xs text-grayScale-600 md:table-cell">
                           {formatNotificationTypeLabel(notification.type)}
@@ -372,7 +373,7 @@ export function AllNotificationsPage() {
                             variant={getNotificationLevelBadge(notification.level)}
                             className="text-[10px]"
                           >
-                            {notification.level || "unassigned"}
+                            {notification.level || <UnassignedLabel />}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -381,7 +382,7 @@ export function AllNotificationsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden text-xs capitalize text-grayScale-500 sm:table-cell">
-                          {notification.delivery_status || "unassigned"}
+                          {notification.delivery_status || <UnassignedLabel />}
                         </TableCell>
                         <TableCell className="hidden text-xs text-grayScale-500 sm:table-cell">
                           {formatNotificationTimestamp(notification.timestamp)}

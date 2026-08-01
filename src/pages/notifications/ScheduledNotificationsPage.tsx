@@ -37,6 +37,7 @@ import {
 import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { cn } from "../../lib/utils"
 import { DEFAULT_TABLE_PAGE_SIZE } from "../../lib/tablePagination"
+import { UnassignedLabel } from "../../lib/displayValue"
 import type {
   NotificationChannel,
   ScheduledNotification,
@@ -261,7 +262,7 @@ export function ScheduledNotificationsPage() {
                         <TableCell>{channelLabel(job.channel)}</TableCell>
                         <TableCell className="max-w-[240px]">
                           <p className="truncate text-sm font-medium text-grayScale-700">
-                            {job.title || "unassigned"}
+                            {job.title || <UnassignedLabel />}
                           </p>
                           <p className="truncate text-xs text-grayScale-400">{job.message}</p>
                           {job.channel === "email" && job.email_template_slug ? (

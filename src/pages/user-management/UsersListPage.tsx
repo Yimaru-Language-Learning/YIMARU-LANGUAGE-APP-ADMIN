@@ -26,6 +26,7 @@ import axios from "axios"
 import { USER_FILTER_COUNTRIES, USER_FILTER_ETHIOPIA_REGIONS } from "../../data/userFilterLocations"
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
 import { usersExportQuery } from "../../lib/csvExportFilters"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 function formatJoinedAt(iso: string): string {
   if (!iso?.trim()) return "unassigned"
@@ -365,7 +366,7 @@ export function UsersListPage() {
     const hasPhone = Boolean(phone?.trim())
     const hasEmail = Boolean(email?.trim())
     if (!hasPhone && !hasEmail) {
-      return <span className="text-grayScale-400">unassigned</span>
+      return <span className="text-grayScale-400"><UnassignedLabel /></span>
     }
     return (
       <div className="space-y-1 text-sm text-grayScale-600">
@@ -665,8 +666,8 @@ export function UsersListPage() {
                     <TableCell className="hidden md:table-cell align-top">
                       {renderContactDetails(u.phoneNumber, u.email)}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.country || "unassigned"}</TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.region || "unassigned"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.country || <UnassignedLabel />}</TableCell>
+                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.region || <UnassignedLabel />}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-grayScale-500 whitespace-nowrap">
                       {formatJoinedAt(u.createdAt)}
                     </TableCell>

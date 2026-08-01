@@ -46,6 +46,7 @@ import type {
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
+import { UnassignedLabel } from "../../lib/displayValue"
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -173,7 +174,7 @@ export function CourseModuleDetailPage() {
       const row = list.find((m) => Number(m.id) === parsedModuleId);
       if (row) {
         setModuleTitle(row.name?.trim() || `Module ${parsedModuleId}`);
-        setModuleDescription(row.description?.trim() || "unassigned");
+        setModuleDescription(row.description?.trim() || <UnassignedLabel />);
         setModulePublishStatus(row.publish_status ?? null);
       } else {
         setModuleTitle(`Module ${parsedModuleId}`);

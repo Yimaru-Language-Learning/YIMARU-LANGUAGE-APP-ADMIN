@@ -46,6 +46,7 @@ import { Textarea } from "../../components/ui/textarea"
 import { ToggleSwitch } from "../../components/ui/toggle-switch"
 import { cn } from "../../lib/utils"
 import type { QuestionSetDetail } from "../../types/course.types"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type TabId = "set" | "questions" | "thresholds"
 type DraftQuestionType = "MCQ" | "TRUE_FALSE"
@@ -817,13 +818,15 @@ export function InitialAssessmentPage() {
                         >
                           {(() => {
                             const value = String(q.difficultyLevel ?? "").trim()
-                            if (!value || value === "unassigned" || value === "-") return "unassigned"
+                            if (!value || value === "unassigned" || value === "-") {
+                              return <UnassignedLabel />
+                            }
                             return value.toLowerCase()
                           })()}
                         </span>
                       </TableCell>
                       <TableCell className="hidden text-right font-medium text-grayScale-700 lg:table-cell">
-                        {Number.isFinite(q.points) ? q.points : "unassigned"}
+                        {Number.isFinite(q.points) ? q.points : <UnassignedLabel />}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">

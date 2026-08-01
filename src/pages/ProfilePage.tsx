@@ -24,6 +24,7 @@ import { cn } from "../lib/utils";
 import type { TeamMeProfile } from "../types/team.types";
 import { ProfileAvatarUpload } from "../components/profile/ProfileAvatarUpload";
 import { PersonaProfilePictureUploadField } from "./personas/components/PersonaProfilePictureUploadField";
+import { UnassignedLabel, isUnassignedLabel, DisplayValue } from "../lib/displayValue"
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "unassigned";
@@ -69,7 +70,7 @@ function FieldGroup({
   mono,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   mono?: boolean;
 }) {
   return (
@@ -81,7 +82,11 @@ function FieldGroup({
           mono && "font-mono text-xs",
         )}
       >
-        {value}
+        {typeof value === "string" && isUnassignedLabel(value) ? (
+          <UnassignedLabel />
+        ) : (
+          value
+        )}
       </p>
     </div>
   );
@@ -329,7 +334,7 @@ export function ProfilePage() {
           <FieldGroup label="Email address" value={profile.email} />
           <FieldGroup label="Phone" value={profile.phone_number} />
           <div className="sm:col-span-2">
-            <FieldGroup label="Bio" value={displayValue(profile.bio)} />
+            <FieldGroup label="Bio" value={<DisplayValue value={profile.bio} />} />
           </div>
         </div>
       </SectionCard>
@@ -339,15 +344,15 @@ export function ProfilePage() {
         <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
           <FieldGroup
             label="Department"
-            value={displayValue(profile.department)}
+            value={<DisplayValue value={profile.department} />}
           />
           <FieldGroup
             label="Job Title"
-            value={displayValue(profile.job_title)}
+            value={<DisplayValue value={profile.job_title} />}
           />
           <FieldGroup
             label="Work Phone"
-            value={displayValue(profile.work_phone)}
+            value={<DisplayValue value={profile.work_phone} />}
           />
           <FieldGroup label="Member ID" value={String(profile.id)} mono />
         </div>

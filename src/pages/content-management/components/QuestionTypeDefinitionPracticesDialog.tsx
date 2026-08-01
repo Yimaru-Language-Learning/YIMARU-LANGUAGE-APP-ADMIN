@@ -21,6 +21,7 @@ import {
   isQuestionTypeDefinitionPracticeUnlinked,
 } from "../../../lib/questionTypeDefinitionPractices"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
+import { UnassignedLabel } from "../../../lib/displayValue"
 import type {
   QuestionTypeDefinition,
   QuestionTypeDefinitionPractice,
@@ -234,7 +235,7 @@ export function QuestionTypeDefinitionPracticesDialog({
                           publishStatusClass(practice.publish_status),
                         )}
                       >
-                        {practice.publish_status || "unassigned"}
+                        {practice.publish_status || <UnassignedLabel />}
                       </Badge>
                       <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
                         {practice.matching_question_count} matching question

@@ -58,6 +58,7 @@ import { AddModuleModal } from "./components/AddModuleModal";
 import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
 import { ModulePracticeCard } from "./components/ModulePracticeCard";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 const MODULE_CARD_GRADIENT = "from-[#8E44AD] to-[#C39BD3]" as const;
 
@@ -787,7 +788,7 @@ export function CourseDetailPage() {
                             <p className="text-[12px] font-medium leading-snug text-grayScale-400 line-clamp-3">
                               {module.description?.trim()
                                 ? module.description
-                                : "unassigned"}
+                                : <UnassignedLabel />}
                             </p>
                           </div>
                         </div>

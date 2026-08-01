@@ -50,6 +50,7 @@ import {
 import { PracticeActionButton } from "./components/PracticeActionButton";
 import { UnitPracticesPanel } from "./components/UnitPracticesPanel";
 import { cn } from "../../lib/utils";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 export function UnitManagementPage() {
   const navigate = useNavigate();
@@ -209,7 +210,7 @@ export function UnitManagementPage() {
         list.map((row, index) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Module ${row.id}`,
-          description: row.description?.trim() || "unassigned",
+          description: row.description?.trim() || <UnassignedLabel />,
           thumbnail: row.thumbnail?.trim() || "",
           icon: row.icon?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),

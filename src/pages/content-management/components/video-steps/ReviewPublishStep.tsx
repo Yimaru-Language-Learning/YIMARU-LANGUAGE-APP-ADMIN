@@ -11,6 +11,7 @@ import {
   resolveThumbnailForPreview,
 } from "../../../../lib/videoPreview";
 import { PreviewLimitedFileVideo } from "../PreviewLimitedFileVideo";
+import { UnassignedLabel } from "../../../../lib/displayValue"
 
 interface ReviewPublishStepProps {
   formData: AddLessonFormData;
@@ -115,7 +116,7 @@ export function ReviewPublishStep({
                   </div>
                 </div>
               ) : (
-                <p className="text-grayScale-400 text-sm">unassigned</p>
+                <p className="text-grayScale-400 text-sm"><UnassignedLabel /></p>
               )}
             </div>
 
@@ -148,7 +149,7 @@ export function ReviewPublishStep({
                   </p>
                 </div>
               ) : (
-                <p className="text-grayScale-400 text-sm">unassigned</p>
+                <p className="text-grayScale-400 text-sm"><UnassignedLabel /></p>
               )}
             </div>
           </div>
@@ -176,7 +177,7 @@ export function ReviewPublishStep({
               Title
             </span>
             <p className="text-[15px] font-medium text-grayScale-900">
-              {formData.title || "unassigned"}
+              {formData.title || <UnassignedLabel />}
             </p>
           </div>
 
@@ -187,7 +188,7 @@ export function ReviewPublishStep({
             <p className="text-[15px] font-medium text-grayScale-900">
               {formData.sortOrder.trim() !== ""
                 ? formData.sortOrder.trim()
-                : "unassigned"}
+                : <UnassignedLabel />}
             </p>
           </div>
 
@@ -199,7 +200,8 @@ export function ReviewPublishStep({
               className="text-[14px] text-grayScale-600 leading-relaxed max-w-4xl"
               dangerouslySetInnerHTML={{
                 __html:
-                  formData.description || "<p class='text-grayScale-400'>unassigned</p>",
+                  formData.description ||
+                  "<p class='text-grayScale-400 italic'>unassigned</p>",
               }}
             />
           </div>

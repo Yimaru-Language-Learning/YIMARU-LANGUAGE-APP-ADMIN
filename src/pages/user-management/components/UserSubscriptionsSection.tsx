@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "../../../components/ui/table"
 import { useTeamPermissions } from "../../../hooks/useTeamPermissions"
-import { displayValue, NOT_ASSIGNED_LABEL } from "../../../lib/displayValue"
+import { DisplayValue, NOT_ASSIGNED_LABEL, displayValue } from "../../../lib/displayValue"
 import {
   formatAdminPaymentMethod,
   hasSubscriptionAdminPermission,
@@ -559,7 +559,7 @@ export function UserSubscriptionsSection({
                               {recentPayments.map((payment) => (
                                 <TableRow key={payment.id}>
                                   <TableCell className="text-sm text-grayScale-700">
-                                    {displayValue(payment.plan_name)}
+                                    <DisplayValue value={payment.plan_name} />
                                   </TableCell>
                                   <TableCell className="text-sm text-grayScale-700">
                                     {formatMoney(payment.amount, payment.currency)}

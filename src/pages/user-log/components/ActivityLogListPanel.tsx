@@ -65,6 +65,7 @@ import { TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
 import type { ActivityLog, ActivityLogFilters } from "../../../types/activity-log.types"
 import { ActorCell, ActorLabel } from "./ActorLabel"
 import { ActorHoverCard } from "./ActorHoverCard"
+import { UnassignedLabel } from "../../../lib/displayValue"
 
 export interface ActivityLogListPanelProps {
   /** When set, locks the list to actions by this actor (user profile audit tab). */
@@ -281,7 +282,7 @@ export function ActivityLogListPanel({
             </div>
             <div>
               <p className="text-2xl font-bold text-grayScale-600">
-                {logs[0]?.created_at ? getRelativeActivityTime(logs[0].created_at) : "unassigned"}
+                {logs[0]?.created_at ? getRelativeActivityTime(logs[0].created_at) : <UnassignedLabel />}
               </p>
               <p className="text-xs text-grayScale-400">Latest on this page</p>
             </div>
@@ -450,7 +451,7 @@ export function ActivityLogListPanel({
                         scrollable ? "whitespace-nowrap" : "max-w-[280px] truncate",
                       )}
                     >
-                      {log.message || "unassigned"}
+                      {log.message || <UnassignedLabel />}
                     </p>
                   </TableCell>
                   {showActorColumn ? (
@@ -583,7 +584,7 @@ export function ActivityLogListPanel({
                   icon={<Shield className="h-4 w-4" />}
                   label="Role"
                   value={
-                    selectedLog.actor_role ? formatRoleLabel(selectedLog.actor_role) : "unassigned"
+                    selectedLog.actor_role ? formatRoleLabel(selectedLog.actor_role) : <UnassignedLabel />
                   }
                 />
                 <DetailItem
@@ -601,13 +602,13 @@ export function ActivityLogListPanel({
                 <DetailItem
                   icon={<Globe className="h-4 w-4" />}
                   label="IP address"
-                  value={selectedLog.ip_address || "unassigned"}
+                  value={selectedLog.ip_address || <UnassignedLabel />}
                 />
                 <DetailItem
                   icon={<Monitor className="h-4 w-4" />}
                   label="User agent"
                   value={
-                    selectedLog.user_agent ? truncateUA(selectedLog.user_agent) : "unassigned"
+                    selectedLog.user_agent ? truncateUA(selectedLog.user_agent) : <UnassignedLabel />
                   }
                   title={selectedLog.user_agent ?? undefined}
                 />

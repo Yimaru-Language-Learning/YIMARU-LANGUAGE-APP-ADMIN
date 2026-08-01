@@ -42,6 +42,7 @@ import {
 } from "../../lib/contentListFilters";
 import { refreshFileUrl, uploadImageFile } from "../../api/files.api";
 import type { LearningProgramListItem } from "../../types/course.types";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 /** Presigned MinIO/S3 URLs and our storage hosts — safe to send to POST /files/refresh-url. */
 function looksLikeRefreshableFileUrl(url: string): boolean {
@@ -732,7 +733,7 @@ export function LearnEnglishPage() {
                       <p className="mt-2 text-sm leading-relaxed text-grayScale-500 line-clamp-4">
                         {program.description?.trim()
                           ? program.description
-                          : "unassigned"}
+                          : <UnassignedLabel />}
                       </p>
                     </div>
                     <Link

@@ -46,6 +46,7 @@ import type {
   ProgramCourseListItem,
 } from "../../types/course.types";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 export function ProgramCoursesPage() {
   const navigate = useNavigate();
@@ -759,7 +760,7 @@ export function ProgramCoursesPage() {
                         {course.name}
                       </h3>
                       <p className="mt-2 text-[13px] leading-relaxed text-grayScale-500 line-clamp-2">
-                        {course.description?.trim() ? course.description : "unassigned"}
+                        {course.description?.trim() ? course.description : <UnassignedLabel />}
                       </p>
 
                       <div className="my-6 grid grid-cols-3 gap-4 border-y border-grayScale-50 py-4">

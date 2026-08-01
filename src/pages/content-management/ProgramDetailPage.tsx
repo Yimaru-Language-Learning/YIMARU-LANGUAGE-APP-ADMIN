@@ -44,6 +44,7 @@ import {
 } from "../../lib/contentListFilters";
 import { uploadImageFile } from "../../api/files.api";
 import uploadIcon from "../../assets/icons/upload.png";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 export function ProgramDetailPage() {
   const navigate = useNavigate();
@@ -116,7 +117,7 @@ export function ProgramDetailPage() {
         list.map((row) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Course ${row.id}`,
-          description: row.description?.trim() || "unassigned",
+          description: row.description?.trim() || <UnassignedLabel />,
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
           publishStatus: row.publish_status ?? null,
@@ -310,7 +311,7 @@ export function ProgramDetailPage() {
         {
           id: row.id,
           name: row.name ?? name,
-          description: row.description?.trim() || "unassigned",
+          description: row.description?.trim() || <UnassignedLabel />,
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
           unitsCount: Number(row.units_count ?? 0),
@@ -409,7 +410,7 @@ export function ProgramDetailPage() {
             ? {
                 ...course,
                 name: row?.name ?? name,
-                description: row?.description?.trim() || preservedDescription || "unassigned",
+                description: row?.description?.trim() || preservedDescription || <UnassignedLabel />,
                 thumbnail: row?.thumbnail?.trim() || null,
                 sortOrder: Number(row?.sort_order ?? sortOrderNum),
                 unitsCount: Number(row?.units_count ?? course.unitsCount ?? 0),

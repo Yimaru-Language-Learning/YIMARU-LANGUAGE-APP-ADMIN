@@ -27,6 +27,7 @@ import type {
 } from "../../types/user.types"
 import type { Role } from "../../types/rbac.types"
 import { mapDeletionRequestApiItem } from "../../types/user.types"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 const stateBadge: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -542,21 +543,21 @@ export function DeletionRequestsPage() {
                           {item.first_name} {item.last_name}
                         </p>
                         <p className="text-xs text-grayScale-500">{item.email}</p>
-                        <p className="text-xs text-grayScale-500">{item.phone_number || "unassigned"}</p>
+                        <p className="text-xs text-grayScale-500">{item.phone_number || <UnassignedLabel />}</p>
                       </TableCell>
                       <TableCell className="py-3.5">
-                        <p className="text-sm text-grayScale-700">{item.role || "unassigned"}</p>
-                        <p className="text-xs text-grayScale-500">{item.status || "unassigned"}</p>
+                        <p className="text-sm text-grayScale-700">{item.role || <UnassignedLabel />}</p>
+                        <p className="text-xs text-grayScale-500">{item.status || <UnassignedLabel />}</p>
                       </TableCell>
                       <TableCell className="hidden py-3.5 text-sm text-grayScale-600 md:table-cell">
-                        {item.deletion_requested_at || "unassigned"}
+                        {item.deletion_requested_at || <UnassignedLabel />}
                       </TableCell>
                       <TableCell className="hidden py-3.5 text-sm text-grayScale-600 md:table-cell">
-                        {item.deletion_scheduled_at || "unassigned"}
+                        {item.deletion_scheduled_at || <UnassignedLabel />}
                       </TableCell>
                       <TableCell className="py-3.5">
                         <Badge className={stateBadge[item.deletion_state] || "bg-grayScale-200 text-grayScale-600"}>
-                          {item.deletion_state || "unassigned"}
+                          {item.deletion_state || <UnassignedLabel />}
                         </Badge>
                       </TableCell>
                     </TableRow>

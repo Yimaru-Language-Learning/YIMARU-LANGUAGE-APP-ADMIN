@@ -48,6 +48,7 @@ import { ModulePracticeCard } from "./components/ModulePracticeCard";
 import { VideoCard } from "./components/VideoCard";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
+import { UnassignedLabel } from "../../lib/displayValue"
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -157,13 +158,13 @@ export function ModuleDetailPage() {
 
   const displayModuleDescription = (() => {
     if (hasNavName) {
-      return navState?.moduleDescription?.trim() || "unassigned";
+      return navState?.moduleDescription?.trim() || <UnassignedLabel />;
     }
     if (!moduleListResolved) {
       return "Loading…";
     }
     if (loadedModuleDescription !== null) {
-      return loadedModuleDescription.trim() || "unassigned";
+      return loadedModuleDescription.trim() || <UnassignedLabel />;
     }
     return "unassigned";
   })();

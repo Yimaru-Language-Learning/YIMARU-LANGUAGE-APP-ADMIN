@@ -47,6 +47,7 @@ import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
 import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import { UnassignedLabel } from "../../lib/displayValue"
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -166,7 +167,7 @@ export function CourseManagementPage() {
         list.map((row, index) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Unit ${row.id}`,
-          description: row.description?.trim() || "unassigned",
+          description: row.description?.trim() || <UnassignedLabel />,
           thumbnail: row.thumbnail?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
           publishStatus: row.publish_status ?? null,

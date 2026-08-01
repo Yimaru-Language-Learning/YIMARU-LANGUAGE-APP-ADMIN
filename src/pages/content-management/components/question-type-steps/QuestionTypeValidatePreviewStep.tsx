@@ -11,6 +11,7 @@ import {
 } from "../../lib/questionTypeDefinitionValidation"
 import { DefinitionRuntimeHint } from "./DefinitionRuntimeHint"
 import { QuestionTypeStepFooter } from "./QuestionTypeStepFooter"
+import { UnassignedLabel } from "../../../../lib/displayValue"
 
 interface QuestionTypeValidatePreviewStepProps {
   draft: QuestionTypeDefinitionCreatePayload
@@ -118,13 +119,13 @@ export function QuestionTypeValidatePreviewStep({
             <div>
               <dt className="text-[11px] font-bold uppercase text-grayScale-400">Stimulus kinds</dt>
               <dd className="mt-1 font-medium text-grayScale-800">
-                {payload.stimulus_component_kinds.join(", ") || "unassigned"}
+                {payload.stimulus_component_kinds.join(", ") || <UnassignedLabel />}
               </dd>
             </div>
             <div>
               <dt className="text-[11px] font-bold uppercase text-grayScale-400">Response kinds</dt>
               <dd className="mt-1 font-medium text-grayScale-800">
-                {payload.response_component_kinds.join(", ") || "unassigned"}
+                {payload.response_component_kinds.join(", ") || <UnassignedLabel />}
               </dd>
             </div>
             <div>
@@ -132,7 +133,7 @@ export function QuestionTypeValidatePreviewStep({
               <dd className="mt-1 font-medium text-grayScale-800">
                 {payload.stimulus_schema.length
                   ? payload.stimulus_schema.map((r) => r.label).join(" · ")
-                  : "unassigned"}
+                  : <UnassignedLabel />}
               </dd>
             </div>
             <div>
@@ -140,7 +141,7 @@ export function QuestionTypeValidatePreviewStep({
               <dd className="mt-1 font-medium text-grayScale-800">
                 {payload.response_schema.length
                   ? payload.response_schema.map((r) => r.label).join(" · ")
-                  : "unassigned"}
+                  : <UnassignedLabel />}
               </dd>
             </div>
           </dl>

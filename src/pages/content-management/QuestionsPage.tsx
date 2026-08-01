@@ -23,6 +23,7 @@ import type { QuestionDetail } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { PageBackLink } from "../../components/navigation/PageBackLink"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type QuestionTypeFilter = "all" | "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO"
 type DifficultyFilter = "all" | "EASY" | "MEDIUM" | "HARD"
@@ -523,7 +524,7 @@ export function QuestionsPage() {
                         )}
                       </TableCell>
                       <TableCell className="hidden py-3.5 text-sm text-grayScale-500 md:table-cell">
-                        {question.status || "unassigned"}
+                        {question.status || <UnassignedLabel />}
                       </TableCell>
                       <TableCell className="py-3.5 text-sm font-semibold text-grayScale-600">
                         {question.points ?? 0}
@@ -696,10 +697,10 @@ export function QuestionsPage() {
                   <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <p><span className="font-medium">ID:</span> {detailData.id}</p>
                     <p><span className="font-medium">Type:</span> {typeLabels[detailData.question_type] || detailData.question_type}</p>
-                    <p><span className="font-medium">Difficulty:</span> {detailData.difficulty_level || "unassigned"}</p>
+                    <p><span className="font-medium">Difficulty:</span> {detailData.difficulty_level || <UnassignedLabel />}</p>
                     <p><span className="font-medium">Points:</span> {detailData.points ?? 0}</p>
-                    <p><span className="font-medium">Status:</span> {detailData.status || "unassigned"}</p>
-                    <p><span className="font-medium">Created:</span> {detailData.created_at || "unassigned"}</p>
+                    <p><span className="font-medium">Status:</span> {detailData.status || <UnassignedLabel />}</p>
+                    <p><span className="font-medium">Created:</span> {detailData.created_at || <UnassignedLabel />}</p>
                   </div>
                   {detailData.explanation ? (
                     <div>
@@ -755,7 +756,7 @@ export function QuestionsPage() {
                               : (answer as { acceptable_answer?: string }).acceptable_answer || ""
                           return (
                             <p key={`${value}-${index}`} className="rounded-md border border-grayScale-200 bg-grayScale-50 px-2 py-1">
-                              {value || "unassigned"}
+                              {value || <UnassignedLabel />}
                             </p>
                           )
                         })}

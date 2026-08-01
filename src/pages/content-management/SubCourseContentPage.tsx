@@ -32,6 +32,7 @@ import type {
 } from "../../types/course.types"
 import type { Rating } from "../../types/ratings.types"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 type TabType = "video" | "practice" | "ratings"
 type StatusFilter = "all" | "published" | "draft" | "archived"
@@ -625,7 +626,7 @@ export function SubModuleContentPage() {
                                 day: "numeric",
                                 year: "numeric",
                               })
-                            : "unassigned"}
+                            : <UnassignedLabel />}
                         </span>
                         <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                           <button

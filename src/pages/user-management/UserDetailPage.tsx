@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   BookOpen,
@@ -35,7 +35,7 @@ import type { UserLearningActivityData, UserSubscriptionsData } from "../../type
 import { UserLearningActivitySection } from "./components/UserLearningActivitySection";
 import { UserAccountActivitySection } from "./components/UserAccountActivitySection";
 import { UserSubscriptionsSection } from "./components/UserSubscriptionsSection";
-import { displayValue, NOT_ASSIGNED_LABEL } from "../../lib/displayValue";
+import { DisplayValue, NOT_ASSIGNED_LABEL, UnassignedLabel, displayValue, isUnassignedLabel } from "../../lib/displayValue"
 
 const activityIcons = {
   completed: CheckCircle2,
@@ -413,9 +413,9 @@ export function UserDetailPage() {
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <InfoRow label="Joined" value={formatDate(user.created_at)} />
                 <InfoRow label="Last login" value={formatDateTime(user.last_login, "Never")} />
-                <InfoRow label="Gender" value={displayValue(user.gender)} />
+                <InfoRow label="Gender" value={<DisplayValue value={user.gender} />} />
                 <InfoRow label="Birthday" value={formatDate(user.birth_day)} />
-                <InfoRow label="Occupation" value={displayValue(user.occupation)} />
+                <InfoRow label="Occupation" value={<DisplayValue value={user.occupation} />} />
               </div>
             </CardContent>
           </Card>
@@ -439,7 +439,7 @@ export function UserDetailPage() {
               />
               <InfoRow
                 label="Preferred language"
-                value={displayValue(user.preferred_language)}
+                value={<DisplayValue value={user.preferred_language} />}
               />
             </CardContent>
           </Card>
@@ -467,11 +467,11 @@ export function UserDetailPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-                <InfoItem label="Education level" value={displayValue(user.education_level)} />
+                <InfoItem label="Education level" value={<DisplayValue value={user.education_level} />} />
                 <InfoItem label="Age group" value={formatAgeGroup(user.age_group)} />
-                <InfoItem label="Favorite topic" value={displayValue(user.favoutite_topic)} />
-                <InfoItem label="Language goal" value={displayValue(user.language_goal)} />
-                <InfoItem label="Challenge" value={displayValue(user.language_challange)} />
+                <InfoItem label="Favorite topic" value={<DisplayValue value={user.favoutite_topic} />} />
+                <InfoItem label="Language goal" value={<DisplayValue value={user.language_goal} />} />
+                <InfoItem label="Challenge" value={<DisplayValue value={user.language_challange} />} />
                 <InfoItem label="Role" value={formatRoleLabel(user.role)} />
               </div>
 
@@ -598,20 +598,24 @@ export function UserDetailPage() {
   );
 }
 
-function InfoItem({ label, value }: { label: string; value: string }) {
+function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">{label}</p>
-      <p className="text-sm text-grayScale-700">{value}</p>
+      <p className="text-sm text-grayScale-700">
+        {typeof value === "string" && isUnassignedLabel(value) ? <UnassignedLabel /> : value}
+      </p>
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-sm text-grayScale-500">{label}</span>
-      <span className="text-sm font-medium text-grayScale-700">{value}</span>
+      <span className="text-sm font-medium text-grayScale-700">
+        {typeof value === "string" && isUnassignedLabel(value) ? <UnassignedLabel /> : value}
+      </span>
     </div>
   );
 }

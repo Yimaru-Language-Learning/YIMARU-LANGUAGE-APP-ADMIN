@@ -13,6 +13,7 @@ import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../../../li
 import type { ParentContextPractice, PracticeParent } from "../../../../types/course.types"
 import { cn } from "../../../../lib/utils"
 import { SearchHighlight, getSearchTokens } from "../../../../components/SearchHighlight"
+import { UnassignedLabel } from "../../../../lib/displayValue"
 
 interface SelectPracticeToAttachStepProps {
   targetParent: PracticeParent
@@ -254,7 +255,11 @@ export function SelectPracticeToAttachStep({
                         publishStatusClass(practice.publish_status),
                       )}
                     >
-                      {(practice.publish_status || "unassigned").toString()}
+                      {practice.publish_status?.trim() ? (
+                        practice.publish_status
+                      ) : (
+                        <UnassignedLabel />
+                      )}
                     </span>
                     {alreadyLinked ? (
                       <span className="text-[11px] font-semibold text-brand-600">

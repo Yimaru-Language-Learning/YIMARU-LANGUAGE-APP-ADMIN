@@ -41,6 +41,7 @@ import {
 import type { CategorySubCategoryListItem, CourseCategory } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
+import { UnassignedLabel } from "../../lib/displayValue"
 
 export function CoursesPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
@@ -415,7 +416,7 @@ export function CoursesPage() {
                     </TableCell>
                     <TableCell>
                       <p className="max-w-md truncate text-sm text-grayScale-600" title={sub.description || undefined}>
-                        {sub.description?.trim() ? sub.description : "unassigned"}
+                        {sub.description?.trim() ? sub.description : <UnassignedLabel />}
                       </p>
                     </TableCell>
                     <TableCell className="hidden xl:table-cell tabular-nums text-sm text-grayScale-600">

@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { InviteTeamMemberDialog } from "../role-management/components/InviteTeamMemberDialog";
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export";
 import { teamMemberExportQuery } from "../../lib/csvExportFilters";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -388,10 +389,10 @@ export function TeamManagementPage() {
                       </span>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-grayScale-600">
-                      {member.department || "unassigned"}
+                      {member.department || <UnassignedLabel />}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-grayScale-600">
-                      {member.job_title || "unassigned"}
+                      {member.job_title || <UnassignedLabel />}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {member.last_login ? (
@@ -406,7 +407,7 @@ export function TeamManagementPage() {
                       ) : (
                         <div>
                           <div className="text-sm text-grayScale-600">Never</div>
-                          <div className="text-xs text-grayScale-400">unassigned</div>
+                          <div className="text-xs text-grayScale-400"><UnassignedLabel /></div>
                         </div>
                       )}
                     </TableCell>

@@ -4,6 +4,7 @@ import { PersonaAvatar } from "../../../../components/personas/PersonaAvatar";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { cn } from "../../../../lib/utils";
+import { UnassignedLabel, isUnassignedLabel } from "../../../../lib/displayValue"
 
 export type PracticeReviewQuestion = {
   id: string;
@@ -278,7 +279,7 @@ export function PracticeSequentialReview({
         </div>
         <div className="rounded-xl border border-grayScale-200 bg-white px-5 py-4 shadow-sm">
           <p className="text-sm leading-relaxed text-grayScale-600">
-            {guidanceText.trim() || "unassigned"}
+            {isUnassignedLabel(guidanceText) ? <UnassignedLabel /> : guidanceText}
           </p>
         </div>
       </div>
@@ -303,7 +304,7 @@ export function PracticeSequentialReview({
                       Text prompt
                     </p>
                     <p className="text-sm leading-relaxed text-grayScale-800">
-                      {question.questionText.trim() || "unassigned"}
+                      {question.questionText.trim() || <UnassignedLabel />}
                     </p>
                   </div>
                   {question.voicePrompt.trim() ? (
@@ -358,7 +359,7 @@ export function PracticeSequentialReview({
                       />
                     </div>
                   ) : (
-                    <p className="text-xs text-grayScale-400">unassigned</p>
+                    <p className="text-xs text-grayScale-400"><UnassignedLabel /></p>
                   )}
                 </div>
               ))}

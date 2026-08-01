@@ -51,6 +51,7 @@ import {
   createIssue,
 } from "../../api/issues.api";
 import type { Issue } from "../../types/issue.types";
+import { UnassignedLabel } from "../../lib/displayValue"
 
 // ── Status configuration ───────────────────────────────────────────
 const STATUSES = ["pending", "in_progress", "resolved", "rejected"] as const;
@@ -532,7 +533,7 @@ export function IssuesPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-grayScale-600 truncate">
-                            {issue.subject?.trim() ? issue.subject : "unassigned"}
+                            {issue.subject?.trim() ? issue.subject : <UnassignedLabel />}
                           </p>
                           <p className="text-xs text-grayScale-400 truncate mt-0.5">
                             {issue.description?.trim() ? issue.description : "No description"}

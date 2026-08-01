@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Gauge, RefreshCw, Save } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -50,20 +50,39 @@ function validateRows(rows: InitialAssessmentLevelThreshold[]): string | null {
   return null
 }
 
+function thresholdsEqual(
+  a: InitialAssessmentLevelThreshold[],
+  b: InitialAssessmentLevelThreshold[],
+): boolean {
+  if (a.length !== b.length) return false
+  return a.every(
+    (row, i) =>
+      String(row.level).toUpperCase() === String(b[i]?.level).toUpperCase() &&
+      Number(row.min_percent) === Number(b[i]?.min_percent) &&
+      Number(row.display_order) === Number(b[i]?.display_order),
+  )
+}
+
 export function InitialAssessmentThresholdsTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState<InitialAssessmentLevelThreshold[]>(DEFAULTS)
+  const [savedRows, setSavedRows] = useState<InitialAssessmentLevelThreshold[]>(DEFAULTS)
+
+  const dirty = useMemo(() => !thresholdsEqual(rows, savedRows), [rows, savedRows])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getInitialAssessmentLevelThresholds()
-      setRows(ensureAllLevels(data.length ? data : DEFAULTS))
+      const next = ensureAllLevels(data.length ? data : DEFAULTS)
+      setRows(next)
+      setSavedRows(next)
     } catch (e) {
       console.error(e)
       notifyApiError(e, "Failed to load placement level thresholds")
       setRows(DEFAULTS)
+      setSavedRows(DEFAULTS)
     } finally {
       setLoading(false)
     }
@@ -94,7 +113,9 @@ export function InitialAssessmentThresholdsTab() {
     setSaving(true)
     try {
       const saved = await updateInitialAssessmentLevelThresholds(next)
-      setRows(ensureAllLevels(saved))
+      const normalized = ensureAllLevels(saved)
+      setRows(normalized)
+      setSavedRows(normalized)
       toast.success("Placement level thresholds saved")
     } catch (e) {
       notifyApiError(e, "Failed to save thresholds")
@@ -131,7 +152,7 @@ export function InitialAssessmentThresholdsTab() {
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
             Reload
           </Button>
-          <Button type="button" size="sm" onClick={() => void handleSave()} disabled={saving}>
+          <Button type="button" size="sm" onClick={() => void handleSave()} disabled={saving || !dirty}>
             <Save className="mr-1.5 h-3.5 w-3.5" />
             {saving ? "Saving…" : "Save"}
           </Button>

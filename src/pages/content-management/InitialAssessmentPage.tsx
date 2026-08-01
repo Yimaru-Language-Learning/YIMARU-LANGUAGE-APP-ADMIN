@@ -30,6 +30,14 @@ import { TablePagination } from "../../components/admin/TablePagination"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog"
 import { Input } from "../../components/ui/input"
 import { Select } from "../../components/ui/select"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
@@ -147,6 +155,27 @@ function draftFromQuestionDetail(q: PlacementQuestionDetail): QuestionDraft {
   }
 }
 
+function draftsEqual(a: QuestionDraft, b: QuestionDraft): boolean {
+  if (
+    a.questionText !== b.questionText ||
+    a.questionType !== b.questionType ||
+    a.difficulty !== b.difficulty ||
+    a.points !== b.points ||
+    a.tips !== b.tips ||
+    a.explanation !== b.explanation ||
+    a.options.length !== b.options.length
+  ) {
+    return false
+  }
+  return a.options.every(
+    (opt, i) => opt.text === b.options[i]?.text && opt.isCorrect === b.options[i]?.isCorrect,
+  )
+}
+
+function normalizeTimeLimitValue(raw: number | null | undefined): string {
+  return raw != null && raw > 0 ? String(raw) : ""
+}
+
 export function InitialAssessmentPage() {
   const [tab, setTab] = useState<TabId>("set")
   const [loading, setLoading] = useState(true)
@@ -165,12 +194,30 @@ export function InitialAssessmentPage() {
   const [editingStatus, setEditingStatus] = useState<string>("PUBLISHED")
   const [formLoading, setFormLoading] = useState(false)
   const [draft, setDraft] = useState<QuestionDraft>(emptyDraft)
+  const [draftBaseline, setDraftBaseline] = useState<QuestionDraft>(emptyDraft)
   const [savingQuestion, setSavingQuestion] = useState(false)
   const [removingId, setRemovingId] = useState<number | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<PlacementQuestionRow | null>(null)
   const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null)
   const [questionsPage, setQuestionsPage] = useState(1)
   const [questionsPageSize, setQuestionsPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [questionsSearch, setQuestionsSearch] = useState("")
+
+  const setFormDirty = useMemo(() => {
+    if (!setDetail) return false
+    const savedTitle = setDetail.title || "Initial Placement Assessment"
+    const savedDescription = setDetail.description || "PLACEMENT"
+    const savedShuffle = Boolean(setDetail.shuffle_questions)
+    const savedTimeLimit = normalizeTimeLimitValue(setDetail.time_limit_minutes)
+    return (
+      title.trim() !== savedTitle.trim() ||
+      (description.trim() || "PLACEMENT") !== savedDescription.trim() ||
+      shuffle !== savedShuffle ||
+      timeLimit.trim() !== savedTimeLimit
+    )
+  }, [setDetail, title, description, shuffle, timeLimit])
+
+  const questionFormDirty = useMemo(() => !draftsEqual(draft, draftBaseline), [draft, draftBaseline])
 
   const loadSet = useCallback(async () => {
     setLoading(true)
@@ -181,11 +228,7 @@ export function InitialAssessmentPage() {
       setDescription(detail.description || "PLACEMENT")
       setStatus(String(detail.status || "DRAFT").toUpperCase())
       setShuffle(Boolean(detail.shuffle_questions))
-      setTimeLimit(
-        detail.time_limit_minutes != null && detail.time_limit_minutes > 0
-          ? String(detail.time_limit_minutes)
-          : "",
-      )
+      setTimeLimit(normalizeTimeLimitValue(detail.time_limit_minutes))
     } catch (e) {
       console.error(e)
       notifyApiError(e, "Failed to load placement assessment")
@@ -336,20 +379,26 @@ export function InitialAssessmentPage() {
     setAddOpen(false)
     setEditingQuestionId(null)
     setEditingStatus("PUBLISHED")
-    setDraft(emptyDraft())
+    const blank = emptyDraft()
+    setDraft(blank)
+    setDraftBaseline(blank)
     setFormLoading(false)
   }
 
   const openCreateQuestion = () => {
     setEditingQuestionId(null)
     setEditingStatus("PUBLISHED")
-    setDraft(emptyDraft())
+    const blank = emptyDraft()
+    setDraft(blank)
+    setDraftBaseline(blank)
     setAddOpen(true)
   }
 
   const openEditQuestion = async (questionId: number) => {
     setEditingQuestionId(questionId)
-    setDraft(emptyDraft())
+    const blank = emptyDraft()
+    setDraft(blank)
+    setDraftBaseline(blank)
     setAddOpen(true)
     setFormLoading(true)
     try {
@@ -363,7 +412,9 @@ export function InitialAssessmentPage() {
       setEditingStatus(
         detail.status && detail.status !== "unassigned" ? detail.status : "DRAFT",
       )
-      setDraft(draftFromQuestionDetail(detail))
+      const nextDraft = draftFromQuestionDetail(detail)
+      setDraft(nextDraft)
+      setDraftBaseline(nextDraft)
     } catch (e) {
       notifyApiError(e, "Failed to load question")
       closeQuestionForm()
@@ -431,6 +482,7 @@ export function InitialAssessmentPage() {
     try {
       await detachPlacementQuestion(setDetail.id, questionId)
       toast.success("Question removed from placement set")
+      setPendingDelete(null)
       await loadQuestions(setDetail.id)
       await loadSet()
     } catch (e) {
@@ -599,7 +651,12 @@ export function InitialAssessmentPage() {
         <Card className="rounded-xl border-grayScale-200/70 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
             <CardTitle className="text-base font-bold">Placement set settings</CardTitle>
-            <Button type="button" size="sm" onClick={() => void handleSaveSet()} disabled={savingSet}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void handleSaveSet()}
+              disabled={savingSet || !setFormDirty}
+            >
               <Save className="mr-1.5 h-3.5 w-3.5" />
               {savingSet ? "Saving…" : "Save"}
             </Button>
@@ -803,7 +860,7 @@ export function InitialAssessmentPage() {
                             size="icon"
                             className="h-8 w-8"
                             disabled={removingId === q.questionId}
-                            onClick={() => void handleRemoveQuestion(q.questionId)}
+                            onClick={() => setPendingDelete(q)}
                             aria-label={`Remove question ${q.questionId}`}
                           >
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -988,7 +1045,7 @@ export function InitialAssessmentPage() {
                   <Button
                     type="button"
                     onClick={() => void handleSaveQuestion()}
-                    disabled={savingQuestion || formLoading}
+                    disabled={savingQuestion || formLoading || !questionFormDirty}
                   >
                     {savingQuestion
                       ? "Saving…"
@@ -1002,6 +1059,44 @@ export function InitialAssessmentPage() {
           </div>
         </div>
       )}
+
+      <Dialog
+        open={pendingDelete != null}
+        onOpenChange={(open) => {
+          if (!open && removingId == null) setPendingDelete(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove question?</DialogTitle>
+            <DialogDescription>
+              {pendingDelete
+                ? `Remove “${pendingDelete.questionText}” from this placement set? The question stays in the library.`
+                : "Remove this question from the placement set?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={removingId != null}
+              onClick={() => setPendingDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pendingDelete == null || removingId != null}
+              onClick={() => {
+                if (pendingDelete) void handleRemoveQuestion(pendingDelete.questionId)
+              }}
+            >
+              {removingId != null ? "Removing…" : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

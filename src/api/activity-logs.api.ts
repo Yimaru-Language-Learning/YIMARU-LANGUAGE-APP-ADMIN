@@ -82,7 +82,7 @@ function unwrapPayload(body: unknown): unknown {
 }
 
 export function parseActivityLogList(body: unknown): ActivityLogListData {
-  const empty: ActivityLogListData = { logs: [], total_count: 0, limit: 20, offset: 0 }
+  const empty: ActivityLogListData = { logs: [], total_count: 0, limit: 10, offset: 0 }
   const payload = unwrapPayload(body)
   if (!isRecord(payload)) return empty
 
@@ -92,20 +92,20 @@ export function parseActivityLogList(body: unknown): ActivityLogListData {
     : []
 
   const total_count = Number(payload.total_count ?? payload.TotalCount ?? logs.length)
-  const limit = Number(payload.limit ?? payload.Limit ?? 20)
+  const limit = Number(payload.limit ?? payload.Limit ?? 10)
   const offset = Number(payload.offset ?? payload.Offset ?? 0)
 
   return {
     logs,
     total_count: Number.isFinite(total_count) ? total_count : logs.length,
-    limit: Number.isFinite(limit) ? limit : 20,
+    limit: Number.isFinite(limit) ? limit : 10,
     offset: Number.isFinite(offset) ? offset : 0,
   }
 }
 
 function buildQueryParams(filters?: ActivityLogFilters): Record<string, string | number> {
   const params: Record<string, string | number> = {
-    limit: Math.min(100, Math.max(1, filters?.limit ?? 20)),
+    limit: Math.min(100, Math.max(1, filters?.limit ?? 10)),
     offset: Math.max(0, filters?.offset ?? 0),
   }
   if (filters?.actor_id != null) params.actor_id = filters.actor_id

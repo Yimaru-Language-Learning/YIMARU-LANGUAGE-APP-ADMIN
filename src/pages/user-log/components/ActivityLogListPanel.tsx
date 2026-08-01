@@ -98,7 +98,7 @@ export function ActivityLogListPanel({
   const [error, setError] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(compact ? 10 : 20)
+  const [pageSize, setPageSize] = useState(10)
 
   const [actionFilter, setActionFilter] = useState("")
   const [resourceTypeFilter, setResourceTypeFilter] = useState("")

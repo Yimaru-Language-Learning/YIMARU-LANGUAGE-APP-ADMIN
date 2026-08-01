@@ -79,7 +79,7 @@ export function parsePaymentsList(body: unknown): PaymentsListData {
 
 function buildQueryParams(params: GetPaymentsParams): Record<string, string | number> {
   const query: Record<string, string | number> = {
-    limit: Math.min(100, Math.max(1, params.limit ?? 20)),
+    limit: Math.min(100, Math.max(1, params.limit ?? 10)),
     offset: Math.max(0, params.offset ?? 0),
   }
   if (params.status?.trim()) query.status = params.status.trim()

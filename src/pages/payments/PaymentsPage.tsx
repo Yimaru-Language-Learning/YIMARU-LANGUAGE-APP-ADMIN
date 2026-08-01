@@ -111,7 +111,7 @@ export function PaymentsPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [paymentStats, setPaymentStats] = useState<PaymentAggregateStats>(EMPTY_PAYMENT_STATS)
   const [offset, setOffset] = useState(0)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(10)
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "">("")
   const [providerFilter, setProviderFilter] = useState<PaymentProvider | "">("")
   const [planCategoryFilter, setPlanCategoryFilter] = useState<PaymentPlanCategory | "">("")

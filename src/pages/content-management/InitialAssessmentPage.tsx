@@ -19,6 +19,7 @@ import {
   getPlacementQuestionDetail,
   listPlacementQuestions,
   savePlacementAssessmentSet,
+  type CefrLevel,
   type PlacementQuestionDetail,
   type PlacementQuestionRow,
 } from "../../api/initial-assessment.api"
@@ -177,13 +178,15 @@ function normalizeTimeLimitValue(raw: number | null | undefined): string {
   return raw != null && raw > 0 ? String(raw) : ""
 }
 
+const CEFR_LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"]
+
 export function InitialAssessmentPage() {
   const [tab, setTab] = useState<TabId>("set")
+  const [selectedLevel, setSelectedLevel] = useState<CefrLevel>("A1")
   const [loading, setLoading] = useState(true)
   const [savingSet, setSavingSet] = useState(false)
   const [setDetail, setSetDetail] = useState<QuestionSetDetail | null>(null)
   const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("PLACEMENT")
   const [status, setStatus] = useState("DRAFT")
   const [shuffle, setShuffle] = useState(false)
   const [timeLimit, setTimeLimit] = useState<string>("")
@@ -206,27 +209,24 @@ export function InitialAssessmentPage() {
 
   const setFormDirty = useMemo(() => {
     if (!setDetail) return false
-    const savedTitle = setDetail.title || "Initial Placement Assessment"
-    const savedDescription = setDetail.description || "PLACEMENT"
+    const savedTitle = setDetail.title || `Initial Placement Assessment — ${selectedLevel}`
     const savedShuffle = Boolean(setDetail.shuffle_questions)
     const savedTimeLimit = normalizeTimeLimitValue(setDetail.time_limit_minutes)
     return (
       title.trim() !== savedTitle.trim() ||
-      (description.trim() || "PLACEMENT") !== savedDescription.trim() ||
       shuffle !== savedShuffle ||
       timeLimit.trim() !== savedTimeLimit
     )
-  }, [setDetail, title, description, shuffle, timeLimit])
+  }, [setDetail, title, shuffle, timeLimit, selectedLevel])
 
   const questionFormDirty = useMemo(() => !draftsEqual(draft, draftBaseline), [draft, draftBaseline])
 
   const loadSet = useCallback(async () => {
     setLoading(true)
     try {
-      const detail = await ensurePlacementAssessmentSet()
+      const detail = await ensurePlacementAssessmentSet(selectedLevel)
       setSetDetail(detail)
-      setTitle(detail.title || "Initial Placement Assessment")
-      setDescription(detail.description || "PLACEMENT")
+      setTitle(detail.title || `Initial Placement Assessment — ${selectedLevel}`)
       setStatus(String(detail.status || "DRAFT").toUpperCase())
       setShuffle(Boolean(detail.shuffle_questions))
       setTimeLimit(normalizeTimeLimitValue(detail.time_limit_minutes))
@@ -237,7 +237,7 @@ export function InitialAssessmentPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [selectedLevel])
 
   const loadQuestions = useCallback(async (setId: number) => {
     setQuestionsLoading(true)
@@ -322,7 +322,7 @@ export function InitialAssessmentPage() {
     try {
       const updated = await savePlacementAssessmentSet(setDetail.id, {
         title: title.trim(),
-        description: description.trim() || "PLACEMENT",
+        description: selectedLevel,
         status,
         shuffle_questions: shuffle,
         time_limit_minutes: timeLimit.trim() ? Number(timeLimit) : null,
@@ -359,7 +359,7 @@ export function InitialAssessmentPage() {
       const nextStatus = nextPublished ? "PUBLISHED" : "DRAFT"
       const updated = await savePlacementAssessmentSet(setDetail.id, {
         title: title.trim() || setDetail.title,
-        description: description.trim() || "PLACEMENT",
+        description: selectedLevel,
         status: nextStatus,
         shuffle_questions: shuffle,
         time_limit_minutes: timeLimit.trim() ? Number(timeLimit) : null,
@@ -368,7 +368,11 @@ export function InitialAssessmentPage() {
       })
       setSetDetail(updated)
       setStatus(nextStatus)
-      toast.success(nextPublished ? "Placement assessment published" : "Placement assessment unpublished")
+      toast.success(
+        nextPublished
+          ? `${selectedLevel} placement set published`
+          : `${selectedLevel} placement set unpublished`,
+      )
     } catch (e) {
       notifyApiError(e, "Failed to update publish status")
     } finally {
@@ -577,13 +581,13 @@ export function InitialAssessmentPage() {
             Initial placement assessment
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm text-grayScale-500">
-            Manage the single learner placement test, its questions, and the A1–C2 score thresholds used
-            when grading submissions.
+            Manage one question set per CEFR level (A1–C2). Learners progress upward when they pass
+            each level&apos;s pass score; failing stops and assigns the highest level they passed.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Badge variant={published ? "success" : "secondary"}>
-            {published ? "Published" : "Draft"}
+            {selectedLevel} · {published ? "Published" : "Draft"}
           </Badge>
           <div className="flex items-center gap-2 rounded-xl border border-grayScale-200 bg-white px-3 py-2">
             <span className="text-xs font-medium text-grayScale-500">Live for learners</span>
@@ -591,7 +595,7 @@ export function InitialAssessmentPage() {
               checked={published}
               onCheckedChange={() => void handlePublishToggle(!published)}
               disabled={savingSet}
-              aria-label="Publish placement assessment"
+              aria-label={`Publish ${selectedLevel} placement assessment`}
             />
           </div>
           <Button type="button" variant="outline" size="sm" onClick={() => void loadSet()} disabled={loading}>
@@ -599,6 +603,33 @@ export function InitialAssessmentPage() {
             Refresh
           </Button>
         </div>
+      </div>
+
+      <div
+        className="mb-6 flex flex-wrap gap-2"
+        role="tablist"
+        aria-label="CEFR placement level"
+      >
+        {CEFR_LEVELS.map((level) => {
+          const selected = selectedLevel === level
+          return (
+            <button
+              key={level}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => setSelectedLevel(level)}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
+                selected
+                  ? "bg-brand-500 text-white"
+                  : "border border-grayScale-200 bg-white text-grayScale-600 hover:border-grayScale-300",
+              )}
+            >
+              {level}
+            </button>
+          )
+        })}
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
@@ -627,9 +658,9 @@ export function InitialAssessmentPage() {
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-grayScale-100">
         {(
           [
-            { id: "set", label: "Placement set" },
+            { id: "set", label: `${selectedLevel} set` },
             { id: "questions", label: "Questions" },
-            { id: "thresholds", label: "Score thresholds" },
+            { id: "thresholds", label: "Pass thresholds" },
           ] as const
         ).map((item) => (
           <button
@@ -669,14 +700,12 @@ export function InitialAssessmentPage() {
             </label>
             <label className="space-y-1.5 sm:col-span-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-grayScale-400">
-                Description
+                CEFR level
               </span>
-              <Textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Short description for admins"
-              />
+              <Input value={selectedLevel} disabled readOnly />
+              <span className="text-xs text-grayScale-400">
+                Each level has its own published set. Switch levels with the chips above.
+              </span>
             </label>
             <label className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wide text-grayScale-400">

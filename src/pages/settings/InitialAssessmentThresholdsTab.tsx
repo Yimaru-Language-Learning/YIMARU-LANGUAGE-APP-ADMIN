@@ -16,12 +16,12 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 const LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"] as const
 
 const DEFAULTS: InitialAssessmentLevelThreshold[] = [
-  { level: "A1", min_percent: 0, display_order: 1 },
-  { level: "A2", min_percent: 17, display_order: 2 },
-  { level: "B1", min_percent: 34, display_order: 3 },
-  { level: "B2", min_percent: 51, display_order: 4 },
-  { level: "C1", min_percent: 68, display_order: 5 },
-  { level: "C2", min_percent: 85, display_order: 6 },
+  { level: "A1", min_percent: 70, display_order: 1 },
+  { level: "A2", min_percent: 70, display_order: 2 },
+  { level: "B1", min_percent: 70, display_order: 3 },
+  { level: "B2", min_percent: 70, display_order: 4 },
+  { level: "C1", min_percent: 70, display_order: 5 },
+  { level: "C2", min_percent: 70, display_order: 6 },
 ]
 
 function ensureAllLevels(rows: InitialAssessmentLevelThreshold[]): InitialAssessmentLevelThreshold[] {
@@ -37,14 +37,10 @@ function ensureAllLevels(rows: InitialAssessmentLevelThreshold[]): InitialAssess
 }
 
 function validateRows(rows: InitialAssessmentLevelThreshold[]): string | null {
-  if (rows[0]?.min_percent !== 0) return "A1 minimum score must be 0%."
   for (let i = 0; i < rows.length; i++) {
     const value = rows[i].min_percent
     if (!Number.isFinite(value) || value < 0 || value > 100) {
-      return `${rows[i].level} minimum must be between 0 and 100.`
-    }
-    if (i > 0 && value <= rows[i - 1].min_percent) {
-      return `${rows[i].level} minimum must be greater than ${rows[i - 1].level}.`
+      return `${rows[i].level} pass score must be between 0 and 100.`
     }
   }
   return null
@@ -143,8 +139,9 @@ export function InitialAssessmentThresholdsTab() {
             </CardTitle>
           </div>
           <p className="text-sm text-grayScale-500">
-            Map placement score percentage to CEFR levels A1–C2. Learners receive the highest
-            level whose minimum they meet.
+            Pass score (%) required to clear each CEFR level&apos;s question set and continue to the
+            next level. Failing a level finalizes the learner at the highest level they already
+            passed (A1 if none).
           </p>
         </div>
         <div className="flex gap-2">
@@ -166,14 +163,13 @@ export function InitialAssessmentThresholdsTab() {
               className="flex flex-col gap-1.5 rounded-xl border border-grayScale-200 bg-white p-4"
             >
               <span className="text-sm font-semibold text-grayScale-800">{row.level}</span>
-              <span className="text-xs text-grayScale-400">Minimum score (%)</span>
+              <span className="text-xs text-grayScale-400">Pass score (%)</span>
               <Input
                 type="number"
                 min={0}
                 max={100}
                 step={1}
                 value={row.min_percent}
-                disabled={row.level === "A1"}
                 onChange={(e) => updateMin(row.level, e.target.value)}
                 className="h-9"
               />
@@ -181,8 +177,8 @@ export function InitialAssessmentThresholdsTab() {
           ))}
         </div>
         <p className="mt-2 text-xs text-grayScale-400">
-          Learners get the highest level whose minimum score they meet. A1 starts at 0%. Manage the
-          placement test and its questions under{" "}
+          Learners start at A1 and advance only when they meet that level&apos;s pass score. Configure
+          one question set per level under{" "}
           <Link to="/new-content/initial-assessment" className="font-medium text-brand-600 hover:underline">
             Content → Initial assessment
           </Link>

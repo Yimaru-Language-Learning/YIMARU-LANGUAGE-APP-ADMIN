@@ -211,31 +211,49 @@ function unwrapQuestionSets(body: unknown): Array<Record<string, unknown>> {
   return []
 }
 
-function pickStandalonePlacement(sets: Array<Record<string, unknown>>): Record<string, unknown> | null {
-  const publishedStandalone = sets.find((set) => {
+const CEFR_LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"]
+
+function isCefrLevel(value: string): value is CefrLevel {
+  return (CEFR_LEVELS as string[]).includes(value)
+}
+
+function setLevel(set: Record<string, unknown>): CefrLevel | null {
+  const level = String(set.description ?? "").trim().toUpperCase()
+  return isCefrLevel(level) ? level : null
+}
+
+function pickSetForLevel(
+  sets: Array<Record<string, unknown>>,
+  level: CefrLevel,
+): Record<string, unknown> | null {
+  const matching = sets.filter((set) => setLevel(set) === level)
+  if (matching.length === 0) return null
+
+  const publishedStandalone = matching.find((set) => {
     const status = String(set.status ?? "").toUpperCase()
     const owner = String(set.owner_type ?? "STANDALONE").toUpperCase()
     return status === "PUBLISHED" && (owner === "STANDALONE" || owner === "")
   })
   if (publishedStandalone) return publishedStandalone
 
-  const anyStandalone = sets.find((set) => {
+  const anyStandalone = matching.find((set) => {
     const owner = String(set.owner_type ?? "STANDALONE").toUpperCase()
     return owner === "STANDALONE" || owner === ""
   })
   if (anyStandalone) return anyStandalone
 
-  return sets[0] ?? null
+  const published = matching.find((set) => String(set.status ?? "").toUpperCase() === "PUBLISHED")
+  return published ?? matching[0] ?? null
 }
 
-export async function findPlacementAssessmentSet(): Promise<QuestionSetDetail | null> {
+export async function findPlacementAssessmentSet(level: CefrLevel): Promise<QuestionSetDetail | null> {
   const res = await getQuestionSets({
     set_type: "INITIAL_ASSESSMENT",
-    limit: 50,
+    limit: 100,
     offset: 0,
   })
   const sets = unwrapQuestionSets(res.data)
-  const picked = pickStandalonePlacement(sets)
+  const picked = pickSetForLevel(sets, level)
   if (!picked) return null
   const id = Number(picked.id)
   if (!Number.isFinite(id)) return null
@@ -245,11 +263,15 @@ export async function findPlacementAssessmentSet(): Promise<QuestionSetDetail | 
 
 export async function createPlacementAssessmentSet(input?: {
   title?: string
-  description?: string
+  level: CefrLevel
 }): Promise<QuestionSetDetail> {
+  const level = input?.level
+  if (!level) {
+    throw new Error("Placement set level is required")
+  }
   const payload: CreateQuestionSetRequest = {
-    title: input?.title?.trim() || "Initial Placement Assessment",
-    description: input?.description?.trim() || "PLACEMENT",
+    title: input?.title?.trim() || `Initial Placement Assessment — ${level}`,
+    description: level,
     set_type: "INITIAL_ASSESSMENT",
     owner_type: "STANDALONE",
     owner_id: null,
@@ -269,10 +291,10 @@ export async function createPlacementAssessmentSet(input?: {
   return detailRes.data.data
 }
 
-export async function ensurePlacementAssessmentSet(): Promise<QuestionSetDetail> {
-  const existing = await findPlacementAssessmentSet()
+export async function ensurePlacementAssessmentSet(level: CefrLevel): Promise<QuestionSetDetail> {
+  const existing = await findPlacementAssessmentSet(level)
   if (existing) return existing
-  return createPlacementAssessmentSet()
+  return createPlacementAssessmentSet({ level })
 }
 
 export async function savePlacementAssessmentSet(

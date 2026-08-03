@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react"
+import { RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { adminApplySubscription } from "../../../api/admin-subscriptions.api"
+import { Button } from "../../../components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog"
 import { notifyApiError } from "../../../lib/apiErrors"
-import { formatPlanCategory } from "../../../lib/subscriptionPlans"
+import { formatPlanCategory, formatPlanPrice } from "../../../lib/subscriptionPlans"
 import { TypeToConfirmDialog } from "../../../lib/typeToConfirm"
+import { cn } from "../../../lib/utils"
 import type { UserSubscriptionRecord } from "../../../types/userAdmin.types"
 
 const CONFIRM_WORD = "EXTEND"
@@ -36,11 +47,23 @@ export function ExtendSubscriptionDialog({
   subscription,
   onExtended,
 }: ExtendSubscriptionDialogProps) {
+  const [recordPayment, setRecordPayment] = useState(true)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!open) setSaving(false)
+    if (!open) {
+      setSaving(false)
+      setConfirmOpen(false)
+      setRecordPayment(true)
+    }
   }, [open, subscription?.id])
+
+  const handleContinue = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!subscription) return
+    setConfirmOpen(true)
+  }
 
   const handleConfirmExtend = async () => {
     if (!subscription) return
@@ -49,6 +72,7 @@ export function ExtendSubscriptionDialog({
     try {
       const res = await adminApplySubscription(userId, {
         plan_id: subscription.plan_id,
+        record_payment: recordPayment,
       })
       const expiresLabel = res.data?.expires_at
         ? formatDateTime(res.data.expires_at)
@@ -58,6 +82,7 @@ export function ExtendSubscriptionDialog({
           ? `Subscription extended to ${expiresLabel}`
           : res.message || "Subscription extended",
       )
+      setConfirmOpen(false)
       onExtended()
       onOpenChange(false)
     } catch (err) {
@@ -67,33 +92,173 @@ export function ExtendSubscriptionDialog({
     }
   }
 
+  const priceLabel = subscription
+    ? formatPlanPrice({
+        price: subscription.price,
+        currency: subscription.currency || "ETB",
+      })
+    : "the plan price"
+
   return (
-    <TypeToConfirmDialog
-      open={open && subscription != null}
-      onOpenChange={(next) => {
-        if (saving) return
-        if (!next) onOpenChange(false)
-      }}
-      title="Are you sure?"
-      description={
-        subscription ? (
-          <>
-            Extend <strong>{subscription.plan_name}</strong> (#
-            {subscription.id}) by one plan period? Current expiry:{" "}
-            <strong>{formatDateTime(subscription.expires_at)}</strong>
-            {subscription.plan_category
-              ? ` · ${formatPlanCategory(subscription.plan_category)}`
-              : ""}
-            .
-          </>
-        ) : (
-          "Extend this subscription by one plan period?"
-        )
-      }
-      confirmWord={CONFIRM_WORD}
-      confirmLabel="Extend subscription"
-      confirming={saving}
-      onConfirm={handleConfirmExtend}
-    />
+    <>
+      <Dialog
+        open={open && subscription != null && !confirmOpen}
+        onOpenChange={(next) => {
+          if (saving) return
+          if (!next) {
+            setConfirmOpen(false)
+            onOpenChange(false)
+          }
+        }}
+      >
+        <DialogContent className="h-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[12px] border border-grayScale-100 p-0 sm:max-w-xl">
+          <form onSubmit={handleContinue}>
+            <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6">
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold text-grayScale-900">
+                <RefreshCw className="h-5 w-5 text-brand-600" aria-hidden />
+                Extend subscription
+              </DialogTitle>
+              <DialogDescription className="text-sm text-grayScale-500">
+                Extend by one plan period. Choose whether to record a payment at the plan
+                price.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 px-6 py-5">
+              {subscription ? (
+                <div className="rounded-xl border border-grayScale-100 bg-grayScale-50 px-4 py-3 text-sm text-grayScale-700">
+                  <p>
+                    <span className="font-semibold">{subscription.plan_name}</span>
+                    {subscription.plan_category
+                      ? ` · ${formatPlanCategory(subscription.plan_category)}`
+                      : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-grayScale-500">
+                    Current expiry: {formatDateTime(subscription.expires_at)}
+                    {" · Plan price: "}
+                    {formatPlanPrice({
+                      price: subscription.price,
+                      currency: subscription.currency || "ETB",
+                    })}
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
+                  Payment <span className="text-destructive">*</span>
+                </p>
+                <div
+                  className="flex flex-col gap-2 sm:flex-row"
+                  role="radiogroup"
+                  aria-label="Payment recording"
+                >
+                  <label
+                    className={cn(
+                      "flex flex-1 cursor-pointer flex-col rounded-xl border px-4 py-3 transition-colors",
+                      recordPayment
+                        ? "border-brand-500 bg-brand-50/60 ring-1 ring-brand-500/30"
+                        : "border-grayScale-200 bg-white hover:border-grayScale-300",
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="extend_record_payment"
+                        checked={recordPayment}
+                        onChange={() => setRecordPayment(true)}
+                        className="h-4 w-4 border-grayScale-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm font-semibold text-grayScale-800">
+                        Record payment
+                      </span>
+                    </span>
+                    <span className="mt-1 pl-6 text-xs text-grayScale-500">
+                      Commit a SUCCESS payment of {priceLabel}.
+                    </span>
+                  </label>
+                  <label
+                    className={cn(
+                      "flex flex-1 cursor-pointer flex-col rounded-xl border px-4 py-3 transition-colors",
+                      !recordPayment
+                        ? "border-brand-500 bg-brand-50/60 ring-1 ring-brand-500/30"
+                        : "border-grayScale-200 bg-white hover:border-grayScale-300",
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="extend_record_payment"
+                        checked={!recordPayment}
+                        onChange={() => setRecordPayment(false)}
+                        className="h-4 w-4 border-grayScale-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm font-semibold text-grayScale-800">
+                        No payment
+                      </span>
+                    </span>
+                    <span className="mt-1 pl-6 text-xs text-grayScale-500">
+                      Extend access only — no payments row or revenue.
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[6px]"
+                disabled={saving}
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving || !subscription}
+                className="rounded-[6px] bg-brand-500 font-semibold text-white hover:bg-brand-600"
+              >
+                Continue
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <TypeToConfirmDialog
+        open={confirmOpen && subscription != null}
+        onOpenChange={setConfirmOpen}
+        title="Are you sure?"
+        description={
+          subscription ? (
+            <>
+              Extend <strong>{subscription.plan_name}</strong> (#{subscription.id}) by one
+              plan period? Current expiry:{" "}
+              <strong>{formatDateTime(subscription.expires_at)}</strong>
+              {subscription.plan_category
+                ? ` · ${formatPlanCategory(subscription.plan_category)}`
+                : ""}
+              .
+              {recordPayment ? (
+                <>
+                  {" "}
+                  A payment of <strong>{priceLabel}</strong> will be recorded.
+                </>
+              ) : (
+                " No payment will be recorded."
+              )}
+            </>
+          ) : (
+            "Extend this subscription by one plan period?"
+          )
+        }
+        confirmWord={CONFIRM_WORD}
+        confirmLabel={recordPayment ? "Extend and record payment" : "Extend without payment"}
+        confirming={saving}
+        onConfirm={handleConfirmExtend}
+      />
+    </>
   )
 }

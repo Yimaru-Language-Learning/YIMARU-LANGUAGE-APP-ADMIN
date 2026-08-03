@@ -21,6 +21,11 @@ export interface AdminSubscriptionRes {
 /** Body for unified grant-or-extend. */
 export interface AdminApplySubscriptionBody {
   plan_id: number
+  /**
+   * When true (default if omitted), records a SUCCESS payment at the plan price.
+   * When false, grants/extends access with no payments row.
+   */
+  record_payment?: boolean
 }
 
 /** @deprecated Prefer AdminApplySubscriptionBody */

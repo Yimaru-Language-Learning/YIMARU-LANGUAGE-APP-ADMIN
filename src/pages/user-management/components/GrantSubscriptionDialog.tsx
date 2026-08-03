@@ -52,6 +52,7 @@ export function GrantSubscriptionDialog({
   const [planId, setPlanId] = useState("")
   const [planSearch, setPlanSearch] = useState("")
   const [planMenuOpen, setPlanMenuOpen] = useState(false)
+  const [recordPayment, setRecordPayment] = useState(true)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -61,6 +62,7 @@ export function GrantSubscriptionDialog({
     setPlanId("")
     setPlanSearch("")
     setPlanMenuOpen(false)
+    setRecordPayment(true)
     setConfirmOpen(false)
     setFormError(null)
     setSaving(false)
@@ -131,7 +133,10 @@ export function GrantSubscriptionDialog({
 
     setSaving(true)
     try {
-      const res = await adminApplySubscription(userId, { plan_id: id })
+      const res = await adminApplySubscription(userId, {
+        plan_id: id,
+        record_payment: recordPayment,
+      })
       toast.success(res.message || "Subscription granted")
       setConfirmOpen(false)
       onGranted()
@@ -163,12 +168,12 @@ export function GrantSubscriptionDialog({
             <DialogHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6">
               <DialogTitle className="flex items-center gap-2 text-lg font-bold text-grayScale-900">
                 <Gift className="h-5 w-5 text-brand-600" aria-hidden />
-                Mark as paid
+                Grant subscription
               </DialogTitle>
               <DialogDescription className="text-sm text-grayScale-500">
                 Grant plan access
-                {userName ? ` to ${userName}` : ""}. A payment is recorded at the
-                plan price.
+                {userName ? ` to ${userName}` : ""}. Choose whether to record a
+                payment at the plan price.
               </DialogDescription>
             </DialogHeader>
 
@@ -270,11 +275,68 @@ export function GrantSubscriptionDialog({
                     An active {formatPlanCategory(selectedPlan.category)} subscription already
                     exists. Extend or cancel it instead.
                   </p>
-                ) : selectedPlan ? (
-                  <p className="text-xs text-grayScale-500">
-                    Payment recorded: {formatPlanPrice(selectedPlan)}.
-                  </p>
                 ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
+                  Payment <span className="text-destructive">*</span>
+                </p>
+                <div
+                  className="flex flex-col gap-2 sm:flex-row"
+                  role="radiogroup"
+                  aria-label="Payment recording"
+                >
+                  <label
+                    className={cn(
+                      "flex flex-1 cursor-pointer flex-col rounded-xl border px-4 py-3 transition-colors",
+                      recordPayment
+                        ? "border-brand-500 bg-brand-50/60 ring-1 ring-brand-500/30"
+                        : "border-grayScale-200 bg-white hover:border-grayScale-300",
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="grant_record_payment"
+                        checked={recordPayment}
+                        onChange={() => setRecordPayment(true)}
+                        className="h-4 w-4 border-grayScale-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm font-semibold text-grayScale-800">
+                        Record payment
+                      </span>
+                    </span>
+                    <span className="mt-1 pl-6 text-xs text-grayScale-500">
+                      Commit a SUCCESS payment
+                      {selectedPlan ? ` of ${formatPlanPrice(selectedPlan)}` : " at the plan price"}.
+                    </span>
+                  </label>
+                  <label
+                    className={cn(
+                      "flex flex-1 cursor-pointer flex-col rounded-xl border px-4 py-3 transition-colors",
+                      !recordPayment
+                        ? "border-brand-500 bg-brand-50/60 ring-1 ring-brand-500/30"
+                        : "border-grayScale-200 bg-white hover:border-grayScale-300",
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="grant_record_payment"
+                        checked={!recordPayment}
+                        onChange={() => setRecordPayment(false)}
+                        className="h-4 w-4 border-grayScale-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm font-semibold text-grayScale-800">
+                        No payment
+                      </span>
+                    </span>
+                    <span className="mt-1 pl-6 text-xs text-grayScale-500">
+                      Grant access only — no payments row or revenue.
+                    </span>
+                  </label>
+                </div>
               </div>
 
               {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
@@ -319,15 +381,21 @@ export function GrantSubscriptionDialog({
               ) : (
                 " to this learner"
               )}
-              ? A payment of <strong>{formatPlanPrice(selectedPlan)}</strong> will be
-              recorded.
+              {recordPayment ? (
+                <>
+                  ? A payment of <strong>{formatPlanPrice(selectedPlan)}</strong> will be
+                  recorded.
+                </>
+              ) : (
+                "? No payment will be recorded."
+              )}
             </>
           ) : (
             "Grant this subscription?"
           )
         }
         confirmWord={CONFIRM_WORD}
-        confirmLabel="Mark as paid"
+        confirmLabel={recordPayment ? "Grant and record payment" : "Grant without payment"}
         confirming={saving}
         onConfirm={handleConfirmGrant}
       />

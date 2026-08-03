@@ -55,6 +55,8 @@ function mutationResult(res: { data: unknown; status?: number }) {
  * POST /admin/users/:user_id/subscriptions/extend
  * Unified grant-or-extend: no active sub in plan category → grant (201);
  * active in category → extend one period of selected plan (200).
+ * Optional body.record_payment (default true) controls whether a SUCCESS
+ * payment at the plan price is recorded.
  */
 export const adminApplySubscription = (userId: number, body: AdminApplySubscriptionBody) =>
   http

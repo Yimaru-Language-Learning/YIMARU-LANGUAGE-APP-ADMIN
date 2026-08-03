@@ -230,12 +230,12 @@ function SubscriptionManageCard({
                 disabled={!markAsPaidEnabled}
                 title={
                   !markAsPaidEnabled
-                    ? "Mark as paid is unavailable while this learner already has an active subscription."
+                    ? "Grant is unavailable while this learner already has an active subscription."
                     : undefined
                 }
                 onClick={onGrant}
               >
-                Mark as Paid
+                Grant Subscription
               </Button>
             ) : null}
             {canCancel ? (
@@ -310,7 +310,7 @@ function EmptySubscriptionCard({
                 className="h-10 min-w-0 flex-1 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600"
                 onClick={onGrant}
               >
-                Mark as Paid
+                Grant Subscription
               </Button>
             ) : null}
             {canCancel ? (

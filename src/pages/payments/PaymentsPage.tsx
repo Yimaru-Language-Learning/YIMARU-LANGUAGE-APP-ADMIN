@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Copy,
   CreditCard,
+  ExternalLink,
   Eye,
   MoreHorizontal,
   RefreshCw,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { getAllPayments, getPayments, paymentsFilterParams } from "../../api/payments.api"
+import { getAllPayments } from "../../api/payments.api"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { ExportCsvButton } from "../../components/export/ExportCsvButton"
 import { ExportTruncationWarning } from "../../components/export/ExportTruncationWarning"
@@ -81,10 +82,38 @@ type PaymentListFilters = {
   provider: PaymentProvider | ""
   planCategory: PaymentPlanCategory | ""
   currency: string
-  reference: string
 }
 
-const TEXT_FILTER_DEBOUNCE_MS = 400
+function paymentMatchesSearch(payment: Payment, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  const haystack = [
+    String(payment.id),
+    String(payment.user_id),
+    String(payment.plan_id),
+    String(payment.subscription_id),
+    payment.session_id,
+    payment.transaction_id,
+    payment.nonce,
+    payment.amount,
+    payment.currency,
+    payment.payment_method,
+    payment.status,
+    payment.plan_name,
+    payment.plan_category,
+    formatPaymentPlanCategory(payment.plan_category),
+    payment.user_email,
+    payment.user_first_name,
+    payment.user_last_name,
+    paymentCustomerName(payment),
+    formatPaymentMethod(payment.payment_method),
+    formatPaymentStatus(payment.status),
+    formatPaymentAmount(payment),
+  ]
+    .join(" ")
+    .toLowerCase()
+  return haystack.includes(q)
+}
 
 function copyText(value: string, label: string) {
   if (!value) return
@@ -105,38 +134,22 @@ const EMPTY_PAYMENT_STATS: PaymentAggregateStats = {
 
 export function PaymentsPage() {
   const [loading, setLoading] = useState(true)
-  const [statsLoading, setStatsLoading] = useState(true)
   const [error, setError] = useState(false)
   const [payments, setPayments] = useState<Payment[]>([])
-  const [totalCount, setTotalCount] = useState(0)
-  const [paymentStats, setPaymentStats] = useState<PaymentAggregateStats>(EMPTY_PAYMENT_STATS)
-  const [offset, setOffset] = useState(0)
-  const [pageSize, setPageSize] = useState(10)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+  const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "">("")
   const [providerFilter, setProviderFilter] = useState<PaymentProvider | "">("")
   const [planCategoryFilter, setPlanCategoryFilter] = useState<PaymentPlanCategory | "">("")
   const [currencyFilter, setCurrencyFilter] = useState("")
-  const [referenceInput, setReferenceInput] = useState("")
-  const [referenceFilter, setReferenceFilter] = useState("")
   const [selected, setSelected] = useState<Payment | null>(null)
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setReferenceFilter(referenceInput.trim())
-    }, TEXT_FILTER_DEBOUNCE_MS)
-    return () => window.clearTimeout(timer)
-  }, [referenceInput])
-
-  useEffect(() => {
-    setOffset(0)
-  }, [referenceFilter])
 
   const listFilters: PaymentListFilters = {
     status: statusFilter,
     provider: providerFilter,
     planCategory: planCategoryFilter,
     currency: currencyFilter,
-    reference: referenceFilter,
   }
 
   const exportParams = useMemo(
@@ -149,99 +162,87 @@ export function PaymentsPage() {
     { value: providerFilter },
     { value: planCategoryFilter },
     { value: currencyFilter },
-    { value: referenceFilter },
   ])
 
-  const hasActiveFilters = activeFilterCount > 0
+  const hasActiveFilters = activeFilterCount > 0 || Boolean(searchQuery.trim())
 
-  const fetchPayments = useCallback(
-    async (nextOffset: number, limit: number, filters: PaymentListFilters) => {
-      setLoading(true)
-      setError(false)
-      try {
-        const res = await getPayments({
-          limit,
-          offset: nextOffset,
-          ...paymentsFilterParams({
-            ...(filters.status ? { status: filters.status } : {}),
-            ...(filters.provider ? { provider: filters.provider } : {}),
-            ...(filters.planCategory ? { plan_category: filters.planCategory } : {}),
-            ...(filters.currency ? { currency: filters.currency } : {}),
-            ...(filters.reference ? { reference: filters.reference } : {}),
-          }),
-        })
-        setPayments(res.data.payments)
-        setTotalCount(res.data.total_count)
-      } catch (e) {
-        console.error(e)
-        setError(true)
-        setPayments([])
-        setTotalCount(0)
-        notifyApiError(e, "Failed to load payments")
-      } finally {
-        setLoading(false)
-      }
-    },
-    [],
-  )
-
-  const fetchPaymentStats = useCallback(async (filters: PaymentListFilters) => {
-    setStatsLoading(true)
+  const fetchPayments = useCallback(async () => {
+    setLoading(true)
+    setError(false)
     try {
-      const all = await getAllPayments({
-        ...(filters.status ? { status: filters.status } : {}),
-        ...(filters.provider ? { provider: filters.provider } : {}),
-        ...(filters.planCategory ? { plan_category: filters.planCategory } : {}),
-        ...(filters.currency ? { currency: filters.currency } : {}),
-        ...(filters.reference ? { reference: filters.reference } : {}),
-      })
-      setPaymentStats(computePaymentAggregateStats(all))
+      const all = await getAllPayments({})
+      setPayments(all)
     } catch (e) {
       console.error(e)
-      setPaymentStats(EMPTY_PAYMENT_STATS)
-      notifyApiError(e, "Failed to load payment summary")
+      setError(true)
+      setPayments([])
+      notifyApiError(e, "Failed to load payments")
     } finally {
-      setStatsLoading(false)
+      setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void fetchPayments(offset, pageSize, listFilters)
-  }, [
-    offset,
-    pageSize,
-    statusFilter,
-    providerFilter,
-    planCategoryFilter,
-    currencyFilter,
-    referenceFilter,
-    fetchPayments,
-  ])
+    void fetchPayments()
+  }, [fetchPayments])
 
   useEffect(() => {
-    void fetchPaymentStats(listFilters)
+    setPage(1)
+  }, [searchQuery, statusFilter, providerFilter, planCategoryFilter, currencyFilter, pageSize])
+
+  const filteredPayments = useMemo(() => {
+    return payments.filter((payment) => {
+      if (statusFilter && payment.status !== statusFilter) return false
+      if (
+        providerFilter &&
+        payment.payment_method?.toUpperCase() !== providerFilter.toUpperCase()
+      ) {
+        return false
+      }
+      if (planCategoryFilter && payment.plan_category !== planCategoryFilter) return false
+      if (
+        currencyFilter &&
+        payment.currency?.toUpperCase() !== currencyFilter.toUpperCase()
+      ) {
+        return false
+      }
+      return paymentMatchesSearch(payment, searchQuery)
+    })
   }, [
+    payments,
     statusFilter,
     providerFilter,
     planCategoryFilter,
     currencyFilter,
-    referenceFilter,
-    fetchPaymentStats,
+    searchQuery,
   ])
+
+  const paymentStats: PaymentAggregateStats = useMemo(
+    () =>
+      filteredPayments.length
+        ? computePaymentAggregateStats(filteredPayments)
+        : EMPTY_PAYMENT_STATS,
+    [filteredPayments],
+  )
+
+  const totalCount = filteredPayments.length
+  const pageCount = Math.max(1, Math.ceil(totalCount / pageSize))
+  const safePage = Math.min(page, pageCount)
+  const paginatedPayments = useMemo(
+    () => filteredPayments.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filteredPayments, safePage, pageSize],
+  )
 
   const toggleStatus = (value: PaymentStatus) => {
     setStatusFilter((current) => (current === value ? "" : value))
-    setOffset(0)
   }
 
   const toggleProvider = (value: PaymentProvider) => {
     setProviderFilter((current) => (current === value ? "" : value))
-    setOffset(0)
   }
 
   const togglePlanCategory = (value: PaymentPlanCategory) => {
     setPlanCategoryFilter((current) => (current === value ? "" : value))
-    setOffset(0)
   }
 
   const clearFilters = () => {
@@ -249,22 +250,16 @@ export function PaymentsPage() {
     setProviderFilter("")
     setPlanCategoryFilter("")
     setCurrencyFilter("")
-    setReferenceInput("")
-    setReferenceFilter("")
-    setOffset(0)
-  }
-
-  const refreshAll = () => {
-    void fetchPayments(offset, pageSize, listFilters)
-    void fetchPaymentStats(listFilters)
+    setSearchQuery("")
+    setPage(1)
   }
 
   const { successfulCount, totalRevenue, pendingCount } = paymentStats
 
-  const pageStart = totalCount === 0 ? 0 : offset + 1
-  const pageEnd = Math.min(offset + payments.length, totalCount)
-  const canPrev = offset > 0
-  const canNext = offset + pageSize < totalCount
+  const pageStart = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
+  const pageEnd = Math.min(safePage * pageSize, totalCount)
+  const canPrev = safePage > 1
+  const canNext = safePage < pageCount
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -288,8 +283,8 @@ export function PaymentsPage() {
           <Button
             variant="outline"
             className="shrink-0 rounded-[6px]"
-            disabled={loading || statsLoading}
-            onClick={refreshAll}
+            disabled={loading}
+            onClick={() => void fetchPayments()}
           >
             <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
             Refresh
@@ -306,7 +301,9 @@ export function PaymentsPage() {
             </div>
             <div>
               <p className="text-xs font-medium text-grayScale-500">Total transactions</p>
-              <p className="text-2xl font-bold text-grayScale-900">{totalCount}</p>
+              <p className="text-2xl font-bold text-grayScale-900">
+                {loading ? "…" : totalCount.toLocaleString()}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -319,7 +316,7 @@ export function PaymentsPage() {
             <div>
               <p className="text-xs font-medium text-grayScale-500">Successful payments</p>
               <p className="text-2xl font-bold text-grayScale-900">
-                {statsLoading ? "…" : successfulCount.toLocaleString()}
+                {loading ? "…" : successfulCount.toLocaleString()}
               </p>
             </div>
           </CardContent>
@@ -333,10 +330,10 @@ export function PaymentsPage() {
             <div>
               <p className="text-xs font-medium text-grayScale-500">Revenue</p>
               <p className="text-2xl font-bold text-grayScale-900">
-                {statsLoading ? "…" : `${totalRevenue.toLocaleString()} ETB`}
+                {loading ? "…" : `${totalRevenue.toLocaleString()} ETB`}
               </p>
               <p className="text-[11px] text-grayScale-400">
-                {statsLoading ? "Loading summary…" : `${pendingCount.toLocaleString()} pending`}
+                {loading ? "Loading…" : `${pendingCount.toLocaleString()} pending`}
               </p>
             </div>
           </CardContent>
@@ -349,6 +346,30 @@ export function PaymentsPage() {
         </CardHeader>
         <CardContent className="min-w-0 space-y-4 p-4 sm:p-6">
           <ExportTruncationWarning totalCount={totalCount} />
+
+          <div className="relative max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search customer, email, plan, transaction ID…"
+              disabled={loading}
+              className="h-10 rounded-[6px] border-grayScale-200 pl-9 pr-9 text-sm"
+              aria-label="Search payments"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                aria-label="Clear search"
+                disabled={loading}
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-grayScale-400 hover:text-grayScale-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+
           <AdminFiltersPanel
             activeFilterCount={activeFilterCount}
             onClearFilters={clearFilters}
@@ -395,65 +416,27 @@ export function PaymentsPage() {
                 />
               ))}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="payments-currency-filter"
-                  className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
-                >
-                  Currency
-                </label>
-                <Select
-                  id="payments-currency-filter"
-                  value={currencyFilter}
-                  onChange={(e) => {
-                    setCurrencyFilter(e.target.value)
-                    setOffset(0)
-                  }}
-                  disabled={loading}
-                  className="h-9 rounded-[6px] text-sm"
-                >
-                  <option value="">All currencies</option>
-                  {SUBSCRIPTION_CURRENCIES.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="payments-reference-filter"
-                  className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
-                >
-                  Reference
-                </label>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-grayScale-400" />
-                  <Input
-                    id="payments-reference-filter"
-                    value={referenceInput}
-                    onChange={(e) => setReferenceInput(e.target.value)}
-                    placeholder="Session, nonce, or transaction ID"
-                    disabled={loading}
-                    className="h-9 rounded-[6px] border-grayScale-200 pl-8 pr-8 text-sm"
-                  />
-                  {referenceInput ? (
-                    <button
-                      type="button"
-                      aria-label="Clear reference filter"
-                      disabled={loading}
-                      onClick={() => setReferenceInput("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-grayScale-400 hover:text-grayScale-600"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  ) : null}
-                </div>
-                <p className="text-[10px] text-grayScale-400">
-                  Partial match on session ID, nonce, or transaction ID
-                </p>
-              </div>
+            <div className="space-y-1.5 sm:max-w-xs">
+              <label
+                htmlFor="payments-currency-filter"
+                className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
+              >
+                Currency
+              </label>
+              <Select
+                id="payments-currency-filter"
+                value={currencyFilter}
+                onChange={(e) => setCurrencyFilter(e.target.value)}
+                disabled={loading}
+                className="h-9 rounded-[6px] text-sm"
+              >
+                <option value="">All currencies</option>
+                {SUBSCRIPTION_CURRENCIES.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
+              </Select>
             </div>
           </AdminFiltersPanel>
 
@@ -469,12 +452,12 @@ export function PaymentsPage() {
                 variant="outline"
                 size="sm"
                 className="rounded-[6px]"
-                onClick={refreshAll}
+                onClick={() => void fetchPayments()}
               >
                 Try again
               </Button>
             </div>
-          ) : payments.length === 0 ? (
+          ) : paginatedPayments.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-[8px] border border-dashed border-grayScale-200 py-16 text-center">
               <CreditCard className="h-10 w-10 text-grayScale-300" />
               <p className="text-sm font-medium text-grayScale-700">
@@ -482,7 +465,7 @@ export function PaymentsPage() {
               </p>
               <p className="max-w-sm text-xs text-grayScale-500">
                 {hasActiveFilters
-                  ? "Try different filters or clear them to see more results."
+                  ? "Try a different search or clear filters to see more results."
                   : "Transactions will appear here once customers complete checkout."}
               </p>
               {hasActiveFilters ? (
@@ -514,7 +497,7 @@ export function PaymentsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-grayScale-50">
-                  {payments.map((payment) => (
+                  {paginatedPayments.map((payment) => (
                     <tr key={payment.id} className="group transition-colors hover:bg-grayScale-50/60">
                       <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
                         <p className="font-semibold text-grayScale-900">#{payment.id}</p>
@@ -616,10 +599,7 @@ export function PaymentsPage() {
                     <select
                       value={pageSize}
                       disabled={loading}
-                      onChange={(e) => {
-                        setPageSize(Number(e.target.value))
-                        setOffset(0)
-                      }}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
                       className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
                     >
                       {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
@@ -639,7 +619,7 @@ export function PaymentsPage() {
                   size="sm"
                   className="rounded-[6px]"
                   disabled={!canPrev || loading}
-                  onClick={() => setOffset((o) => Math.max(0, o - pageSize))}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   <ChevronLeft className="mr-1 h-4 w-4" />
                   Previous
@@ -650,7 +630,7 @@ export function PaymentsPage() {
                   size="sm"
                   className="rounded-[6px]"
                   disabled={!canNext || loading}
-                  onClick={() => setOffset((o) => o + pageSize)}
+                  onClick={() => setPage((p) => p + 1)}
                 >
                   Next
                   <ChevronRight className="ml-1 h-4 w-4" />

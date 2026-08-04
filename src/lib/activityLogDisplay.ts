@@ -1,4 +1,10 @@
 import type { ActivityLog, ActivityLogActorKind } from "../types/activity-log.types"
+import {
+  formatAppDate,
+  formatAppTime,
+  toAppDayEndISO,
+  toAppDayStartISO,
+} from "./datetime"
 
 export type ActorDisplay = {
   name: string
@@ -355,19 +361,11 @@ export function activityLogResourcePath(
 }
 
 export function formatActivityDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  return formatAppDate(dateStr, "—")
 }
 
 export function formatActivityTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
+  return formatAppTime(dateStr, "—")
 }
 
 export function getRelativeActivityTime(dateStr: string): string {
@@ -386,9 +384,9 @@ export function getRelativeActivityTime(dateStr: string): string {
 }
 
 export function toRfc3339StartOfDay(dateValue: string): string {
-  return new Date(`${dateValue}T00:00:00`).toISOString()
+  return toAppDayStartISO(dateValue)
 }
 
 export function toRfc3339EndOfDay(dateValue: string): string {
-  return new Date(`${dateValue}T23:59:59.999`).toISOString()
+  return toAppDayEndISO(dateValue)
 }

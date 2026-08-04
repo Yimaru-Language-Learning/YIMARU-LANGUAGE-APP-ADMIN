@@ -48,6 +48,7 @@ import {
   formatPaymentStatus,
   computePaymentAggregateStats,
   paymentCustomerName,
+  paymentMatchesDateRange,
   paymentStatusBadgeVariant,
   type PaymentAggregateStats,
 } from "../../lib/payments"
@@ -82,6 +83,8 @@ type PaymentListFilters = {
   provider: PaymentProvider | ""
   planCategory: PaymentPlanCategory | ""
   currency: string
+  dateFrom: string
+  dateTo: string
 }
 
 function paymentMatchesSearch(payment: Payment, query: string): boolean {
@@ -143,6 +146,8 @@ export function PaymentsPage() {
   const [providerFilter, setProviderFilter] = useState<PaymentProvider | "">("")
   const [planCategoryFilter, setPlanCategoryFilter] = useState<PaymentPlanCategory | "">("")
   const [currencyFilter, setCurrencyFilter] = useState("")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
   const [selected, setSelected] = useState<Payment | null>(null)
 
   const listFilters: PaymentListFilters = {
@@ -150,10 +155,20 @@ export function PaymentsPage() {
     provider: providerFilter,
     planCategory: planCategoryFilter,
     currency: currencyFilter,
+    dateFrom,
+    dateTo,
   }
 
   const exportParams = useMemo(
-    () => paymentListFiltersToExportQuery(listFilters),
+    () =>
+      paymentListFiltersToExportQuery({
+        status: listFilters.status || undefined,
+        provider: listFilters.provider || undefined,
+        planCategory: listFilters.planCategory || undefined,
+        currency: listFilters.currency || undefined,
+        dateFrom: listFilters.dateFrom || undefined,
+        dateTo: listFilters.dateTo || undefined,
+      }),
     [listFilters],
   )
 
@@ -162,6 +177,8 @@ export function PaymentsPage() {
     { value: providerFilter },
     { value: planCategoryFilter },
     { value: currencyFilter },
+    { value: dateFrom },
+    { value: dateTo },
   ])
 
   const hasActiveFilters = activeFilterCount > 0 || Boolean(searchQuery.trim())
@@ -188,7 +205,16 @@ export function PaymentsPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [searchQuery, statusFilter, providerFilter, planCategoryFilter, currencyFilter, pageSize])
+  }, [
+    searchQuery,
+    statusFilter,
+    providerFilter,
+    planCategoryFilter,
+    currencyFilter,
+    dateFrom,
+    dateTo,
+    pageSize,
+  ])
 
   const filteredPayments = useMemo(() => {
     return payments.filter((payment) => {
@@ -206,6 +232,7 @@ export function PaymentsPage() {
       ) {
         return false
       }
+      if (!paymentMatchesDateRange(payment, dateFrom, dateTo)) return false
       return paymentMatchesSearch(payment, searchQuery)
     })
   }, [
@@ -214,6 +241,8 @@ export function PaymentsPage() {
     providerFilter,
     planCategoryFilter,
     currencyFilter,
+    dateFrom,
+    dateTo,
     searchQuery,
   ])
 
@@ -250,6 +279,8 @@ export function PaymentsPage() {
     setProviderFilter("")
     setPlanCategoryFilter("")
     setCurrencyFilter("")
+    setDateFrom("")
+    setDateTo("")
     setSearchQuery("")
     setPage(1)
   }
@@ -437,6 +468,45 @@ export function PaymentsPage() {
                   </option>
                 ))}
               </Select>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="payments-date-from"
+                  className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
+                >
+                  From
+                </label>
+                <Input
+                  id="payments-date-from"
+                  type="date"
+                  value={dateFrom}
+                  max={dateTo || undefined}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  disabled={loading}
+                  className="h-9 rounded-[6px] text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="payments-date-to"
+                  className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
+                >
+                  To
+                </label>
+                <Input
+                  id="payments-date-to"
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  disabled={loading}
+                  className="h-9 rounded-[6px] text-sm"
+                />
+              </div>
+                  <p className="pb-2 text-[11px] text-grayScale-400">
+                    Dates use EAT (Africa/Addis_Ababa)
+                  </p>
             </div>
           </AdminFiltersPanel>
 

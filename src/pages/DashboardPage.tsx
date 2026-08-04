@@ -48,6 +48,7 @@ import { useEffect, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { AnalyticsTimeRangeFilter, getDashboardFilterLabel } from "../components/analytics/AnalyticsTimeRangeFilter"
 import {
+  formatAnalyticsSeriesDate,
   getPrimaryQuestionTypeSummary,
   getSeriesPeriodLabel,
   getSubscriptionMetrics,
@@ -76,8 +77,7 @@ function DashboardSectionTitle({ children }: { children: ReactNode }) {
 }
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  return formatAnalyticsSeriesDate(dateStr)
 }
 
 const DEFAULT_FILTERS: DashboardFilters = { mode: "all_time" }
@@ -465,7 +465,7 @@ export function DashboardPage() {
             <section className="space-y-4">
               <DashboardSectionTitle>Revenue &amp; subscriptions</DashboardSectionTitle>
             <div className="grid gap-4">
-              <RevenueTrendCard />
+              <RevenueTrendCard paymentMethod={filters.payment_method} />
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <ActivePlansBreakdownCard

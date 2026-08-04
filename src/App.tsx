@@ -1,9 +1,9 @@
-import { Toaster } from 'sonner'
-import { AppRoutes } from './app/AppRoutes'
-import { useTheme } from './contexts/ThemeContext'
-import { clearTeamSession } from './lib/teamAuthStorage'
+import { Toaster } from "sonner"
+import { AppRoutes } from "./app/AppRoutes"
+import { useTheme } from "./contexts/ThemeContext"
+import { clearTeamSession } from "./lib/teamAuthStorage"
 
-const SESSION_KEY = 'yimaru_session_active'
+const SESSION_KEY = "yimaru_session_active"
 
 /**
  * Clear persisted team tokens when this browser tab session is new.
@@ -14,7 +14,7 @@ function bootstrapBrowserSession() {
   try {
     if (!sessionStorage.getItem(SESSION_KEY)) {
       clearTeamSession()
-      sessionStorage.setItem(SESSION_KEY, '1')
+      sessionStorage.setItem(SESSION_KEY, "1")
     }
   } catch {
     // sessionStorage unavailable (private mode quirks) — leave tokens alone
@@ -29,15 +29,26 @@ function AppToaster() {
     <Toaster
       position="top-center"
       theme={resolvedTheme}
+      closeButton
+      expand={false}
+      visibleToasts={4}
+      offset={20}
+      gap={12}
+      duration={4200}
       toastOptions={{
-        className: 'font-sans',
-        style: {
-          padding: '14px 20px',
-          borderRadius: '12px',
-          fontSize: '14px',
+        classNames: {
+          toast: "yimaru-toast",
+          title: "yimaru-toast__title",
+          description: "yimaru-toast__description",
+          actionButton: "yimaru-toast__action",
+          cancelButton: "yimaru-toast__cancel",
+          closeButton: "yimaru-toast__close",
+          success: "yimaru-toast--success",
+          error: "yimaru-toast--error",
+          warning: "yimaru-toast--warning",
+          info: "yimaru-toast--info",
         },
       }}
-      richColors
     />
   )
 }

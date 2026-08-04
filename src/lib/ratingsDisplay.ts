@@ -1,4 +1,5 @@
 import type { RatingTargetType } from "../types/ratings.types"
+import { formatAppDate, formatAppDateTime } from "./datetime"
 
 export function formatAverageStars(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return "0.0"
@@ -6,25 +7,11 @@ export function formatAverageStars(value: number): string {
 }
 
 export function formatRatingDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr || "unassigned"
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  return formatAppDate(dateStr, dateStr || "unassigned")
 }
 
 export function formatRatingDateTime(dateStr: string): string {
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr || "unassigned"
-  return d.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return formatAppDateTime(dateStr, dateStr || "unassigned")
 }
 
 export function targetTypeLabel(type: RatingTargetType): string {

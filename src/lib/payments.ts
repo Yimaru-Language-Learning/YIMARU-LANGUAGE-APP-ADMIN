@@ -1,4 +1,10 @@
 import { formatPlanCategory } from "./subscriptionPlans"
+import {
+  APP_TIMEZONE,
+  formatAppDateTime,
+  nextAppCalendarDay,
+  toAppCalendarDate,
+} from "./datetime"
 import type { Payment } from "../types/payment.types"
 
 export function formatPaymentAmount(payment: Pick<Payment, "amount" | "currency">): string {
@@ -9,17 +15,39 @@ export function formatPaymentAmount(payment: Pick<Payment, "amount" | "currency"
   return `${formatted} ${payment.currency || "ETB"}`
 }
 
+/** @deprecated Prefer APP_TIMEZONE from datetime.ts */
+export const PAYMENT_DATE_TIMEZONE = APP_TIMEZONE
+
 export function formatPaymentDate(iso: string | null | undefined): string {
-  if (!iso) return "unassigned"
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return formatAppDateTime(iso, "unassigned")
+}
+
+/** YYYY-MM-DD of paid_at (or created_at if unpaid) in EAT. */
+export function paymentEventDateEAT(payment: Pick<Payment, "paid_at" | "created_at">): string | null {
+  const raw = payment.paid_at || payment.created_at
+  if (!raw) return null
+  return toAppCalendarDate(raw)
+}
+
+/** Inclusive YYYY-MM-DD range against the payment event date in EAT. */
+export function paymentMatchesDateRange(
+  payment: Pick<Payment, "paid_at" | "created_at">,
+  from?: string,
+  to?: string,
+): boolean {
+  const fromDay = from?.trim()
+  const toDay = to?.trim()
+  if (!fromDay && !toDay) return true
+  const day = paymentEventDateEAT(payment)
+  if (!day) return false
+  if (fromDay && day < fromDay) return false
+  if (toDay && day > toDay) return false
+  return true
+}
+
+/** Next calendar day as YYYY-MM-DD (for exclusive API upper bounds). */
+export function nextCalendarDay(ymd: string): string {
+  return nextAppCalendarDay(ymd)
 }
 
 export function formatPaymentStatus(status: string): string {

@@ -10,6 +10,7 @@ import {
   Video,
   ShieldAlert,
 } from "lucide-react"
+import { formatAppDate, formatAppDateTime } from "./datetime"
 
 export const NOTIFICATION_TYPE_CONFIG: Record<
   string,
@@ -67,11 +68,7 @@ export function formatNotificationTimestamp(ts: string) {
   if (diffHr < 24) return `${diffHr}h ago`
   if (diffDay < 7) return `${diffDay}d ago`
 
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  })
+  return formatAppDate(ts)
 }
 
 export function formatNotificationTypeLabel(type: string) {
@@ -82,15 +79,7 @@ export function formatNotificationTypeLabel(type: string) {
 }
 
 export function formatNotificationDateTime(ts: string) {
-  const date = new Date(ts)
-  if (Number.isNaN(date.getTime())) return "unassigned"
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return formatAppDateTime(ts, "unassigned")
 }
 
 export function isMeaningfulExpiry(expires: string) {

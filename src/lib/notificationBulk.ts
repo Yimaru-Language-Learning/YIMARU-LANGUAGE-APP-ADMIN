@@ -8,6 +8,7 @@ import type {
 } from "../types/notification.types"
 import { getUsers } from "../api/users.api"
 import { getTeamMembers } from "../api/team.api"
+import { formatAppDateTime } from "./datetime"
 import { TEAM_ROLE_OPTIONS } from "./teamRoles"
 
 export const PLATFORM_ROLES: { value: PlatformRole; label: string }[] = [
@@ -122,13 +123,7 @@ export function formatScheduledAtLabel(value: string): string {
   if (!value) return "Set date & time"
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return formatAppDateTime(value)
 }
 
 export function scheduledStatusBadgeVariant(

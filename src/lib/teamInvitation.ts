@@ -1,4 +1,5 @@
 import type { VerifyInvitationData } from "../types/teamInvitation.types"
+import { formatAppDateTime } from "./datetime"
 
 export function formatTeamRoleLabel(role: string | undefined): string {
   if (!role) return "unassigned"
@@ -9,7 +10,7 @@ export function formatInvitationExpiry(raw: string | undefined): string | null {
   if (!raw) return null
   const d = new Date(raw)
   if (Number.isNaN(d.getTime())) return raw
-  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+  return formatAppDateTime(raw)
 }
 
 /** User-facing title when verify returns valid: false. */

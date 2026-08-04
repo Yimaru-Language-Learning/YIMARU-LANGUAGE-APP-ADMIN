@@ -91,6 +91,10 @@ function buildQueryParams(params: GetPaymentsParams): Record<string, string | nu
   if (params.plan_category?.trim()) query.plan_category = params.plan_category.trim()
   if (params.currency?.trim()) query.currency = params.currency.trim()
   if (params.reference?.trim()) query.reference = params.reference.trim()
+  if (params.created_from?.trim()) query.created_from = params.created_from.trim()
+  if (params.created_to?.trim()) query.created_to = params.created_to.trim()
+  if (params.paid_from?.trim()) query.paid_from = params.paid_from.trim()
+  if (params.paid_to?.trim()) query.paid_to = params.paid_to.trim()
   return query
 }
 
@@ -107,6 +111,10 @@ export function paymentsFilterParams(
   if (params.plan_category?.trim()) next.plan_category = params.plan_category.trim()
   if (params.currency?.trim()) next.currency = params.currency.trim()
   if (params.reference?.trim()) next.reference = params.reference.trim()
+  if (params.created_from?.trim()) next.created_from = params.created_from.trim()
+  if (params.created_to?.trim()) next.created_to = params.created_to.trim()
+  if (params.paid_from?.trim()) next.paid_from = params.paid_from.trim()
+  if (params.paid_to?.trim()) next.paid_to = params.paid_to.trim()
   return next
 }
 

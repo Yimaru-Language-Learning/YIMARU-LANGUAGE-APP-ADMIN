@@ -11,7 +11,7 @@ import { aggregateRevenueByMonth, formatRevenueAxisTick } from "../../lib/analyt
 import type { DateRevenue } from "../../types/analytics.types"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 
-export function RevenueTrendCard() {
+export function RevenueTrendCard({ paymentMethod }: { paymentMethod?: string }) {
   const currentYear = new Date().getFullYear()
   const [year, setYear] = useState(currentYear)
   const [totalRevenue, setTotalRevenue] = useState(0)
@@ -26,7 +26,11 @@ export function RevenueTrendCard() {
     const fetchRevenueTrend = async () => {
       setLoading(true)
       try {
-        const res = await getDashboard({ mode: "year", year })
+        const res = await getDashboard({
+          mode: "year",
+          year,
+          ...(paymentMethod ? { payment_method: paymentMethod } : {}),
+        })
         if (cancelled) return
         setTotalRevenue(res.data.payments.total_revenue)
         setDailyRevenue(res.data.payments.revenue_last_30_days)
@@ -44,7 +48,7 @@ export function RevenueTrendCard() {
     return () => {
       cancelled = true
     }
-  }, [year])
+  }, [year, paymentMethod])
 
   const chartData = useMemo(
     () => aggregateRevenueByMonth(dailyRevenue, year),

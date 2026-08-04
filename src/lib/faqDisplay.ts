@@ -1,4 +1,5 @@
 import type { FAQ, FAQStatus } from "../types/faq.types"
+import { formatAppDateTime } from "./datetime"
 
 export function faqStatusBadgeVariant(status: string): "success" | "secondary" {
   const normalized = status.toUpperCase()
@@ -22,10 +23,7 @@ export function formatFaqDate(raw: string | null | undefined): string {
   if (Number.isNaN(parsed.getTime())) {
     return text.split(" +")[0]?.trim() || text
   }
-  return parsed.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  })
+  return formatAppDateTime(text)
 }
 
 export function deriveFaqCategories(faqs: FAQ[]): string[] {

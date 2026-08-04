@@ -63,6 +63,14 @@ export interface GetPaymentsParams {
   currency?: string
   /** Partial match on session_id, nonce, or transaction_id. */
   reference?: string
+  /** Inclusive lower bound on created_at (RFC3339 or YYYY-MM-DD). */
+  created_from?: string
+  /** Exclusive upper bound on created_at (RFC3339 or YYYY-MM-DD). */
+  created_to?: string
+  /** Inclusive lower bound on paid_at (RFC3339 or YYYY-MM-DD). */
+  paid_from?: string
+  /** Exclusive upper bound on paid_at (RFC3339 or YYYY-MM-DD). */
+  paid_to?: string
   limit?: number
   offset?: number
 }

@@ -4,6 +4,7 @@ import type {
   AppVersion,
   AppVersionStatus,
 } from "../types/app-version.types"
+import { formatAppDateTime } from "./datetime"
 
 export const APP_PLATFORMS: { value: AppPlatform; label: string }[] = [
   { value: "ANDROID", label: "Android" },
@@ -65,13 +66,7 @@ export function formatAppVersionCreatedAt(raw: string): string {
     const datePart = raw.split(" ")[0]
     return datePart || raw
   }
-  return d.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return formatAppDateTime(normalized)
 }
 
 export function versionLabel(version: Pick<AppVersion, "version_name" | "version_code">): string {

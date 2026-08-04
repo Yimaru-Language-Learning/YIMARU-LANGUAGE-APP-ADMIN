@@ -1,3 +1,5 @@
+import { formatAppDateTime } from "./datetime"
+
 const SAMPLE_VALUES: Record<string, string> = {
   OTP: "123456",
   FirstName: "Alex",
@@ -42,10 +44,7 @@ export function formatEmailTemplateDate(raw: string | null | undefined) {
   if (Number.isNaN(parsed.getTime())) {
     return text.split(" +")[0]?.trim() || text
   }
-  return parsed.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  })
+  return formatAppDateTime(text)
 }
 
 export function emailTemplateStatusBadgeVariant(status: string) {

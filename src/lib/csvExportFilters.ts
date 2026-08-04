@@ -1,6 +1,7 @@
 import type { GetUsersParams } from "../api/users.api"
 import { buildUsersListQuery } from "../api/users.api"
 import { paymentsFilterParams } from "../api/payments.api"
+import { nextCalendarDay } from "./payments"
 import type { ActivityLogFilters } from "../types/activity-log.types"
 import type { QueryParams } from "./csv-export"
 
@@ -10,13 +11,21 @@ export function paymentListFiltersToExportQuery(filters: {
   planCategory?: string
   currency?: string
   reference?: string
+  /** Inclusive YYYY-MM-DD; mapped to created_from. */
+  dateFrom?: string
+  /** Inclusive YYYY-MM-DD; mapped to exclusive created_to. */
+  dateTo?: string
 }): QueryParams {
+  const dateFrom = filters.dateFrom?.trim()
+  const dateTo = filters.dateTo?.trim()
   return paymentsFilterParams({
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.provider ? { provider: filters.provider } : {}),
     ...(filters.planCategory ? { plan_category: filters.planCategory } : {}),
     ...(filters.currency ? { currency: filters.currency } : {}),
     ...(filters.reference ? { reference: filters.reference } : {}),
+    ...(dateFrom ? { created_from: dateFrom } : {}),
+    ...(dateTo ? { created_to: nextCalendarDay(dateTo) } : {}),
   })
 }
 

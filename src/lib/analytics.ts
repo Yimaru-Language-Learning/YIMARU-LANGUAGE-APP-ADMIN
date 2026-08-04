@@ -121,9 +121,56 @@ const MONTH_SHORT = [
   "Dec",
 ] as const
 
+/** Calendar Y-M-D from an analytics series date (API encodes civil days as UTC midnight). */
+export function analyticsSeriesYmd(dateStr: string): string | null {
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(String(dateStr ?? "").trim())
+  return match ? match[1] : null
+}
+
+/**
+ * Format a daily analytics series date for charts.
+ * Uses the civil YYYY-MM-DD from the API — never the browser local timezone —
+ * so EAT buckets stay aligned with payments/Chapa.
+ */
+export function formatAnalyticsSeriesDate(dateStr: string): string {
+  const ymd = analyticsSeriesYmd(dateStr)
+  if (ymd) {
+    const [year, month, day] = ymd.split("-").map(Number)
+    const d = new Date(Date.UTC(year, month - 1, day))
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    })
+  }
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return String(dateStr)
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  })
+}
+
 function formatShortDate(iso: string) {
+  const ymd = analyticsSeriesYmd(iso)
+  if (ymd) {
+    const [year, month, day] = ymd.split("-").map(Number)
+    const d = new Date(Date.UTC(year, month - 1, day))
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+  }
   const d = new Date(iso)
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  })
 }
 
 function formatBreakdownLabel(label: string) {
@@ -154,8 +201,14 @@ export function aggregateRevenueByMonth(daily: DateRevenue[], year: number): Mon
   }))
 
   for (const { date, revenue } of daily) {
-    const parsed = new Date(date)
-    if (parsed.getUTCFullYear() !== year) continue
+    const ymd = analyticsSeriesYmd(date)
+    const parsed = ymd
+      ? (() => {
+          const [year, month, day] = ymd.split("-").map(Number)
+          return new Date(Date.UTC(year, month - 1, day))
+        })()
+      : new Date(date)
+    if (Number.isNaN(parsed.getTime()) || parsed.getUTCFullYear() !== year) continue
     monthly[parsed.getUTCMonth()].revenue += revenue
   }
 

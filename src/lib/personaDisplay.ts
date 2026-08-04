@@ -2,6 +2,7 @@ import type {
   GetPersonasResponse,
   PersonaListItem,
 } from "../types/persona.types"
+import { formatAppDate } from "./datetime"
 import amanuelAvatar from "../assets/personas/amanuel.png"
 import aseffaAvatar from "../assets/personas/aseffa.png"
 import bethelAvatar from "../assets/personas/bethel.png"
@@ -91,13 +92,7 @@ export function mapPersonaToCard(persona: PersonaListItem): PersonaCardModel {
 
 export function formatPersonaDate(dateStr: string | null | undefined): string {
   if (!dateStr?.trim()) return "unassigned"
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  return formatAppDate(dateStr, dateStr)
 }
 
 export function personaStatusLabel(isActive: boolean): string {

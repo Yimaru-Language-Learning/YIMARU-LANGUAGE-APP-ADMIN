@@ -180,6 +180,7 @@ export type DashboardDateFilterMode = "all_time" | "year" | "year_month" | "cust
 
 export interface DashboardDateFilter {
   mode: DashboardDateFilterMode
+  timezone?: string
   year?: number
   month?: number
   from?: string
@@ -189,6 +190,7 @@ export interface DashboardDateFilter {
   series_start?: string
   series_end?: string
   ref_date?: string
+  payment_method?: string
 }
 
 export type DashboardFilterMode = DashboardDateFilterMode
@@ -199,6 +201,8 @@ export interface DashboardFilters {
   month?: number
   from?: string
   to?: string
+  /** Optional payment/revenue filter (e.g. CHAPA, ARIFPAY, ADMIN_GRANT). */
+  payment_method?: string
 }
 
 export interface DashboardData {

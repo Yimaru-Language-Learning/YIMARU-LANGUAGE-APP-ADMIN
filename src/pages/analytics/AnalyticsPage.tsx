@@ -68,6 +68,7 @@ import {
   formatPercentRate,
   buildSubscriptionStatusPie,
   aggregateRevenueByMonth,
+  formatAnalyticsSeriesDate,
   formatRevenueAxisTick,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
@@ -75,8 +76,7 @@ import type { DashboardData, DashboardFilters, LabelCount } from "../../types/an
 const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16"]
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  return formatAnalyticsSeriesDate(dateStr)
 }
 
 function formatNumber(n: number) {

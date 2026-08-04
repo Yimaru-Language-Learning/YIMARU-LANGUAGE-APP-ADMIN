@@ -8,23 +8,34 @@ import type {
 } from "../types/analytics.types";
 
 function buildDashboardQueryParams(filters?: DashboardFilters): Record<string, string | number> {
+  const params: Record<string, string | number> = {};
+
+  if (filters?.payment_method?.trim()) {
+    params.payment_method = filters.payment_method.trim().toUpperCase();
+  }
+
   if (!filters || filters.mode === "all_time") {
-    return {};
+    return params;
   }
 
   if (filters.mode === "year" && filters.year != null) {
-    return { year: filters.year };
+    params.year = filters.year;
+    return params;
   }
 
   if (filters.mode === "year_month" && filters.year != null && filters.month != null) {
-    return { year: filters.year, month: filters.month };
+    params.year = filters.year;
+    params.month = filters.month;
+    return params;
   }
 
   if (filters.mode === "custom" && filters.from && filters.to) {
-    return { from: filters.from, to: filters.to };
+    params.from = filters.from;
+    params.to = filters.to;
+    return params;
   }
 
-  return {};
+  return params;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

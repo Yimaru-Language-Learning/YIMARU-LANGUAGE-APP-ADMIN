@@ -4,6 +4,7 @@ import type {
   SubscriptionPlanDurationUnit,
   UpdateSubscriptionPlanPayload,
 } from "../types/subscription.types"
+import { formatAppDate } from "./datetime"
 
 export const SUBSCRIPTION_PLAN_CATEGORIES: {
   value: SubscriptionPlanCategory
@@ -78,13 +79,7 @@ export function formatPlanCategory(category: string): string {
 }
 
 export function formatPlanCreatedAt(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  return formatAppDate(iso, iso)
 }
 
 export function planToUpdatePayload(

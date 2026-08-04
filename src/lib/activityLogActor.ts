@@ -1,5 +1,6 @@
 import { getTeamMemberById } from "../api/team.api"
 import { getUserById } from "../api/users.api"
+import { formatAppDate } from "./datetime"
 import { TEAM_ROLE_OPTIONS, formatTeamRoleLabel } from "./teamRoles"
 import type { TeamMember, TeamMemberDetail } from "../types/team.types"
 import type { UserProfileData } from "../types/user.types"
@@ -149,11 +150,5 @@ export async function fetchActorProfile(
 }
 
 export function formatActorDate(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  return formatAppDate(iso, iso)
 }

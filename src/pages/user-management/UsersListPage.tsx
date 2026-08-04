@@ -52,6 +52,7 @@ function UserListFilterDropdown({
   allLabel,
   options,
   onSelect,
+  disabled = false,
 }: {
   id: string
   label: string
@@ -59,58 +60,69 @@ function UserListFilterDropdown({
   allLabel: string
   options: readonly string[]
   onSelect: (next: string) => void
+  disabled?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs font-medium text-grayScale-500">
+    <div className={cn("flex flex-col gap-1", disabled && "opacity-60")}>
+      <label
+        htmlFor={id}
+        className={cn(
+          "text-xs font-medium text-grayScale-500",
+          disabled && "text-grayScale-400",
+        )}
+      >
         {label}
       </label>
       <DropdownMenu.Root modal={false}>
-        <DropdownMenu.Trigger asChild>
+        <DropdownMenu.Trigger asChild disabled={disabled}>
           <button
             type="button"
             id={id}
+            disabled={disabled}
             className={cn(
               "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600",
               "outline-none focus-visible:ring-1 focus-visible:ring-brand-500",
+              disabled && "cursor-not-allowed bg-grayScale-50 text-grayScale-400",
             )}
           >
             <span className="min-w-0 truncate">{value || allLabel}</span>
             <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-400" />
           </button>
         </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            side="bottom"
-            align="start"
-            sideOffset={4}
-            collisionPadding={12}
-            className="z-[200] max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto rounded-md border border-grayScale-200 bg-white p-1 shadow-lg"
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <DropdownMenu.Item
-              className={cn(
-                "cursor-pointer rounded px-2 py-2 text-sm text-grayScale-700 outline-none data-[highlighted]:bg-grayScale-100",
-                !value && "bg-grayScale-50 font-medium",
-              )}
-              onSelect={() => onSelect("")}
+        {!disabled ? (
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="bottom"
+              align="start"
+              sideOffset={4}
+              collisionPadding={12}
+              className="z-[200] max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto rounded-md border border-grayScale-200 bg-white p-1 shadow-lg"
+              onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              {allLabel}
-            </DropdownMenu.Item>
-            {options.map((opt) => (
               <DropdownMenu.Item
-                key={opt}
                 className={cn(
                   "cursor-pointer rounded px-2 py-2 text-sm text-grayScale-700 outline-none data-[highlighted]:bg-grayScale-100",
-                  value === opt && "bg-brand-50 font-medium text-brand-700",
+                  !value && "bg-grayScale-50 font-medium",
                 )}
-                onSelect={() => onSelect(opt)}
+                onSelect={() => onSelect("")}
               >
-                {opt}
+                {allLabel}
               </DropdownMenu.Item>
-            ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
+              {options.map((opt) => (
+                <DropdownMenu.Item
+                  key={opt}
+                  className={cn(
+                    "cursor-pointer rounded px-2 py-2 text-sm text-grayScale-700 outline-none data-[highlighted]:bg-grayScale-100",
+                    value === opt && "bg-brand-50 font-medium text-brand-700",
+                  )}
+                  onSelect={() => onSelect(opt)}
+                >
+                  {opt}
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        ) : null}
       </DropdownMenu.Root>
     </div>
   )
@@ -139,7 +151,6 @@ export function UsersListPage() {
     name: string
     nextStatus: UserStatus
   } | null>(null)
-  const [roleFilter, setRoleFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [createdAfterLocal, setCreatedAfterLocal] = useState("")
   const [createdBeforeLocal, setCreatedBeforeLocal] = useState("")
@@ -171,13 +182,16 @@ export function UsersListPage() {
         const res = await getUsers({
           page,
           page_size: pageSize,
-          role: roleFilter || undefined,
           status: statusFilter || undefined,
           query: search || undefined,
           created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
           created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
           country: countryFilter.trim() || undefined,
-          region: regionFilter.trim() || undefined,
+          region:
+            (!countryFilter.trim() || countryFilter.trim().toLowerCase() === "ethiopia") &&
+            regionFilter.trim()
+              ? regionFilter.trim()
+              : undefined,
           subscription_status: subscriptionStatusFilter || undefined,
         })
         const apiUsers = res.data.data.users
@@ -208,7 +222,6 @@ export function UsersListPage() {
   }, [
     page,
     pageSize,
-    roleFilter,
     statusFilter,
     search,
     createdAfterLocal,
@@ -222,6 +235,8 @@ export function UsersListPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const safePage = Math.min(page, pageCount)
+  const regionFilterEnabled =
+    !countryFilter.trim() || countryFilter.trim().toLowerCase() === "ethiopia"
 
   const handlePrev = () => safePage > 1 && setPage(safePage - 1)
   const handleNext = () => safePage < pageCount && setPage(safePage + 1)
@@ -299,7 +314,7 @@ export function UsersListPage() {
       setUsers(
         users.map((user) => (user.id === id ? { ...user, status: nextStatus } : user)),
       )
-      toast.success(`User ${nextActive ? "activated" : "deactivated"} successfully`)
+      toast.success(`User ${nextActive ? "activated" : "set to inactive"} successfully`)
     } catch (err: any) {
       setToggledStatuses((prev) => ({ ...prev, [id]: previousActive }))
       notifyApiError(err, "Failed to update user status")
@@ -318,7 +333,6 @@ export function UsersListPage() {
   }
 
   const activeFilterCount = countActiveFilters([
-    { value: roleFilter },
     { value: statusFilter },
     { value: createdAfterLocal },
     { value: createdBeforeLocal },
@@ -328,7 +342,6 @@ export function UsersListPage() {
   ])
 
   const clearFilters = () => {
-    setRoleFilter("")
     setStatusFilter("")
     setCreatedAfterLocal("")
     setCreatedBeforeLocal("")
@@ -341,17 +354,19 @@ export function UsersListPage() {
   const exportParams = useMemo(
     () =>
       usersExportQuery({
-        role: roleFilter || undefined,
         status: statusFilter || undefined,
         query: search || undefined,
         created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
         created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
         country: countryFilter.trim() || undefined,
-        region: regionFilter.trim() || undefined,
+        region:
+          (!countryFilter.trim() || countryFilter.trim().toLowerCase() === "ethiopia") &&
+          regionFilter.trim()
+            ? regionFilter.trim()
+            : undefined,
         subscription_status: subscriptionStatusFilter || undefined,
       }),
     [
-      roleFilter,
       statusFilter,
       search,
       createdAfterLocal,
@@ -479,22 +494,6 @@ export function UsersListPage() {
           <div className="flex flex-wrap gap-3">
             <div className="relative w-full sm:w-auto">
               <select
-                value={roleFilter}
-                onChange={(e) => {
-                  setRoleFilter(e.target.value)
-                  setPage(1)
-                }}
-                className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                <option value="">All roles</option>
-                <option value="STUDENT">Student</option>
-                <option value="TEACHER">Teacher</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-            </div>
-            <div className="relative w-full sm:w-auto">
-              <select
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value)
@@ -504,9 +503,7 @@ export function UsersListPage() {
               >
                 <option value="">All statuses</option>
                 <option value="ACTIVE">Active</option>
-                <option value="DEACTIVATED">Deactivated</option>
-                <option value="SUSPENDED">Suspended</option>
-                <option value="PENDING">Pending</option>
+                <option value="INACTIVE">Inactive</option>
               </select>
               <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
             </div>
@@ -550,6 +547,9 @@ export function UsersListPage() {
               options={USER_FILTER_COUNTRIES}
               onSelect={(next) => {
                 setCountryFilter(next)
+                const allowsRegion =
+                  !next.trim() || next.trim().toLowerCase() === "ethiopia"
+                if (!allowsRegion) setRegionFilter("")
                 setPage(1)
               }}
             />
@@ -559,6 +559,7 @@ export function UsersListPage() {
               value={regionFilter}
               allLabel="All regions"
               options={USER_FILTER_ETHIOPIA_REGIONS}
+              disabled={!regionFilterEnabled}
               onSelect={(next) => {
                 setRegionFilter(next)
                 setPage(1)
@@ -791,7 +792,10 @@ export function UsersListPage() {
               <p className="text-sm leading-relaxed text-grayScale-600">
                 Are you sure you want to change the status of{" "}
                 <span className="font-semibold">{confirmDialog.name || "this user"}</span> to{" "}
-                <span className="font-semibold capitalize">{confirmDialog.nextStatus.toLowerCase()}</span>?
+                <span className="font-semibold">
+                  {confirmDialog.nextStatus === "DEACTIVATED" ? "Inactive" : "Active"}
+                </span>
+                ?
               </p>
             </div>
             <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">

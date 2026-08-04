@@ -396,7 +396,9 @@ export function normalizeUserSubscriptions(raw: unknown): UserSubscriptionsData 
   };
 }
 
-/** Query params for GET /users (RFC3339 for created_*; subscription_status: ACTIVE | PENDING | Unsubscribed). */
+/** Query params for GET /users (RFC3339 for created_*; subscription_status: ACTIVE | PENDING | Unsubscribed).
+ * status: ACTIVE | PENDING | SUSPENDED | DEACTIVATED | INACTIVE (all statuses except ACTIVE).
+ */
 export interface GetUsersParams {
   page?: number
   page_size?: number

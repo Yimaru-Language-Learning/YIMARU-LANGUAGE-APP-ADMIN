@@ -64,6 +64,8 @@ function formatRoleLabel(role: string): string {
 function formatStatusLabel(status: string): string {
   const value = status.trim();
   if (!value) return NOT_ASSIGNED_LABEL;
+  const normalized = value.toUpperCase();
+  if (normalized === "DEACTIVATED") return "Inactive";
   return value
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
@@ -288,7 +290,7 @@ export function UserDetailPage() {
     setUser((prev) => (prev ? { ...prev, status: nextStatus } : prev));
     try {
       await updateUserStatus({ user_id: user.id, status: nextStatus });
-      toast.success(`User ${nextActive ? "activated" : "deactivated"} successfully`);
+      toast.success(`User ${nextActive ? "activated" : "set to inactive"} successfully`);
     } catch (err: unknown) {
       setUser((prev) => (prev ? { ...prev, status: previousStatus } : prev));
       notifyApiError(err, "Failed to update user status");
@@ -399,10 +401,10 @@ export function UserDetailPage() {
                       <Icon className="h-4 w-4 text-grayScale-400" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
+                      <p className="text-[11px] font-medium uppercase leading-tight tracking-wider text-grayScale-400">
                         {label}
                       </p>
-                      <p className="truncate text-sm text-grayScale-700">{value}</p>
+                      <p className="truncate text-sm leading-snug text-grayScale-700">{value}</p>
                     </div>
                   </div>
                 ))}
@@ -414,7 +416,6 @@ export function UserDetailPage() {
                 <InfoRow label="Joined" value={formatDate(user.created_at)} />
                 <InfoRow label="Last login" value={formatDateTime(user.last_login, "Never")} />
                 <InfoRow label="Gender" value={<DisplayValue value={user.gender} />} />
-                <InfoRow label="Birthday" value={formatDate(user.birth_day)} />
                 <InfoRow label="Occupation" value={<DisplayValue value={user.occupation} />} />
               </div>
             </CardContent>
@@ -466,7 +467,7 @@ export function UserDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
                 <InfoItem label="Education level" value={<DisplayValue value={user.education_level} />} />
                 <InfoItem label="Age group" value={formatAgeGroup(user.age_group)} />
                 <InfoItem label="Favorite topic" value={<DisplayValue value={user.favoutite_topic} />} />
@@ -576,7 +577,10 @@ export function UserDetailPage() {
               <p className="text-sm leading-relaxed text-grayScale-600">
                 Are you sure you want to change the status of{" "}
                 <span className="font-semibold">{fullName || "this user"}</span> to{" "}
-                <span className="font-semibold capitalize">{confirmDialog.nextStatus.toLowerCase()}</span>?
+                <span className="font-semibold">
+                  {confirmDialog.nextStatus === "DEACTIVATED" ? "Inactive" : "Active"}
+                </span>
+                ?
               </p>
             </div>
             <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 px-6 py-4 sm:flex-row sm:justify-end">
@@ -601,7 +605,7 @@ export function UserDetailPage() {
 function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">{label}</p>
+      <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">{label}</p>
       <p className="text-sm text-grayScale-700">
         {typeof value === "string" && isUnassignedLabel(value) ? <UnassignedLabel /> : value}
       </p>
@@ -611,9 +615,9 @@ function InfoItem({ label, value }: { label: string; value: ReactNode }) {
 
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-sm text-grayScale-500">{label}</span>
-      <span className="text-sm font-medium text-grayScale-700">
+    <div className="flex items-baseline gap-1.5 text-sm">
+      <span className="shrink-0 text-grayScale-500">{label}:</span>
+      <span className="min-w-0 font-medium text-grayScale-700">
         {typeof value === "string" && isUnassignedLabel(value) ? <UnassignedLabel /> : value}
       </span>
     </div>

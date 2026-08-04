@@ -7,7 +7,6 @@ import {
   HelpCircle,
   MessageSquare,
   Star,
-  TicketCheck,
   // TrendingUp,
   Users,
   UserX,
@@ -179,12 +178,6 @@ export function DashboardPage() {
     dashboard?.subscriptions.by_status,
     PIE_COLORS,
   )
-  const issueStatusData =
-    dashboard?.issues.by_status.map((s, i) => ({
-      name: s.label,
-      value: s.count,
-      color: PIE_COLORS[i % PIE_COLORS.length],
-    })) ?? []
 
   const seriesPeriodLabel = dashboard ? getSeriesPeriodLabel(dashboard.date_filter) : "Last 30 Days"
   const subscriptionMetrics = dashboard
@@ -305,13 +298,6 @@ export function DashboardPage() {
                 }
                 deltaLabel={`${dashboard.payments.total_payments} payments`}
                 deltaPositive={dashboard.payments.total_revenue > 0}
-              />
-              <StatCard
-                icon={TicketCheck}
-                label="Issues"
-                value={`${dashboard.issues.resolved_issues}/${dashboard.issues.total_issues}`}
-                deltaLabel={`${(dashboard.issues.resolution_rate * 100).toFixed(1)}% resolved`}
-                deltaPositive={dashboard.issues.resolution_rate > 0.5}
               />
             </div>
           )}
@@ -497,13 +483,6 @@ export function DashboardPage() {
                     title="Subscription Status"
                     data={subscriptionStatusData}
                     countSuffix="Subscriptions"
-                  />
-                ) : null}
-                {issueStatusData.length > 0 ? (
-                  <DonutBreakdownCard
-                    title="Issue Status"
-                    data={issueStatusData}
-                    countSuffix="Issues"
                   />
                 ) : null}
               </div>

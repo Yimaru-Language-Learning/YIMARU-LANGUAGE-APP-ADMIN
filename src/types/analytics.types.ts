@@ -144,14 +144,6 @@ export interface DashboardNotifications {
   by_type: LabelCount[]
 }
 
-export interface DashboardIssues {
-  total_issues: number
-  resolved_issues: number
-  resolution_rate: number
-  by_status: LabelCount[]
-  by_type: LabelCount[]
-}
-
 export interface DashboardTeam {
   total_members: number
   by_role: LabelCount[]
@@ -214,7 +206,6 @@ export interface DashboardData {
   courses: DashboardCourses
   content: DashboardContent
   notifications: DashboardNotifications
-  issues: DashboardIssues
   team: DashboardTeam
   videos?: DashboardVideos
 }

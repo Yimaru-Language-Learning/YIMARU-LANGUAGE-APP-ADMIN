@@ -57,7 +57,6 @@ import { AddQuestionPage } from "../pages/content-management/AddQuestionPage";
 import { HumanLanguageHierarchyPage } from "../pages/content-management/HumanLanguageHierarchyPage";
 import { HumanLanguageSubModulePage } from "../pages/content-management/HumanLanguageSubModulePage";
 import { UserLogPage } from "../pages/user-log/UserLogPage";
-import { IssuesPage } from "../pages/issues/IssuesPage";
 import { PaymentsPage } from "../pages/payments/PaymentsPage";
 import { SubscriptionsExportPage } from "../pages/subscriptions/SubscriptionsExportPage";
 import { ProfilePage } from "../pages/ProfilePage";
@@ -347,7 +346,6 @@ export function AppRoutes() {
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/subscriptions/export" element={<SubscriptionsExportPage />} />
         <Route path="/user-log" element={<UserLogPage />} />
-        <Route path="/issues" element={<IssuesPage />} />
         <Route path="/help/faqs" element={<FaqsPage />} />
         <Route path="/help/faqs/:id/edit" element={<EditFaqPage />} />
         <Route path="/app-reviews" element={<AppReviewsPage />} />

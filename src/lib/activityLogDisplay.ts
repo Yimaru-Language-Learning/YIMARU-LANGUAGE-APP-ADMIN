@@ -236,7 +236,6 @@ export const RESOURCE_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "FILE", label: "File" },
   { value: "REFERRAL", label: "Referral" },
   { value: "ASSESSMENT_QUESTION", label: "Assessment question" },
-  { value: "ISSUE", label: "Issue" },
   { value: "RATING", label: "Rating" },
 ]
 
@@ -353,8 +352,6 @@ export function activityLogResourcePath(
       return `/notifications/email-templates`
     case "SUBSCRIPTION_PLAN":
       return `/settings`
-    case "ISSUE":
-      return `/issues`
     default:
       return null
   }

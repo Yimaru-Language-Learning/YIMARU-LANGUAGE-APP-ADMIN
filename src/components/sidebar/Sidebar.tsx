@@ -4,7 +4,6 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  CircleAlert,
   CircleHelp,
   ClipboardList,
   CreditCard,
@@ -126,7 +125,6 @@ const navEntries: NavEntry[] = [
     icon: ClipboardList,
     permission: "activity_logs.list",
   },
-  { kind: "link", label: "Issue reports", to: "/issues", icon: CircleAlert },
   {
     kind: "link",
     label: "FAQs",

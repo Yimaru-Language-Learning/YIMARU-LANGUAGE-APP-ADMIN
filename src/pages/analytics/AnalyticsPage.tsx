@@ -25,7 +25,6 @@ import {
   BookOpen,
   HelpCircle,
   Bell,
-  TicketCheck,
   UsersRound,
   TrendingUp,
   TrendingDown,
@@ -444,7 +443,7 @@ export function AnalyticsPage() {
     )
   }
 
-  const { users, subscriptions, payments, courses, content, notifications, issues, team, videos } = dashboard
+  const { users, subscriptions, payments, courses, content, notifications, team, videos } = dashboard
   const subscriptionMetrics = getSubscriptionMetrics(subscriptions)
   const seriesPeriodLabel = getSeriesPeriodLabel(dashboard.date_filter)
   const lms = courses.lms
@@ -520,12 +519,6 @@ export function AnalyticsPage() {
   const monthlyRevenueTrendData = useMonthlyRevenueTrend
     ? aggregateRevenueByMonth(payments.revenue_last_30_days, monthlyTrendYear)
     : revenueData
-
-  const issueStatusPie = issues.by_status.map((s, i) => ({
-    name: s.label,
-    value: s.count,
-    color: PIE_COLORS[i % PIE_COLORS.length],
-  }))
 
   const subscriptionStatusPie = buildSubscriptionStatusPie(
     subscriptions.by_status,
@@ -667,13 +660,6 @@ export function AnalyticsPage() {
                     </>
                   }
                   trend={payments.total_revenue > 0 ? "up" : "neutral"}
-                />
-                <KpiCard
-                  icon={TicketCheck}
-                  label="Issue Resolution"
-                  value={`${(issues.resolution_rate * 100).toFixed(1)}%`}
-                  sub={`${issues.resolved_issues} resolved of ${issues.total_issues} total`}
-                  trend={issues.resolution_rate >= 0.5 ? "up" : "down"}
                 />
               </div>
             </Section>
@@ -1191,20 +1177,6 @@ export function AnalyticsPage() {
               data={subscriptions.by_status}
               total={subscriptions.total_subscriptions}
             />
-          </div>
-        </Section>
-
-        {/* ─── Issues & Support ─── */}
-        <Section title="Issues & Support" icon={TicketCheck} count={issues.total_issues} defaultOpen={false}>
-          <div className="grid items-start gap-4 lg:grid-cols-3">
-            <DonutCard
-              title="Issue Status"
-              data={issueStatusPie}
-              centerValue={issues.total_issues.toString()}
-              centerLabel="Total"
-            />
-            <BreakdownList title="Issues by Type" data={issues.by_type} total={issues.total_issues} />
-            <BreakdownList title="Issues by Status" data={issues.by_status} total={issues.total_issues} />
           </div>
         </Section>
 

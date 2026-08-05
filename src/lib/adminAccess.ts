@@ -2,13 +2,6 @@ import { getNormalizedSessionTeamRole } from "./teamRole"
 
 export const FULL_PANEL_TEAM_ROLES = new Set(["SUPER_ADMIN", "ADMIN"])
 
-/** The three assignable staff roles for the admin panel. */
-export const STAFF_TEAM_ROLE_OPTIONS = [
-  { value: "SUPER_ADMIN", label: "Super Admin" },
-  { value: "ADMIN", label: "Admin" },
-  { value: "CONTENT_MANAGER", label: "Content Manager" },
-] as const
-
 const CONTENT_MANAGER_PATH_PREFIXES = [
   "/new-content",
   "/personas",
@@ -16,34 +9,38 @@ const CONTENT_MANAGER_PATH_PREFIXES = [
   "/content",
 ]
 
+function normalizedTeamRole(role?: string): string {
+  return (role ?? getNormalizedSessionTeamRole()).toUpperCase()
+}
+
+/** Only Content Manager gets a reduced admin panel; all other roles keep full navigation. */
+export function isContentManagerPanelRole(role?: string): boolean {
+  return normalizedTeamRole(role) === "CONTENT_MANAGER"
+}
+
 export function hasFullAdminPanelAccess(role?: string): boolean {
-  const r = (role ?? getNormalizedSessionTeamRole()).toUpperCase()
-  return FULL_PANEL_TEAM_ROLES.has(r)
+  const r = normalizedTeamRole(role)
+  if (!r) return true
+  return !isContentManagerPanelRole(r)
 }
 
 export function isContentManagerRole(role?: string): boolean {
-  const r = (role ?? getNormalizedSessionTeamRole()).toUpperCase()
-  return r === "CONTENT_MANAGER"
+  return isContentManagerPanelRole(role)
 }
 
 export function canSendTeamInvitations(role?: string): boolean {
-  const r = (role ?? getNormalizedSessionTeamRole()).toUpperCase()
-  return r === "SUPER_ADMIN"
+  return normalizedTeamRole(role) === "SUPER_ADMIN"
 }
 
 export function isPathAllowedForTeamRole(pathname: string, role?: string): boolean {
-  const r = (role ?? getNormalizedSessionTeamRole()).toUpperCase()
-  if (!r || hasFullAdminPanelAccess(r)) return true
-  if (isContentManagerRole(r)) {
-    return CONTENT_MANAGER_PATH_PREFIXES.some(
-      (p) => pathname === p || pathname.startsWith(`${p}/`),
-    )
-  }
-  return pathname === "/profile" || pathname.startsWith("/profile/")
+  if (!isContentManagerPanelRole(role)) return true
+  return CONTENT_MANAGER_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  )
 }
 
 export function getDefaultAppHome(role?: string): string {
-  if (isContentManagerRole(role)) return "/new-content"
+  if (isContentManagerPanelRole(role)) return "/new-content"
   return "/dashboard"
 }
 
@@ -61,9 +58,7 @@ export function isNavEntryAllowedForTeamRole(
   entry: FilterableNavEntry,
   role?: string,
 ): boolean {
-  const r = (role ?? getNormalizedSessionTeamRole()).toUpperCase()
-  if (!r || hasFullAdminPanelAccess(r)) return true
-  if (!isContentManagerRole(r)) return false
+  if (!isContentManagerPanelRole(role)) return true
 
   if (entry.kind === "section") {
     return entry.label === "Learning content" || entry.label === "Account"

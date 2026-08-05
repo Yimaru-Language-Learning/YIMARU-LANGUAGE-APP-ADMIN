@@ -1,5 +1,11 @@
 import type { Role } from "../types/rbac.types"
-import { STAFF_TEAM_ROLE_OPTIONS } from "./adminAccess"
+
+/** The three assignable staff roles for the admin panel. */
+export const STAFF_TEAM_ROLE_OPTIONS = [
+  { value: "SUPER_ADMIN", label: "Super Admin" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "CONTENT_MANAGER", label: "Content Manager" },
+] as const
 
 export const TEAM_ROLE_OPTIONS = [...STAFF_TEAM_ROLE_OPTIONS]
 

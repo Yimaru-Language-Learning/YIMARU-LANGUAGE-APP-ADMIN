@@ -43,8 +43,9 @@ import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tabl
 import { toast } from "sonner"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { InviteTeamMemberDialog } from "./components/InviteTeamMemberDialog"
-import { canSendTeamInvitations, STAFF_TEAM_ROLE_OPTIONS } from "../../lib/adminAccess"
+import { canSendTeamInvitations } from "../../lib/adminAccess"
 import { getNormalizedSessionTeamRole } from "../../lib/teamRole"
+import { STAFF_TEAM_ROLE_OPTIONS } from "../../lib/teamRoles"
 
 export function RolesListPage() {
   const navigate = useNavigate()

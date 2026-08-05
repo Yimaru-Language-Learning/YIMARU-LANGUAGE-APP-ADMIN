@@ -4,6 +4,11 @@ import { Sidebar } from "../components/sidebar/Sidebar"
 import { Topbar } from "../components/topbar/Topbar"
 import { getAccessToken } from "../lib/teamAuthStorage"
 import {
+  getDefaultAppHome,
+  isPathAllowedForTeamRole,
+} from "../lib/adminAccess"
+import { getNormalizedSessionTeamRole } from "../lib/teamRole"
+import {
   connectNotificationsWebSocket,
   disconnectNotificationsWebSocket,
 } from "../lib/notificationsWebSocket"
@@ -68,6 +73,11 @@ export function AppLayout() {
 
   if (!token) {
     return <Navigate to="/login" replace />
+  }
+
+  const teamRole = getNormalizedSessionTeamRole()
+  if (!isPathAllowedForTeamRole(location.pathname, teamRole)) {
+    return <Navigate to={getDefaultAppHome(teamRole)} replace />
   }
 
   return (

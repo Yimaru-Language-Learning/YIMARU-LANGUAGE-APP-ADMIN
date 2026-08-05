@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { getDefaultAppHome } from "../lib/adminAccess";
+import { getNormalizedSessionTeamRole } from "../lib/teamRole";
 import { AppLayout } from "../layouts/AppLayout";
 import { DashboardPage } from "../pages/DashboardPage";
 import { AnalyticsPage } from "../pages/analytics/AnalyticsPage";
@@ -91,7 +93,7 @@ export function AppRoutes() {
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/account-deletion" element={<AccountDeletionPage />} />
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to={getDefaultAppHome(getNormalizedSessionTeamRole())} replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/users" element={<UserManagementLayout />}>
           <Route index element={<Navigate to="list" replace />} />

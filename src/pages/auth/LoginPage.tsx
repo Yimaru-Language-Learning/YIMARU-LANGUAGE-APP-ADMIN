@@ -12,6 +12,8 @@ import { login, loginWithGoogle } from "../../api/auth.api";
 import type { LoginRequest } from "../../types/auth.types";
 import type { LoginResult } from "../../api/auth.api";
 import { saveTeamSessionFromLoginResult, getAccessToken } from "../../lib/teamAuthStorage";
+import { getDefaultAppHome } from "../../lib/adminAccess";
+import { getNormalizedSessionTeamRole } from "../../lib/teamRole";
 import { toast } from "sonner";
 
 declare global {
@@ -111,7 +113,7 @@ export function LoginPage() {
       toast.success("Welcome back!", {
         description: "You have signed in successfully.",
       });
-      navigate("/dashboard");
+      navigate(getDefaultAppHome(getNormalizedSessionTeamRole()));
     },
     [navigate]
   );
@@ -183,7 +185,7 @@ export function LoginPage() {
   }, [googleReady, handleGoogleCallback]);
 
   if (token) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getDefaultAppHome(getNormalizedSessionTeamRole())} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

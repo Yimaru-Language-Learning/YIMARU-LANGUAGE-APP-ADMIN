@@ -28,6 +28,10 @@ import { hasPersonaPermission } from "../../lib/personasPermissions";
 import { hasActivityLogPermission } from "../../lib/activityLogPermissions";
 import { hasExportPermission } from "../../lib/exportPermissions";
 import { SidebarNavGroup } from "./SidebarNavGroup";
+import {
+  getNormalizedSessionTeamRole,
+} from "../../lib/teamRole";
+import { isNavEntryAllowedForTeamRole } from "../../lib/adminAccess";
 
 type NavLinkItem = {
   kind: "link";
@@ -164,6 +168,7 @@ export function Sidebar({
     loading: permissionsLoading,
   } = useTeamPermissions();
   const [unreadCount, setUnreadCount] = useState(0);
+  const sessionTeamRole = getNormalizedSessionTeamRole();
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -251,6 +256,27 @@ export function Sidebar({
 
         <nav className="mt-6 flex-1 space-y-0.5 overflow-y-auto scrollbar-none">
           {navEntries.map((entry, index) => {
+            if (
+              !isNavEntryAllowedForTeamRole(
+                entry.kind === "section"
+                  ? { kind: "section", label: entry.label }
+                  : entry.kind === "group"
+                    ? {
+                        kind: "group",
+                        label: entry.label,
+                        basePath: entry.basePath,
+                      }
+                    : {
+                        kind: "link",
+                        label: entry.label,
+                        to: entry.to,
+                      },
+                sessionTeamRole,
+              )
+            ) {
+              return null;
+            }
+
             if (entry.kind === "section") {
               if (isCollapsed) {
                 return index > 0 ? (

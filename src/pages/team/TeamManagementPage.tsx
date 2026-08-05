@@ -33,6 +33,8 @@ import { InviteTeamMemberDialog } from "../role-management/components/InviteTeam
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export";
 import { teamMemberExportQuery } from "../../lib/csvExportFilters";
 import { UnassignedLabel } from "../../lib/displayValue"
+import { canSendTeamInvitations } from "../../lib/adminAccess";
+import { getNormalizedSessionTeamRole } from "../../lib/teamRole";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -243,6 +245,8 @@ export function TeamManagementPage() {
     [roleFilter, statusFilter, search],
   );
 
+  const showInviteActions = canSendTeamInvitations(getNormalizedSessionTeamRole());
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -260,13 +264,15 @@ export function TeamManagementPage() {
             disabled={loading}
             className="w-full sm:w-auto"
           />
-          <Button
-            className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto"
-            onClick={() => setInviteOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Add Team Member
-          </Button>
+          {showInviteActions ? (
+            <Button
+              className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto"
+              onClick={() => setInviteOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Add Team Member
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -296,11 +302,6 @@ export function TeamManagementPage() {
               <option value="super_admin">Super Admin</option>
               <option value="admin">Admin</option>
               <option value="content_manager">Content Manager</option>
-              <option value="instructor">Instructor</option>
-              <option value="support_agent">Support Agent</option>
-              <option value="finance">Finance</option>
-              <option value="hr">HR</option>
-              <option value="analyst">Analyst</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
           </div>
@@ -502,11 +503,13 @@ export function TeamManagementPage() {
       </div>
 
       {/* Status Update Confirmation Modal */}
-      <InviteTeamMemberDialog
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        onInvited={() => void fetchMembers()}
-      />
+      {showInviteActions ? (
+        <InviteTeamMemberDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          onInvited={() => void fetchMembers()}
+        />
+      ) : null}
 
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

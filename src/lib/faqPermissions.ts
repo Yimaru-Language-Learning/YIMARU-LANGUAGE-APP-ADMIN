@@ -2,10 +2,6 @@
 const FAQ_BYPASS_TEAM_ROLES = new Set([
   "SUPER_ADMIN",
   "ADMIN",
-  "CONTENT_MANAGER",
-  "FINANCE",
-  "HR",
-  "ANALYST",
 ])
 
 export function getSessionTeamRole(): string {

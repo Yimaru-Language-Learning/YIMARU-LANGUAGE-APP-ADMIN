@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Mail, Shield } from "lucide-react"
 import { toast } from "sonner"
-import { fetchAllRoles } from "../../../api/rbac.api"
 import { fetchAllTeamMemberEmails, inviteTeamMember } from "../../../api/team.api"
 import { Button } from "../../../components/ui/button"
 import {
@@ -24,9 +23,8 @@ import {
 } from "../../../lib/parseInviteEmails"
 import {
   formatTeamRoleLabel,
-  rbacRolesToTeamRoleOptions,
+  staffTeamRoleOptions,
   teamRoleNameForInvite,
-  TEAM_ROLE_OPTIONS,
   type TeamRoleOption,
 } from "../../../lib/teamRoles"
 
@@ -52,8 +50,6 @@ export function InviteTeamMemberDialog({
 
   const [emailsText, setEmailsText] = useState("")
   const [teamRole, setTeamRole] = useState(lockedRole)
-  const [loadedRoleOptions, setLoadedRoleOptions] = useState<TeamRoleOption[]>([])
-  const [rolesLoading, setRolesLoading] = useState(false)
   const [existingEmails, setExistingEmails] = useState<Set<string>>(new Set())
   const [existingEmailsLoading, setExistingEmailsLoading] = useState(false)
   const [existingEmailsError, setExistingEmailsError] = useState(false)
@@ -77,38 +73,9 @@ export function InviteTeamMemberDialog({
   )
   const hasEmailConflicts = alreadyRegisteredEmails.length > 0
 
-  const fallbackRoleOptions = useMemo<TeamRoleOption[]>(
-    () => TEAM_ROLE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
-    [],
-  )
-
   const selectableRoleOptions = roleOptions?.length
     ? roleOptions
-    : loadedRoleOptions.length
-      ? loadedRoleOptions
-      : fallbackRoleOptions
-
-  useEffect(() => {
-    if (!open || roleLocked || roleOptions?.length) return
-
-    let cancelled = false
-    setRolesLoading(true)
-    void fetchAllRoles()
-      .then((roles) => {
-        if (cancelled) return
-        setLoadedRoleOptions(rbacRolesToTeamRoleOptions(roles))
-      })
-      .catch(() => {
-        if (!cancelled) setLoadedRoleOptions([])
-      })
-      .finally(() => {
-        if (!cancelled) setRolesLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [open, roleLocked, roleOptions])
+    : staffTeamRoleOptions()
 
   useEffect(() => {
     if (!open) return
@@ -348,11 +315,9 @@ export function InviteTeamMemberDialog({
                 id="invite-role"
                 value={teamRole}
                 onChange={(e) => setTeamRole(e.target.value)}
-                disabled={submitting || rolesLoading || selectableRoleOptions.length === 0}
+                disabled={submitting || selectableRoleOptions.length === 0}
               >
-                {rolesLoading ? (
-                  <option value="">Loading roles…</option>
-                ) : selectableRoleOptions.length === 0 ? (
+                {selectableRoleOptions.length === 0 ? (
                   <option value="">No roles available</option>
                 ) : (
                   selectableRoleOptions.map((opt) => (

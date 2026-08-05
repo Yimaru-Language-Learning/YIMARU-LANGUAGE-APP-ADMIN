@@ -1,15 +1,7 @@
 import type { Role } from "../types/rbac.types"
+import { STAFF_TEAM_ROLE_OPTIONS } from "./adminAccess"
 
-export const TEAM_ROLE_OPTIONS = [
-  { value: "SUPER_ADMIN", label: "Super Admin" },
-  { value: "ADMIN", label: "Admin" },
-  { value: "CONTENT_MANAGER", label: "Content Manager" },
-  { value: "SUPPORT_AGENT", label: "Support Agent" },
-  { value: "INSTRUCTOR", label: "Instructor" },
-  { value: "FINANCE", label: "Finance" },
-  { value: "HR", label: "HR" },
-  { value: "ANALYST", label: "Analyst" },
-] as const
+export const TEAM_ROLE_OPTIONS = [...STAFF_TEAM_ROLE_OPTIONS]
 
 export const EMPLOYMENT_TYPE_OPTIONS = [
   { value: "full_time", label: "Full-time" },
@@ -44,14 +36,12 @@ export function formatTeamRoleLabel(teamRole: string): string {
 
 /**
  * Role key/name sent to POST /team/members/invite.
- * Must be a built-in team role (e.g. SUPER_ADMIN) or an exact RBAC role name/id —
- * never a UI display label like "Super Admin".
+ * Must be one of SUPER_ADMIN, ADMIN, or CONTENT_MANAGER.
  */
 export function teamRoleNameForInvite(teamRole: string, explicitName?: string): string {
   const raw = (teamRole || explicitName || "").trim()
   if (!raw) return ""
 
-  // Accidental display labels from built-in options → API keys
   const byLabel = TEAM_ROLE_OPTIONS.find(
     (o) => o.label.toLowerCase() === raw.toLowerCase(),
   )
@@ -62,19 +52,17 @@ export function teamRoleNameForInvite(teamRole: string, explicitName?: string): 
   )
   if (byValue) return byValue.value
 
-  // Custom RBAC roles: keep exact name (spaces allowed); numeric id strings pass through
-  return raw
+  return rbacRoleNameToTeamRole(raw)
 }
 
 export type TeamRoleOption = { value: string; label: string }
 
-export function rbacRolesToTeamRoleOptions(roles: Role[]): TeamRoleOption[] {
-  const names = Array.from(
-    new Set(roles.map((role) => role.name.trim()).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b))
+export function staffTeamRoleOptions(): TeamRoleOption[] {
+  return TEAM_ROLE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))
+}
 
-  return names.map((name) => ({
-    value: name,
-    label: formatTeamRoleLabel(name),
-  }))
+/** @deprecated Custom RBAC team roles are no longer supported; use staffTeamRoleOptions(). */
+export function rbacRolesToTeamRoleOptions(roles: Role[]): TeamRoleOption[] {
+  void roles
+  return staffTeamRoleOptions()
 }

@@ -30,7 +30,6 @@ import {
   TrendingDown,
   CreditCard,
   Video,
-  Layers,
   FolderOpen,
   RefreshCw,
   ChevronDown,
@@ -625,128 +624,46 @@ export function AnalyticsPage() {
 
       <div className="space-y-5">
         {activeSummaryTab === "key" && (
-          <>
-            {/* ─── Key Metrics ─── */}
-            <Section title="Key Metrics" icon={TrendingUp} defaultOpen>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <KpiCard
-                  icon={Users}
-                  label="Total Users"
-                  value={formatNumber(users.total_users)}
-                  sub={`+${users.new_today} today · +${users.new_week} this week · +${users.new_month} this month`}
-                  trend={users.new_month > 0 ? "up" : "neutral"}
-                />
-                <KpiCard
-                  icon={CreditCard}
-                  label="Active Learners"
-                  value={formatNumber(snapshot?.active_learners ?? subscriptionMetrics.active)}
-                  sub={`${formatNumber(snapshot?.active_now ?? subscriptionMetrics.active)} active subs · ${subscriptionMetrics.inactive} inactive`}
-                  trend={subscriptions.new_month > 0 ? "up" : "neutral"}
-                />
-                <KpiCard
-                  icon={DollarSign}
-                  label="Total Revenue"
-                  value={
-                    <SensitiveValue>
-                      {`ETB ${formatNumber(payments.total_revenue)}`}
+          <Section title="Key Metrics" icon={TrendingUp} defaultOpen>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                icon={Users}
+                label="Total Users"
+                value={formatNumber(users.total_users)}
+                sub={`+${users.new_today} today · +${users.new_week} this week · +${users.new_month} this month`}
+                trend={users.new_month > 0 ? "up" : "neutral"}
+              />
+              <KpiCard
+                icon={CreditCard}
+                label="Active Learners"
+                value={formatNumber(snapshot?.active_learners ?? subscriptionMetrics.active)}
+                sub={`${formatNumber(snapshot?.active_now ?? subscriptionMetrics.active)} active subs · ${subscriptionMetrics.inactive} inactive`}
+                trend={subscriptions.new_month > 0 ? "up" : "neutral"}
+              />
+              <KpiCard
+                icon={DollarSign}
+                label="Total Revenue"
+                value={
+                  <SensitiveValue>
+                    {`ETB ${formatNumber(payments.total_revenue)}`}
+                  </SensitiveValue>
+                }
+                sub={
+                  <>
+                    {payments.successful_payments}/{payments.total_payments} successful · Avg{" "}
+                    <SensitiveValue showToggle={false}>
+                      ETB {payments.avg_transaction_value.toLocaleString()}
                     </SensitiveValue>
-                  }
-                  sub={
-                    <>
-                      {payments.successful_payments}/{payments.total_payments} successful · Avg{" "}
-                      <SensitiveValue showToggle={false}>
-                        ETB {payments.avg_transaction_value.toLocaleString()}
-                      </SensitiveValue>
-                    </>
-                  }
-                  trend={payments.total_revenue > 0 ? "up" : "neutral"}
-                />
-              </div>
-            </Section>
-          </>
-        )}
-
-        {activeSummaryTab === "content" && (
-          <>
-            {/* ─── Content & Platform ─── */}
-            <Section
-              title="Content & Platform"
-              icon={BookOpen}
-              count={courses.total_videos + content.total_questions}
-              defaultOpen
-            >
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <KpiCard
-                  icon={FolderOpen}
-                  label="Categories"
-                  value={courses.total_categories.toLocaleString()}
-                  sub={`${courses.total_courses} courses · ${courses.total_sub_courses} modules`}
-                  trend="neutral"
-                />
-                <KpiCard
-                  icon={BookOpen}
-                  label="LMS Programs"
-                  value={(lms?.programs ?? 0).toLocaleString()}
-                  sub={`${lms?.courses ?? 0} courses · ${lms?.practices ?? 0} practices`}
-                  trend="neutral"
-                />
-                <KpiCard
-                  icon={Video}
-                  label="Videos"
-                  value={courses.total_videos.toLocaleString()}
-                  sub={getVideoLessonsSummary(lms?.lessons_with_video, examPrep?.lessons_with_video)}
-                  trend={courses.total_videos > 0 ? "up" : "neutral"}
-                />
-                <KpiCard
-                  icon={HelpCircle}
-                  label="Questions"
-                  value={content.total_questions.toLocaleString()}
-                  sub={getPrimaryQuestionTypeSummary(content.questions_by_type)}
-                  trend={content.total_questions > 0 ? "up" : "neutral"}
-                />
-              </div>
-            </Section>
-          </>
+                  </>
+                }
+                trend={payments.total_revenue > 0 ? "up" : "neutral"}
+              />
+            </div>
+          </Section>
         )}
 
         {activeSummaryTab === "operations" && (
           <>
-            {/* ─── Operations ─── */}
-            <Section title="Operations" icon={Bell} defaultOpen>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <KpiCard
-                  icon={Bell}
-                  label="Notifications Sent"
-                  value={formatNumber(notifications.total_sent)}
-                  sub={`${notifications.read_count} read · ${notifications.unread_count} unread`}
-                  trend={notifications.unread_count === 0 ? "up" : "neutral"}
-                />
-                <KpiCard
-                  icon={UsersRound}
-                  label="Team Members"
-                  value={team.total_members.toLocaleString()}
-                  sub={`${team.by_role.length} roles`}
-                  trend="neutral"
-                />
-                <KpiCard
-                  icon={CreditCard}
-                  label="Payments"
-                  value={payments.total_payments.toLocaleString()}
-                  sub={`${payments.successful_payments} successful`}
-                  trend={payments.successful_payments > 0 ? "up" : "neutral"}
-                />
-                <KpiCard
-                  icon={Layers}
-                  label="Question Sets"
-                  value={content.total_question_sets.toLocaleString()}
-                  sub={content.question_sets_by_type.map((q) => `${q.count} ${q.label.toLowerCase()}`).join(" · ")}
-                  trend="neutral"
-                />
-              </div>
-            </Section>
-          </>
-        )}
-
         {/* ─── User Analytics ─── */}
         <Section title="User Analytics" icon={Users} count={users.total_users} defaultOpen>
           <Card className="shadow-none">
@@ -1194,9 +1111,53 @@ export function AnalyticsPage() {
           </div>
         </Section>
 
+        {/* ─── Team ─── */}
+        <Section title="Team" icon={UsersRound} count={team.total_members} defaultOpen={false}>
+          <div className="grid items-start gap-4 sm:grid-cols-2">
+            <BreakdownList title="Team by Role" data={team.by_role} total={team.total_members} />
+            <BreakdownList title="Team by Status" data={team.by_status} total={team.total_members} />
+          </div>
+        </Section>
+
+          </>
+        )}
+
+        {activeSummaryTab === "content" && (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                icon={FolderOpen}
+                label="Categories"
+                value={courses.total_categories.toLocaleString()}
+                sub={`${courses.total_courses} courses · ${courses.total_sub_courses} modules`}
+                trend="neutral"
+              />
+              <KpiCard
+                icon={BookOpen}
+                label="LMS Programs"
+                value={(lms?.programs ?? 0).toLocaleString()}
+                sub={`${lms?.courses ?? 0} courses · ${lms?.practices ?? 0} practices`}
+                trend="neutral"
+              />
+              <KpiCard
+                icon={Video}
+                label="Videos"
+                value={courses.total_videos.toLocaleString()}
+                sub={getVideoLessonsSummary(lms?.lessons_with_video, examPrep?.lessons_with_video)}
+                trend={courses.total_videos > 0 ? "up" : "neutral"}
+              />
+              <KpiCard
+                icon={HelpCircle}
+                label="Questions"
+                value={content.total_questions.toLocaleString()}
+                sub={getPrimaryQuestionTypeSummary(content.questions_by_type)}
+                trend={content.total_questions > 0 ? "up" : "neutral"}
+              />
+            </div>
+
         {/* ─── Course Management ─── */}
         {(lms || examPrep) && (
-          <Section title="Course Management" icon={BookOpen} count={courses.total_videos} defaultOpen={false}>
+          <Section title="Course Management" icon={BookOpen} count={courses.total_videos} defaultOpen>
             <div className="grid items-start gap-4 lg:grid-cols-2">
               {lms && (
                 <BreakdownList
@@ -1241,7 +1202,7 @@ export function AnalyticsPage() {
 
         {/* ─── Video Analytics ─── */}
         {videos && (
-          <Section title="Video Analytics" icon={PlayCircle} count={videos.total_watch_sessions} defaultOpen>
+          <Section title="Video Analytics" icon={PlayCircle} count={videos.total_watch_sessions} defaultOpen={false}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
                 icon={PlayCircle}
@@ -1393,13 +1354,8 @@ export function AnalyticsPage() {
           </Section>
         )}
 
-        {/* ─── Team ─── */}
-        <Section title="Team" icon={UsersRound} count={team.total_members} defaultOpen={false}>
-          <div className="grid items-start gap-4 sm:grid-cols-2">
-            <BreakdownList title="Team by Role" data={team.by_role} total={team.total_members} />
-            <BreakdownList title="Team by Status" data={team.by_status} total={team.total_members} />
-          </div>
-        </Section>
+          </>
+        )}
       </div>
     </div>
     </SensitiveRevealProvider>

@@ -17,7 +17,7 @@ export function AttachProgramPracticeFlow() {
   const [isPublished, setIsPublished] = useState(false);
 
   const [formData, setFormData] = useState({
-    program: "English Proficiency Exams",
+    program: "Duolingo/IELTS",
     test: "Mock Exam 1",
     questionType: "Speaking Practice",
     version: "V 1.0",

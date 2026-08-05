@@ -215,7 +215,7 @@ export function CourseCategoryPage() {
                   Category name
                 </label>
                 <Input
-                  placeholder="e.g. Beginner English, Exam Prep"
+                  placeholder="e.g. Beginner English, Duolingo/IELTS"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                 />

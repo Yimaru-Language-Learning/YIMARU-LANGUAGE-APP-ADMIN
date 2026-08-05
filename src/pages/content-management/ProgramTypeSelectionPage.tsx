@@ -54,7 +54,7 @@ export function ProgramTypeSelectionPage() {
           </div>
         </Link>
 
-        {/* English Proficiency Exams Card */}
+        {/* Duolingo/IELTS Card */}
         <Link to="/new-content/courses/proficiency" className="group h-full">
           <div className="bg-white w-[500px] rounded-[6px] border border-grayScale-100 px-10 py-12 h-full transition-all flex flex-col items-start gap-10">
             <div className="h-16 w-16 rounded-full bg-brand-50/10 flex items-center justify-center">
@@ -63,11 +63,11 @@ export function ProgramTypeSelectionPage() {
 
             <div className="space-y-3 flex-1">
               <h3 className="text-[20px] font-bold text-grayScale-900 transition-colors">
-                English Proficiency Exams
+                Duolingo/IELTS
               </h3>
               <p className="text-[15px] leading-relaxed text-grayScale-500 font-medium">
-                Exam preparation courses such as IELTS, and Duolingo. Structure
-                content by band scores, sections, and mock tests.
+                Duolingo/IELTS courses. Structure content by band scores,
+                sections, and mock tests.
               </p>
             </div>
           </div>

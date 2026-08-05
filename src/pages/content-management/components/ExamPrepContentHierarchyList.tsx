@@ -135,7 +135,7 @@ export function ExamPrepContentHierarchyList() {
       setLessons(fetchedLessons)
     } catch (error) {
       console.error("Failed to fetch exam prep hierarchy:", error)
-      notifyApiError(error, "Failed to load exam prep content")
+      notifyApiError(error, "Failed to load Duolingo/IELTS content")
     } finally {
       setLoading({})
     }

@@ -272,7 +272,7 @@ export function UserLearningActivitySection({
             <div>
               <CardTitle className="text-base">Learning activity</CardTitle>
               <p className="mt-0.5 text-xs text-grayScale-500">
-                LMS and exam prep progress trees for this learner.
+                LMS and Duolingo/IELTS progress trees for this learner.
               </p>
             </div>
           </div>
@@ -307,7 +307,7 @@ export function UserLearningActivitySection({
                 )}
                 onClick={() => setTrack("exam_prep")}
               >
-                Exam prep
+                Duolingo/IELTS
               </button>
             </div>
           </div>
@@ -373,7 +373,7 @@ export function UserLearningActivitySection({
         {!loading && !error && activity && track === "exam_prep" ? (
           <>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <Metric label="Exam prep courses" value={catalogCourses.length} />
+              <Metric label="Duolingo/IELTS courses" value={catalogCourses.length} />
               <Metric
                 label="Accessible courses"
                 value={catalogCourses.filter((course) => course.access.is_accessible).length}
@@ -393,7 +393,7 @@ export function UserLearningActivitySection({
                 disabled={catalogCourses.length === 0}
               >
                 <option value="">
-                  {catalogCourses.length === 0 ? "No exam prep courses" : "Select exam prep course..."}
+                  {catalogCourses.length === 0 ? "No Duolingo/IELTS courses" : "Select Duolingo/IELTS course..."}
                 </option>
                 {catalogCourses.map((course) => (
                   <option key={course.id} value={course.id}>
@@ -406,7 +406,7 @@ export function UserLearningActivitySection({
             {selectedCatalogCourse ? (
               <CourseBlock course={selectedCatalogCourse} examPrep />
             ) : (
-              <p className="py-6 text-center text-sm text-grayScale-400">No exam prep activity yet.</p>
+              <p className="py-6 text-center text-sm text-grayScale-400">No Duolingo/IELTS activity yet.</p>
             )}
           </>
         ) : null}

@@ -184,7 +184,7 @@ export function getPrimaryQuestionTypeSummary(questionsByType: LabelCount[]): st
 }
 
 export function getVideoLessonsSummary(lmsLessonsWithVideo = 0, examPrepLessonsWithVideo = 0): string {
-  return `${lmsLessonsWithVideo.toLocaleString()} LMS · ${examPrepLessonsWithVideo.toLocaleString()} exam prep lessons`
+  return `${lmsLessonsWithVideo.toLocaleString()} LMS · ${examPrepLessonsWithVideo.toLocaleString()} Duolingo/IELTS lessons`
 }
 
 export interface MonthlyRevenuePoint {

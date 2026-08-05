@@ -25,7 +25,7 @@ export function AttachPracticeFlow() {
     program:
       programType === "skill"
         ? "Skill-Based Courses"
-        : "English Proficiency Exams",
+        : "Duolingo/IELTS",
     module: "Module 4: Interactive Speaking",
     video: "Intro to Interactive Speaking",
     questionType: "speaking",

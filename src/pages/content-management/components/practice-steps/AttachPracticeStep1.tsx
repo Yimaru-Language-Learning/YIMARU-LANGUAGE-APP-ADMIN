@@ -38,7 +38,7 @@ export function AttachPracticeStep1({
             >
               <option value="">Choose Program</option>
               <option value="skill">Skill-Based Courses</option>
-              <option value="exams">English Proficiency Exams</option>
+              <option value="exams">Duolingo/IELTS</option>
             </Select>
           </div>
         </div>

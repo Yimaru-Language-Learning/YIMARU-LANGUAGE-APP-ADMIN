@@ -90,9 +90,9 @@ export function ProgramDetailPage() {
   // Mock data for "proficiency" program type
   const programs: Record<string, any> = {
     proficiency: {
-      title: "English Proficiency Exams",
+      title: "Duolingo/IELTS",
       description:
-        "Manage exam-based learning programs such as Duolingo and IELTS.",
+        "Manage Duolingo/IELTS learning programs.",
       courses: [],
     },
     "skill-based": {
@@ -667,7 +667,7 @@ export function ProgramDetailPage() {
               No catalog courses yet
             </p>
             <p className="mt-1 text-sm text-grayScale-400">
-              Create your first exam-prep catalog course to start organizing units, modules, and lessons.
+              Create your first Duolingo/IELTS catalog course to start organizing units, modules, and lessons.
             </p>
           </div>
         ) : programType === "proficiency" && filteredProficiencyCourses.length === 0 ? (

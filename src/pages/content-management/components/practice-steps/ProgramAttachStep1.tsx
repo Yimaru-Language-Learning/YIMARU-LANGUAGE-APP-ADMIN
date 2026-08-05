@@ -37,7 +37,7 @@ export function ProgramAttachStep1({
               }
             >
               <option value="">Choose Program</option>
-              <option value="exams">English Proficiency Exams</option>
+              <option value="exams">Duolingo/IELTS</option>
               <option value="skill">Skill-Based Courses</option>
             </Select>
           </div>

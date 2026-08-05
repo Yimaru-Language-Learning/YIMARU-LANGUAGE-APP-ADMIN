@@ -84,8 +84,7 @@ export function NewContentPage() {
           <CardContent className="border-t border-grayScale-200 bg-white p-8 text-center">
             <h3 className="text-xl font-bold text-grayScale-700">Courses</h3>
             <p className="mt-3 text-sm leading-relaxed text-grayScale-500">
-              Manage skill-based and exam preparation courses such as Duolingo
-              and IELTS.
+              Manage skill-based and Duolingo/IELTS courses.
             </p>
             <Link to="/new-content/courses" className="block w-full">
               <Button className="mt-8 h-12 w-full rounded-[6px] bg-brand-500 text-base font-semibold ">

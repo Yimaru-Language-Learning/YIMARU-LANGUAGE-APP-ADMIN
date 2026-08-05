@@ -159,7 +159,7 @@ export function EditPracticeFlow() {
   const programLabel = isExamPrep
     ? programType === "skill"
       ? "Skill-Based Courses"
-      : "English Proficiency Exams"
+      : "Duolingo/IELTS"
     : level
       ? `Program ${level}`
       : null;

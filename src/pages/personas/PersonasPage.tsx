@@ -194,7 +194,7 @@ export function PersonasPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-grayScale-800">Personas</h1>
           <p className="mt-1 max-w-2xl text-sm text-grayScale-500">
             Manage coach and character profiles linked to practice shells in Learn English and
-            exam-prep content.
+            Duolingo/IELTS content.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

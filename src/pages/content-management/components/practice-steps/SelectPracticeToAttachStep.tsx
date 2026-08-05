@@ -189,7 +189,7 @@ export function SelectPracticeToAttachStep({
           <p className="max-w-sm text-xs text-grayScale-500">
             {unlinkedOnly
               ? isExamPrep
-                ? "No unlinked exam-prep practices match your search. Try all practices or create a new shell first."
+                ? "No unlinked Duolingo/IELTS practices match your search. Try all practices or create a new shell first."
                 : "No unlinked practices match your search. Try all practices or create a new shell from Question Types."
               : "Try a different search, switch to unlinked only, or create a new practice instead."}
           </p>

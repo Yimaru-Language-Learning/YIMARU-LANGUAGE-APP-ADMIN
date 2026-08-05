@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel";
 import { ExportCsvButton } from "../../components/export/ExportCsvButton";
+import { FullPanelOnly, SuperAdminOnly } from "../../components/access/AdminAccessGates";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -33,8 +34,6 @@ import { InviteTeamMemberDialog } from "../role-management/components/InviteTeam
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export";
 import { teamMemberExportQuery } from "../../lib/csvExportFilters";
 import { UnassignedLabel } from "../../lib/displayValue"
-import { canSendTeamInvitations } from "../../lib/adminAccess";
-import { getNormalizedSessionTeamRole } from "../../lib/teamRole";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -245,8 +244,6 @@ export function TeamManagementPage() {
     [roleFilter, statusFilter, search],
   );
 
-  const showInviteActions = canSendTeamInvitations(getNormalizedSessionTeamRole());
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -257,6 +254,7 @@ export function TeamManagementPage() {
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <FullPanelOnly>
           <ExportCsvButton
             permission={EXPORT_PERMISSIONS.teamMembers}
             exportPath={EXPORT_ROUTES.teamMembers}
@@ -264,7 +262,8 @@ export function TeamManagementPage() {
             disabled={loading}
             className="w-full sm:w-auto"
           />
-          {showInviteActions ? (
+          </FullPanelOnly>
+          <SuperAdminOnly>
             <Button
               className="bg-brand-600 hover:bg-brand-500 text-white w-full sm:w-auto"
               onClick={() => setInviteOpen(true)}
@@ -272,7 +271,7 @@ export function TeamManagementPage() {
               <Plus className="h-4 w-4" />
               Add Team Member
             </Button>
-          ) : null}
+          </SuperAdminOnly>
         </div>
       </div>
 
@@ -503,13 +502,13 @@ export function TeamManagementPage() {
       </div>
 
       {/* Status Update Confirmation Modal */}
-      {showInviteActions ? (
+      <SuperAdminOnly>
         <InviteTeamMemberDialog
           open={inviteOpen}
           onOpenChange={setInviteOpen}
           onInvited={() => void fetchMembers()}
         />
-      ) : null}
+      </SuperAdminOnly>
 
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

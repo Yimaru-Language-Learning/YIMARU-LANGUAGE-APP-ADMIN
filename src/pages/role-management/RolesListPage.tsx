@@ -43,13 +43,11 @@ import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tabl
 import { toast } from "sonner"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { InviteTeamMemberDialog } from "./components/InviteTeamMemberDialog"
-import { canSendTeamInvitations } from "../../lib/adminAccess"
-import { getNormalizedSessionTeamRole } from "../../lib/teamRole"
+import { SuperAdminOnly } from "../../components/access/AdminAccessGates"
 import { STAFF_TEAM_ROLE_OPTIONS } from "../../lib/teamRoles"
 
 export function RolesListPage() {
   const navigate = useNavigate()
-  const showTeamInviteActions = canSendTeamInvitations(getNormalizedSessionTeamRole())
   const staffRoleNames = useMemo(
     () => new Set(STAFF_TEAM_ROLE_OPTIONS.map((o) => o.value)),
     [],
@@ -474,7 +472,8 @@ export function RolesListPage() {
                       </div>
                     </div>
 
-                    {showTeamInviteActions && staffRoleNames.has(role.name.toUpperCase()) ? (
+                    <SuperAdminOnly>
+                    {staffRoleNames.has(role.name.toUpperCase()) ? (
                     <Button
                       type="button"
                       variant="outline"
@@ -487,6 +486,7 @@ export function RolesListPage() {
                       Invite team members
                     </Button>
                     ) : null}
+                    </SuperAdminOnly>
 
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <Button

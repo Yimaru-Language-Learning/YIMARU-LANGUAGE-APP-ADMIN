@@ -26,6 +26,7 @@ export interface DashboardUsers {
   by_role: LabelCount[]
   by_status: LabelCount[]
   by_age_group: LabelCount[]
+  by_gender: LabelCount[]
   by_education_level: LabelCount[]
   by_occupation: LabelCount[]
   by_learning_goal: LabelCount[]

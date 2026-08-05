@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { getDefaultAppHome } from "../lib/adminAccess";
 import { getNormalizedSessionTeamRole } from "../lib/teamRole";
+import { FullPanelGuard } from "../components/access/AdminAccessGates";
 import { AppLayout } from "../layouts/AppLayout";
 import { DashboardPage } from "../pages/DashboardPage";
 import { AnalyticsPage } from "../pages/analytics/AnalyticsPage";
@@ -94,6 +95,8 @@ export function AppRoutes() {
       <Route path="/account-deletion" element={<AccountDeletionPage />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<Navigate to={getDefaultAppHome(getNormalizedSessionTeamRole())} replace />} />
+
+        <Route element={<FullPanelGuard />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/users" element={<UserManagementLayout />}>
           <Route index element={<Navigate to="list" replace />} />
@@ -106,6 +109,7 @@ export function AppRoutes() {
         <Route path="/roles" element={<RoleManagementLayout />}>
           <Route index element={<RolesListPage />} />
           <Route path="add" element={<AddRolePage />} />
+        </Route>
         </Route>
 
         <Route path="/content" element={<ContentManagementLayout />}>
@@ -323,7 +327,12 @@ export function AppRoutes() {
           element={<LinkExistingPracticeFlow />}
         />
 
+        <Route path="/personas" element={<PersonasPage />} />
+        <Route path="/admin/personas" element={<PersonasPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+
+        <Route element={<FullPanelGuard />}>
         <Route
           path="/notifications/email-templates"
           element={<EmailTemplatesPage />}
@@ -354,15 +363,13 @@ export function AppRoutes() {
         <Route path="/admin/app-reviews" element={<AppReviewsPage />} />
         <Route path="/operations/app-reviews" element={<AppReviewsPage />} />
         <Route path="/ratings" element={<AppReviewsPage />} />
-        <Route path="/personas" element={<PersonasPage />} />
-        <Route path="/admin/personas" element={<PersonasPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
 
         <Route path="/team" element={<TeamManagementPage />} />
         <Route path="/team/add" element={<AddTeamMemberPage />} />
         <Route path="/team/:id" element={<TeamMemberDetailPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

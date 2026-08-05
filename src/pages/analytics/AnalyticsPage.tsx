@@ -735,6 +735,16 @@ export function AnalyticsPage() {
                   total={users.total_users}
                 />
                 <BreakdownList
+                  title="Gender"
+                  data={users.by_gender ?? []}
+                  total={users.total_users}
+                />
+                <BreakdownList
+                  title="Education level"
+                  data={users.by_education_level ?? []}
+                  total={users.total_users}
+                />
+                <BreakdownList
                   title="Country"
                   data={users.by_country ?? []}
                   total={users.total_users}

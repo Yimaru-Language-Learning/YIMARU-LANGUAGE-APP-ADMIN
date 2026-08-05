@@ -34,9 +34,15 @@ export function canSendTeamInvitations(role?: string): boolean {
 
 export function isPathAllowedForTeamRole(pathname: string, role?: string): boolean {
   if (!isContentManagerPanelRole(role)) return true
+  if (pathname === "/notifications") return true
   return CONTENT_MANAGER_PATH_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   )
+}
+
+/** Content managers may open the personal notification inbox only (not admin broadcast tools). */
+export function isContentManagerNotificationInboxPath(pathname: string): boolean {
+  return pathname === "/notifications"
 }
 
 export function getDefaultAppHome(role?: string): string {
@@ -61,13 +67,26 @@ export function isNavEntryAllowedForTeamRole(
   if (!isContentManagerPanelRole(role)) return true
 
   if (entry.kind === "section") {
-    return entry.label === "Learning content" || entry.label === "Account"
+    return (
+      entry.label === "Learning content" ||
+      entry.label === "Account" ||
+      entry.label === "Communications"
+    )
   }
   if (entry.kind === "group") {
-    return entry.basePath === "/new-content"
+    return entry.basePath === "/new-content" || entry.basePath === "/notifications"
   }
   if (entry.kind === "link") {
-    return entry.to === "/personas" || entry.to === "/profile"
+    const to = entry.to ?? ""
+    if (to === "/personas" || to === "/profile") return true
+    if (to === "/notifications") return true
+    if (to.startsWith("/notifications/")) return false
+    return (
+      to === "/new-content" ||
+      to.startsWith("/new-content/") ||
+      to === "/content" ||
+      to.startsWith("/content/")
+    )
   }
   return false
 }

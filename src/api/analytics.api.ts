@@ -139,6 +139,7 @@ function normalizeDashboardUsers(raw: unknown, root?: Record<string, unknown>): 
     by_role: asLabelCounts(pickField(u, "by_role", "byRole", "ByRole")),
     by_status: asLabelCounts(pickField(u, "by_status", "byStatus", "ByStatus")),
     by_age_group: asLabelCounts(pickField(u, "by_age_group", "byAgeGroup", "ByAgeGroup")),
+    by_gender: asLabelCounts(pickField(u, "by_gender", "byGender", "ByGender")),
     by_education_level: asLabelCounts(
       pickField(u, ...EDUCATION_LEVEL_KEYS) ?? pickField(scope, ...EDUCATION_LEVEL_KEYS),
     ),

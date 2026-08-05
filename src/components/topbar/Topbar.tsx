@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import { cn } from "../../lib/utils"
 import { NotificationDropdown } from "./NotificationDropdown"
+import { FullPanelOnly } from "../access/AdminAccessGates"
 
 type TopbarProps = {
   onSidebarToggle: () => void
@@ -57,10 +58,8 @@ export function Topbar({ onSidebarToggle }: TopbarProps) {
       </button>
 
       <div className="flex items-center gap-3">
-        {/* Notifications */}
         <NotificationDropdown />
 
-        {/* Separator */}
         <div className="h-6 w-px bg-grayScale-200" />
 
         {/* Avatar + Radix Dropdown */}
@@ -92,6 +91,7 @@ export function Topbar({ onSidebarToggle }: TopbarProps) {
               </span>
               Profile
             </DropdownMenu.Item>
+            <FullPanelOnly>
             <DropdownMenu.Item
               className={cn(
                 "group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-grayScale-600 hover:bg-grayScale-100 hover:text-brand-600"
@@ -103,6 +103,7 @@ export function Topbar({ onSidebarToggle }: TopbarProps) {
               </span>
               Settings
             </DropdownMenu.Item>
+            </FullPanelOnly>
             <DropdownMenu.Item
               className={cn(
                 "group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-grayScale-600 hover:bg-grayScale-100 hover:text-brand-600"

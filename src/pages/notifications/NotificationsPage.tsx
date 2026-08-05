@@ -54,6 +54,7 @@ import { toast } from "sonner"
 import { TablePagination } from "../../components/admin/TablePagination"
 import { DEFAULT_TABLE_PAGE_SIZE } from "../../lib/tablePagination"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { FullPanelOnly } from "../../components/access/AdminAccessGates"
 
 function NotificationItem({
   notification,
@@ -441,6 +442,7 @@ export function NotificationsPage() {
           {/* Bulk actions */}
           {!loading && !error && (
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+              <FullPanelOnly>
               <Button
                 size="sm"
                 className="bg-brand-500 text-white hover:bg-brand-600"
@@ -449,6 +451,7 @@ export function NotificationsPage() {
                 <Mail className="mr-2 h-3.5 w-3.5" />
                 Send notification
               </Button>
+              </FullPanelOnly>
               {notifications.length > 0 && (
                 <>
                   {globalUnread > 0 ? (

@@ -28,9 +28,7 @@ import { hasPersonaPermission } from "../../lib/personasPermissions";
 import { hasActivityLogPermission } from "../../lib/activityLogPermissions";
 import { hasExportPermission } from "../../lib/exportPermissions";
 import { SidebarNavGroup } from "./SidebarNavGroup";
-import {
-  getNormalizedSessionTeamRole,
-} from "../../lib/teamRole";
+import { useAdminAccess } from "../../hooks/useAdminAccess";
 import { isNavEntryAllowedForTeamRole } from "../../lib/adminAccess";
 
 type NavLinkItem = {
@@ -168,7 +166,7 @@ export function Sidebar({
     loading: permissionsLoading,
   } = useTeamPermissions();
   const [unreadCount, setUnreadCount] = useState(0);
-  const sessionTeamRole = getNormalizedSessionTeamRole();
+  const { teamRole: sessionTeamRole } = useAdminAccess();
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -352,6 +350,15 @@ export function Sidebar({
 
             if (entry.kind === "group") {
               const isNotifications = entry.basePath === "/notifications";
+              const visibleChildren = entry.children.filter((child) =>
+                isNavEntryAllowedForTeamRole(
+                  { kind: "link", label: child.label, to: child.to },
+                  sessionTeamRole,
+                ),
+              );
+              if (visibleChildren.length === 0) {
+                return null;
+              }
               return (
                 <SidebarNavGroup
                   key={entry.basePath}
@@ -359,7 +366,7 @@ export function Sidebar({
                   icon={entry.icon}
                   basePath={entry.basePath}
                   activePaths={entry.activePaths}
-                  children={entry.children}
+                  children={visibleChildren}
                   isCollapsed={isCollapsed}
                   onNavigate={onClose}
                   trailing={

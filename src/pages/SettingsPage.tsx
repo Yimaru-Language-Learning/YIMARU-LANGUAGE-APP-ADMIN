@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import {
   Eye,
   EyeOff,
-  Gauge,
   Globe,
   Lock,
   Moon,
@@ -31,21 +30,18 @@ import type { TeamMeProfile } from "../types/team.types";
 import { toast } from "sonner";
 import { AppVersionsTab } from "./settings/AppVersionsTab";
 import { SubscriptionPlansTab } from "./settings/SubscriptionPlansTab";
-import { InitialAssessmentThresholdsTab } from "./settings/InitialAssessmentThresholdsTab";
 import { ThemeModePreview } from "./settings/components/ThemeModePreview";
 import { useTheme } from "../contexts/ThemeContext";
 
 type SettingsTab =
   | "subscription"
   | "app-versions"
-  | "assessment"
   | "security"
   | "appearance";
 
 const tabs: { id: SettingsTab; label: string; icon: typeof Shield }[] = [
   { id: "subscription", label: "Subscription packages", icon: CreditCard },
   { id: "app-versions", label: "App versions", icon: Smartphone },
-  { id: "assessment", label: "Initial assessment", icon: Gauge },
   { id: "security", label: "Security", icon: Shield },
   { id: "appearance", label: "Appearance", icon: Palette },
 ];
@@ -445,7 +441,6 @@ export function SettingsPage() {
         <main className="min-h-[400px] min-w-0 w-full">
           {activeTab === "subscription" && <SubscriptionPlansTab />}
           {activeTab === "app-versions" && <AppVersionsTab />}
-          {activeTab === "assessment" && <InitialAssessmentThresholdsTab />}
           {activeTab === "security" && <SecurityTab memberId={profile.id} />}
           {activeTab === "appearance" && <AppearanceTab />}
         </main>

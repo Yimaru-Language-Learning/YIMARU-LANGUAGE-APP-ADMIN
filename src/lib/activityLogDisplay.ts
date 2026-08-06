@@ -336,8 +336,6 @@ export function activityLogResourcePath(
       return `/users/${resourceId}`
     case "TEAM_MEMBER":
       return `/team/${resourceId}`
-    case "FAQ":
-      return `/help/faqs/${resourceId}/edit`
     case "PERSONA":
       return `/personas`
     case "QUESTION_TYPE_DEFINITION":

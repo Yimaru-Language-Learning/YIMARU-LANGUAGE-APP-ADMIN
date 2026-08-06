@@ -75,8 +75,6 @@ import { AboutPage } from "../pages/AboutPage";
 import { TermsPage } from "../pages/TermsPage";
 import { PrivacyPage } from "../pages/PrivacyPage";
 import { AccountDeletionPage } from "../pages/AccountDeletionPage";
-import { FaqsPage } from "../pages/faqs/FaqsPage";
-import { EditFaqPage } from "../pages/faqs/EditFaqPage";
 import { AppReviewsPage } from "../pages/ratings/AppReviewsPage";
 import { PersonasPage } from "../pages/personas/PersonasPage";
 
@@ -352,8 +350,6 @@ export function AppRoutes() {
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/subscriptions/export" element={<SubscriptionsExportPage />} />
         <Route path="/user-log" element={<UserLogPage />} />
-        <Route path="/help/faqs" element={<FaqsPage />} />
-        <Route path="/help/faqs/:id/edit" element={<EditFaqPage />} />
         <Route path="/app-reviews" element={<AppReviewsPage />} />
         <Route path="/admin/app-reviews" element={<AppReviewsPage />} />
         <Route path="/operations/app-reviews" element={<AppReviewsPage />} />

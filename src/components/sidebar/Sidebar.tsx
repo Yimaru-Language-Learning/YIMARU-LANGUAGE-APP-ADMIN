@@ -4,7 +4,6 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   ClipboardList,
   CreditCard,
   LayoutDashboard,
@@ -22,7 +21,6 @@ import { cn } from "../../lib/utils";
 import { SidebarLogo } from "./SidebarLogo";
 import { getUnreadCount } from "../../api/notifications.api";
 import { useTeamPermissions } from "../../hooks/useTeamPermissions";
-import { hasFaqPermission } from "../../lib/faqPermissions";
 import { hasRatingsPermission } from "../../lib/ratingsPermissions";
 import { hasPersonaPermission } from "../../lib/personasPermissions";
 import { hasActivityLogPermission } from "../../lib/activityLogPermissions";
@@ -126,13 +124,6 @@ const navEntries: NavEntry[] = [
     to: "/user-log",
     icon: ClipboardList,
     permission: "activity_logs.list",
-  },
-  {
-    kind: "link",
-    label: "FAQs",
-    to: "/help/faqs",
-    icon: CircleHelp,
-    permission: "faqs.list",
   },
   {
     kind: "link",
@@ -300,13 +291,6 @@ export function Sidebar({
 
             if (entry.kind === "link") {
               if (
-                entry.permission === "faqs.list" &&
-                !permissionsLoading &&
-                !hasFaqPermission("faqs.list", permissions)
-              ) {
-                return null;
-              }
-              if (
                 entry.permission === "ratings.list_by_target" &&
                 !permissionsLoading &&
                 !hasRatingsPermission("ratings.list_by_target", permissions)
@@ -336,7 +320,6 @@ export function Sidebar({
               }
               if (
                 entry.permission &&
-                entry.permission !== "faqs.list" &&
                 entry.permission !== "ratings.list_by_target" &&
                 entry.permission !== "personas.list" &&
                 entry.permission !== "activity_logs.list" &&

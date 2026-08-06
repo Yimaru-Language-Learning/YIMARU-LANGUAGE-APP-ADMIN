@@ -3,6 +3,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Card } from "../../../components/ui/card"
 import { Button } from "../../../components/ui/button"
 import { cn } from "../../../lib/utils"
+import { SearchHighlight } from "../../../components/SearchHighlight"
 import { UnassignedLabel, isUnassignedLabel } from "../../../lib/displayValue"
 
 export interface QuestionTypeDefinitionCardModel {
@@ -13,6 +14,7 @@ export interface QuestionTypeDefinitionCardModel {
   is_system?: boolean
   stimulusKindsCount: number
   responseKindsCount: number
+  searchQuery?: string
   onEdit?: () => void
   onDelete?: () => void
   onViewPractices?: () => void
@@ -28,6 +30,7 @@ export function QuestionTypeCard({
   is_system,
   stimulusKindsCount,
   responseKindsCount,
+  searchQuery = "",
   onEdit,
   onDelete,
   onViewPractices,
@@ -41,7 +44,9 @@ export function QuestionTypeCard({
     <Card className="group overflow-hidden border-grayScale-200 rounded-[12px] bg-white transition-all duration-300">
       <div className="px-4 py-6 space-y-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[18px] font-bold text-grayScale-900 leading-[1.2]">{display_name}</h3>
+          <h3 className="text-[18px] font-bold text-grayScale-900 leading-[1.2]">
+            <SearchHighlight text={display_name} query={searchQuery} />
+          </h3>
           {is_system ? (
             <Badge className="shrink-0 border-none bg-violet-100 text-violet-800 flex items-center gap-1">
               <Shield className="h-3 w-3" />
@@ -55,7 +60,9 @@ export function QuestionTypeCard({
           )}
         </div>
 
-        <p className="text-[12px] font-mono text-grayScale-500 break-all">#{id} · {definitionKey}</p>
+        <p className="text-[12px] font-mono text-grayScale-500 break-all">
+          <SearchHighlight text={`#${id} · ${definitionKey}`} query={searchQuery} />
+        </p>
 
         <div className="flex flex-wrap items-center gap-2 text-grayScale-700 font-medium text-[14px]">
           <Layers className="h-4 w-4 text-[#9E2891]" />

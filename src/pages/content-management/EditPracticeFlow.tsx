@@ -335,9 +335,25 @@ export function EditPracticeFlow() {
       setLoadingPractice(true);
       setLoadError(null);
       try {
-        const res = isExamPrep
-          ? await getExamPrepPracticeFull(practiceId)
-          : await getLearnEnglishPracticeFull(practiceId);
+        const loadPrimary = isExamPrep
+          ? getExamPrepPracticeFull
+          : getLearnEnglishPracticeFull;
+        const loadFallback = isExamPrep
+          ? getLearnEnglishPracticeFull
+          : getExamPrepPracticeFull;
+
+        let res: Awaited<ReturnType<typeof getExamPrepPracticeFull>>;
+        try {
+          res = await loadPrimary(practiceId);
+        } catch (primaryError) {
+          // Hierarchy URLs / mislabeled kind: retry the other practice table.
+          try {
+            res = await loadFallback(practiceId);
+          } catch {
+            throw primaryError;
+          }
+        }
+
         const full = unwrapPracticeFullData(res);
         if (!full) throw new Error("Practice details were missing from the response.");
         const mapped = mapPracticeFullToFormState(full, typeDefinitions);

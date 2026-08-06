@@ -34,6 +34,7 @@ import { InviteTeamMemberDialog } from "../role-management/components/InviteTeam
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export";
 import { teamMemberExportQuery } from "../../lib/csvExportFilters";
 import { UnassignedLabel } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -372,9 +373,14 @@ export function TeamManagementPage() {
                         </Avatar>
                         <div>
                           <div className="font-medium text-grayScale-600">
-                            {member.first_name} {member.last_name}
+                            <SearchHighlight
+                              text={`${member.first_name} ${member.last_name}`.trim()}
+                              query={search}
+                            />
                           </div>
-                          <div className="text-xs text-grayScale-400">{member.email}</div>
+                          <div className="text-xs text-grayScale-400">
+                            <SearchHighlight text={member.email ?? ""} query={search} />
+                          </div>
                         </div>
                       </div>
                     </TableCell>

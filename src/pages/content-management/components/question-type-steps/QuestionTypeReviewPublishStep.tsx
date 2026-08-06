@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -11,7 +11,6 @@ import {
   updateQuestionTypeDefinition,
   validateQuestionTypeDefinition,
 } from "../../../../api/questionTypeDefinitions.api"
-import { getQuestionTypeDefinitionGroups } from "../../../../api/questionTypeDefinitionGroups.api"
 import type { QuestionTypeDefinitionCreatePayload } from "../../../../types/questionTypeDefinition.types"
 import {
   buildCreatePayload,
@@ -19,7 +18,6 @@ import {
   inferRuntimeQuestionType,
 } from "../../lib/questionTypeDefinitionValidation"
 import { slotLabel } from "./componentKindUi"
-import { questionTypeGroupLabels } from "../../../../lib/questionTypeGroupIds"
 import { UnassignedLabel } from "../../../../lib/displayValue"
 
 interface QuestionTypeReviewPublishStepProps {
@@ -40,25 +38,10 @@ export function QuestionTypeReviewPublishStep({
 }: QuestionTypeReviewPublishStepProps) {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
-  const [groupName, setGroupName] = useState<string>("")
   const isEdit = editDefinitionId != null && editDefinitionId > 0
 
   const payload = buildCreatePayload(draft)
   const runtime = inferRuntimeQuestionType(payload.key, payload.response_component_kinds)
-
-  useEffect(() => {
-    if (!payload.group_ids?.length) {
-      setGroupName("Ungrouped")
-      return
-    }
-    getQuestionTypeDefinitionGroups()
-      .then((res) => {
-        setGroupName(questionTypeGroupLabels(payload.group_ids, res.groups))
-      })
-      .catch(() => {
-        setGroupName(payload.group_ids!.map((id) => `Group #${id}`).join(", "))
-      })
-  }, [payload.group_ids])
 
   const submit = async (status: "ACTIVE" | "INACTIVE") => {
     if (isEdit && saveDisabled) return
@@ -133,10 +116,6 @@ export function QuestionTypeReviewPublishStep({
             <div className="sm:col-span-2">
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Description</dt>
               <dd className="font-medium text-grayScale-800 dark:text-grayScale-500 mt-1">{payload.description || <UnassignedLabel />}</dd>
-            </div>
-            <div>
-              <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Groups</dt>
-              <dd className="font-medium text-grayScale-900 dark:text-grayScale-600 mt-1">{groupName || <UnassignedLabel />}</dd>
             </div>
             <div>
               <dt className="text-grayScale-400 font-semibold uppercase text-[11px] tracking-wide">Status</dt>

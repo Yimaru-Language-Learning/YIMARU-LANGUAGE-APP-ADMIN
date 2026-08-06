@@ -24,6 +24,7 @@ import { cn } from "../../lib/utils"
 import { PageBackLink } from "../../components/navigation/PageBackLink"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 type QuestionTypeFilter = "all" | "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "AUDIO"
 type DifficultyFilter = "all" | "EASY" | "MEDIUM" | "HARD"
@@ -495,7 +496,7 @@ export function QuestionsPage() {
                       </TableCell>
                       <TableCell className="max-w-md py-3.5">
                         <div className="truncate text-sm font-medium text-grayScale-600">
-                          {question.question_text}
+                          <SearchHighlight text={question.question_text} query={searchQuery} />
                         </div>
                         {question.question_type === "MCQ" && (question.options?.length ?? 0) > 0 && (
                           <div className="mt-1 truncate text-xs text-grayScale-400">

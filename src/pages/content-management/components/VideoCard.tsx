@@ -17,6 +17,7 @@ import {
 } from "../../../components/ui/dialog";
 import { isAdminOrSuperAdminRole } from "../../../lib/sessionRole";
 import { cn } from "../../../lib/utils";
+import { SearchHighlight } from "../../../components/SearchHighlight";
 import {
   applyShortPreviewToEmbedUrl,
   DEFAULT_PREVIEW_MAX_SECONDS,
@@ -95,6 +96,8 @@ interface VideoCardProps {
   accessTierUpdating?: boolean;
   /** Shown under title on module lesson cards; reserved height keeps grid rows even. */
   description?: string | null;
+  /** When set, matching search keywords are highlighted in title/description. */
+  searchQuery?: string;
 }
 
 export function VideoCard({
@@ -118,6 +121,7 @@ export function VideoCard({
   accessTierUpdating = false,
   hoverModuleActions = false,
   description,
+  searchQuery = "",
 }: VideoCardProps) {
   const [thumbFailed, setThumbFailed] = useState(false);
   const [probedDurationSeconds, setProbedDurationSeconds] = useState<
@@ -552,12 +556,16 @@ export function VideoCard({
         </div>
 
         <h3 className="line-clamp-2 min-h-[3rem] shrink-0 text-[16px] font-medium leading-snug text-grayScale-900">
-          {title}
+          <SearchHighlight text={title} query={searchQuery} />
         </h3>
 
         {hoverModuleActions ? (
           <p className="mt-1 line-clamp-2 min-h-[2.5rem] shrink-0 text-[13px] leading-snug text-grayScale-500">
-            {description?.trim() ? description.trim() : "\u00a0"}
+            {description?.trim() ? (
+              <SearchHighlight text={description.trim()} query={searchQuery} />
+            ) : (
+              "\u00a0"
+            )}
           </p>
         ) : null}
 

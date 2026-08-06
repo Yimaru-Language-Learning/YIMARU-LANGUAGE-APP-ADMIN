@@ -41,7 +41,8 @@ import {
 import type { CategorySubCategoryListItem, CourseCategory } from "../../types/course.types"
 import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 export function CoursesPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
@@ -408,15 +409,19 @@ export function CoursesPage() {
                         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-grayScale-50 text-grayScale-400 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                           <BookOpen className="h-4 w-4" />
                         </div>
-                        <p className="min-w-0 text-sm font-medium text-grayScale-600">{sub.name}</p>
+                        <p className="min-w-0 text-sm font-medium text-grayScale-600">
+                          <SearchHighlight text={sub.name} query={searchQuery} />
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <span className="text-sm text-grayScale-600">{sub.category_name}</span>
+                      <span className="text-sm text-grayScale-600">
+                        <SearchHighlight text={sub.category_name} query={searchQuery} />
+                      </span>
                     </TableCell>
                     <TableCell>
                       <p className="max-w-md truncate text-sm text-grayScale-600" title={sub.description || undefined}>
-                        {sub.description?.trim() ? sub.description : <UnassignedLabel />}
+                        <DisplayValue value={sub.description} query={searchQuery} />
                       </p>
                     </TableCell>
                     <TableCell className="hidden xl:table-cell tabular-nums text-sm text-grayScale-600">

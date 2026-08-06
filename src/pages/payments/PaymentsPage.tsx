@@ -64,6 +64,7 @@ import type {
 
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 const STATUS_FILTERS: { value: PaymentStatus; label: string }[] = [
   { value: "PENDING", label: "Pending" },
@@ -570,22 +571,40 @@ export function PaymentsPage() {
                   {paginatedPayments.map((payment) => (
                     <tr key={payment.id} className="group transition-colors hover:bg-grayScale-50/60">
                       <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                        <p className="font-semibold text-grayScale-900">#{payment.id}</p>
+                        <p className="font-semibold text-grayScale-900">
+                          <SearchHighlight text={`#${payment.id}`} query={searchQuery} />
+                        </p>
                         <p className="mt-0.5 max-w-[140px] truncate font-mono text-[11px] text-grayScale-500">
-                          {payment.transaction_id || payment.session_id || <UnassignedLabel />}
+                          {payment.transaction_id || payment.session_id ? (
+                            <SearchHighlight
+                              text={payment.transaction_id || payment.session_id || ""}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            <UnassignedLabel />
+                          )}
                         </p>
                       </td>
                       <td className="px-3 py-2.5 sm:px-4">
                         <p className="max-w-[150px] truncate font-medium text-grayScale-900">
-                          {paymentCustomerName(payment)}
+                          <SearchHighlight
+                            text={paymentCustomerName(payment)}
+                            query={searchQuery}
+                          />
                         </p>
                         <p className="mt-0.5 max-w-[150px] truncate text-xs text-grayScale-500">
-                          {payment.user_email || `User #${payment.user_id}`}
+                          <SearchHighlight
+                            text={payment.user_email || `User #${payment.user_id}`}
+                            query={searchQuery}
+                          />
                         </p>
                       </td>
                       <td className="px-3 py-2.5 sm:px-4">
                         <p className="max-w-[160px] truncate font-medium text-grayScale-800">
-                          {payment.plan_name || `Plan #${payment.plan_id}`}
+                          <SearchHighlight
+                            text={payment.plan_name || `Plan #${payment.plan_id}`}
+                            query={searchQuery}
+                          />
                         </p>
                         {payment.plan_category && (
                           <p className="mt-0.5 truncate text-[11px] text-grayScale-400">

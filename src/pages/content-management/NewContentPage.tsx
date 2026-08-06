@@ -49,25 +49,25 @@ export function NewContentPage() {
         </div>
       </div>
 
-      {/* Cards Grid */}
-      <div className="grid max-w-5xl gap-8 grid-cols-1 md:grid-cols-2">
+      {/* Cards Grid — equal-height cards with bottom-aligned actions */}
+      <div className="grid max-w-5xl gap-8 grid-cols-1 items-stretch md:grid-cols-2">
         {/* Learn English Card */}
-        <Card className="overflow-hidden border-none shadow-soft">
-          <div className="flex h-56 items-center justify-center bg-white/50">
+        <Card className="flex h-full flex-col overflow-hidden border-none shadow-soft">
+          <div className="flex h-56 shrink-0 items-center justify-center bg-white/50">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-100/30">
               <Mic className="h-10 w-10 text-brand-500" />
             </div>
           </div>
-          <CardContent className="border-t border-grayScale-200 bg-white p-8 text-center">
+          <CardContent className="flex flex-1 flex-col border-t border-grayScale-200 bg-white p-8 text-center">
             <h3 className="text-xl font-bold text-grayScale-700">
               Learn English
             </h3>
-            <p className="mt-3 text-sm leading-relaxed text-grayScale-500">
+            <p className="mt-3 flex-1 text-sm leading-relaxed text-grayScale-500">
               Manage structured English learning content based on levels and
               modules.
             </p>
-            <Link to="/new-content/learn-english">
-              <Button className="mt-8 h-12 w-full rounded-[6px] bg-brand-500 text-base font-semibold ">
+            <Link to="/new-content/learn-english" className="mt-8 block w-full">
+              <Button className="h-12 w-full rounded-[6px] bg-brand-500 text-base font-semibold">
                 Manage Learn English
               </Button>
             </Link>
@@ -75,19 +75,19 @@ export function NewContentPage() {
         </Card>
 
         {/* Courses Card */}
-        <Card className="overflow-hidden border-none shadow-soft">
-          <div className="flex h-56 items-center justify-center bg-white/50">
+        <Card className="flex h-full flex-col overflow-hidden border-none shadow-soft">
+          <div className="flex h-56 shrink-0 items-center justify-center bg-white/50">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-100/30">
               <Mic className="h-10 w-10 text-brand-500" />
             </div>
           </div>
-          <CardContent className="border-t border-grayScale-200 bg-white p-8 text-center">
+          <CardContent className="flex flex-1 flex-col border-t border-grayScale-200 bg-white p-8 text-center">
             <h3 className="text-xl font-bold text-grayScale-700">Courses</h3>
-            <p className="mt-3 text-sm leading-relaxed text-grayScale-500">
+            <p className="mt-3 flex-1 text-sm leading-relaxed text-grayScale-500">
               Manage skill-based and Duolingo/IELTS courses.
             </p>
-            <Link to="/new-content/courses" className="block w-full">
-              <Button className="mt-8 h-12 w-full rounded-[6px] bg-brand-500 text-base font-semibold ">
+            <Link to="/new-content/courses" className="mt-8 block w-full">
+              <Button className="h-12 w-full rounded-[6px] bg-brand-500 text-base font-semibold">
                 Manage Courses
               </Button>
             </Link>

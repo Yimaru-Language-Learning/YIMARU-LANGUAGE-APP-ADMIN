@@ -18,12 +18,14 @@ import {
   practicePublishStatus,
 } from "../../../lib/parentContextPractice";
 import { resolveThumbnailForPreview } from "../../../lib/videoPreview";
+import { SearchHighlight } from "../../../components/SearchHighlight";
 import { cn } from "../../../lib/utils";
 import { PublishStatusConfirmDialog } from "./PublishStatusConfirmDialog";
 
 type ModulePracticeCardProps = {
   practice: ParentContextPractice;
   statusUpdating?: boolean;
+  searchQuery?: string;
   onEdit?: () => void;
   onPublish?: () => void;
   onSaveAsDraft?: () => void;
@@ -34,6 +36,7 @@ type ModulePracticeCardProps = {
 export function ModulePracticeCard({
   practice,
   statusUpdating = false,
+  searchQuery = "",
   onEdit,
   onPublish,
   onSaveAsDraft,
@@ -167,7 +170,7 @@ export function ModulePracticeCard({
           </div>
 
           <h3 className="line-clamp-3 min-h-[2.75rem] text-[14px] font-bold leading-snug text-[#0F172A]">
-            {practice.title}
+            <SearchHighlight text={practice.title} query={searchQuery} />
           </h3>
 
           <div className="mt-auto grid grid-cols-1 gap-2 pt-2">

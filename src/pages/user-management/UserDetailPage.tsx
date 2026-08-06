@@ -36,6 +36,17 @@ import { UserLearningActivitySection } from "./components/UserLearningActivitySe
 import { UserAccountActivitySection } from "./components/UserAccountActivitySection";
 import { UserSubscriptionsSection } from "./components/UserSubscriptionsSection";
 import { DisplayValue, NOT_ASSIGNED_LABEL, UnassignedLabel, displayValue, isUnassignedLabel } from "../../lib/displayValue"
+import {
+  displayUserAgeGroup,
+  displayUserOccupation,
+  displayUserRegion,
+  displayUserEducationLevel,
+  displayUserLearningGoal,
+  displayUserLanguageChallenge,
+  displayUserLanguageGoal,
+  displayUserFavouriteTopic,
+  displayUserCountry,
+} from "../../lib/userProfileFieldDisplay"
 
 const activityIcons = {
   completed: CheckCircle2,
@@ -70,12 +81,6 @@ function formatStatusLabel(status: string): string {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
-}
-
-function formatAgeGroup(ageGroup: string): string {
-  const value = ageGroup.trim();
-  if (!value) return NOT_ASSIGNED_LABEL;
-  return value.replace(/_/g, "-");
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -334,8 +339,8 @@ export function UserDetailPage() {
 
   const contactFields = [
     { icon: Mail, label: "Email", value: displayValue(user.email) },
-    { icon: Globe, label: "Country", value: displayValue(user.country) },
-    { icon: MapPin, label: "Region", value: displayValue(user.region) },
+    { icon: Globe, label: "Country", value: displayUserCountry(user.country) },
+    { icon: MapPin, label: "Region", value: displayUserRegion(user.region) },
   ];
 
   return (
@@ -416,7 +421,7 @@ export function UserDetailPage() {
                 <InfoRow label="Joined" value={formatDate(user.created_at)} />
                 <InfoRow label="Last login" value={formatDateTime(user.last_login, "Never")} />
                 <InfoRow label="Gender" value={<DisplayValue value={user.gender} />} />
-                <InfoRow label="Occupation" value={<DisplayValue value={user.occupation} />} />
+                <InfoRow label="Occupation" value={displayUserOccupation(user.occupation)} />
               </div>
             </CardContent>
           </Card>
@@ -468,27 +473,23 @@ export function UserDetailPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-                <InfoItem label="Education level" value={<DisplayValue value={user.education_level} />} />
-                <InfoItem label="Age group" value={formatAgeGroup(user.age_group)} />
-                <InfoItem label="Favorite topic" value={<DisplayValue value={user.favoutite_topic} />} />
-                <InfoItem label="Language goal" value={<DisplayValue value={user.language_goal} />} />
-                <InfoItem label="Challenge" value={<DisplayValue value={user.language_challange} />} />
+                <InfoItem label="Education level" value={displayUserEducationLevel(user.education_level)} />
+                <InfoItem label="Age group" value={displayUserAgeGroup(user.age_group)} />
+                <InfoItem label="Favorite topic" value={displayUserFavouriteTopic(user.favoutite_topic)} />
+                <InfoItem label="Language goal" value={displayUserLanguageGoal(user.language_goal)} />
+                <InfoItem label="Challenge" value={displayUserLanguageChallenge(user.language_challange)} />
                 <InfoItem label="Role" value={formatRoleLabel(user.role)} />
               </div>
 
-              {user.learning_goal.trim() ? (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
-                      Learning goal
-                    </p>
-                    <div className="rounded-xl bg-grayScale-100 p-4 text-sm leading-relaxed text-grayScale-700">
-                      {user.learning_goal.trim()}
-                    </div>
-                  </div>
-                </>
-              ) : null}
+              <Separator />
+              <div>
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-grayScale-400">
+                  Learning goal
+                </p>
+                <div className="rounded-xl bg-grayScale-100 p-4 text-sm leading-relaxed text-grayScale-700">
+                  {displayUserLearningGoal(user.learning_goal)}
+                </div>
+              </div>
             </CardContent>
           </Card>
 

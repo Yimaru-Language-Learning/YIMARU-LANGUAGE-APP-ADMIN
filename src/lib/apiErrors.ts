@@ -7,12 +7,15 @@ export function readApiResponseMessage(data: unknown): string {
   if (typeof data === "string") return data.trim()
   if (data && typeof data === "object") {
     const record = data as Record<string, unknown>
-    if (typeof record.message === "string" && record.message.trim()) {
-      return record.message.trim()
+    const message =
+      typeof record.message === "string" ? record.message.trim() : ""
+    const detail =
+      typeof record.error === "string" ? record.error.trim() : ""
+    if (message && detail && detail !== message) {
+      return `${message}: ${detail}`
     }
-    if (typeof record.error === "string" && record.error.trim()) {
-      return record.error.trim()
-    }
+    if (message) return message
+    if (detail) return detail
   }
   return ""
 }

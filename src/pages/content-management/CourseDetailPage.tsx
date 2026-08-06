@@ -58,7 +58,8 @@ import { AddModuleModal } from "./components/AddModuleModal";
 import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
 import { ModulePracticeCard } from "./components/ModulePracticeCard";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 const MODULE_CARD_GRADIENT = "from-[#8E44AD] to-[#C39BD3]" as const;
 
@@ -783,12 +784,13 @@ export function CourseDetailPage() {
                               />
                             </div>
                             <h3 className="text-lg font-bold tracking-tight text-[#0F172A]">
-                              {module.name}
+                              <SearchHighlight text={module.name} query={moduleSearch} />
                             </h3>
                             <p className="text-[12px] font-medium leading-snug text-grayScale-400 line-clamp-3">
-                              {module.description?.trim()
-                                ? module.description
-                                : <UnassignedLabel />}
+                              <DisplayValue
+                                value={module.description}
+                                query={moduleSearch}
+                              />
                             </p>
                           </div>
                         </div>
@@ -852,6 +854,7 @@ export function CourseDetailPage() {
                       key={practice.id}
                       practice={practice}
                       statusUpdating={publishStatusPracticeId === practice.id}
+                      searchQuery={practiceSearch}
                       onEdit={() =>
                         navigate(
                           `/new-content/learn-english/${programIdParam}/courses/${courseIdNum}/edit-practice/${practice.id}?backTo=courses`,

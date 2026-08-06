@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { listPersonas, updatePersona } from "../../api/personas.api"
+import { SearchHighlight } from "../../components/SearchHighlight"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -309,10 +310,12 @@ export function PersonasPage() {
                         />
                       </TableCell>
                       <TableCell className="py-3.5">
-                        <p className="text-sm font-semibold text-grayScale-700">{persona.name}</p>
+                        <p className="text-sm font-semibold text-grayScale-700">
+                          <SearchHighlight text={persona.name} query={query} />
+                        </p>
                         {persona.description ? (
                           <p className="mt-0.5 line-clamp-2 text-xs text-grayScale-500">
-                            {persona.description}
+                            <SearchHighlight text={persona.description} query={query} />
                           </p>
                         ) : null}
                       </TableCell>

@@ -39,6 +39,7 @@ import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 const MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024
 const ALLOWED_AUDIO_EXTENSIONS = new Set(["mp3", "wav", "ogg", "m4a", "aac", "webm", "flac"])
@@ -1459,7 +1460,14 @@ export function SpeakingPage() {
                               }
                               onChange={() => togglePracticeSelection(group.practiceId)}
                             />
-                            {group.practiceTitle} {group.practiceId ? `(#${group.practiceId})` : ""}
+                            {group.practiceTitle ? (
+                              <SearchHighlight
+                                text={`${group.practiceTitle}${group.practiceId ? ` (#${group.practiceId})` : ""}`}
+                                query={searchQuery}
+                              />
+                            ) : (
+                              "Unknown practice"
+                            )}
                           </label>
                         </div>
                       </div>
@@ -1481,7 +1489,9 @@ export function SpeakingPage() {
                               onChange={() => toggleQuestionSelection(question.id)}
                               className="mt-1"
                             />
-                            <p className="text-sm font-medium leading-snug text-grayScale-800">{question.question_text}</p>
+                            <p className="text-sm font-medium leading-snug text-grayScale-800">
+                              <SearchHighlight text={question.question_text} query={searchQuery} />
+                            </p>
                           </div>
                           <Button
                             variant="ghost"

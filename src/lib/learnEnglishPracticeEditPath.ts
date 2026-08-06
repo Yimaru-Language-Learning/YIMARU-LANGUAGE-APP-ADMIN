@@ -172,7 +172,7 @@ async function detectParentTab(
 }
 
 function buildCourseEditPath(programId: number, courseId: number, practiceId: number): string {
-  return `/new-content/learn-english/${programId}/courses/${courseId}/edit-practice/${practiceId}?backTo=courses`
+  return `/new-content/learn-english/${programId}/courses/${courseId}/edit-practice/${practiceId}?kind=LMS&backTo=courses`
 }
 
 function buildModuleEditPath(
@@ -181,7 +181,7 @@ function buildModuleEditPath(
   moduleId: number,
   practiceId: number,
 ): string {
-  return `/new-content/learn-english/${programId}/courses/${courseId}/modules/${moduleId}/edit-practice/${practiceId}?backTo=module`
+  return `/new-content/learn-english/${programId}/courses/${courseId}/modules/${moduleId}/edit-practice/${practiceId}?kind=LMS&backTo=module`
 }
 
 function buildLessonEditPath(
@@ -193,7 +193,7 @@ function buildLessonEditPath(
   lessonTitle?: string,
 ): string {
   const titleQuery = lessonTitle ? `lessonTitle=${encodeURIComponent(lessonTitle)}&` : ""
-  return `/new-content/learn-english/${programId}/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/edit-practice/${practiceId}?${titleQuery}backTo=lesson`
+  return `/new-content/learn-english/${programId}/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/edit-practice/${practiceId}?${titleQuery}kind=LMS&backTo=lesson`
 }
 
 async function resolveFromDirectNavFields(

@@ -614,6 +614,7 @@ export function ModuleDetailPage() {
                   hoverModuleActions
                   thumbnailUrl={resolveThumbnailForPreview(lesson.thumbnail)}
                   thumbnailGradient={LESSON_THUMB_GRADIENTS[i % LESSON_THUMB_GRADIENTS.length]}
+                  searchQuery={lessonSearch}
                   durationSeconds={(() => {
                     const raw =
                       lesson.duration_seconds ?? lesson.duration ?? null;
@@ -708,6 +709,7 @@ export function ModuleDetailPage() {
                     key={practice.id}
                     practice={practice}
                     statusUpdating={publishStatusPracticeId === practice.id}
+                    searchQuery={practiceSearch}
                     onEdit={() =>
                       navigate(
                         `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/edit-practice/${practice.id}?backTo=module`,

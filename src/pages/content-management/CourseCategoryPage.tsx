@@ -19,6 +19,7 @@ import {
 import { getCourseCategories, createCourseCategory, deleteCourseCategory } from "../../api/courses.api"
 import type { CourseCategory } from "../../types/course.types"
 import { toast } from "sonner"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 export function CourseCategoryPage() {
   const [categories, setCategories] = useState<CourseCategory[]>([])
@@ -163,7 +164,7 @@ export function CourseCategoryPage() {
                     <FolderOpen className="h-6 w-6" />
                   </div>
                   <CardTitle className="text-lg font-semibold text-grayScale-600 transition-colors group-hover:text-grayScale-700">
-                    {category.name}
+                    <SearchHighlight text={category.name} query={searchQuery} />
                   </CardTitle>
                 </CardHeader>
 

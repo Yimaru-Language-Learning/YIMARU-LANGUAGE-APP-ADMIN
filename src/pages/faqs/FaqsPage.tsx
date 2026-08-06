@@ -49,6 +49,7 @@ import { FaqDeleteDialog } from "./components/FaqDeleteDialog"
 import { FaqAccessDenied } from "./components/FaqAccessDenied"
 import { FaqPublicPreviewDialog } from "./components/FaqPublicPreviewDialog"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 type StatusFilter = "all" | FAQStatus
 
@@ -333,7 +334,7 @@ export function FaqsPage() {
                   <TableRow key={faq.id}>
                     <TableCell className="max-w-xs">
                       <p className="line-clamp-2 font-medium text-grayScale-900">
-                        {faq.question}
+                        <SearchHighlight text={faq.question} query={query} />
                       </p>
                     </TableCell>
                     <TableCell>

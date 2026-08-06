@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { SearchHighlight } from "../components/SearchHighlight"
 import { cn } from "./utils"
 
 export const UNASSIGNED_LABEL = "unassigned"
@@ -32,19 +33,30 @@ export function DisplayValue({
   value,
   className,
   unassignedClassName,
+  query = "",
 }: {
   value: string | number | null | undefined
   className?: string
   unassignedClassName?: string
+  /** When set, matching search keywords are highlighted. */
+  query?: string
 }): ReactNode {
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
       return <UnassignedLabel className={unassignedClassName} />
+    }
+    const asText = String(value)
+    if (query.trim()) {
+      return <SearchHighlight text={asText} query={query} className={className} />
     }
     return <span className={className}>{value}</span>
   }
   if (isUnassignedLabel(value)) {
     return <UnassignedLabel className={unassignedClassName} />
   }
-  return <span className={className}>{value!.trim()}</span>
+  const text = value!.trim()
+  if (query.trim()) {
+    return <SearchHighlight text={text} query={query} className={className} />
+  }
+  return <span className={className}>{text}</span>
 }

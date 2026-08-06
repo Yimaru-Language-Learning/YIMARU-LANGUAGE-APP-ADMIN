@@ -34,6 +34,7 @@ import { cn } from "../../lib/utils"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import { PageBackLink } from "../../components/navigation/PageBackLink"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 type CourseWithCategory = Course & { category_name: string }
 
@@ -346,16 +347,16 @@ export function AllCoursesPage() {
                     >
                       <TableCell className="max-w-md py-3.5">
                         <div className="truncate text-sm font-semibold text-grayScale-700">
-                          {course.title}
+                          <SearchHighlight text={course.title} query={search} />
                         </div>
                         {course.description && (
                           <div className="mt-1 truncate text-xs text-grayScale-400">
-                            {course.description}
+                            <SearchHighlight text={course.description} query={search} />
                           </div>
                         )}
                       </TableCell>
                       <TableCell className="py-3.5 text-sm text-grayScale-500">
-                        {course.category_name}
+                        <SearchHighlight text={course.category_name} query={search} />
                       </TableCell>
                       <TableCell className="hidden py-3.5 md:table-cell">
                         <Badge

@@ -46,7 +46,8 @@ import type {
   ProgramCourseListItem,
 } from "../../types/course.types";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 export function ProgramCoursesPage() {
   const navigate = useNavigate();
@@ -757,10 +758,10 @@ export function ProgramCoursesPage() {
                         />
                       </div>
                       <h3 className="text-xl font-bold text-grayScale-700">
-                        {course.name}
+                        <SearchHighlight text={course.name} query={listSearch} />
                       </h3>
                       <p className="mt-2 text-[13px] leading-relaxed text-grayScale-500 line-clamp-2">
-                        {course.description?.trim() ? course.description : <UnassignedLabel />}
+                        <DisplayValue value={course.description} query={listSearch} />
                       </p>
 
                       <div className="my-6 grid grid-cols-3 gap-4 border-y border-grayScale-50 py-4">

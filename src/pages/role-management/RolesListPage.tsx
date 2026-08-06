@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
 import {
-  Plus,
   Search,
   Shield,
   ShieldCheck,
@@ -28,7 +26,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "../../components/ui/dialog"
 import {
-  getRoles,
   getRoleDetail,
   getAllPermissions,
   setRolePermissions,
@@ -36,6 +33,7 @@ import {
   deleteRole,
   bulkDeactivateRole,
   bulkReactivateRole,
+  fetchAllRoles,
 } from "../../api/rbac.api"
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
@@ -45,9 +43,12 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { InviteTeamMemberDialog } from "./components/InviteTeamMemberDialog"
 import { SuperAdminOnly } from "../../components/access/AdminAccessGates"
 import { STAFF_TEAM_ROLE_OPTIONS } from "../../lib/teamRoles"
+import {
+  matchesRoleManagementCategory,
+  type RoleManagementCategory,
+} from "../../lib/rbacRoleCategories"
 
 export function RolesListPage() {
-  const navigate = useNavigate()
   const staffRoleNames = useMemo(
     () => new Set(STAFF_TEAM_ROLE_OPTIONS.map((o) => o.value)),
     [],
@@ -55,7 +56,7 @@ export function RolesListPage() {
 
   // List state
   const [roles, setRoles] = useState<Role[]>([])
-  const [total, setTotal] = useState(0)
+  const [roleCategoryFilter, setRoleCategoryFilter] = useState<RoleManagementCategory>("team")
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [query, setQuery] = useState("")
@@ -105,23 +106,24 @@ export function RolesListPage() {
     return () => clearTimeout(timer)
   }, [query])
 
+  useEffect(() => {
+    setPage(1)
+  }, [roleCategoryFilter])
+
   const fetchRoles = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await getRoles({
+      const all = await fetchAllRoles({
         query: debouncedQuery || undefined,
-        page,
-        page_size: pageSize,
       })
-      setRoles(res.data.data.roles ?? [])
-      setTotal(res.data.data.total ?? 0)
+      setRoles(all)
     } catch {
       setError("Failed to load roles.")
     } finally {
       setLoading(false)
     }
-  }, [debouncedQuery, page, pageSize])
+  }, [debouncedQuery])
 
   // Fetch roles
   useEffect(() => {
@@ -339,25 +341,51 @@ export function RolesListPage() {
     return entries.sort(([a], [b]) => a.localeCompare(b))
   }, [allPermissionsMap, permSearch])
 
+  const filteredRoles = useMemo(
+    () => roles.filter((role) => matchesRoleManagementCategory(role.name, roleCategoryFilter)),
+    [roles, roleCategoryFilter],
+  )
+
+  const total = filteredRoles.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const safePage = Math.min(page, totalPages)
+
+  const paginatedRoles = useMemo(() => {
+    const start = (safePage - 1) * pageSize
+    return filteredRoles.slice(start, start + pageSize)
+  }, [filteredRoles, safePage, pageSize])
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">Role Management</h1>
-          <p className="mt-1 text-sm text-grayScale-400">
-            Manage roles and their permissions.
-          </p>
-        </div>
-        <Button
-          onClick={() => navigate("/roles/add")}
-          className="bg-brand-500 hover:bg-brand-600"
-        >
-          <Plus className="h-4 w-4" />
-          Add New Role
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">Role Management</h1>
+        <p className="mt-1 text-sm text-grayScale-400">
+          Manage roles and their permissions.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {(
+          [
+            { value: "team" as const, label: "Team member roles" },
+            { value: "user" as const, label: "User roles" },
+          ] as const
+        ).map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setRoleCategoryFilter(value)}
+              className={cn(
+                "h-9 rounded-full px-3 text-xs font-semibold transition-colors",
+                roleCategoryFilter === value
+                  ? "bg-brand-500 text-white"
+                  : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",
+              )}
+            >
+              {label}
+          </button>
+        ))}
       </div>
 
       {/* Search */}
@@ -398,7 +426,7 @@ export function RolesListPage() {
       {/* Roles grid */}
       {!loading && !error && (
         <>
-          {roles.length === 0 ? (
+          {filteredRoles.length === 0 ? (
             <Card className="shadow-none border border-dashed border-grayScale-200 bg-grayScale-50/60">
               <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                 <Shield className="h-10 w-10 text-grayScale-300" />
@@ -406,13 +434,15 @@ export function RolesListPage() {
                 <p className="text-xs text-grayScale-400">
                   {debouncedQuery
                     ? `No roles match "${debouncedQuery}".`
-                    : "Create a new role to get started."}
+                    : roleCategoryFilter === "team"
+                      ? "No team member roles match this view."
+                      : "No user roles match this view."}
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {roles.map((role) => (
+              {paginatedRoles.map((role) => (
                 <Card
                   key={role.id}
                   className="overflow-hidden border border-grayScale-100 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
@@ -553,7 +583,7 @@ export function RolesListPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-grayScale-100 pt-4 text-sm text-grayScale-500">
               <div className="flex flex-wrap items-center gap-2">
                 <span>
-                  Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total} roles
+                  Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, total)} of {total} roles
                 </span>
                 <span className="hidden h-4 w-px bg-grayScale-200 sm:inline" />
                 <span className="flex items-center gap-2">
@@ -583,20 +613,20 @@ export function RolesListPage() {
                     variant="outline"
                     size="icon"
                     className="h-8 w-8"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
+                    disabled={safePage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="px-3 text-xs font-medium text-grayScale-600">
-                    {page} / {totalPages}
+                    {safePage} / {totalPages}
                   </span>
                   <Button
                     variant="outline"
                     size="icon"
                     className="h-8 w-8"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => p + 1)}
+                    disabled={safePage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

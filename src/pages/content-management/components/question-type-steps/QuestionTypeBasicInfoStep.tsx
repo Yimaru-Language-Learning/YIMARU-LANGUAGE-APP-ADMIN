@@ -4,7 +4,6 @@ import { Textarea } from "../../../../components/ui/textarea"
 import { Select } from "../../../../components/ui/select"
 import type { QuestionTypeDefinitionCreatePayload } from "../../../../types/questionTypeDefinition.types"
 import type { FieldErrorMap } from "../../lib/questionTypeDefinitionValidation"
-import { QuestionTypeGroupsMultiSelect } from "../QuestionTypeGroupSelect"
 import { QuestionTypeStepFooter } from "./QuestionTypeStepFooter"
 
 interface QuestionTypeBasicInfoStepProps {
@@ -80,17 +79,6 @@ export function QuestionTypeBasicInfoStep({
               value={draft.description ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
             />
-          </div>
-
-          <div className="space-y-2 max-w-md">
-            <label className="text-[14px] font-medium text-grayScale-700 dark:text-grayScale-500">Groups</label>
-            <QuestionTypeGroupsMultiSelect
-              value={draft.group_ids ?? null}
-              onChange={(groupIds) => setDraft((d) => ({ ...d, group_ids: groupIds }))}
-            />
-            <p className="text-grayScale-400 text-[13px] font-medium">
-              Optional catalog groups for organizing this definition in the library.
-            </p>
           </div>
 
           <div className="space-y-2 max-w-xs">

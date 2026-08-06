@@ -253,6 +253,7 @@ export function UnitPracticesPanel({
               key={practice.id}
               practice={practice}
               statusUpdating={publishStatusUpdatingId === practice.id}
+              searchQuery={listSearch}
               onEdit={() => navigate(editPracticeHref(practice.id))}
               onPublish={() => void handlePracticePublishStatus(practice.id, "PUBLISHED")}
               onSaveAsDraft={() => void handlePracticePublishStatus(practice.id, "DRAFT")}

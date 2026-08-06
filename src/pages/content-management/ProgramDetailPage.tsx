@@ -44,7 +44,8 @@ import {
 } from "../../lib/contentListFilters";
 import { uploadImageFile } from "../../api/files.api";
 import uploadIcon from "../../assets/icons/upload.png";
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 export function ProgramDetailPage() {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ export function ProgramDetailPage() {
         list.map((row) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Course ${row.id}`,
-          description: row.description?.trim() || <UnassignedLabel />,
+          description: row.description?.trim() || "",
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
           publishStatus: row.publish_status ?? null,
@@ -311,7 +312,7 @@ export function ProgramDetailPage() {
         {
           id: row.id,
           name: row.name ?? name,
-          description: row.description?.trim() || <UnassignedLabel />,
+          description: row.description?.trim() || "",
           thumbnail: row.thumbnail?.trim() || null,
           sortOrder: Number(row.sort_order ?? 0),
           unitsCount: Number(row.units_count ?? 0),
@@ -394,9 +395,7 @@ export function ProgramDetailPage() {
       const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
       const existing = createdCourses.find((c) => c.id === editingCourseId);
       const preservedDescription =
-        existing?.description && existing.description !== "unassigned"
-          ? existing.description
-          : null;
+        typeof existing?.description === "string" ? existing.description.trim() || null : null;
       const response = await updateExamPrepCatalogCourse(editingCourseId, {
         name,
         description: preservedDescription,
@@ -410,7 +409,7 @@ export function ProgramDetailPage() {
             ? {
                 ...course,
                 name: row?.name ?? name,
-                description: row?.description?.trim() || preservedDescription || <UnassignedLabel />,
+                description: row?.description?.trim() || preservedDescription || "",
                 thumbnail: row?.thumbnail?.trim() || null,
                 sortOrder: Number(row?.sort_order ?? sortOrderNum),
                 unitsCount: Number(row?.units_count ?? course.unitsCount ?? 0),
@@ -754,10 +753,10 @@ export function ProgramDetailPage() {
                 </div>
               ) : null}
               <h3 className="text-[18px] font-medium text-grayScale-900">
-                {course.name}
+                <SearchHighlight text={course.name} query={listSearch} />
               </h3>
-              <p className="text-[14px] text-grayScale-500 font-medium">
-                {course.description}
+                <p className="text-[14px] text-grayScale-500 font-medium">
+                <DisplayValue value={course.description} query={listSearch} />
               </p>
             </div>
 

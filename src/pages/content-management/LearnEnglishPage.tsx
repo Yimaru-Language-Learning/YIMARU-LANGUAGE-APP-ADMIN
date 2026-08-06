@@ -42,7 +42,8 @@ import {
 } from "../../lib/contentListFilters";
 import { refreshFileUrl, uploadImageFile } from "../../api/files.api";
 import type { LearningProgramListItem } from "../../types/course.types";
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 /** Presigned MinIO/S3 URLs and our storage hosts — safe to send to POST /files/refresh-url. */
 function looksLikeRefreshableFileUrl(url: string): boolean {
@@ -728,12 +729,10 @@ export function LearnEnglishPage() {
                         />
                       </div>
                       <h3 className="text-xl font-bold text-grayScale-700 line-clamp-2">
-                        {program.name}
+                        <SearchHighlight text={program.name} query={listSearch} />
                       </h3>
                       <p className="mt-2 text-sm leading-relaxed text-grayScale-500 line-clamp-4">
-                        {program.description?.trim()
-                          ? program.description
-                          : <UnassignedLabel />}
+                        <DisplayValue value={program.description} query={listSearch} />
                       </p>
                     </div>
                     <Link

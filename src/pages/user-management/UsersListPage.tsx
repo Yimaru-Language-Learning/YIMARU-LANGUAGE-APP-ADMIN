@@ -27,6 +27,8 @@ import { USER_FILTER_COUNTRIES, USER_FILTER_ETHIOPIA_REGIONS } from "../../data/
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
 import { usersExportQuery } from "../../lib/csvExportFilters"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
+import { displayUserRegion, displayUserCountry } from "../../lib/userProfileFieldDisplay"
 
 function formatJoinedAt(iso: string): string {
   if (!iso?.trim()) return "unassigned"
@@ -151,7 +153,6 @@ export function UsersListPage() {
     name: string
     nextStatus: UserStatus
   } | null>(null)
-  const [statusFilter, setStatusFilter] = useState("")
   const [createdAfterLocal, setCreatedAfterLocal] = useState("")
   const [createdBeforeLocal, setCreatedBeforeLocal] = useState("")
   const [countryFilter, setCountryFilter] = useState("")
@@ -182,7 +183,6 @@ export function UsersListPage() {
         const res = await getUsers({
           page,
           page_size: pageSize,
-          status: statusFilter || undefined,
           query: search || undefined,
           created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
           created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
@@ -222,7 +222,6 @@ export function UsersListPage() {
   }, [
     page,
     pageSize,
-    statusFilter,
     search,
     createdAfterLocal,
     createdBeforeLocal,
@@ -333,7 +332,6 @@ export function UsersListPage() {
   }
 
   const activeFilterCount = countActiveFilters([
-    { value: statusFilter },
     { value: createdAfterLocal },
     { value: createdBeforeLocal },
     { value: countryFilter },
@@ -342,7 +340,6 @@ export function UsersListPage() {
   ])
 
   const clearFilters = () => {
-    setStatusFilter("")
     setCreatedAfterLocal("")
     setCreatedBeforeLocal("")
     setCountryFilter("")
@@ -354,7 +351,6 @@ export function UsersListPage() {
   const exportParams = useMemo(
     () =>
       usersExportQuery({
-        status: statusFilter || undefined,
         query: search || undefined,
         created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
         created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
@@ -367,7 +363,6 @@ export function UsersListPage() {
         subscription_status: subscriptionStatusFilter || undefined,
       }),
     [
-      statusFilter,
       search,
       createdAfterLocal,
       createdBeforeLocal,
@@ -385,8 +380,16 @@ export function UsersListPage() {
     }
     return (
       <div className="space-y-1 text-sm text-grayScale-600">
-        {hasPhone ? <div className="tabular-nums">{phone!.trim()}</div> : null}
-        {hasEmail ? <div className="break-all text-grayScale-500">{email!.trim()}</div> : null}
+        {hasPhone ? (
+          <div className="tabular-nums">
+            <SearchHighlight text={phone!.trim()} query={search} />
+          </div>
+        ) : null}
+        {hasEmail ? (
+          <div className="break-all text-grayScale-500">
+            <SearchHighlight text={email!.trim()} query={search} />
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -491,23 +494,6 @@ export function UsersListPage() {
             </div>
           }
         >
-          <div className="flex flex-wrap gap-3">
-            <div className="relative w-full sm:w-auto">
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value)
-                  setPage(1)
-                }}
-                className="h-9 w-full sm:w-auto appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-grayScale-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                <option value="">All statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400 pointer-events-none" />
-            </div>
-          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <div className="flex flex-col gap-1">
               <label htmlFor="filter-created-after" className="text-xs font-medium text-grayScale-500">
@@ -660,15 +646,22 @@ export function UsersListPage() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="font-medium text-grayScale-600">
-                          {u.firstName} {u.lastName}
+                          <SearchHighlight
+                            text={`${u.firstName} ${u.lastName}`.trim()}
+                            query={search}
+                          />
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell align-top">
                       {renderContactDetails(u.phoneNumber, u.email)}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.country || <UnassignedLabel />}</TableCell>
-                    <TableCell className="hidden md:table-cell text-grayScale-500">{u.region || <UnassignedLabel />}</TableCell>
+                    <TableCell className="hidden md:table-cell text-grayScale-500">
+                      {displayUserCountry(u.country)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-grayScale-500">
+                      {displayUserRegion(u.region)}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-grayScale-500 whitespace-nowrap">
                       {formatJoinedAt(u.createdAt)}
                     </TableCell>

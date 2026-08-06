@@ -29,6 +29,7 @@ import { countActiveFilters } from "../../lib/adminFilterUtils"
 import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages"
 import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
+import { SearchHighlight } from "../../components/SearchHighlight"
 import { useNavigate } from "react-router-dom"
 import {
   getNotifications,
@@ -60,10 +61,12 @@ function NotificationItem({
   notification,
   onToggleRead,
   toggling,
+  searchTerm = "",
 }: {
   notification: Notification
   onToggleRead: (id: string, currentlyRead: boolean) => void
   toggling: boolean
+  searchTerm?: string
 }) {
   const config = NOTIFICATION_TYPE_CONFIG[notification.type] ?? DEFAULT_NOTIFICATION_TYPE_CONFIG
   const Icon = config.icon
@@ -104,7 +107,10 @@ function NotificationItem({
                   notification.is_read ? "text-grayScale-600" : "text-grayScale-800",
                 )}
               >
-                {getNotificationTitle(notification)}
+                <SearchHighlight
+                  text={getNotificationTitle(notification)}
+                  query={searchTerm}
+                />
               </span>
               <Badge variant={getNotificationLevelBadge(notification.level)} className="text-[10px] px-1.5 py-0">
                 {notification.level}
@@ -116,7 +122,10 @@ function NotificationItem({
                 notification.is_read ? "text-grayScale-400" : "text-grayScale-600",
               )}
             >
-              {getNotificationMessage(notification)}
+              <SearchHighlight
+                text={getNotificationMessage(notification)}
+                query={searchTerm}
+              />
             </p>
           </div>
 
@@ -754,12 +763,18 @@ export function NotificationsPage() {
                                 n.is_read ? "text-grayScale-600" : "text-grayScale-800",
                               )}
                             >
-                              {getNotificationTitle(n)}
+                              <SearchHighlight
+                                text={getNotificationTitle(n)}
+                                query={searchTerm}
+                              />
                             </p>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <p className="max-w-sm truncate text-xs text-grayScale-500">
-                              {getNotificationMessage(n)}
+                              <SearchHighlight
+                                text={getNotificationMessage(n)}
+                                query={searchTerm}
+                              />
                             </p>
                           </TableCell>
                           <TableCell>

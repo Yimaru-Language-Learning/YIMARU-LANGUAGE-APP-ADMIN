@@ -28,6 +28,7 @@ import type {
 import type { Role } from "../../types/rbac.types"
 import { mapDeletionRequestApiItem } from "../../types/user.types"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 const stateBadge: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -540,10 +541,21 @@ export function DeletionRequestsPage() {
                     <TableRow key={`${item.user_id}-${index}`} className="group">
                       <TableCell className="py-3.5">
                         <p className="text-sm font-medium text-grayScale-700">
-                          {item.first_name} {item.last_name}
+                          <SearchHighlight
+                            text={`${item.first_name} ${item.last_name}`.trim()}
+                            query={query}
+                          />
                         </p>
-                        <p className="text-xs text-grayScale-500">{item.email}</p>
-                        <p className="text-xs text-grayScale-500">{item.phone_number || <UnassignedLabel />}</p>
+                        <p className="text-xs text-grayScale-500">
+                          <SearchHighlight text={item.email ?? ""} query={query} />
+                        </p>
+                        <p className="text-xs text-grayScale-500">
+                          {item.phone_number ? (
+                            <SearchHighlight text={item.phone_number} query={query} />
+                          ) : (
+                            <UnassignedLabel />
+                          )}
+                        </p>
                       </TableCell>
                       <TableCell className="py-3.5">
                         <p className="text-sm text-grayScale-700">{item.role || <UnassignedLabel />}</p>

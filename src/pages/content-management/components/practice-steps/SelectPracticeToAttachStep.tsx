@@ -36,6 +36,7 @@ function publishStatusClass(status?: string | null): string {
 function matchesPracticeSearch(
   practice: ParentContextPractice,
   query: string,
+  isExamPrep: boolean,
 ): boolean {
   const tokens = getSearchTokens(query)
   if (tokens.length === 0) return true
@@ -91,8 +92,11 @@ export function SelectPracticeToAttachStep({
   }, [searchInput, unlinkedOnly, pageSize])
 
   const filteredPractices = useMemo(
-    () => allPractices.filter((practice) => matchesPracticeSearch(practice, searchInput)),
-    [allPractices, searchInput],
+    () =>
+      allPractices.filter((practice) =>
+        matchesPracticeSearch(practice, searchInput, isExamPrep),
+      ),
+    [allPractices, searchInput, isExamPrep],
   )
 
   const totalCount = filteredPractices.length
@@ -199,7 +203,9 @@ export function SelectPracticeToAttachStep({
           {practices.map((practice) => {
             const alreadyLinked = practiceAlreadyLinkedToParent(practice, targetParent)
             const isSelected = practice.id === selectedPracticeId
-            const parentsLabel = formatPracticeParentsSummary(practice.parents ?? [])
+            const parentsLabel = formatPracticeParentsSummary(practice.parents ?? [], {
+              isExamPrep,
+            })
             return (
               <li key={practice.id}>
                 <button

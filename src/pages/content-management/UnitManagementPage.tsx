@@ -50,7 +50,8 @@ import {
 import { PracticeActionButton } from "./components/PracticeActionButton";
 import { UnitPracticesPanel } from "./components/UnitPracticesPanel";
 import { cn } from "../../lib/utils";
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 export function UnitManagementPage() {
   const navigate = useNavigate();
@@ -210,7 +211,7 @@ export function UnitManagementPage() {
         list.map((row, index) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Module ${row.id}`,
-          description: row.description?.trim() || <UnassignedLabel />,
+          description: row.description?.trim() || "",
           thumbnail: row.thumbnail?.trim() || "",
           icon: row.icon?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
@@ -524,10 +525,7 @@ export function UnitManagementPage() {
     setSavingEdit(true);
     try {
       const existing = modules.find((m) => m.id === editingModuleId);
-      const preservedDescription =
-        existing?.description && existing.description !== "unassigned"
-          ? existing.description
-          : null;
+      const preservedDescription = existing?.description?.trim() || null;
       const minioThumbnail = await resolveToMinioUrl(editThumbnail);
       const minioIcon = await resolveToMinioUrl(editIcon);
       await updateExamPrepUnitModule(editingModuleId, {
@@ -962,10 +960,10 @@ export function UnitManagementPage() {
                       />
                     </div>
                     <h3 className="text-[16px] font-medium text-grayScale-900 leading-tight">
-                      {module.name}
+                      <SearchHighlight text={module.name} query={listSearch} />
                     </h3>
                     <p className="text-[12px] text-grayScale-500 font-medium line-clamp-2">
-                      {module.description}
+                      <DisplayValue value={module.description} query={listSearch} />
                     </p>
                   </div>
                 </div>

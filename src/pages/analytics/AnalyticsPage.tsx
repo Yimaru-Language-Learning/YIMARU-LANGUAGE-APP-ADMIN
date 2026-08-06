@@ -63,18 +63,29 @@ import {
   formatRevenueAxisTick,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
-import { UnassignedLabel, isUnassignedLabel } from "../../lib/displayValue"
+import { isUnassignedLabel } from "../../lib/displayValue"
+import {
+  displayUserAgeGroup,
+  displayUserOccupation,
+  displayUserRegion,
+  displayUserEducationLevel,
+  displayUserLearningGoal,
+  displayUserLanguageChallenge,
+  displayUserCountry,
+  displayUserKnowledgeLevel,
+  mergeAnalyticsRowsByDisplayLabel,
+} from "../../lib/userProfileFieldDisplay"
 
 const PIE_COLORS = ["#9E2891", "#FFD23F", "#1DE9B6", "#C26FC0", "#6366F1", "#F97316", "#14B8A6", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16"]
 
-function genderAnalyticsRowLabel(label: string): ReactNode {
+function genderAnalyticsRowLabel(label: string): string {
   const trimmed = label?.trim() ?? ""
   if (
     isUnassignedLabel(trimmed) ||
     trimmed.toUpperCase() === "OTHER" ||
     trimmed.toLowerCase() === "unknown"
   ) {
-    return <UnassignedLabel />
+    return "unassigned"
   }
   return formatAnalyticsLabel(label)
 }
@@ -151,31 +162,26 @@ function BreakdownList({
   data: LabelCount[]
   total?: number
   scrollable?: boolean
-  formatRowLabel?: (label: string) => ReactNode
+  formatRowLabel?: (label: string) => string
 }) {
-  const computedTotal = total ?? data.reduce((s, d) => s + d.count, 0)
-  const sorted = [...data].sort((a, b) => b.count - a.count)
+  const labelFn = formatRowLabel ?? formatAnalyticsLabel
+  const merged = mergeAnalyticsRowsByDisplayLabel(data, labelFn).filter(
+    (row) => row.label.trim().toUpperCase() !== "OTHER",
+  )
+  const computedTotal = total ?? merged.reduce((s, d) => s + d.count, 0)
   return (
     <Card className="shadow-none flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 flex-1 flex flex-col">
-        {sorted.length > 0 ? (
+        {merged.length > 0 ? (
           <div
             className="space-y-2.5 flex-1 overflow-y-auto overscroll-contain pr-1 max-h-[320px]"
           >
-            {sorted.map((item, i) => {
+            {merged.map((item, i) => {
               const pct = computedTotal > 0 ? (item.count / computedTotal) * 100 : 0
-              const displayLabel = formatRowLabel
-                ? formatRowLabel(item.label)
-                : formatAnalyticsLabel(item.label)
-              const titleText =
-                typeof displayLabel === "string"
-                  ? displayLabel
-                  : isUnassignedLabel(item.label) || item.label.toUpperCase() === "OTHER"
-                    ? "unassigned"
-                    : formatAnalyticsLabel(item.label)
+              const displayLabel = item.label
               return (
                 <div key={`${item.label}-${i}`}>
                   <div className="mb-1 flex items-center justify-between gap-2 text-xs">
@@ -184,7 +190,7 @@ function BreakdownList({
                         className="h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
                       />
-                      <span className="truncate text-grayScale-600" title={titleText}>
+                      <span className="truncate text-grayScale-600" title={displayLabel}>
                         {displayLabel}
                       </span>
                     </div>
@@ -634,21 +640,25 @@ export function AnalyticsPage() {
                   title="Learning goal"
                   data={users.by_learning_goal ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserLearningGoal}
                 />
                 <BreakdownList
                   title="Language challenge"
                   data={users.by_language_challange ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserLanguageChallenge}
                 />
                 <BreakdownList
                   title="Occupation"
                   data={users.by_occupation ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserOccupation}
                 />
                 <BreakdownList
                   title="Age group"
                   data={users.by_age_group ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserAgeGroup}
                 />
                 <BreakdownList
                   title="Gender"
@@ -660,22 +670,26 @@ export function AnalyticsPage() {
                   title="Education level"
                   data={users.by_education_level ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserEducationLevel}
                 />
                 <BreakdownList
                   title="Country"
                   data={users.by_country ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserCountry}
                 />
                 <BreakdownList
                   title="Region"
                   data={users.by_region ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserRegion}
                 />
                 {(users.by_knowledge_level?.length ?? 0) > 0 ? (
                   <BreakdownList
                     title="Knowledge level"
                     data={users.by_knowledge_level ?? []}
                     total={users.total_users}
+                    formatRowLabel={displayUserKnowledgeLevel}
                   />
                 ) : null}
               </div>
@@ -689,12 +703,14 @@ export function AnalyticsPage() {
                   title="Learning goal"
                   data={users.by_learning_goal ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserLearningGoal}
                   scrollable
                 />
                 <BreakdownList
                   title="Language challenge"
                   data={users.by_language_challange ?? []}
                   total={users.total_users}
+                  formatRowLabel={displayUserLanguageChallenge}
                   scrollable
                 />
               </div>

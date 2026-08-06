@@ -46,7 +46,7 @@ import type {
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -80,7 +80,7 @@ export function CourseModuleDetailPage() {
     [lessonPracticeChoice],
   );
   const [moduleTitle, setModuleTitle] = useState("Module");
-  const [moduleDescription, setModuleDescription] = useState("unassigned");
+  const [moduleDescription, setModuleDescription] = useState("");
   const [modulePublishStatus, setModulePublishStatus] = useState<
     PracticePublishStatus | string | null
   >(null);
@@ -174,17 +174,17 @@ export function CourseModuleDetailPage() {
       const row = list.find((m) => Number(m.id) === parsedModuleId);
       if (row) {
         setModuleTitle(row.name?.trim() || `Module ${parsedModuleId}`);
-        setModuleDescription(row.description?.trim() || <UnassignedLabel />);
+        setModuleDescription(row.description?.trim() || "");
         setModulePublishStatus(row.publish_status ?? null);
       } else {
         setModuleTitle(`Module ${parsedModuleId}`);
-        setModuleDescription("unassigned");
+        setModuleDescription("");
         setModulePublishStatus(null);
       }
     } catch (error) {
       console.error(error);
       setModuleTitle(`Module ${parsedModuleId}`);
-      setModuleDescription("unassigned");
+      setModuleDescription("");
     }
   }, [parsedModuleId, parsedUnitId]);
 
@@ -628,7 +628,7 @@ export function CourseModuleDetailPage() {
             {moduleTitle}
           </h1>
           <ContentPageDescription className="text-[16px] font-medium text-grayScale-400">
-            {moduleDescription}
+            <DisplayValue value={moduleDescription} />
           </ContentPageDescription>
         </div>
 
@@ -876,6 +876,7 @@ export function CourseModuleDetailPage() {
                     LESSON_THUMB_GRADIENTS[i % LESSON_THUMB_GRADIENTS.length]
                   }
                   durationSeconds={lesson.durationSeconds}
+                  searchQuery={lessonSearch}
                   onEdit={() => openEditLesson(lesson)}
                   onDelete={() => setDeletingLessonId(lesson.id)}
                   description={lesson.description}

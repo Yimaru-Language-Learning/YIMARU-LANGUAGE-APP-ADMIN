@@ -657,6 +657,7 @@ export function LessonPracticesPage() {
                       key={p.id}
                       practice={p}
                       statusUpdating={publishStatusUpdatingId === p.id}
+                      searchQuery={listSearch}
                       onEdit={() => void navigate(editPracticeHref(p.id))}
                       onPublish={() =>
                         void handlePracticePublishStatus(p.id, "PUBLISHED")

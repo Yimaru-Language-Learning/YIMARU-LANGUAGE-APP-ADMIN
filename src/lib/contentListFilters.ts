@@ -9,7 +9,10 @@ export function textMatchesSearch(
 ): boolean {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
-  return fields.some((field) => (field ?? "").toLowerCase().includes(needle))
+  return fields.some((field) => {
+    if (typeof field !== "string") return false
+    return field.toLowerCase().includes(needle)
+  })
 }
 
 export function matchesPublishStatusFilter(

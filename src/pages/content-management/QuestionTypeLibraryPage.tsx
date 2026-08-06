@@ -5,10 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  FolderOpen,
   Layers,
-  Pencil,
   Plus,
   RefreshCw,
   Search,
@@ -17,7 +14,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "../../components/ui/button"
-import { Badge } from "../../components/ui/badge"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Input } from "../../components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -39,25 +35,11 @@ import {
   deleteQuestionTypeDefinition,
   getQuestionTypeDefinitions,
 } from "../../api/questionTypeDefinitions.api"
-import {
-  deleteQuestionTypeDefinitionGroup,
-  getQuestionTypeDefinitionGroups,
-} from "../../api/questionTypeDefinitionGroups.api"
-import type {
-  QuestionTypeDefinition,
-  QuestionTypeDefinitionGroup,
-} from "../../types/questionTypeDefinition.types"
-import { QuestionTypeGroupFormDialog } from "./components/QuestionTypeGroupFormDialog"
+import type { QuestionTypeDefinition } from "../../types/questionTypeDefinition.types"
 import { PageBackLink } from "../../components/navigation/PageBackLink"
-import {
-  definitionBelongsToGroup,
-  isDefinitionUngrouped,
-  questionTypeGroupLabels,
-} from "../../lib/questionTypeGroupIds"
 
 type StatusFilter = "All" | "ACTIVE" | "INACTIVE"
 type ScopeFilter = "all" | "system" | "custom"
-type GroupFilter = "all" | "ungrouped" | number
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "All", label: "All statuses" },
@@ -79,48 +61,22 @@ export function QuestionTypeLibraryPage() {
 
   const [loading, setLoading] = useState(true)
   const [definitions, setDefinitions] = useState<QuestionTypeDefinition[]>([])
-  const [groups, setGroups] = useState<QuestionTypeDefinitionGroup[]>([])
-  const [groupsLoading, setGroupsLoading] = useState(true)
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All")
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all")
-  const [groupFilter, setGroupFilter] = useState<GroupFilter>("all")
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [offset, setOffset] = useState(0)
   const [definitionPendingDelete, setDefinitionPendingDelete] = useState<QuestionTypeDefinition | null>(null)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
   const [definitionForPractices, setDefinitionForPractices] = useState<QuestionTypeDefinition | null>(null)
-  const [groupFormOpen, setGroupFormOpen] = useState(false)
-  const [groupPendingEdit, setGroupPendingEdit] = useState<QuestionTypeDefinitionGroup | null>(null)
-  const [groupPendingDelete, setGroupPendingDelete] = useState<QuestionTypeDefinitionGroup | null>(null)
-  const [groupDeleteSubmitting, setGroupDeleteSubmitting] = useState(false)
-  const [groupsSectionOpen, setGroupsSectionOpen] = useState(false)
 
   const hasActiveFilters =
-    query.trim().length > 0 ||
-    statusFilter !== "All" ||
-    scopeFilter !== "all" ||
-    groupFilter !== "all"
+    query.trim().length > 0 || statusFilter !== "All" || scopeFilter !== "all"
 
   const activeFilterCount = countActiveFilters([
     { value: statusFilter, defaultValue: "All" },
     { value: scopeFilter, defaultValue: "all" },
-    { value: groupFilter === "all" ? "" : "filtered", defaultValue: "" },
   ])
-
-  const loadGroups = useCallback(async () => {
-    setGroupsLoading(true)
-    try {
-      const { groups: rows } = await getQuestionTypeDefinitionGroups()
-      setGroups(rows)
-    } catch (e) {
-      console.error(e)
-      notifyApiError(e, "Failed to load question type groups")
-      setGroups([])
-    } finally {
-      setGroupsLoading(false)
-    }
-  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -143,12 +99,11 @@ export function QuestionTypeLibraryPage() {
 
   useEffect(() => {
     void load()
-    void loadGroups()
-  }, [load, loadGroups])
+  }, [load])
 
   useEffect(() => {
     setOffset(0)
-  }, [query, pageSize, scopeFilter, statusFilter, groupFilter])
+  }, [query, pageSize, scopeFilter, statusFilter])
 
   useEffect(() => {
     if (createdId) {
@@ -165,23 +120,14 @@ export function QuestionTypeLibraryPage() {
   const isSystemScope = scopeFilter === "system"
 
   const filtered = useMemo(() => {
-    let rows = definitions
-    if (groupFilter === "ungrouped") {
-      rows = rows.filter((d) => isDefinitionUngrouped(d.group_ids))
-    } else if (typeof groupFilter === "number") {
-      rows = rows.filter((d) => definitionBelongsToGroup(d.group_ids, groupFilter))
-    }
     const q = query.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((d) => {
+    if (!q) return definitions
+    return definitions.filter((d) => {
       const name = (d.display_name || "").toLowerCase()
       const key = (d.key || "").toLowerCase()
-      const groupName = questionTypeGroupLabels(d.group_ids, groups).toLowerCase()
-      return (
-        name.includes(q) || key.includes(q) || String(d.id).includes(q) || groupName.includes(q)
-      )
+      return name.includes(q) || key.includes(q) || String(d.id).includes(q)
     })
-  }, [definitions, query, groupFilter, groups])
+  }, [definitions, query])
 
   const paginated = useMemo(() => {
     if (isSystemScope) return filtered
@@ -201,40 +147,7 @@ export function QuestionTypeLibraryPage() {
     setQuery("")
     setStatusFilter("All")
     setScopeFilter("all")
-    setGroupFilter("all")
     setOffset(0)
-  }
-
-  const definitionCountByGroup = useMemo(() => {
-    const counts = new Map<number, number>()
-    for (const d of definitions) {
-      for (const id of d.group_ids ?? []) {
-        counts.set(id, (counts.get(id) ?? 0) + 1)
-      }
-    }
-    return counts
-  }, [definitions])
-
-  const ungroupedCount = useMemo(
-    () => definitions.filter((d) => isDefinitionUngrouped(d.group_ids)).length,
-    [definitions],
-  )
-
-  const handleConfirmDeleteGroup = async () => {
-    const row = groupPendingDelete
-    if (!row) return
-    setGroupDeleteSubmitting(true)
-    try {
-      await deleteQuestionTypeDefinitionGroup(row.id)
-      toast.success("Group deleted. Membership links for this group were removed.")
-      setGroupPendingDelete(null)
-      if (groupFilter === row.id) setGroupFilter("all")
-      await Promise.all([load(), loadGroups()])
-    } catch (e) {
-      notifyApiError(e, "Delete failed")
-    } finally {
-      setGroupDeleteSubmitting(false)
-    }
   }
 
   const openDeleteConfirm = (row: QuestionTypeDefinition) => {
@@ -293,144 +206,6 @@ export function QuestionTypeLibraryPage() {
       </div>
 
       <Card className="overflow-hidden rounded-2xl border border-grayScale-200 bg-white shadow-none">
-        <CardHeader
-          className={cn(
-            "px-6 py-5",
-            groupsSectionOpen ? "border-b border-grayScale-100" : "",
-          )}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              className="flex min-w-0 flex-1 items-center gap-3 text-left"
-              onClick={() => setGroupsSectionOpen((open) => !open)}
-              aria-expanded={groupsSectionOpen}
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                <FolderOpen className="h-5 w-5" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-base font-bold text-grayScale-900">Groups</CardTitle>
-                  {!groupsSectionOpen && !groupsLoading ? (
-                    <span className="rounded-full bg-grayScale-100 px-2 py-0.5 text-[11px] font-semibold text-grayScale-600">
-                      {groups.length} group{groups.length === 1 ? "" : "s"}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-xs text-grayScale-500 mt-0.5">
-                  {groupsSectionOpen
-                    ? "Organize definitions by subject, skill, or workflow"
-                    : "Click to expand and manage groups"}
-                </p>
-              </div>
-              {groupsSectionOpen ? (
-                <ChevronUp className="h-5 w-5 shrink-0 text-grayScale-400" aria-hidden />
-              ) : (
-                <ChevronDown className="h-5 w-5 shrink-0 text-grayScale-400" aria-hidden />
-              )}
-            </button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="shrink-0 rounded-[8px] border-grayScale-200"
-              onClick={() => {
-                setGroupPendingEdit(null)
-                setGroupFormOpen(true)
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create group
-            </Button>
-          </div>
-        </CardHeader>
-        {groupsSectionOpen ? (
-        <CardContent className="p-0">
-          {groupsLoading ? (
-            <div className="flex items-center justify-center gap-2 px-6 py-10 text-sm text-grayScale-500">
-              <SpinnerIcon className="h-5 w-5 text-brand-500" />
-              Loading groups…
-            </div>
-          ) : groups.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-grayScale-500">
-              No groups yet. Create one to organize your question type catalog.
-            </div>
-          ) : (
-            <ul className="divide-y divide-grayScale-100">
-              {groups.map((g) => (
-                <li
-                  key={g.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 hover:bg-grayScale-50/80"
-                >
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-left"
-                    onClick={() => navigate(`/new-content/question-types/groups/${g.id}`)}
-                  >
-                    <p className="font-semibold text-grayScale-900">{g.name}</p>
-                    <p className="mt-0.5 text-xs text-grayScale-500">
-                      {definitionCountByGroup.get(g.id) ?? 0} definition
-                      {(definitionCountByGroup.get(g.id) ?? 0) === 1 ? "" : "s"}
-                      {g.description ? ` · ${g.description}` : ""}
-                    </p>
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      className={cn(
-                        "border-none shadow-none text-[11px]",
-                        g.status === "ACTIVE"
-                          ? "bg-[#F0FDF4] text-[#16A34A]"
-                          : "bg-grayScale-100 text-grayScale-600",
-                      )}
-                    >
-                      {g.status}
-                    </Badge>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => {
-                        setGroupFilter(g.id)
-                        resetPagination()
-                      }}
-                    >
-                      Filter
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => {
-                        setGroupPendingEdit(g)
-                        setGroupFormOpen(true)
-                      }}
-                      aria-label={`Edit ${g.name}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-grayScale-500 hover:text-red-600"
-                      onClick={() => setGroupPendingDelete(g)}
-                      aria-label={`Delete ${g.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-        ) : null}
-      </Card>
-
-      <Card className="overflow-hidden rounded-2xl border border-grayScale-200 bg-white shadow-none">
         <CardHeader className="border-b border-grayScale-100 px-4 py-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -452,7 +227,6 @@ export function QuestionTypeLibraryPage() {
               disabled={loading}
               onClick={() => {
                 void load()
-                void loadGroups()
               }}
             >
               <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
@@ -527,39 +301,6 @@ export function QuestionTypeLibraryPage() {
                     />
                   ))}
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                    Group
-                  </span>
-                  <FilterChip
-                    label="All groups"
-                    active={groupFilter === "all"}
-                    disabled={loading}
-                    onClick={() => {
-                      setGroupFilter("all")
-                      resetPagination()
-                    }}
-                  />
-                  <FilterChip
-                    label={`Ungrouped (${ungroupedCount})`}
-                    active={groupFilter === "ungrouped"}
-                    disabled={loading}
-                    onClick={() => {
-                      setGroupFilter("ungrouped")
-                      resetPagination()
-                    }}
-                  />
-                  {typeof groupFilter === "number" ? (
-                    <FilterChip
-                      label={questionTypeGroupLabel(groupFilter, groups)}
-                      active
-                      disabled={loading}
-                      onClick={() => {
-                        navigate(`/new-content/question-types/groups/${groupFilter}`)
-                      }}
-                    />
-                  ) : null}
-                </div>
               </div>
             </AdminFiltersPanel>
           </div>
@@ -613,6 +354,7 @@ export function QuestionTypeLibraryPage() {
                   is_system={d.is_system}
                   stimulusKindsCount={d.stimulus_component_kinds?.length ?? 0}
                   responseKindsCount={d.response_component_kinds?.length ?? 0}
+                  searchQuery={query}
                   deleteDisabled={!!d.is_system}
                   onEdit={() => navigate(`/new-content/question-types/${d.id}/edit`)}
                   onCreatePractice={() =>
@@ -696,49 +438,6 @@ export function QuestionTypeLibraryPage() {
           ) : null}
         </CardContent>
       </Card>
-
-      <QuestionTypeGroupFormDialog
-        open={groupFormOpen}
-        onOpenChange={setGroupFormOpen}
-        group={groupPendingEdit}
-        onSaved={() => {
-          void loadGroups()
-          void load()
-        }}
-      />
-
-      <Dialog
-        open={groupPendingDelete !== null}
-        onOpenChange={(open) => !groupDeleteSubmitting && !open && setGroupPendingDelete(null)}
-      >
-        <DialogContent className="max-w-md rounded-2xl border-grayScale-200">
-          <DialogHeader>
-            <DialogTitle>Delete group?</DialogTitle>
-            <DialogDescription className="text-left">
-              Deleting &quot;{groupPendingDelete?.name}&quot; will not delete any question types.
-              Definitions will be removed from this group only; other group memberships are unchanged.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={groupDeleteSubmitting}
-              onClick={() => setGroupPendingDelete(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={groupDeleteSubmitting}
-              onClick={() => void handleConfirmDeleteGroup()}
-            >
-              {groupDeleteSubmitting ? <SpinnerIcon className="h-4 w-4" /> : "Delete group"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <QuestionTypeDefinitionPracticesDialog
         definition={definitionForPractices}

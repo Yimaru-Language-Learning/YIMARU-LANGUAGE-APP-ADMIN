@@ -47,7 +47,8 @@ import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
 import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
-import { UnassignedLabel } from "../../lib/displayValue"
+import { DisplayValue } from "../../lib/displayValue"
+import { SearchHighlight } from "../../components/SearchHighlight"
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -167,7 +168,7 @@ export function CourseManagementPage() {
         list.map((row, index) => ({
           id: Number(row.id),
           name: row.name?.trim() || `Unit ${row.id}`,
-          description: row.description?.trim() || <UnassignedLabel />,
+          description: row.description?.trim() || "",
           thumbnail: row.thumbnail?.trim() || "",
           sortOrder: Number(row.sort_order ?? 0),
           publishStatus: row.publish_status ?? null,
@@ -466,10 +467,7 @@ export function CourseManagementPage() {
     setSavingEdit(true);
     try {
       const existing = units.find((u) => u.id === editingUnitId);
-      const preservedDescription =
-        existing?.description && existing.description !== "unassigned"
-          ? existing.description
-          : null;
+      const preservedDescription = existing?.description?.trim() || null;
       const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
       await updateExamPrepCatalogUnit(editingUnitId, {
         name,
@@ -852,10 +850,10 @@ export function CourseManagementPage() {
                   />
                 </div>
                 <h3 className="text-[18px] font-medium text-grayScale-900  transition-colors">
-                  {unit.name}
+                  <SearchHighlight text={unit.name} query={listSearch} />
                 </h3>
                 <p className="text-[12px] text-grayScale-500 font-medium line-clamp-3">
-                  {unit.description}
+                  <DisplayValue value={unit.description} query={listSearch} />
                 </p>
               </div>
 

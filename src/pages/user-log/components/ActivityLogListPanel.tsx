@@ -65,7 +65,7 @@ import { TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
 import type { ActivityLog, ActivityLogFilters } from "../../../types/activity-log.types"
 import { ActorCell, ActorLabel } from "./ActorLabel"
 import { ActorHoverCard } from "./ActorHoverCard"
-import { UnassignedLabel } from "../../../lib/displayValue"
+import { UnassignedLabel, DisplayValue } from "../../../lib/displayValue"
 
 export interface ActivityLogListPanelProps {
   /** When set, locks the list to actions by this actor (user profile audit tab). */
@@ -451,7 +451,7 @@ export function ActivityLogListPanel({
                         scrollable ? "whitespace-nowrap" : "max-w-[280px] truncate",
                       )}
                     >
-                      {log.message || <UnassignedLabel />}
+                      <DisplayValue value={log.message} query={searchQuery} />
                     </p>
                   </TableCell>
                   {showActorColumn ? (

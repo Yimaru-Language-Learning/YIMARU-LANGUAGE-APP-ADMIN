@@ -11,9 +11,9 @@ export function ProgramTypeSelectionPage() {
         <h1 className="text-[28px] font-bold tracking-tight text-grayScale-900">
           Courses
         </h1>
-        <p className="max-w-2xl text-[15px] font-medium  text-grayScale-500">
-          Organize courses under skill-based learning or English proficiency
-          exams. Select a program type to manage curriculum and modules.
+        <p className="max-w-2xl text-[15px] font-medium text-grayScale-500">
+          Organize courses under skill-based learning or English Proficiency
+          Exams. Select a program type to manage curriculum and modules.
         </p>
       </div>
 
@@ -32,20 +32,20 @@ export function ProgramTypeSelectionPage() {
         </div>
       </div>
 
-      {/* Selection Cards Grid */}
-      <div className="flex flex-warp gap-10 pt-4">
+      {/* Selection Cards Grid — equal width/height, consistent content alignment */}
+      <div className="grid max-w-5xl grid-cols-1 items-stretch gap-8 pt-4 md:grid-cols-2">
         {/* Skill-Based Courses Card */}
         <Link to="/new-content/courses/skill-based" className="group h-full">
-          <div className="bg-white rounded-[6px] w-[500px] border border-grayScale-100 px-10 py-12 h-full transition-all flex flex-col items-start gap-10">
-            <div className="h-16 w-16 rounded-full bg-brand-50/10 flex items-center justify-center">
+          <div className="flex h-full flex-col items-start gap-10 rounded-[6px] border border-grayScale-100 bg-white px-10 py-12 transition-all">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-50/10">
               <Brain className="h-8 w-8 text-brand-500" />
             </div>
 
-            <div className="space-y-3 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col space-y-3">
               <h3 className="text-[20px] font-bold text-grayScale-900">
                 Skill-Based Courses
               </h3>
-              <p className="text-[15px] leading-relaxed text-grayScale-500 font-medium">
+              <p className="flex-1 text-[15px] font-medium leading-relaxed text-grayScale-500">
                 Practice-focused communication and skills training. Create
                 modules for vocabulary, grammar, and real-world conversation
                 scenarios.
@@ -54,20 +54,20 @@ export function ProgramTypeSelectionPage() {
           </div>
         </Link>
 
-        {/* Duolingo/IELTS Card */}
+        {/* English Proficiency Exams Card */}
         <Link to="/new-content/courses/proficiency" className="group h-full">
-          <div className="bg-white w-[500px] rounded-[6px] border border-grayScale-100 px-10 py-12 h-full transition-all flex flex-col items-start gap-10">
-            <div className="h-16 w-16 rounded-full bg-brand-50/10 flex items-center justify-center">
+          <div className="flex h-full flex-col items-start gap-10 rounded-[6px] border border-grayScale-100 bg-white px-10 py-12 transition-all">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-50/10">
               <GraduationCap className="h-8 w-8 text-brand-500" />
             </div>
 
-            <div className="space-y-3 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col space-y-3">
               <h3 className="text-[20px] font-bold text-grayScale-900 transition-colors">
-                Duolingo/IELTS
+                English Proficiency Exams
               </h3>
-              <p className="text-[15px] leading-relaxed text-grayScale-500 font-medium">
-                Duolingo/IELTS courses. Structure content by band scores,
-                sections, and mock tests.
+              <p className="flex-1 text-[15px] font-medium leading-relaxed text-grayScale-500">
+                English Proficiency Exams courses. Structure content by band
+                scores, sections, and mock tests.
               </p>
             </div>
           </div>

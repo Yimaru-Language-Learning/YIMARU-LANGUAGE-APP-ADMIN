@@ -7,6 +7,7 @@ import { Input } from "../../components/ui/input"
 import { getCourseCategories } from "../../api/courses.api"
 import type { CourseCategory } from "../../types/course.types"
 import { cn } from "../../lib/utils"
+import { SearchHighlight } from "../../components/SearchHighlight"
 
 const contentSections = [
   {
@@ -271,10 +272,10 @@ export function ContentOverviewPage() {
                     </div>
 
                     <CardTitle className="text-[15px] font-semibold text-grayScale-700 transition-colors duration-200 group-hover:text-brand-600">
-                      {section.title}
+                      <SearchHighlight text={section.title} query={searchQuery} />
                     </CardTitle>
                     <CardDescription className="mt-1 text-[13px] leading-relaxed text-grayScale-400">
-                      {section.description}
+                      <SearchHighlight text={section.description} query={searchQuery} />
                     </CardDescription>
                   </CardHeader>
 

@@ -35,7 +35,6 @@ import { CourseManagementPage } from "../pages/content-management/CourseManageme
 import { UnitManagementPage } from "../pages/content-management/UnitManagementPage";
 import { InitialAssessmentPage } from "../pages/content-management/InitialAssessmentPage";
 import { QuestionTypeLibraryPage } from "../pages/content-management/QuestionTypeLibraryPage";
-import { QuestionTypeGroupDetailPage } from "../pages/content-management/QuestionTypeGroupDetailPage";
 import { CreateQuestionTypeFlow } from "../pages/content-management/CreateQuestionTypeFlow";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { NotificationsPage } from "../pages/notifications/NotificationsPage";
@@ -197,10 +196,6 @@ export function AppRoutes() {
         <Route
           path="/new-content/initial-assessment"
           element={<InitialAssessmentPage />}
-        />
-        <Route
-          path="/new-content/question-types/groups/:groupId"
-          element={<QuestionTypeGroupDetailPage />}
         />
         <Route
           path="/new-content/question-types/:definitionId/create-practice"

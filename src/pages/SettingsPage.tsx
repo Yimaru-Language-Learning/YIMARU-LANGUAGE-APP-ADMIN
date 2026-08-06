@@ -32,12 +32,25 @@ import { AppVersionsTab } from "./settings/AppVersionsTab";
 import { SubscriptionPlansTab } from "./settings/SubscriptionPlansTab";
 import { ThemeModePreview } from "./settings/components/ThemeModePreview";
 import { useTheme } from "../contexts/ThemeContext";
+import { RolesListPage } from "./role-management/RolesListPage";
+import { useSearchParams } from "react-router-dom";
 
 type SettingsTab =
   | "subscription"
   | "app-versions"
   | "security"
   | "appearance";
+
+const SETTINGS_TABS: SettingsTab[] = [
+  "subscription",
+  "app-versions",
+  "security",
+  "appearance",
+]
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return value != null && (SETTINGS_TABS as string[]).includes(value)
+}
 
 const tabs: { id: SettingsTab; label: string; icon: typeof Shield }[] = [
   { id: "subscription", label: "Subscription packages", icon: CreditCard },
@@ -197,6 +210,8 @@ function SecurityTab({ memberId }: { memberId: number }) {
           </div>
         </CardContent>
       </Card>
+
+      <RolesListPage embedded />
     </div>
   );
 }
@@ -352,10 +367,25 @@ function AppearanceTab() {
 }
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("subscription");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() =>
+    isSettingsTab(tabFromUrl) ? tabFromUrl : "subscription",
+  );
   const [profile, setProfile] = useState<TeamMeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isSettingsTab(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl, activeTab]);
+
+  const selectTab = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    setSearchParams(tab === "subscription" ? {} : { tab }, { replace: true });
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -423,7 +453,7 @@ export function SettingsPage() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => selectTab(tab.id)}
                 className={cn(
                   "flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors",
                   active

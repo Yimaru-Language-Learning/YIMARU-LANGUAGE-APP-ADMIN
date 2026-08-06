@@ -63,11 +63,10 @@ const navEntries: NavEntry[] = [
     kind: "group",
     label: "Users & access",
     basePath: "/users",
-    activePaths: ["/users", "/roles", "/team"],
+    activePaths: ["/users", "/team"],
     icon: Users,
     children: [
       { label: "All users", to: "/users/list" },
-      { label: "Roles", to: "/roles" },
       { label: "Team members", to: "/team" },
     ],
   },

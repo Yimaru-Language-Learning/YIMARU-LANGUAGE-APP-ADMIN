@@ -3,9 +3,6 @@ import {
   Search,
   Shield,
   ShieldCheck,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   Eye,
   X,
@@ -37,18 +34,24 @@ import {
 } from "../../api/rbac.api"
 import type { Role, RoleDetail, RolePermission } from "../../types/rbac.types"
 import { cn } from "../../lib/utils"
-import { DEFAULT_TABLE_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from "../../lib/tablePagination"
 import { toast } from "sonner"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { InviteTeamMemberDialog } from "./components/InviteTeamMemberDialog"
 import { SuperAdminOnly } from "../../components/access/AdminAccessGates"
+import { useAdminAccess } from "../../hooks/useAdminAccess"
 import { STAFF_TEAM_ROLE_OPTIONS } from "../../lib/teamRoles"
 import {
   matchesRoleManagementCategory,
   type RoleManagementCategory,
 } from "../../lib/rbacRoleCategories"
 
-export function RolesListPage() {
+type RolesListPageProps = {
+  /** Compact layout when nested under Settings → Security. */
+  embedded?: boolean
+}
+
+export function RolesListPage({ embedded = false }: RolesListPageProps) {
+  const { canInviteTeam: canEditRoles } = useAdminAccess()
   const staffRoleNames = useMemo(
     () => new Set(STAFF_TEAM_ROLE_OPTIONS.map((o) => o.value)),
     [],
@@ -57,10 +60,6 @@ export function RolesListPage() {
   // List state
   const [roles, setRoles] = useState<Role[]>([])
   const [roleCategoryFilter, setRoleCategoryFilter] = useState<RoleManagementCategory>("team")
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
-  const [query, setQuery] = useState("")
-  const [debouncedQuery, setDebouncedQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -97,33 +96,18 @@ export function RolesListPage() {
 
   const [inviteForRole, setInviteForRole] = useState<Role | null>(null)
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query)
-      setPage(1)
-    }, 400)
-    return () => clearTimeout(timer)
-  }, [query])
-
-  useEffect(() => {
-    setPage(1)
-  }, [roleCategoryFilter])
-
   const fetchRoles = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const all = await fetchAllRoles({
-        query: debouncedQuery || undefined,
-      })
+      const all = await fetchAllRoles()
       setRoles(all)
     } catch {
       setError("Failed to load roles.")
     } finally {
       setLoading(false)
     }
-  }, [debouncedQuery])
+  }, [])
 
   // Fetch roles
   useEffect(() => {
@@ -346,22 +330,24 @@ export function RolesListPage() {
     [roles, roleCategoryFilter],
   )
 
-  const total = filteredRoles.length
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const safePage = Math.min(page, totalPages)
-
-  const paginatedRoles = useMemo(() => {
-    const start = (safePage - 1) * pageSize
-    return filteredRoles.slice(start, start + pageSize)
-  }, [filteredRoles, safePage, pageSize])
-
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", embedded && "space-y-4")}>
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-grayScale-700">Role Management</h1>
+        <h2
+          className={cn(
+            "font-bold tracking-tight text-grayScale-700",
+            embedded ? "text-lg" : "text-2xl",
+          )}
+        >
+          {embedded ? "Roles" : "Role Management"}
+        </h2>
         <p className="mt-1 text-sm text-grayScale-400">
-          Manage roles and their permissions.
+          {embedded
+            ? canEditRoles
+              ? "View and edit system roles and permissions."
+              : "View system roles and permissions. Only Super Admins can make changes."
+            : "Manage roles and their permissions."}
         </p>
       </div>
 
@@ -388,26 +374,6 @@ export function RolesListPage() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search roles…"
-          className="pl-9"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-grayScale-400 hover:text-grayScale-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
       {/* Error */}
       {error && (
         <div className="flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-5 py-4">
@@ -432,17 +398,15 @@ export function RolesListPage() {
                 <Shield className="h-10 w-10 text-grayScale-300" />
                 <p className="text-sm font-semibold text-grayScale-600">No roles found.</p>
                 <p className="text-xs text-grayScale-400">
-                  {debouncedQuery
-                    ? `No roles match "${debouncedQuery}".`
-                    : roleCategoryFilter === "team"
-                      ? "No team member roles match this view."
-                      : "No user roles match this view."}
+                  {roleCategoryFilter === "team"
+                    ? "No team member roles match this view."
+                    : "No user roles match this view."}
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {paginatedRoles.map((role) => (
+              {filteredRoles.map((role) => (
                 <Card
                   key={role.id}
                   className="overflow-hidden border border-grayScale-100 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
@@ -518,6 +482,7 @@ export function RolesListPage() {
                     ) : null}
                     </SuperAdminOnly>
 
+                    <SuperAdminOnly>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <Button
                         type="button"
@@ -542,12 +507,14 @@ export function RolesListPage() {
                         Reactivate all
                       </Button>
                     </div>
+                    </SuperAdminOnly>
 
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-grayScale-400">
                         Open details to view permissions
                       </span>
                       <div className="flex items-center gap-2">
+                        <SuperAdminOnly>
                         {!role.is_system && (
                           <Button
                             type="button"
@@ -561,6 +528,7 @@ export function RolesListPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
+                        </SuperAdminOnly>
                         <Button
                           variant="outline"
                           size="sm"
@@ -575,63 +543,6 @@ export function RolesListPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {total > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-grayScale-100 pt-4 text-sm text-grayScale-500">
-              <div className="flex flex-wrap items-center gap-2">
-                <span>
-                  Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, total)} of {total} roles
-                </span>
-                <span className="hidden h-4 w-px bg-grayScale-200 sm:inline" />
-                <span className="flex items-center gap-2">
-                  Rows per page
-                  <div className="relative">
-                    <select
-                      value={pageSize}
-                      onChange={(e) => {
-                        setPageSize(Number(e.target.value))
-                        setPage(1)
-                      }}
-                      className="h-8 appearance-none rounded-md border bg-white pl-2 pr-7 text-sm font-medium text-grayScale-600 focus:outline-none"
-                    >
-                      {TABLE_PAGE_SIZE_OPTIONS.map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-grayScale-400" />
-                  </div>
-                </span>
-              </div>
-              {totalPages > 1 ? (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={safePage <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="px-3 text-xs font-medium text-grayScale-600">
-                    {safePage} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={safePage >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : null}
             </div>
           )}
         </>
@@ -657,7 +568,7 @@ export function RolesListPage() {
                     <Shield className="h-5 w-5 text-brand-500" />
                   )}
                   {selectedRole?.name ?? "Role Details"}
-                  {selectedRole && (
+                  {selectedRole && canEditRoles && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -748,7 +659,7 @@ export function RolesListPage() {
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-grayScale-600">Permissions</h4>
-                  {!editingPermissions && (
+                  {!editingPermissions && canEditRoles && (
                     <Button
                       variant="outline"
                       size="sm"

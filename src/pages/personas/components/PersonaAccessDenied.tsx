@@ -78,7 +78,7 @@ export function PersonaAccessDenied({ apiForbidden = false }: PersonaAccessDenie
               </Button>
             ) : null}
             <Button variant="outline" asChild>
-              <Link to="/roles">Manage roles</Link>
+              <Link to="/settings?tab=security">Manage roles</Link>
             </Button>
             <Button
               variant="outline"

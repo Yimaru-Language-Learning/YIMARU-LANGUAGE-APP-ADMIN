@@ -49,9 +49,6 @@ import { UserManagementLayout } from "../pages/user-management/UserManagementLay
 import { UsersListPage } from "../pages/user-management/UsersListPage";
 import { UserGroupsPage } from "../pages/user-management/UserGroupsPage";
 import { DeletionRequestsPage } from "../pages/user-management/DeletionRequestsPage";
-import { RoleManagementLayout } from "../pages/role-management/RoleManagementLayout";
-import { RolesListPage } from "../pages/role-management/RolesListPage";
-import { AddRolePage } from "../pages/role-management/AddRolePage";
 import { PracticeDetailsPage } from "../pages/content-management/PracticeDetailsPage";
 import { PracticeMembersPage } from "../pages/content-management/PracticeMembersPage";
 import { QuestionsPage } from "../pages/content-management/QuestionsPage";
@@ -103,10 +100,8 @@ export function AppRoutes() {
           <Route path=":id" element={<UserDetailPage />} />
         </Route>
 
-        <Route path="/roles" element={<RoleManagementLayout />}>
-          <Route index element={<RolesListPage />} />
-          <Route path="add" element={<AddRolePage />} />
-        </Route>
+        <Route path="/roles" element={<Navigate to="/settings?tab=security" replace />} />
+        <Route path="/roles/*" element={<Navigate to="/settings?tab=security" replace />} />
         </Route>
 
         <Route path="/content" element={<ContentManagementLayout />}>

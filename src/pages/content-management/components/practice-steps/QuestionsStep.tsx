@@ -25,18 +25,22 @@ import {
   ChevronDown,
   ChevronsDownUp,
   ChevronsUpDown,
+  Library,
 } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { Input } from "../../../../components/ui/input";
 import { DynamicSchemaSlotField } from "../../../../components/content-management/DynamicSchemaSlotField";
 import type { QuestionTypeDefinition } from "../../../../types/questionTypeDefinition.types";
+import type { QuestionDetail } from "../../../../types/course.types";
 import { questionTypeDefinitionListLabel } from "../../../../api/questionTypeDefinitions.api";
 import {
   definitionUsesDynamicPayload,
   emptyDynamicFieldValuesForDefinition,
   legacyQuestionTypeFromDefinition,
+  questionRowHasContent,
 } from "../../../../lib/learnEnglishDefinitionQuestion";
+import { mapQuestionDetailToPracticeFormRow } from "../../../../lib/practiceFullMapper";
 import { validateLearnEnglishQuestionsWithDefinitions } from "../../../../lib/learnEnglishPracticePublish";
 import {
   fixAssociationsAfterReorder,
@@ -48,6 +52,7 @@ import {
 import { cn } from "../../../../lib/utils";
 import { toast } from "sonner";
 import { QuestionAssociationField } from "./QuestionAssociationField";
+import { QuestionBankAttachDialog } from "./QuestionBankAttachDialog";
 import { StimulusBlocksPanel } from "./StimulusBlocksPanel";
 import {
   isIeltsSharedStimulusMode,
@@ -210,6 +215,7 @@ export function QuestionsStep({
   definitionsError,
 }: QuestionsStepProps) {
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [bankDialogOpen, setBankDialogOpen] = useState(false);
   const [expandedQuestionIds, setExpandedQuestionIds] = useState<Set<string>>(
     () => new Set(formData.questions[0]?.id ? [formData.questions[0].id] : []),
   );
@@ -323,6 +329,83 @@ export function QuestionsStep({
     });
     setExpandedQuestionIds(new Set([id]));
   };
+
+  const isBlankDraftRow = (row: {
+    serverQuestionId?: number | null;
+    text?: string;
+    questionTypeDefinitionId?: number | null;
+    dynamicFieldValues?: Record<string, string>;
+  }) => {
+    if (row.serverQuestionId != null && Number(row.serverQuestionId) > 0) return false;
+    const def = typeDefinitions.find((d) => d.id === row.questionTypeDefinitionId);
+    if (!def) {
+      return !String(row.text ?? "").trim();
+    }
+    return !questionRowHasContent(
+      {
+        questionText: String(row.text ?? "").trim(),
+        questionTypeDefinitionId: def.id,
+        dynamicFieldValues: { ...(row.dynamicFieldValues ?? {}) },
+      },
+      def,
+    );
+  };
+
+  const attachBankQuestions = (details: QuestionDetail[]) => {
+    if (details.length === 0) return;
+    const already = new Set(
+      formData.questions
+        .map((q: { serverQuestionId?: number | null }) => Number(q.serverQuestionId))
+        .filter((id: number) => Number.isFinite(id) && id > 0),
+    );
+    const fresh = details.filter((d) => d?.id && !already.has(d.id));
+    if (fresh.length === 0) {
+      toast.message("Those questions are already on this practice");
+      return;
+    }
+
+    const lastAnchor = findLastSectionAnchor(formData.questions);
+    let base = [...formData.questions];
+    if (base.length === 1 && isBlankDraftRow(base[0])) {
+      base = [];
+    }
+
+    const startOrder = base.length + 1;
+    const added = fresh.map((detail, index) => {
+      const mapped = mapQuestionDetailToPracticeFormRow(
+        detail,
+        typeDefinitions,
+        startOrder + index,
+      );
+      if (!lastAnchor || base.length === 0) return mapped;
+      const linked = setQuestionSectionAnchorRef(
+        {
+          id: mapped.id,
+          associatedQuestionId: mapped.associatedQuestionId,
+          associatedAnchorRowId: mapped.associatedAnchorRowId,
+        },
+        lastAnchor,
+      );
+      return {
+        ...mapped,
+        associatedQuestionId: linked.associatedQuestionId ?? null,
+        associatedAnchorRowId: linked.associatedAnchorRowId ?? null,
+      };
+    });
+
+    const nextQuestions = syncQuestionDisplayOrders([...base, ...added]);
+    setFormData({ ...formData, questions: nextQuestions });
+    setExpandedQuestionIds(new Set(added.map((q) => q.id)));
+    toast.success(
+      fresh.length === 1
+        ? "Attached 1 question from the bank"
+        : `Attached ${fresh.length} questions from the bank`,
+    );
+  };
+
+  const existingBankIds = formData.questions
+    .map((q: { serverQuestionId?: number | null }) => Number(q.serverQuestionId))
+    .filter((id: number) => Number.isFinite(id) && id > 0);
 
   const renderTypeSpecificFields = (
     q: any,
@@ -566,7 +649,7 @@ export function QuestionsStep({
         <p className="text-grayScale-400 text-lg">
           {ieltsMode
             ? "Create shared stimulus blocks, link questions to a block, then fill in each question's own stimulus and response fields."
-            : "Choose a question type for each item, then fill in the fields that type requires."}{" "}
+            : "Create new questions, or attach existing ones from the question bank. Choose a type for each new item, then fill in the fields that type requires."}{" "}
           Group questions into sections so learners complete earlier blocks before later ones unlock.
           Collapse cards to compare and drag them into order.
         </p>
@@ -691,6 +774,13 @@ export function QuestionsStep({
                                 <span className="text-base font-bold text-grayScale-700">
                                   Question {q.displayOrder ?? i + 1}
                                 </span>
+                                {q.serverQuestionId != null &&
+                                Number(q.serverQuestionId) > 0 ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                    <Library className="h-3 w-3" />
+                                    Bank #{q.serverQuestionId}
+                                  </span>
+                                ) : null}
                                 <span className="rounded-full bg-grayScale-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-600">
                                   {q.difficultyLevel ?? "EASY"}
                                 </span>
@@ -971,6 +1061,16 @@ export function QuestionsStep({
         </button>
         <button
           type="button"
+          onClick={() => setBankDialogOpen(true)}
+          className="flex items-center gap-3 text-base font-bold text-emerald-700 transition-all hover:opacity-80"
+        >
+          <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-emerald-600">
+            <Library className="h-3 w-3 stroke-[2]" />
+          </div>
+          Attach from question bank
+        </button>
+        <button
+          type="button"
           onClick={() => addQuestion(true)}
           disabled={definitionsLoading || typeDefinitions.length === 0}
           className="flex items-center gap-3 text-base font-bold text-sky-700 transition-all hover:opacity-80 disabled:opacity-40"
@@ -981,6 +1081,14 @@ export function QuestionsStep({
           Start new section
         </button>
       </div>
+
+      <QuestionBankAttachDialog
+        open={bankDialogOpen}
+        onOpenChange={setBankDialogOpen}
+        excludeIds={existingBankIds}
+        onAttach={attachBankQuestions}
+        typeDefinitions={typeDefinitions}
+      />
 
       <div className="flex items-center justify-between pt-8">
         <Button
@@ -996,6 +1104,7 @@ export function QuestionsStep({
           onClick={() => {
             const mapped = formData.questions.map((row: typeof formData.questions[0]) => ({
               clientRowId: row.id,
+              serverQuestionId: row.serverQuestionId ?? null,
               questionText: String(row.text ?? "").trim(),
               questionTypeDefinitionId: Number(row.questionTypeDefinitionId),
               dynamicFieldValues: { ...(row.dynamicFieldValues ?? {}) },

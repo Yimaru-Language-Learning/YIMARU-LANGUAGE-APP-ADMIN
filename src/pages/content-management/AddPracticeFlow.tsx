@@ -382,6 +382,7 @@ export function AddPracticeFlow() {
     const persona = personaFromId(selectedPersona, personas);
     const mappedQuestions = formData.questions.map((q, index) => ({
         clientRowId: q.id,
+        serverQuestionId: q.serverQuestionId ?? null,
         questionText: String(q.text ?? "").trim(),
         questionTypeDefinitionId: Number(q.questionTypeDefinitionId),
         difficultyLevel: (q.difficultyLevel ?? "EASY") as

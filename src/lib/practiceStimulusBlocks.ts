@@ -4,10 +4,14 @@ import type {
   DynamicQuestionPayload,
   QuestionTypeDefinition,
 } from "../types/questionTypeDefinition.types"
-import { buildDynamicQuestionPayload } from "./practiceDynamicQuestionPayload"
+import {
+  buildDynamicQuestionPayload,
+  dynamicPayloadToFieldValues,
+} from "./practiceDynamicQuestionPayload"
 import {
   validateDefinitionQuestion,
   questionRowHasContent,
+  isExistingBankQuestion,
   type LearnEnglishDefinitionQuestionInput,
 } from "./learnEnglishDefinitionQuestion"
 import { isNoInputComponentKind } from "./questionComponentKinds"
@@ -196,12 +200,16 @@ export function validatePracticeStimulusBlocks(
   if (keyErr) return keyErr
   const byId = new Map(definitions.map((d) => [d.id, d]))
   const filled = questions.filter((q) => {
+    if (isExistingBankQuestion(q)) return true
     const def = byId.get(q.questionTypeDefinitionId)
     return def ? questionRowHasContent(q, def) : false
   })
-  if (filled.length === 0) return "Add at least one question with content."
+  if (filled.length === 0) {
+    return "Add at least one question with content, or attach questions from the bank."
+  }
   for (let i = 0; i < filled.length; i++) {
     const q = filled[i]
+    if (isExistingBankQuestion(q)) continue
     const def = byId.get(q.questionTypeDefinitionId)
     if (!def) {
       return `Question ${i + 1}: type definition #${q.questionTypeDefinitionId} was not found. Refresh and try again.`

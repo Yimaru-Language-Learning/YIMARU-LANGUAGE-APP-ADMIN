@@ -977,7 +977,9 @@ export const updateParentLinkedPractice = (
 
 /** GET /practices/:id/full — Learn English practice with question set and questions. */
 export const getLearnEnglishPracticeFull = (practiceId: number) =>
-  http.get<GetPracticeFullResponse>(`/practices/${practiceId}/full`)
+  http.get<GetPracticeFullResponse>(`/practices/${practiceId}/full`, {
+    skipErrorToast: true,
+  })
 
 /** PUT /practices/:id/full — atomic update of practice, question set, and questions. */
 export const updateLearnEnglishPracticeFull = (
@@ -988,7 +990,9 @@ export const updateLearnEnglishPracticeFull = (
 
 /** GET /exam-prep/practices/:id/full */
 export const getExamPrepPracticeFull = (practiceId: number) =>
-  http.get<GetPracticeFullResponse>(`/exam-prep/practices/${practiceId}/full`)
+  http.get<GetPracticeFullResponse>(`/exam-prep/practices/${practiceId}/full`, {
+    skipErrorToast: true,
+  })
 
 /** PUT /exam-prep/practices/:id/full */
 export const updateExamPrepPracticeFull = (

@@ -7,6 +7,7 @@ import type {
   PracticeParent,
   PracticePublishStatus,
   AuthoringProfile,
+  QuestionDetail,
   QuestionOption,
   QuestionShortAnswer,
   UpdatePracticeFullRequest,
@@ -566,6 +567,34 @@ function mapFullQuestionToFormRow(
   }
 }
 
+/** Map a question-bank detail into a practice form row for attach-from-bank. */
+export function mapQuestionDetailToPracticeFormRow(
+  detail: QuestionDetail,
+  typeDefinitions: QuestionTypeDefinition[],
+  displayOrder: number,
+): PracticeFormQuestionRow {
+  const item: PracticeFullQuestionItem = {
+    id: detail.id,
+    display_order: displayOrder,
+    question_text: detail.question_text,
+    question_type: detail.question_type,
+    question_type_definition_id: detail.question_type_definition_id ?? null,
+    dynamic_payload: detail.dynamic_payload ?? null,
+    difficulty_level: detail.difficulty_level ?? undefined,
+    points: detail.points ?? undefined,
+    status: detail.status,
+    options: detail.options,
+    short_answers: detail.short_answers,
+    voice_prompt: detail.voice_prompt ?? undefined,
+    sample_answer_voice_prompt: detail.sample_answer_voice_prompt ?? undefined,
+    audio_correct_answer_text: detail.audio_correct_answer_text ?? undefined,
+    image_url: detail.image_url ?? undefined,
+    tips: detail.tips ?? undefined,
+    explanation: detail.explanation ?? undefined,
+  }
+  return mapFullQuestionToFormRow(item, typeDefinitions)
+}
+
 function parsePersonaIdValue(value: unknown): number | null {
   if (value == null) return null
   const n = Number(value)
@@ -758,6 +787,7 @@ export function buildPracticeFullUpdateRequest(
           : index + 1,
     }))
     .filter(({ q }) => {
+      if (q.serverQuestionId != null && Number(q.serverQuestionId) > 0) return true
       const def = byId.get(q.questionTypeDefinitionId)
       return def ? questionRowHasContent(q, def) : false
     })
@@ -777,7 +807,39 @@ export function buildPracticeFullUpdateRequest(
   const questions: PracticeFullQuestionItem[] = []
   for (const { q, sortOrder } of toUpdate) {
     const def = byId.get(q.questionTypeDefinitionId)
-    if (!def) continue
+    if (!def) {
+      if (q.serverQuestionId != null && Number(q.serverQuestionId) > 0) {
+        displayOrder += 1
+        const associationRow = {
+          id: q.clientRowId ?? `update-${sortOrder}`,
+          serverQuestionId: q.serverQuestionId ?? null,
+          displayOrder: sortOrder,
+          associatedQuestionId: q.associatedQuestionId ?? null,
+          associatedAnchorRowId: q.associatedAnchorRowId ?? null,
+        }
+        questions.push({
+          id: Number(q.serverQuestionId),
+          display_order: displayOrder,
+          associated_question_id: resolveAssociatedQuestionId(
+            associationRow,
+            associationRows,
+            new Map(
+              associationRows
+                .filter((r) => r.serverQuestionId != null && r.serverQuestionId > 0)
+                .map((r) => [r.id, r.serverQuestionId as number]),
+            ),
+          ),
+          question_type: "DYNAMIC",
+          difficulty_level: q.difficultyLevel ?? "EASY",
+          points: q.points ?? 1,
+          status: opts.status,
+          ...(q.stimulusBlockKey?.trim()
+            ? { stimulus_block_key: q.stimulusBlockKey.trim() }
+            : {}),
+        })
+      }
+      continue
+    }
     displayOrder += 1
     const associationRow = {
       id: q.clientRowId ?? `update-${sortOrder}`,
@@ -834,5 +896,16 @@ export function unwrapPracticeFullData(
   if (!body) return null
   const raw = body.data ?? body.Data ?? null
   if (!raw) return null
-  return normalizePracticeFullData(raw) ?? (raw as PracticeFullData)
+  const normalized = normalizePracticeFullData(raw)
+  if (normalized) return normalized
+  // Fall back only when the payload already looks usable.
+  const record = asRecord(raw)
+  if (!record) return null
+  const practice = record.practice ?? record.Practice
+  const questionSet = record.question_set ?? record.QuestionSet ?? record.questionSet
+  const questions = record.questions ?? record.Questions
+  if (!asRecord(practice) || !asRecord(questionSet) || !Array.isArray(questions)) {
+    return null
+  }
+  return raw as PracticeFullData
 }

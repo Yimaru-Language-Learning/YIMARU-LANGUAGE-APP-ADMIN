@@ -17,6 +17,7 @@ import {
 } from "./practiceParents"
 import {
   buildCreateQuestionFromDefinition,
+  isExistingBankQuestion,
   questionRowHasContent,
   validateDefinitionQuestion,
   type LearnEnglishDefinitionQuestionInput,
@@ -71,12 +72,16 @@ export function validatePracticeQuestionsWithDefinitions(
 ): string | null {
   const byId = new Map(definitions.map((d) => [d.id, d]))
   const filled = questions.filter((q) => {
+    if (isExistingBankQuestion(q)) return true
     const def = byId.get(q.questionTypeDefinitionId)
     return def ? questionRowHasContent(q, def) : false
   })
-  if (filled.length === 0) return "Add at least one question with content."
+  if (filled.length === 0) {
+    return "Add at least one question with content, or attach questions from the bank."
+  }
   for (let i = 0; i < filled.length; i++) {
     const q = filled[i]
+    if (isExistingBankQuestion(q)) continue
     if (!Number.isFinite(q.questionTypeDefinitionId) || q.questionTypeDefinitionId <= 0) {
       return `Question ${i + 1}: select a question type from the list.`
     }
@@ -137,6 +142,7 @@ export async function executePracticeCreation(
           : index + 1,
     }))
     .filter(({ q }) => {
+      if (isExistingBankQuestion(q)) return true
       const def = byId.get(q.questionTypeDefinitionId)
       return def ? questionRowHasContent(q, def) : false
     })
@@ -144,7 +150,7 @@ export async function executePracticeCreation(
 
   const associationRows = toCreate.map(({ q, sortOrder }) => ({
     id: q.clientRowId ?? `row-${sortOrder}`,
-    serverQuestionId: null as number | null,
+    serverQuestionId: isExistingBankQuestion(q) ? Number(q.serverQuestionId) : null,
     displayOrder: sortOrder,
     associatedQuestionId: q.associatedQuestionId ?? null,
     associatedAnchorRowId: q.associatedAnchorRowId ?? null,
@@ -152,17 +158,27 @@ export async function executePracticeCreation(
   const associationErr = validateQuestionAssociations(associationRows)
   if (associationErr) throw new Error(associationErr)
 
-  // Steps 2 & 3 — create questions and attach to set (order from step 3 drag-and-drop)
+  // Steps 2 & 3 — create new questions (or reuse bank IDs) and attach to set
   let displayOrder = 0
   const rowIdToServerId = new Map<string, number>()
+  for (const row of associationRows) {
+    if (row.serverQuestionId != null && row.serverQuestionId > 0) {
+      rowIdToServerId.set(row.id, row.serverQuestionId)
+    }
+  }
   for (const { q, sortOrder } of toCreate) {
-    const def = byId.get(q.questionTypeDefinitionId)
-    if (!def) throw new Error(`Missing definition #${q.questionTypeDefinitionId}`)
     displayOrder += 1
-    const payload = buildCreateQuestionFromDefinition(def, q, opts.status)
-    const qRes = await createQuestion(payload)
-    const questionId = extractCreatedResourceId(qRes, "Could not create question")
     const rowKey = q.clientRowId ?? `row-${sortOrder}`
+    let questionId: number
+    if (isExistingBankQuestion(q)) {
+      questionId = Number(q.serverQuestionId)
+    } else {
+      const def = byId.get(q.questionTypeDefinitionId)
+      if (!def) throw new Error(`Missing definition #${q.questionTypeDefinitionId}`)
+      const payload = buildCreateQuestionFromDefinition(def, q, opts.status)
+      const qRes = await createQuestion(payload)
+      questionId = extractCreatedResourceId(qRes, "Could not create question")
+    }
     rowIdToServerId.set(rowKey, questionId)
 
     const associationRow = {

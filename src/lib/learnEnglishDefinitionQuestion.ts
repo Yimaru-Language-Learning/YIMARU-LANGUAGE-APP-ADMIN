@@ -185,6 +185,8 @@ export type QuestionDifficultyLevel = "EASY" | "MEDIUM" | "HARD"
 
 export interface LearnEnglishDefinitionQuestionInput {
   clientRowId?: string
+  /** When set, practice creation attaches this bank question instead of creating a new one. */
+  serverQuestionId?: number | null
   questionText: string
   questionTypeDefinitionId: number
   dynamicFieldValues: Record<string, string>
@@ -202,6 +204,12 @@ export interface LearnEnglishDefinitionQuestionInput {
   shortAnswers?: string[]
   voicePromptUrl?: string
   sampleAnswerVoiceUrl?: string
+}
+
+export function isExistingBankQuestion(
+  q: Pick<LearnEnglishDefinitionQuestionInput, "serverQuestionId">,
+): boolean {
+  return q.serverQuestionId != null && Number(q.serverQuestionId) > 0
 }
 
 export function questionRowHasContent(

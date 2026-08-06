@@ -1441,6 +1441,8 @@ export interface QuestionShortAnswer {
 export interface QuestionDetail {
   id: number
   question_text: string
+  /** Human-readable prompt for lists/search when question_text is omitted (DYNAMIC). */
+  preview_text?: string | null
   question_type: "MCQ" | "TRUE_FALSE" | "SHORT_ANSWER" | "SHORT" | string
   difficulty_level?: string | null
   points?: number | null

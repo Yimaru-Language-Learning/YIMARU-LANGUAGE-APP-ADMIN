@@ -24,6 +24,13 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const message = readApiResponseMessage(error.response?.data)
     if (message) return message
+    if (error.message?.trim()) return error.message.trim()
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim()
+  }
+  if (typeof error === "string" && error.trim()) {
+    return error.trim()
   }
   return fallback
 }

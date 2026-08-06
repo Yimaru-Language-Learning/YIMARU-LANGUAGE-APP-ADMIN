@@ -349,13 +349,21 @@ export function EditPracticeFlow() {
           // Hierarchy URLs / mislabeled kind: retry the other practice table.
           try {
             res = await loadFallback(practiceId);
-          } catch {
+          } catch (fallbackError) {
+            const primaryMsg = getApiErrorMessage(primaryError, "");
+            const fallbackMsg = getApiErrorMessage(fallbackError, "");
+            if (primaryMsg && fallbackMsg && primaryMsg !== fallbackMsg) {
+              throw new Error(`${primaryMsg} (also tried alternate API: ${fallbackMsg})`);
+            }
             throw primaryError;
           }
         }
 
         const full = unwrapPracticeFullData(res);
         if (!full) throw new Error("Practice details were missing from the response.");
+        if (!full.practice || !full.question_set || !Array.isArray(full.questions)) {
+          throw new Error("Practice response was incomplete (missing practice, question set, or questions).");
+        }
         const mapped = mapPracticeFullToFormState(full, typeDefinitions);
         if (cancelled) return;
         const loadedPersona =

@@ -358,7 +358,7 @@ export function AppVersionsTab() {
               ) : null}
             </div>
           ) : (
-            <div className="min-w-0 w-full max-w-full overflow-x-auto rounded-[8px] border border-grayScale-100">
+            <div className="min-w-0 w-full max-w-full overflow-x-auto overscroll-x-contain rounded-[8px] border border-grayScale-100 [-webkit-overflow-scrolling:touch]">
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-grayScale-100 bg-grayScale-50/80 text-[11px] font-bold uppercase tracking-wider text-grayScale-400">

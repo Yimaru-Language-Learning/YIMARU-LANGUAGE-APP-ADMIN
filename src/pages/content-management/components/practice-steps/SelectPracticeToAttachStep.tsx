@@ -334,10 +334,10 @@ export function SelectPracticeToAttachStep({
   const footer = (
     <div
       className={cn(
-        "flex items-center justify-between border-t border-grayScale-100",
+        "flex flex-col-reverse gap-3 border-t border-grayScale-100 sm:flex-row sm:items-center sm:justify-between",
         isDialog
-          ? "bg-grayScale-50/60 px-5 py-3.5"
-          : "bg-[#F8FAFC] p-4 px-12",
+          ? "bg-grayScale-50/60 px-4 py-3.5 sm:px-5"
+          : "bg-[#F8FAFC] px-4 py-4 sm:px-8",
       )}
     >
       <button
@@ -355,10 +355,10 @@ export function SelectPracticeToAttachStep({
         disabled={!canContinue}
         onClick={nextStep}
         className={cn(
-          "bg-brand-500 font-bold text-white hover:bg-brand-600 disabled:opacity-50",
+          "w-full bg-brand-500 font-bold text-white hover:bg-brand-600 disabled:opacity-50 sm:w-auto",
           isDialog
             ? "h-10 rounded-[6px] px-8 text-sm"
-            : "flex h-10 items-center gap-2 rounded-[6px] px-10 text-[14px] transition-all active:scale-95",
+            : "flex h-10 items-center justify-center gap-2 rounded-[6px] px-10 text-[14px] transition-all active:scale-95",
         )}
       >
         Next: Review

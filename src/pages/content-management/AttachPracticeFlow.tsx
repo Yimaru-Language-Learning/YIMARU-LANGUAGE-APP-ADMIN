@@ -145,13 +145,13 @@ export function AttachPracticeFlow() {
       : "Verify practice details before publishing it.";
 
   return (
-    <div className="space-y-8 pb-32 px-6 pt-10 min-h-screen  animate-in fade-in duration-500">
-      <div className="mx-auto w-full">
+    <div className="min-h-screen animate-in fade-in space-y-6 px-0 pb-24 pt-4 duration-500 sm:space-y-8 sm:px-2 sm:pb-32 sm:pt-8">
+      <div className="mx-auto w-full min-w-0 max-w-7xl">
         {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between mb-12">
+        <div className="mb-8 flex items-center justify-between sm:mb-12">
           <Link
             to={backPath}
-            className="flex items-center gap-2 text-[15px] font-bold text-grayScale-600 transition-colors hover:text-brand-500 group"
+            className="group flex items-center gap-2 text-[15px] font-bold text-grayScale-600 transition-colors hover:text-brand-500"
           >
             <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
             Back to Videos
@@ -159,34 +159,34 @@ export function AttachPracticeFlow() {
         </div>
 
         {/* Stepper Area */}
-        <div className="mb-20 w-full pointer-events-none">
+        <div className="pointer-events-none mb-10 w-full max-w-3xl sm:mb-16">
           <Stepper steps={steps} currentStep={currentStep} />
         </div>
 
         {/* Page Title & Header Actions */}
-        <div className="mb-10 flex items-start justify-between">
-          <div className="">
-            <h1 className="text-[30px] font-bold text-[#0D1421] ">{title}</h1>
-            <p className="text-grayScale-400 text-[16px] font-medium ">
+        <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-[#0D1421] sm:text-[30px]">{title}</h1>
+            <p className="text-sm font-medium text-grayScale-400 sm:text-[16px]">
               {description}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <Button
               variant="outline"
-              className="h-10 px-8 rounded-[6px] border-grayScale-100 text-grayScale-600 font-bold bg-white hover:bg-grayScale-50 shadow-sm"
+              className="h-10 w-full rounded-[6px] border-grayScale-100 bg-white px-8 font-bold text-grayScale-600 shadow-sm hover:bg-grayScale-50 sm:w-auto"
               onClick={() => navigate(backPath)}
             >
               Cancel
             </Button>
-            <Button className="h-10 px-8 rounded-[6px] bg-[#9E2891] font-bold text-white shadow-md hover:bg-[#8A237E] transition-all">
+            <Button className="h-10 w-full rounded-[6px] bg-[#9E2891] px-8 font-bold text-white shadow-md transition-all hover:bg-[#8A237E] sm:w-auto">
               Save as Draft
             </Button>
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="w-full">{renderStep()}</div>
+        <div className="w-full min-w-0">{renderStep()}</div>
       </div>
     </div>
   );

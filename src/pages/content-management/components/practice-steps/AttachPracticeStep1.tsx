@@ -148,7 +148,7 @@ export function AttachPracticeStep1({
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-grayScale-200 bg-[#F8FAFC] py-4 px-12">
+      <div className="flex flex-col-reverse gap-3 border-t border-grayScale-200 bg-[#F8FAFC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <button
           className="text-[14px] text-grayScale-500 transition-colors hover:text-grayScale-700"
           onClick={onCancel}
@@ -157,7 +157,7 @@ export function AttachPracticeStep1({
         </button>
         <Button
           onClick={nextStep}
-          className="h-10 px-12 rounded-[6px] bg-[#9E2891] text-[14px] font-bold text-white shadow-lg shadow-brand-500/10 transition-all active:scale-95 flex items-center gap-3"
+          className="flex h-10 w-full items-center justify-center gap-3 rounded-[6px] bg-[#9E2891] px-8 text-[14px] font-bold text-white shadow-lg shadow-brand-500/10 transition-all active:scale-95 sm:w-auto sm:px-12"
         >
           Next: Review
           <ArrowRight className="h-4 w-4" />

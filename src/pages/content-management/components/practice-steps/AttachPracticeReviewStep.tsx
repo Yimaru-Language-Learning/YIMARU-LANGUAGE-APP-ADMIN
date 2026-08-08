@@ -186,18 +186,18 @@ export function AttachPracticeReviewStep({
       </div>
 
       {/* 4. Action Footer */}
-      <div className="flex items-center justify-between pt-10 px-2">
+      <div className="flex flex-col-reverse gap-3 px-0 pt-8 sm:flex-row sm:items-center sm:justify-between sm:px-2 sm:pt-10">
         <Button
           onClick={prevStep}
           variant="outline"
-          className="h-12 px-10 rounded-[6px] bg-transparent border-grayScale-400 font-bold text-grayScale-600  transition-all"
+          className="h-12 w-full rounded-[6px] border-grayScale-400 bg-transparent px-10 font-bold text-grayScale-600 transition-all sm:w-auto"
         >
           Back
         </Button>
-        <div className="flex gap-4">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
           <Button
             variant="outline"
-            className="h-12 px-10 rounded-[6px] border-grayScale-200 font-bold text-grayScale-600 bg-white shadow-none transition-all"
+            className="h-12 w-full rounded-[6px] border-grayScale-200 bg-white px-10 font-bold text-grayScale-600 shadow-none transition-all sm:w-auto"
           >
             Save as Draft
           </Button>
@@ -205,10 +205,10 @@ export function AttachPracticeReviewStep({
             onClick={onPublish}
             disabled={!isConfirmed}
             className={cn(
-              "h-12 px-10 rounded-[6px] font-bold text-white shadow-xl flex items-center gap-3 transition-all active:scale-95",
+              "flex h-12 w-full items-center justify-center gap-3 rounded-[6px] px-10 font-bold text-white shadow-xl transition-all active:scale-95 sm:w-auto",
               isConfirmed
-                ? "bg-[#9E2891] hover:bg-[#8A237E] shadow-[#9E2891]/20"
-                : "bg-grayScale-200 cursor-not-allowed opacity-50",
+                ? "bg-[#9E2891] shadow-[#9E2891]/20 hover:bg-[#8A237E]"
+                : "cursor-not-allowed bg-grayScale-200 opacity-50",
             )}
           >
             <Rocket className="h-5 w-5" />

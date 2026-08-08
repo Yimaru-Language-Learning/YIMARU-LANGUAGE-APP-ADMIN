@@ -75,17 +75,17 @@ export function ProgramAttachReviewStep({
       </div>
 
       {/* Footer Actions */}
-      <div className="flex bg-[#F8FAFC] border border-grayScale-200 items-center rounded-[12px] justify-between py-4 px-6">
+      <div className="flex flex-col-reverse gap-3 rounded-[12px] border border-grayScale-200 bg-[#F8FAFC] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <Button
           onClick={onCancel}
           variant="outline"
-          className="h-10 px-6 rounded-[6px] border-grayScale-100 font-bold text-grayScale-500 bg-white hover:bg-grayScale-50 transition-all text-lg"
+          className="h-10 w-full rounded-[6px] border-grayScale-100 bg-white px-6 text-lg font-bold text-grayScale-500 transition-all hover:bg-grayScale-50 sm:w-auto"
         >
           Cancel
         </Button>
         <Button
           onClick={onPublish}
-          className="h-10 px-10 rounded-[6px] bg-[#9E2891] text-[16px] font-medium text-white  transition-all active:scale-95 flex items-center gap-3"
+          className="flex h-10 w-full items-center justify-center gap-3 rounded-[6px] bg-[#9E2891] px-10 text-[16px] font-medium text-white transition-all active:scale-95 sm:w-auto"
         >
           Next: Review & Publish
           <ArrowRight className="h-4 w-4" />

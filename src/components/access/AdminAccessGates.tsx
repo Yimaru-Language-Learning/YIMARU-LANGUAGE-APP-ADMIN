@@ -14,7 +14,7 @@ export function FullPanelOnly({ children, fallback = null }: GateProps) {
   return <>{children}</>
 }
 
-/** Renders children only for Super Admin (e.g. team email invites). */
+/** Renders children only for Admin / Super Admin (e.g. team email invites). */
 export function SuperAdminOnly({ children, fallback = null }: GateProps) {
   const { canInviteTeam } = useAdminAccess()
   if (!canInviteTeam) return <>{fallback}</>

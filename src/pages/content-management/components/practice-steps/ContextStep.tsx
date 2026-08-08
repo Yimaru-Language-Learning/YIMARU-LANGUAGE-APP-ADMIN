@@ -348,7 +348,7 @@ export function ContextStep({
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-grayScale-100 bg-[#F8FAFC] p-4 px-12">
+      <div className="flex flex-col-reverse gap-3 border-t border-grayScale-100 bg-[#F8FAFC] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <button
           type="button"
           className="text-[14px] font-bold text-grayScale-500 transition-colors hover:text-grayScale-700"
@@ -360,7 +360,7 @@ export function ContextStep({
           type="button"
           onClick={nextStep}
           disabled={!canContinue}
-          className="h-10 px-10 rounded-[6px] bg-brand-500 text-[14px] font-bold text-white transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-[6px] bg-brand-500 px-8 text-[14px] font-bold text-white transition-all active:scale-95 disabled:opacity-50 sm:w-auto sm:px-10"
         >
           Next: Persona <ArrowRight className="h-5 w-5" />
         </Button>

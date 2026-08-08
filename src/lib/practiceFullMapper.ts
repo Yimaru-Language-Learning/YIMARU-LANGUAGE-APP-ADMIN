@@ -56,8 +56,8 @@ export interface PracticeFormQuestionRow {
   stimulusBlockKey: string | null
   questionTypeDefinitionId: number | null
   text: string
-  difficultyLevel: "EASY" | "MEDIUM" | "HARD"
-  points: number
+  difficultyLevel?: "EASY" | "MEDIUM" | "HARD"
+  points?: number
   dynamicFieldValues: Record<string, string>
   sourceDynamicPayload?: DynamicQuestionPayload | null
   mcqOptions: { text: string; isCorrect: boolean }[]
@@ -641,8 +641,6 @@ export function mapPracticeFullToFormState(
             stimulusBlockKey: null,
             questionTypeDefinitionId: typeDefinitions[0]?.id ?? null,
             text: "",
-            difficultyLevel: "EASY" as const,
-            points: 1,
             dynamicFieldValues: typeDefinitions[0]
               ? emptyDynamicFieldValuesForDefinition(typeDefinitions[0])
               : {},

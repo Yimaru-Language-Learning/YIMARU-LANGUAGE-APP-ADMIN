@@ -12,7 +12,7 @@ export const Table = React.forwardRef<HTMLTableElement, TableProps>(
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     )
     if (noWrapper) return table
-    return <div className="relative w-full min-w-0 overflow-auto">{table}</div>
+    return <div className="relative w-full min-w-0 overflow-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">{table}</div>
   },
 )
 Table.displayName = "Table"
@@ -53,7 +53,7 @@ export const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttr
   ({ className, ...props }, ref) => (
     <th
       ref={ref}
-      className={cn("h-11 px-4 text-left align-middle text-xs font-semibold text-grayScale-500 [&:has([role=checkbox])]:pr-0", className)}
+      className={cn("h-11 px-3 text-left align-middle text-xs font-semibold text-grayScale-500 sm:px-4 [&:has([role=checkbox])]:pr-0", className)}
       {...props}
     />
   ),
@@ -62,7 +62,7 @@ TableHead.displayName = "TableHead"
 
 export const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props} />
+    <td ref={ref} className={cn("p-3 align-middle sm:p-4 [&:has([role=checkbox])]:pr-0", className)} {...props} />
   ),
 )
 TableCell.displayName = "TableCell"

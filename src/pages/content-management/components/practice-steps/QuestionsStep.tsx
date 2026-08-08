@@ -77,8 +77,6 @@ function questionSummaryPreview(
     text?: string;
     dynamicFieldValues?: Record<string, string>;
     questionTypeDefinitionId?: number | null;
-    difficultyLevel?: string;
-    points?: number;
   },
   def: QuestionTypeDefinition | undefined,
 ): string {
@@ -186,8 +184,6 @@ function createEmptyQuestionRow(id: string, displayOrder = 1, inheritAnchor?: {
     stimulusBlockKey: null as string | null,
     questionTypeDefinitionId: null as number | null,
     text: "",
-    difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
-    points: 1,
     dynamicFieldValues: {} as Record<string, string>,
     mcqOptions: defaultMcqOptions(),
     trueFalseCorrect: true,
@@ -781,9 +777,6 @@ export function QuestionsStep({
                                     Bank #{q.serverQuestionId}
                                   </span>
                                 ) : null}
-                                <span className="rounded-full bg-grayScale-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-grayScale-600">
-                                  {q.difficultyLevel ?? "EASY"}
-                                </span>
                                 <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-semibold text-sky-800">
                                   {sectionBadgeLabel(q, formData.questions)}
                                 </span>
@@ -792,9 +785,6 @@ export function QuestionsStep({
                                     {q.stimulusBlockKey}
                                   </span>
                                 ) : null}
-                                <span className="text-xs font-medium text-grayScale-500">
-                                  {q.points ?? 1} pt{(q.points ?? 1) === 1 ? "" : "s"}
-                                </span>
                               </div>
                               <p className="text-xs font-medium text-brand-600">
                                 {typeLabel}
@@ -895,55 +885,6 @@ export function QuestionsStep({
                     </select>
                   </div>
                 ) : null}
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
-                      Difficulty
-                    </label>
-                    <select
-                      className="h-11 w-full rounded-lg border border-grayScale-200 bg-white px-3 text-sm font-medium text-grayScale-800"
-                      value={q.difficultyLevel ?? "EASY"}
-                      onChange={(e) => {
-                        const newQuestions = [...formData.questions];
-                        newQuestions[i] = {
-                          ...newQuestions[i],
-                          difficultyLevel: e.target.value as
-                            | "EASY"
-                            | "MEDIUM"
-                            | "HARD",
-                        };
-                        setFormData({ ...formData, questions: newQuestions });
-                      }}
-                    >
-                      <option value="EASY">Easy</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HARD">Hard</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
-                      Points
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={q.points ?? 1}
-                      onChange={(e) => {
-                        const newQuestions = [...formData.questions];
-                        const parsed = Number.parseInt(e.target.value, 10);
-                        newQuestions[i] = {
-                          ...newQuestions[i],
-                          points:
-                            Number.isFinite(parsed) && parsed > 0 ? parsed : 1,
-                        };
-                        setFormData({ ...formData, questions: newQuestions });
-                      }}
-                      className="h-11 rounded-lg border-grayScale-200"
-                    />
-                  </div>
-                </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-grayScale-700">
@@ -1090,12 +1031,12 @@ export function QuestionsStep({
         typeDefinitions={typeDefinitions}
       />
 
-      <div className="flex items-center justify-between pt-8">
+      <div className="flex flex-col-reverse gap-3 pt-8 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           onClick={prevStep}
           variant="outline"
-          className="h-10 w-20 rounded-[6px] border-grayScale-200 font-bold text-grayScale-600 shadow-sm"
+          className="h-10 w-full rounded-[6px] border-grayScale-200 font-bold text-grayScale-600 shadow-sm sm:w-20"
         >
           Back
         </Button>
@@ -1157,7 +1098,7 @@ export function QuestionsStep({
             nextStep();
           }}
           disabled={definitionsLoading || !!definitionsError || typeDefinitions.length === 0}
-          className="h-10 rounded-[6px] bg-brand-500 px-8 font-bold disabled:opacity-50"
+          className="h-10 w-full rounded-[6px] bg-brand-500 px-8 font-bold disabled:opacity-50 sm:w-auto"
         >
           Next: Review <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

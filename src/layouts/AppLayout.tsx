@@ -39,6 +39,15 @@ export function AppLayout() {
   }, [])
 
   useEffect(() => {
+    if (!sidebarOpen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [sidebarOpen])
+
+  useEffect(() => {
     const container = mainRef.current
     if (!container) return
 
@@ -100,8 +109,8 @@ export function AppLayout() {
         >
           <Outlet />
         </main>
-        <footer className="shrink-0 border-t bg-grayScale-50 px-4 py-3 lg:px-6">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-grayScale-400">
+        <footer className="shrink-0 border-t bg-grayScale-50 px-3 py-2.5 sm:px-4 sm:py-3 lg:px-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-[11px] text-grayScale-400 sm:text-xs">
             <span>Powered by</span>
             <a
               href="https://yimaruacademy.com"
@@ -111,7 +120,7 @@ export function AppLayout() {
             >
               Yimaru Academy
             </a>
-            <span>·</span>
+            <span aria-hidden>·</span>
             <span>© {new Date().getFullYear()}</span>
           </div>
         </footer>

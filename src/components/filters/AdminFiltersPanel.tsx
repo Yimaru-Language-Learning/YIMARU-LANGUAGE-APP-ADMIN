@@ -47,7 +47,9 @@ export function AdminFiltersPanel({
       )}
     >
       <div className="flex flex-wrap items-center gap-3 p-4">
-        {search ? <div className="min-w-[200px] flex-1">{search}</div> : null}
+        {search ? (
+          <div className="min-w-0 w-full flex-1 sm:min-w-[200px]">{search}</div>
+        ) : null}
         {inlineActions ? (
           <div className="h-9 shrink-0">{actions}</div>
         ) : (

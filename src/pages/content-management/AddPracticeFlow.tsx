@@ -243,8 +243,6 @@ export function AddPracticeFlow() {
         stimulusBlockKey: null as string | null,
         questionTypeDefinitionId: null as number | null,
         text: "",
-        difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
-        points: 1,
         dynamicFieldValues: {} as Record<string, string>,
         mcqOptions: [
           { text: "", isCorrect: true },
@@ -576,8 +574,6 @@ export function AddPracticeFlow() {
                     questionTypeDefinitionId:
                       typeDefinitions[0]?.id ?? (null as number | null),
                     text: "",
-                    difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
-                    points: 1,
                     dynamicFieldValues: typeDefinitions[0]
                       ? emptyDynamicFieldValuesForDefinition(typeDefinitions[0])
                       : {},
@@ -750,26 +746,26 @@ export function AddPracticeFlow() {
   };
 
   return (
-    <div className="space-y-8 px-6 pb-16 pt-6">
-      <div className="mx-auto max-w-7xl w-full">
-        <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6 px-0 pb-12 pt-2 sm:space-y-8 sm:px-2 sm:pb-16 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl min-w-0">
+        <div className="mb-6 flex items-center justify-between sm:mb-8">
           <PageBackLink fallbackTo={backPath} label={backLabel} />
         </div>
 
-        <div className=" mb-10">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-[#0F172A]">
+        <div className="mb-8 sm:mb-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <h1 className="text-2xl font-bold text-[#0F172A] sm:text-3xl">
               {isFromQuestionType ? "Create Practice from Question Type" : "Add New Practice"}
             </h1>
             <Button
               variant="outline"
-              className="rounded-[8px] border-grayScale-200 text-grayScale-600 h-10 px-6 font-bold bg-white hover:bg-grayScale-50"
+              className="h-10 w-full rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
               onClick={goBack}
             >
               Cancel
             </Button>
           </div>
-          <p className="text-grayScale-400 text-base">
+          <p className="mt-1 text-sm text-grayScale-400 sm:text-base">
             {isFromQuestionType
               ? `Build a practice using ${seededQuestionType?.display_name ?? "the selected question type"}. Locations are optional — attach courses, modules, or lessons later.`
               : "Create a practice with story details, a persona, and questions from your question type library."}
@@ -813,12 +809,12 @@ export function AddPracticeFlow() {
           ) : null}
         </div>
 
-        <div className="mx-auto w-[70%] mb-12">
+        <div className="mx-auto mb-8 w-full max-w-3xl sm:mb-12">
           <Stepper steps={[...STEP_LABELS]} currentStep={currentStep} />
         </div>
 
         <div
-          className={`mx-auto ${currentStep === 3 || currentStep === 4 ? "max-w-6xl" : "max-w-4xl"}`}
+          className={`mx-auto min-w-0 ${currentStep === 3 || currentStep === 4 ? "max-w-6xl" : "max-w-4xl"}`}
         >
           {renderStep()}
         </div>

@@ -20,8 +20,10 @@ function normalizeQuestionRow(question: PracticeFormState["questions"][number]) 
     stimulusBlockKey: question.stimulusBlockKey ?? null,
     questionTypeDefinitionId: question.questionTypeDefinitionId ?? null,
     text: String(question.text ?? "").trim(),
-    difficultyLevel: question.difficultyLevel,
-    points: Number(question.points),
+    difficultyLevel: question.difficultyLevel ?? "EASY",
+    points: Number.isFinite(Number(question.points)) && Number(question.points) > 0
+      ? Number(question.points)
+      : 1,
     dynamicFieldValues: question.dynamicFieldValues ?? {},
     mcqOptions: (question.mcqOptions ?? []).map((option) => ({
       text: String(option.text ?? "").trim(),

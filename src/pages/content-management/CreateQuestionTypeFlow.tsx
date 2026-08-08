@@ -346,7 +346,7 @@ export function CreateQuestionTypeFlow() {
     <div className="min-h-screen pb-20 overflow-x-hidden">
       <div className=" border-b border-grayScale-100 sticky top-0 z-50 bg-white/95 dark:bg-grayScale-50 backdrop-blur">
         <div className="max-w-[1440px] mx-auto py-6 px-4 sm:px-6">
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-6 flex items-center justify-between sm:mb-8">
             <PageBackLink
               fallbackTo="/new-content/question-types"
               label="Back to Question Type Library"
@@ -354,27 +354,27 @@ export function CreateQuestionTypeFlow() {
             />
           </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-            <div className="space-y-1">
-              <h1 className="text-[28px] font-bold text-grayScale-900 dark:text-grayScale-600 tracking-tight">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+            <div className="min-w-0 space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-grayScale-900 dark:text-grayScale-600 sm:text-[28px]">
                 {isEdit ? "Edit question type definition" : "Create question type definition"}
               </h1>
-              <p className="text-grayScale-500 dark:text-grayScale-400 text-[14px] font-medium max-w-2xl">
+              <p className="max-w-2xl text-[14px] font-medium text-grayScale-500 dark:text-grayScale-400">
                 {isEdit
                   ? `Update reusable question type definition #${editDefinitionId}.`
                   : "Build a reusable question type template for dynamic practice and assessment questions."}
               </p>
             </div>
-            <div className="flex items-center gap-4 shrink-0">
+            <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3 lg:w-auto lg:shrink-0">
               <Button
                 variant="outline"
-                className="h-10 px-8 rounded-[6px] border-grayScale-200 text-grayScale-900 dark:text-grayScale-600 font-medium hover:bg-grayScale-50 dark:hover:bg-grayScale-100"
+                className="h-10 w-full rounded-[6px] border-grayScale-200 px-8 font-medium text-grayScale-900 hover:bg-grayScale-50 dark:text-grayScale-600 dark:hover:bg-grayScale-100 sm:w-auto"
                 onClick={() => navigate("/new-content/question-types")}
               >
                 Cancel
               </Button>
               <Button
-                className="h-10 px-8 rounded-[6px] bg-[#9E2891] font-medium text-white shadow-lg shadow-brand-500/10 hover:bg-[#8A237E] transition-all"
+                className="h-10 w-full rounded-[6px] bg-[#9E2891] px-8 font-medium text-white shadow-lg shadow-brand-500/10 transition-all hover:bg-[#8A237E] sm:w-auto"
                 onClick={() => void handleHeaderSaveDraft()}
                 disabled={saving || (isEdit && !hasUnsavedChanges)}
               >

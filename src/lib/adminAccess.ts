@@ -29,7 +29,7 @@ export function isContentManagerRole(role?: string): boolean {
 }
 
 export function canSendTeamInvitations(role?: string): boolean {
-  return normalizedTeamRole(role) === "SUPER_ADMIN"
+  return FULL_PANEL_TEAM_ROLES.has(normalizedTeamRole(role))
 }
 
 export function isPathAllowedForTeamRole(pathname: string, role?: string): boolean {

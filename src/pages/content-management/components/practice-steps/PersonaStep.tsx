@@ -115,12 +115,12 @@ export function PersonaStep({
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-8">
+      <div className="flex flex-col-reverse gap-3 pt-8 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           onClick={prevStep}
           variant="outline"
-          className="h-10 w-20 rounded-[6px] border-grayScale-200 text-grayScale-600"
+          className="h-10 w-full rounded-[6px] border-grayScale-200 text-grayScale-600 sm:w-20"
         >
           Back
         </Button>
@@ -128,7 +128,7 @@ export function PersonaStep({
           type="button"
           onClick={nextStep}
           disabled={!selectedPersona || loading || personas.length === 0}
-          className="h-10 rounded-[6px] bg-brand-500 px-8 shadow-md shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-50"
+          className="h-10 w-full rounded-[6px] bg-brand-500 px-8 shadow-md shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-50 sm:w-auto"
         >
           Next: Questions <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

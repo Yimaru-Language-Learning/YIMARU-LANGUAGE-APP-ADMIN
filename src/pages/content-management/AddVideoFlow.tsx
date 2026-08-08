@@ -186,31 +186,31 @@ export function AddVideoFlow() {
   }
 
   return (
-    <div className="space-y-8 pb-32 px-6 pt-6 min-h-screen ">
-      <div className="mx-auto max-w-7xl w-full">
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen space-y-6 px-0 pb-24 pt-2 sm:space-y-8 sm:px-2 sm:pb-32 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl min-w-0">
+        <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
           <PageBackLink fallbackTo={backPath} label="Back to module" className="text-grayScale-500" />
           <Button
             variant="outline"
-            className="rounded-[8px] border-grayScale-200 text-grayScale-600 h-10 px-6 font-bold bg-white hover:bg-grayScale-50"
+            className="h-10 w-full rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
             onClick={goBack}
           >
             Cancel
           </Button>
         </div>
 
-        <h1 className="text-2xl font-bold text-[#0F172A] mb-10">
+        <h1 className="mb-8 text-2xl font-bold text-[#0F172A] sm:mb-10">
           Add new lesson
         </h1>
 
-        <div className="mx-auto max-w-4xl mb-12">
+        <div className="mx-auto mb-8 w-full max-w-3xl sm:mb-12">
           <Stepper
             steps={STEPS.map((s) => s.label)}
             currentStep={currentStep}
           />
         </div>
 
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto min-w-0 max-w-7xl">
           {currentStep === 1 && (
             <VideoDetailStep
               key={formResetKey}

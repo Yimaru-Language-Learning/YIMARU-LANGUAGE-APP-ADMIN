@@ -346,7 +346,7 @@ export function RolesListPage({ embedded = false }: RolesListPageProps) {
           {embedded
             ? canEditRoles
               ? "View and edit system roles and permissions."
-              : "View system roles and permissions. Only Super Admins can make changes."
+              : "View system roles and permissions. Only Admins can make changes."
             : "Manage roles and their permissions."}
         </p>
       </div>

@@ -252,24 +252,24 @@ export function LinkExistingPracticeFlow() {
   }
 
   return (
-    <div className="space-y-8 px-6 pb-16 pt-6">
-      <div className="mx-auto w-full max-w-7xl">
-        <div className="mb-8 flex items-center justify-between">
+    <div className="space-y-6 px-0 pb-12 pt-2 sm:space-y-8 sm:px-2 sm:pb-16 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl min-w-0">
+        <div className="mb-6 flex items-center justify-between sm:mb-8">
           <PageBackLink fallbackTo={backPath} label={backLabel} />
         </div>
 
-        <div className="mb-10">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-[#0F172A]">Attach Existing Practice</h1>
+        <div className="mb-8 sm:mb-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <h1 className="text-2xl font-bold text-[#0F172A] sm:text-3xl">Attach Existing Practice</h1>
             <Button
               variant="outline"
-              className="h-10 rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50"
+              className="h-10 w-full rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
               onClick={goBack}
             >
               Cancel
             </Button>
           </div>
-          <p className="text-base text-grayScale-400">
+          <p className="mt-1 text-sm text-grayScale-400 sm:text-base">
             Browse your practice library and link an existing practice to this content location.
           </p>
           <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm text-violet-950">
@@ -287,11 +287,11 @@ export function LinkExistingPracticeFlow() {
           </div>
         </div>
 
-        <div className="mx-auto mb-12 w-[70%] max-w-md">
+        <div className="mx-auto mb-8 w-full max-w-3xl sm:mb-12">
           <Stepper steps={[...STEP_LABELS]} currentStep={currentStep} />
         </div>
 
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto min-w-0 max-w-4xl">
           {currentStep === 1 ? (
             <SelectPracticeToAttachStep
               isExamPrep={isExamPrep}

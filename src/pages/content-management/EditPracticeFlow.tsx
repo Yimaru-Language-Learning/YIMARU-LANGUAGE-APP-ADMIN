@@ -280,8 +280,6 @@ export function EditPracticeFlow() {
         stimulusBlockKey: null as string | null,
         questionTypeDefinitionId: null as number | null,
         text: "",
-        difficultyLevel: "EASY" as "EASY" | "MEDIUM" | "HARD",
-        points: 1,
         dynamicFieldValues: {} as Record<string, string>,
         mcqOptions: [
           { text: "", isCorrect: true },
@@ -740,18 +738,26 @@ export function EditPracticeFlow() {
   };
 
   return (
-    <div className="space-y-8 px-6 pb-16 pt-6">
-      <div className="mx-auto max-w-7xl w-full">
-        <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6 px-0 pb-12 pt-2 sm:space-y-8 sm:px-2 sm:pb-16 sm:pt-4">
+      <div className="mx-auto w-full max-w-7xl min-w-0">
+        <div className="mb-6 flex items-center justify-between sm:mb-8">
           <PageBackLink fallbackTo={backPath} label={backLabel} />
         </div>
 
-        <div className="mb-10">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-3xl font-bold text-[#0F172A]">Edit Practice</h1>
-            <div className="flex shrink-0 items-center gap-3">
+        <div className="mb-8 sm:mb-10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <h1 className="text-2xl font-bold text-[#0F172A] sm:text-3xl">Edit Practice</h1>
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
               <Button
-                className="h-10 rounded-[8px] bg-brand-500 px-6 font-bold text-white shadow-md shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-50"
+                variant="outline"
+                className="h-10 w-full rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
+                disabled={submitting}
+                onClick={() => goBack()}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="h-10 w-full rounded-[8px] bg-brand-500 px-6 font-bold text-white shadow-md shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-50 sm:w-auto"
                 disabled={submitting || !hasUnsavedChanges}
                 onClick={handleSaveChanges}
               >
@@ -764,27 +770,19 @@ export function EditPracticeFlow() {
                   "Save changes"
                 )}
               </Button>
-              <Button
-                variant="outline"
-                className="h-10 rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50"
-                disabled={submitting}
-                onClick={() => goBack()}
-              >
-                Cancel
-              </Button>
             </div>
           </div>
-          <p className="text-grayScale-400 text-base">
+          <p className="mt-1 text-sm text-grayScale-400 sm:text-base">
             Update story details, persona, and questions for practice #{practiceId}.
           </p>
         </div>
 
-        <div className="mx-auto w-[70%] mb-12">
+        <div className="mx-auto mb-8 w-full max-w-3xl sm:mb-12">
           <Stepper steps={[...STEP_LABELS]} currentStep={currentStep} />
         </div>
 
         <div
-          className={`mx-auto ${currentStep === 3 || currentStep === 4 ? "max-w-6xl" : "max-w-4xl"}`}
+          className={`mx-auto min-w-0 ${currentStep === 3 || currentStep === 4 ? "max-w-6xl" : "max-w-4xl"}`}
         >
           {renderStep()}
         </div>

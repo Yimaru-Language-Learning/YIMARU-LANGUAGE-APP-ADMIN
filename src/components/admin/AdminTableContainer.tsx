@@ -13,8 +13,16 @@ export function AdminTableContainer({
   minWidth,
 }: AdminTableContainerProps) {
   return (
-    <div className={cn("min-w-0 overflow-x-auto rounded-lg border border-grayScale-100", className)}>
-      <div style={minWidth ? { minWidth } : undefined} className={minWidth ? undefined : "min-w-0"}>
+    <div
+      className={cn(
+        "min-w-0 overflow-x-auto overscroll-x-contain rounded-lg border border-grayScale-100 [-webkit-overflow-scrolling:touch]",
+        className,
+      )}
+    >
+      <div
+        style={minWidth ? { minWidth } : undefined}
+        className={minWidth ? "inline-block min-w-full align-middle" : "min-w-0"}
+      >
         {children}
       </div>
     </div>

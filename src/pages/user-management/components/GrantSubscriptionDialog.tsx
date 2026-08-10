@@ -32,6 +32,8 @@ type GrantSubscriptionDialogProps = {
   userId: number
   userName?: string
   activeByCategory: Record<string, boolean>
+  /** Plan IDs the learner already has an active subscription for. */
+  activePlanIds?: Set<number> | number[]
   onGranted: () => void
 }
 
@@ -45,6 +47,7 @@ export function GrantSubscriptionDialog({
   userId,
   userName,
   activeByCategory,
+  activePlanIds,
   onGranted,
 }: GrantSubscriptionDialogProps) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
@@ -56,6 +59,11 @@ export function GrantSubscriptionDialog({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  const activePlanIdSet = useMemo(() => {
+    if (!activePlanIds) return new Set<number>()
+    return activePlanIds instanceof Set ? activePlanIds : new Set(activePlanIds)
+  }, [activePlanIds])
 
   useEffect(() => {
     if (!open) return
@@ -87,8 +95,11 @@ export function GrantSubscriptionDialog({
     [plans, planId],
   )
 
+  const planAlreadyActive =
+    selectedPlan != null && activePlanIdSet.has(selectedPlan.id)
   const categoryBlocked =
     selectedPlan != null && activeByCategory[selectedPlan.category] === true
+  const grantBlocked = planAlreadyActive || categoryBlocked
 
   const filteredPlans = useMemo(() => {
     const q = planSearch.trim().toLowerCase()
@@ -117,6 +128,12 @@ export function GrantSubscriptionDialog({
       setFormError("Select a subscription plan.")
       return
     }
+    if (planAlreadyActive) {
+      setFormError(
+        "This learner already has an active subscription for that plan. Extend it instead.",
+      )
+      return
+    }
     if (categoryBlocked) {
       setFormError(
         "This learner already has an active subscription in that category. Extend the existing plan or cancel it first.",
@@ -129,7 +146,7 @@ export function GrantSubscriptionDialog({
 
   const handleConfirmGrant = async () => {
     const id = Number(planId)
-    if (!Number.isFinite(id) || id < 1 || categoryBlocked) return
+    if (!Number.isFinite(id) || id < 1 || grantBlocked) return
 
     setSaving(true)
     try {
@@ -227,7 +244,9 @@ export function GrantSubscriptionDialog({
                           role="listbox"
                         >
                           {filteredPlans.map((plan) => {
-                            const blocked = activeByCategory[plan.category] === true
+                            const alreadyActive = activePlanIdSet.has(plan.id)
+                            const blocked =
+                              alreadyActive || activeByCategory[plan.category] === true
                             const selected = String(plan.id) === planId
                             return (
                               <button
@@ -255,7 +274,11 @@ export function GrantSubscriptionDialog({
                                 <span className="block text-xs text-grayScale-400">
                                   {formatPlanCategory(plan.category)} · {formatPlanDuration(plan)} ·{" "}
                                   {formatPlanPrice(plan)}
-                                  {blocked ? " — category active" : ""}
+                                  {alreadyActive
+                                    ? " — already active"
+                                    : activeByCategory[plan.category] === true
+                                      ? " — category active"
+                                      : ""}
                                 </span>
                               </button>
                             )
@@ -270,10 +293,11 @@ export function GrantSubscriptionDialog({
                     ) : null}
                   </div>
                 )}
-                {selectedPlan && categoryBlocked ? (
+                {selectedPlan && grantBlocked ? (
                   <p className="text-xs text-amber-700">
-                    An active {formatPlanCategory(selectedPlan.category)} subscription already
-                    exists. Extend or cancel it instead.
+                    {planAlreadyActive
+                      ? "This plan is already active for the learner. Extend it instead."
+                      : `An active ${formatPlanCategory(selectedPlan.category)} subscription already exists. Extend or cancel it instead.`}
                   </p>
                 ) : null}
               </div>
@@ -354,7 +378,7 @@ export function GrantSubscriptionDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={saving || plansLoading || !planId || categoryBlocked}
+                disabled={saving || plansLoading || !planId || grantBlocked}
                 className="rounded-[6px] bg-brand-500 font-semibold text-white hover:bg-brand-600"
               >
                 Continue

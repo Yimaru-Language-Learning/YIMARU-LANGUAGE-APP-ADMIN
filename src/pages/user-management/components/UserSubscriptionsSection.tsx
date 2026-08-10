@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react"
+import { getSubscriptionPlans } from "../../../api/subscription-plans.api"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent } from "../../../components/ui/card"
 import { SpinnerIcon } from "../../../components/ui/spinner-icon"
@@ -12,7 +13,7 @@ import {
   TableRow,
 } from "../../../components/ui/table"
 import { useTeamPermissions } from "../../../hooks/useTeamPermissions"
-import { DisplayValue, NOT_ASSIGNED_LABEL, displayValue } from "../../../lib/displayValue"
+import { DisplayValue, NOT_ASSIGNED_LABEL } from "../../../lib/displayValue"
 import {
   formatAdminPaymentMethod,
   hasSubscriptionAdminPermission,
@@ -21,6 +22,7 @@ import {
 } from "../../../lib/subscriptionAdminPermissions"
 import { formatPlanCategory, isLifetimeExpiry } from "../../../lib/subscriptionPlans"
 import { cn } from "../../../lib/utils"
+import type { SubscriptionPlan } from "../../../types/subscription.types"
 import type { UserSubscriptionRecord, UserSubscriptionsData } from "../../../types/userAdmin.types"
 import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog"
 import { ExtendSubscriptionDialog } from "./ExtendSubscriptionDialog"
@@ -137,7 +139,7 @@ function SubscriptionManageCard({
   canExtend,
   canGrant,
   canCancel,
-  hasActiveSubscription,
+  grantEnabled,
   onExtend,
   onGrant,
   onCancel,
@@ -146,7 +148,7 @@ function SubscriptionManageCard({
   canExtend: boolean
   canGrant: boolean
   canCancel: boolean
-  hasActiveSubscription: boolean
+  grantEnabled: boolean
   onExtend: () => void
   onGrant: () => void
   onCancel: () => void
@@ -156,9 +158,8 @@ function SubscriptionManageCard({
   const isActive = subscription.is_currently_active || statusUpper === "ACTIVE"
   const statusTone = isActive ? "active" : statusUpper === "PENDING" ? "pending" : "inactive"
   const isLifetime = !canExtendSubscription(subscription)
-  const extendEnabled = canExtend && hasActiveSubscription && isActive && !isLifetime
-  const cancelEnabled = canCancel && hasActiveSubscription && isActive && statusUpper !== "CANCELLED"
-  const markAsPaidEnabled = canGrant && !hasActiveSubscription
+  const extendEnabled = canExtend && isActive && !isLifetime
+  const cancelEnabled = canCancel && isActive && statusUpper !== "CANCELLED"
 
   return (
     <div className="rounded-2xl border border-grayScale-200 bg-white p-5 shadow-sm sm:p-6">
@@ -211,7 +212,7 @@ function SubscriptionManageCard({
             disabled={!extendEnabled}
             title={
               !extendEnabled
-                ? "Extend is only available when this learner has an active subscription."
+                ? "Extend is only available for an active, non-lifetime subscription."
                 : undefined
             }
             onClick={onExtend}
@@ -227,10 +228,10 @@ function SubscriptionManageCard({
               <Button
                 type="button"
                 className="h-10 min-w-0 flex-1 rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!markAsPaidEnabled}
+                disabled={!grantEnabled}
                 title={
-                  !markAsPaidEnabled
-                    ? "Grant is unavailable while this learner already has an active subscription."
+                  !grantEnabled
+                    ? "Grant is unavailable because this learner already has an active subscription for every available plan."
                     : undefined
                 }
                 onClick={onGrant}
@@ -246,7 +247,7 @@ function SubscriptionManageCard({
                 disabled={!cancelEnabled}
                 title={
                   !cancelEnabled
-                    ? "Cancel is only available when this learner has an active subscription."
+                    ? "Cancel is only available when this subscription is active."
                     : undefined
                 }
                 onClick={onCancel}
@@ -266,12 +267,14 @@ function EmptySubscriptionCard({
   canGrant,
   canExtend,
   canCancel,
+  grantEnabled,
   onGrant,
 }: {
   displayStatus: string
   canGrant: boolean
   canExtend: boolean
   canCancel: boolean
+  grantEnabled: boolean
   onGrant: () => void
 }) {
   const upper = displayStatus.toUpperCase()
@@ -307,7 +310,13 @@ function EmptySubscriptionCard({
             {canGrant ? (
               <Button
                 type="button"
-                className="h-10 min-w-0 flex-1 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600"
+                className="h-10 min-w-0 flex-1 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!grantEnabled}
+                title={
+                  !grantEnabled
+                    ? "No active subscription plans are available to grant."
+                    : undefined
+                }
                 onClick={onGrant}
               >
                 Grant Subscription
@@ -351,8 +360,12 @@ export function UserSubscriptionsSection({
   const { permissions } = useTeamPermissions()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [grantOpen, setGrantOpen] = useState(false)
-  const [extendTarget, setExtendTarget] = useState<UserSubscriptionRecord | null>(null)
+  const [extendOpen, setExtendOpen] = useState(false)
+  const [extendInitialSubscriptionId, setExtendInitialSubscriptionId] = useState<number | null>(
+    null,
+  )
   const [cancelTarget, setCancelTarget] = useState<UserSubscriptionRecord | null>(null)
+  const [catalogPlans, setCatalogPlans] = useState<SubscriptionPlan[]>([])
 
   const canApply = hasSubscriptionAdminPermission(
     SUBSCRIPTION_ADMIN_PERMISSIONS.apply,
@@ -365,11 +378,62 @@ export function UserSubscriptionsSection({
   )
   const learner = isLearnerRole(userRole)
   const showGrant = canApply && learner
-  const hasActiveSubscription =
-    Boolean(subscriptions?.has_active_subscription) ||
-    (subscriptions?.active_subscriptions.length ?? 0) > 0
 
   const activePlans = subscriptions?.active_subscriptions ?? []
+  const extendableActivePlans = useMemo(
+    () =>
+      activePlans.filter(
+        (subscription) =>
+          (subscription.is_currently_active ||
+            subscription.status.toUpperCase() === "ACTIVE") &&
+          canExtendSubscription(subscription),
+      ),
+    [activePlans],
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await getSubscriptionPlans()
+        if (!cancelled) {
+          setCatalogPlans(res.data.filter((plan) => plan.is_active))
+        }
+      } catch {
+        if (!cancelled) setCatalogPlans([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+
+  const subscribedPlanIds = useMemo(() => {
+    return new Set(
+      activePlans
+        .filter(
+          (subscription) =>
+            subscription.is_currently_active ||
+            subscription.status.toUpperCase() === "ACTIVE",
+        )
+        .map((subscription) => subscription.plan_id),
+    )
+  }, [activePlans])
+
+  // Disable grant only when every available active plan already has an active subscription.
+  const allActivePlansSubscribed =
+    catalogPlans.length > 0 &&
+    catalogPlans.every((plan) => subscribedPlanIds.has(plan.id))
+  const grantEnabled = showGrant && !allActivePlansSubscribed
+
+  const openExtend = (preferred?: UserSubscriptionRecord) => {
+    const preferredId =
+      preferred && canExtendSubscription(preferred) ? preferred.id : extendableActivePlans[0]?.id
+    if (preferredId == null) return
+    setExtendInitialSubscriptionId(preferredId)
+    setExtendOpen(true)
+  }
+
   const recentPayments = subscriptions?.payments.slice(0, 12) ?? []
   const history = useMemo(() => {
     if (!subscriptions) return []
@@ -406,8 +470,8 @@ export function UserSubscriptionsSection({
                     canExtend={canExtend}
                     canGrant={showGrant}
                     canCancel={canCancel}
-                    hasActiveSubscription={hasActiveSubscription}
-                    onExtend={() => setExtendTarget(subscription)}
+                    grantEnabled={grantEnabled}
+                    onExtend={() => openExtend(subscription)}
                     onGrant={() => setGrantOpen(true)}
                     onCancel={() => setCancelTarget(subscription)}
                   />
@@ -419,6 +483,7 @@ export function UserSubscriptionsSection({
                 canGrant={showGrant}
                 canExtend={canExtend}
                 canCancel={canCancel}
+                grantEnabled={grantEnabled}
                 onGrant={() => setGrantOpen(true)}
               />
             )}
@@ -501,13 +566,13 @@ export function UserSubscriptionsSection({
                                   variant="outline"
                                   size="sm"
                                   className="h-8 rounded-lg text-xs disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-                                  disabled={!hasActiveSubscription || !subscription.is_currently_active}
+                                  disabled={!subscription.is_currently_active}
                                   title={
-                                    !hasActiveSubscription || !subscription.is_currently_active
+                                    !subscription.is_currently_active
                                       ? "Extend is only available for an active subscription."
                                       : undefined
                                   }
-                                  onClick={() => setExtendTarget(subscription)}
+                                  onClick={() => openExtend(subscription)}
                                 >
                                   Extend
                                 </Button>
@@ -519,12 +584,11 @@ export function UserSubscriptionsSection({
                                   size="sm"
                                   className="h-8 rounded-lg text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                                   disabled={
-                                    !hasActiveSubscription ||
                                     !subscription.is_currently_active ||
                                     subscription.status.toUpperCase() === "CANCELLED"
                                   }
                                   title={
-                                    !hasActiveSubscription || !subscription.is_currently_active
+                                    !subscription.is_currently_active
                                       ? "Cancel is only available for an active subscription."
                                       : undefined
                                   }
@@ -602,16 +666,19 @@ export function UserSubscriptionsSection({
         userId={userId}
         userName={userName}
         activeByCategory={subscriptions?.active_by_category ?? {}}
+        activePlanIds={subscribedPlanIds}
         onGranted={onRefresh}
       />
 
       <ExtendSubscriptionDialog
-        open={extendTarget != null}
+        open={extendOpen}
         onOpenChange={(next) => {
-          if (!next) setExtendTarget(null)
+          setExtendOpen(next)
+          if (!next) setExtendInitialSubscriptionId(null)
         }}
         userId={userId}
-        subscription={extendTarget}
+        subscriptions={extendableActivePlans}
+        initialSubscriptionId={extendInitialSubscriptionId}
         onExtended={onRefresh}
       />
 

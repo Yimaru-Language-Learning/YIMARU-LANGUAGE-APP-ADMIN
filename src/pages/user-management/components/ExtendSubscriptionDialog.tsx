@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { adminApplySubscription } from "../../../api/admin-subscriptions.api"
@@ -23,7 +23,10 @@ type ExtendSubscriptionDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   userId: number
-  subscription: UserSubscriptionRecord | null
+  /** Active, non-lifetime subscriptions the admin can extend. */
+  subscriptions: UserSubscriptionRecord[]
+  /** Preferred subscription id when opening (e.g. from a specific card). */
+  initialSubscriptionId?: number | null
   onExtended: () => void
 }
 
@@ -40,13 +43,23 @@ function formatDateTime(value?: string | null): string {
   })
 }
 
+function subscriptionOptionLabel(subscription: UserSubscriptionRecord): string {
+  const name = subscription.plan_name?.trim() || `Plan #${subscription.plan_id}`
+  const category = subscription.plan_category
+    ? ` · ${formatPlanCategory(subscription.plan_category)}`
+    : ""
+  return `${name}${category} (#${subscription.id})`
+}
+
 export function ExtendSubscriptionDialog({
   open,
   onOpenChange,
   userId,
-  subscription,
+  subscriptions,
+  initialSubscriptionId = null,
   onExtended,
 }: ExtendSubscriptionDialogProps) {
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>("")
   const [recordPayment, setRecordPayment] = useState(true)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -56,8 +69,26 @@ export function ExtendSubscriptionDialog({
       setSaving(false)
       setConfirmOpen(false)
       setRecordPayment(true)
+      setSelectedSubscriptionId("")
+      return
     }
-  }, [open, subscription?.id])
+
+    const preferred =
+      (initialSubscriptionId != null &&
+        subscriptions.find((subscription) => subscription.id === initialSubscriptionId)) ||
+      subscriptions[0] ||
+      null
+    setSelectedSubscriptionId(preferred ? String(preferred.id) : "")
+    setRecordPayment(true)
+    setConfirmOpen(false)
+    setSaving(false)
+  }, [open, initialSubscriptionId, subscriptions])
+
+  const subscription = useMemo(
+    () =>
+      subscriptions.find((item) => String(item.id) === selectedSubscriptionId) ?? null,
+    [subscriptions, selectedSubscriptionId],
+  )
 
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault()
@@ -99,10 +130,12 @@ export function ExtendSubscriptionDialog({
       })
     : "the plan price"
 
+  const showPlanPicker = subscriptions.length > 1
+
   return (
     <>
       <Dialog
-        open={open && subscription != null && !confirmOpen}
+        open={open && subscriptions.length > 0 && !confirmOpen}
         onOpenChange={(next) => {
           if (saving) return
           if (!next) {
@@ -119,12 +152,36 @@ export function ExtendSubscriptionDialog({
                 Extend subscription
               </DialogTitle>
               <DialogDescription className="text-sm text-grayScale-500">
-                Extend by one plan period. Choose whether to record a payment at the plan
-                price.
+                Extend by one plan period
+                {showPlanPicker ? ". Choose which active subscription to extend" : ""}
+                . Choose whether to record a payment at the plan price.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 px-6 py-5">
+              {showPlanPicker ? (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="extend-subscription-plan"
+                    className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400"
+                  >
+                    Active subscription <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    id="extend-subscription-plan"
+                    className="h-11 w-full rounded-[6px] border border-input bg-grayScale-50 px-3 text-sm text-grayScale-700 shadow-sm focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
+                    value={selectedSubscriptionId}
+                    onChange={(e) => setSelectedSubscriptionId(e.target.value)}
+                  >
+                    {subscriptions.map((item) => (
+                      <option key={item.id} value={String(item.id)}>
+                        {subscriptionOptionLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
               {subscription ? (
                 <div className="rounded-xl border border-grayScale-100 bg-grayScale-50 px-4 py-3 text-sm text-grayScale-700">
                   <p>

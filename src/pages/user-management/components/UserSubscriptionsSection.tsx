@@ -155,120 +155,137 @@ function ActiveSubscriptionsCard({
   onGrant: () => void
   onCancel: (subscription: UserSubscriptionRecord) => void
 }) {
+  const [expanded, setExpanded] = useState(true)
   const anyActive = subscriptions.some(
     (subscription) =>
       subscription.is_currently_active || subscription.status.toUpperCase() === "ACTIVE",
   )
 
   return (
-    <div className="rounded-2xl border border-grayScale-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <div className="rounded-2xl border border-grayScale-200 bg-white shadow-sm">
+      <button
+        type="button"
+        className="flex w-full items-start justify-between gap-3 px-5 py-4 text-left sm:px-6 sm:py-5"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+      >
+        <div className="min-w-0 flex-1">
           <h3 className="text-base font-bold text-grayScale-900">Subscriptions</h3>
           <p className="mt-0.5 text-xs text-grayScale-500">
             {subscriptions.length} active plan{subscriptions.length === 1 ? "" : "s"}
           </p>
         </div>
-        <ActiveStatusBadge
-          label={anyActive ? "Active" : formatStatusLabel(subscriptions[0]?.status || "Inactive")}
-          tone={anyActive ? "active" : "inactive"}
-        />
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <ActiveStatusBadge
+            label={anyActive ? "Active" : formatStatusLabel(subscriptions[0]?.status || "Inactive")}
+            tone={anyActive ? "active" : "inactive"}
+          />
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 text-grayScale-400" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-grayScale-400" />
+          )}
+        </div>
+      </button>
 
-      <div className="mt-4 space-y-3 border-t border-grayScale-100 pt-4">
-        {subscriptions.map((subscription) => {
-          const daysLeft = getDaysLeft(subscription)
-          const statusUpper = subscription.status.toUpperCase()
-          const isActive =
-            subscription.is_currently_active || statusUpper === "ACTIVE"
-          const cancelEnabled =
-            canCancel && isActive && statusUpper !== "CANCELLED"
+      {expanded ? (
+        <div className="space-y-6 border-t border-grayScale-100 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+          <div className="space-y-3">
+            {subscriptions.map((subscription) => {
+              const daysLeft = getDaysLeft(subscription)
+              const statusUpper = subscription.status.toUpperCase()
+              const isActive =
+                subscription.is_currently_active || statusUpper === "ACTIVE"
+              const cancelEnabled =
+                canCancel && isActive && statusUpper !== "CANCELLED"
 
-          return (
-            <div
-              key={subscription.id}
-              className="rounded-xl border border-grayScale-100 bg-grayScale-50/70 px-4 py-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-grayScale-900">
-                    {formatPlanTitle(subscription)}
-                  </p>
-                  <p className="mt-0.5 text-xs text-grayScale-500">
-                    {formatPlanCategory(subscription.plan_category)} · Expires{" "}
-                    {formatExpiryDate(subscription)}
-                    {daysLeft != null ? ` · ${formatDaysLeftLabel(daysLeft)}` : ""}
-                  </p>
+              return (
+                <div
+                  key={subscription.id}
+                  className="rounded-xl border border-grayScale-100 bg-grayScale-50/70 px-4 py-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-grayScale-900">
+                        {formatPlanTitle(subscription)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-grayScale-500">
+                        {formatPlanCategory(subscription.plan_category)} · Expires{" "}
+                        {formatExpiryDate(subscription)}
+                        {daysLeft != null ? ` · ${formatDaysLeftLabel(daysLeft)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ActiveStatusBadge
+                        label={formatStatusLabel(subscription.status)}
+                        tone={
+                          isActive
+                            ? "active"
+                            : statusUpper === "PENDING"
+                              ? "pending"
+                              : "inactive"
+                        }
+                      />
+                      {canCancel ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-lg text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={!cancelEnabled}
+                          title={
+                            !cancelEnabled
+                              ? "Cancel is only available when this subscription is active."
+                              : undefined
+                          }
+                          onClick={() => onCancel(subscription)}
+                        >
+                          Cancel
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <ActiveStatusBadge
-                    label={formatStatusLabel(subscription.status)}
-                    tone={
-                      isActive
-                        ? "active"
-                        : statusUpper === "PENDING"
-                          ? "pending"
-                          : "inactive"
-                    }
-                  />
-                  {canCancel ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-lg text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={!cancelEnabled}
-                      title={
-                        !cancelEnabled
-                          ? "Cancel is only available when this subscription is active."
-                          : undefined
-                      }
-                      onClick={() => onCancel(subscription)}
-                    >
-                      Cancel
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+              )
+            })}
+          </div>
 
-      <div className="mt-6 flex flex-col gap-2">
-        {canExtend ? (
-          <Button
-            type="button"
-            className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!extendEnabled}
-            title={
-              !extendEnabled
-                ? "Extend is only available when this learner has an active, non-lifetime subscription."
-                : undefined
-            }
-            onClick={onExtend}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Extend Subscription
-          </Button>
-        ) : null}
+          <div className="flex flex-col gap-2">
+            {canExtend ? (
+              <Button
+                type="button"
+                className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!extendEnabled}
+                title={
+                  !extendEnabled
+                    ? "Extend is only available when this learner has an active, non-lifetime subscription."
+                    : undefined
+                }
+                onClick={onExtend}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Extend Subscription
+              </Button>
+            ) : null}
 
-        {canGrant ? (
-          <Button
-            type="button"
-            className="h-10 w-full rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!grantEnabled}
-            title={
-              !grantEnabled
-                ? "Grant is unavailable because every plan category already has an active subscription."
-                : undefined
-            }
-            onClick={onGrant}
-          >
-            Grant Subscription
-          </Button>
-        ) : null}
-      </div>
+            {canGrant ? (
+              <Button
+                type="button"
+                className="h-10 w-full rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!grantEnabled}
+                title={
+                  !grantEnabled
+                    ? "Grant is unavailable because every plan category already has an active subscription."
+                    : undefined
+                }
+                onClick={onGrant}
+              >
+                Grant Subscription
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -288,65 +305,81 @@ function EmptySubscriptionCard({
   grantEnabled: boolean
   onGrant: () => void
 }) {
+  const [expanded, setExpanded] = useState(true)
   const upper = displayStatus.toUpperCase()
   const tone =
     upper === "ACTIVE" ? "active" : upper === "PENDING" ? "pending" : "inactive"
 
   return (
-    <div className="rounded-2xl border border-grayScale-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-2xl border border-grayScale-200 bg-white shadow-sm">
+      <button
+        type="button"
+        className="flex w-full items-start justify-between gap-3 px-5 py-4 text-left sm:px-6 sm:py-5"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+      >
         <h3 className="text-base font-bold text-grayScale-900">Subscriptions</h3>
-        <ActiveStatusBadge
-          label={formatStatusLabel(displayStatus || "Unsubscribed")}
-          tone={tone}
-        />
-      </div>
-      <div className="mt-4 border-t border-grayScale-100 pt-4">
-        <p className="text-sm text-grayScale-500">No active subscription for this learner.</p>
-      </div>
-      <div className="mt-6 flex flex-col gap-2">
-        {canExtend ? (
-          <Button
-            type="button"
-            className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-            disabled
-            title="Extend is only available when this learner has an active subscription."
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Extend Subscription
-          </Button>
-        ) : null}
-        {(canGrant || canCancel) && (
-          <div className="flex flex-wrap gap-2">
-            {canGrant ? (
+        <div className="flex shrink-0 items-center gap-2">
+          <ActiveStatusBadge
+            label={formatStatusLabel(displayStatus || "Unsubscribed")}
+            tone={tone}
+          />
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 text-grayScale-400" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-grayScale-400" />
+          )}
+        </div>
+      </button>
+
+      {expanded ? (
+        <div className="space-y-6 border-t border-grayScale-100 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+          <p className="text-sm text-grayScale-500">No active subscription for this learner.</p>
+          <div className="flex flex-col gap-2">
+            {canExtend ? (
               <Button
                 type="button"
-                className="h-10 min-w-0 flex-1 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!grantEnabled}
-                title={
-                  !grantEnabled
-                    ? "No active subscription plans are available to grant."
-                    : undefined
-                }
-                onClick={onGrant}
-              >
-                Grant Subscription
-              </Button>
-            ) : null}
-            {canCancel ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 min-w-0 flex-1 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                 disabled
-                title="Cancel is only available when this learner has an active subscription."
+                title="Extend is only available when this learner has an active subscription."
               >
-                Cancel
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Extend Subscription
               </Button>
             ) : null}
+            {(canGrant || canCancel) && (
+              <div className="flex flex-wrap gap-2">
+                {canGrant ? (
+                  <Button
+                    type="button"
+                    className="h-10 min-w-0 flex-1 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!grantEnabled}
+                    title={
+                      !grantEnabled
+                        ? "No active subscription plans are available to grant."
+                        : undefined
+                    }
+                    onClick={onGrant}
+                  >
+                    Grant Subscription
+                  </Button>
+                ) : null}
+                {canCancel ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 min-w-0 flex-1 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled
+                    title="Cancel is only available when this learner has an active subscription."
+                  >
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   )
 }

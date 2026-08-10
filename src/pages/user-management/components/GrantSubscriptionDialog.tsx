@@ -31,14 +31,20 @@ type GrantSubscriptionDialogProps = {
   onOpenChange: (open: boolean) => void
   userId: number
   userName?: string
+  /** Categories that already have an active subscription for this learner. */
   activeByCategory: Record<string, boolean>
-  /** Plan IDs the learner already has an active subscription for. */
-  activePlanIds?: Set<number> | number[]
   onGranted: () => void
 }
 
 function planLabel(plan: SubscriptionPlan): string {
   return `${plan.name} · ${formatPlanCategory(plan.category)} · ${formatPlanDuration(plan)} · ${formatPlanPrice(plan)}`
+}
+
+function isCategoryActive(
+  category: string,
+  activeByCategory: Record<string, boolean>,
+): boolean {
+  return activeByCategory[category] === true
 }
 
 export function GrantSubscriptionDialog({
@@ -47,7 +53,6 @@ export function GrantSubscriptionDialog({
   userId,
   userName,
   activeByCategory,
-  activePlanIds,
   onGranted,
 }: GrantSubscriptionDialogProps) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
@@ -60,10 +65,15 @@ export function GrantSubscriptionDialog({
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const activePlanIdSet = useMemo(() => {
-    if (!activePlanIds) return new Set<number>()
-    return activePlanIds instanceof Set ? activePlanIds : new Set(activePlanIds)
-  }, [activePlanIds])
+  const activeCategoryKey = useMemo(
+    () =>
+      Object.entries(activeByCategory)
+        .filter(([, active]) => active)
+        .map(([category]) => category)
+        .sort()
+        .join("|"),
+    [activeByCategory],
+  )
 
   useEffect(() => {
     if (!open) return
@@ -79,7 +89,12 @@ export function GrantSubscriptionDialog({
       setPlansLoading(true)
       try {
         const res = await getSubscriptionPlans()
-        setPlans(res.data.filter((plan) => plan.is_active))
+        setPlans(
+          res.data.filter(
+            (plan) =>
+              plan.is_active && !isCategoryActive(plan.category, activeByCategory),
+          ),
+        )
       } catch (err) {
         setPlans([])
         notifyApiError(err, "Failed to load subscription plans")
@@ -88,18 +103,14 @@ export function GrantSubscriptionDialog({
       }
     }
     void loadPlans()
-  }, [open])
+    // activeCategoryKey captures category coverage; activeByCategory is read for filtering.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeCategoryKey])
 
   const selectedPlan = useMemo(
     () => plans.find((p) => String(p.id) === planId) ?? null,
     [plans, planId],
   )
-
-  const planAlreadyActive =
-    selectedPlan != null && activePlanIdSet.has(selectedPlan.id)
-  const categoryBlocked =
-    selectedPlan != null && activeByCategory[selectedPlan.category] === true
-  const grantBlocked = planAlreadyActive || categoryBlocked
 
   const filteredPlans = useMemo(() => {
     const q = planSearch.trim().toLowerCase()
@@ -128,13 +139,11 @@ export function GrantSubscriptionDialog({
       setFormError("Select a subscription plan.")
       return
     }
-    if (planAlreadyActive) {
-      setFormError(
-        "This learner already has an active subscription for that plan. Extend it instead.",
-      )
+    if (!selectedPlan) {
+      setFormError("Select a subscription plan.")
       return
     }
-    if (categoryBlocked) {
+    if (isCategoryActive(selectedPlan.category, activeByCategory)) {
       setFormError(
         "This learner already has an active subscription in that category. Extend the existing plan or cancel it first.",
       )
@@ -146,7 +155,8 @@ export function GrantSubscriptionDialog({
 
   const handleConfirmGrant = async () => {
     const id = Number(planId)
-    if (!Number.isFinite(id) || id < 1 || grantBlocked) return
+    if (!Number.isFinite(id) || id < 1 || !selectedPlan) return
+    if (isCategoryActive(selectedPlan.category, activeByCategory)) return
 
     setSaving(true)
     try {
@@ -189,8 +199,9 @@ export function GrantSubscriptionDialog({
               </DialogTitle>
               <DialogDescription className="text-sm text-grayScale-500">
                 Grant plan access
-                {userName ? ` to ${userName}` : ""}. Choose whether to record a
-                payment at the plan price.
+                {userName ? ` to ${userName}` : ""}. Only plans in categories without an
+                active subscription are listed. Choose whether to record a payment at the
+                plan price.
               </DialogDescription>
             </DialogHeader>
 
@@ -204,6 +215,11 @@ export function GrantSubscriptionDialog({
                     <SpinnerIcon className="h-4 w-4" />
                     Loading plans…
                   </div>
+                ) : plans.length === 0 ? (
+                  <p className="text-sm text-grayScale-500">
+                    No grantable plans left — every available category already has an
+                    active subscription.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     <button
@@ -244,9 +260,6 @@ export function GrantSubscriptionDialog({
                           role="listbox"
                         >
                           {filteredPlans.map((plan) => {
-                            const alreadyActive = activePlanIdSet.has(plan.id)
-                            const blocked =
-                              alreadyActive || activeByCategory[plan.category] === true
                             const selected = String(plan.id) === planId
                             return (
                               <button
@@ -254,16 +267,13 @@ export function GrantSubscriptionDialog({
                                 type="button"
                                 role="option"
                                 aria-selected={selected}
-                                disabled={blocked}
                                 className={cn(
                                   "w-full rounded-md px-2 py-2 text-left text-sm transition",
-                                  blocked && "cursor-not-allowed opacity-50",
                                   selected
                                     ? "bg-brand-100/50 text-brand-700"
                                     : "text-grayScale-600 hover:bg-grayScale-100",
                                 )}
                                 onClick={() => {
-                                  if (blocked) return
                                   setPlanId(String(plan.id))
                                   setPlanMenuOpen(false)
                                   setPlanSearch("")
@@ -274,11 +284,6 @@ export function GrantSubscriptionDialog({
                                 <span className="block text-xs text-grayScale-400">
                                   {formatPlanCategory(plan.category)} · {formatPlanDuration(plan)} ·{" "}
                                   {formatPlanPrice(plan)}
-                                  {alreadyActive
-                                    ? " — already active"
-                                    : activeByCategory[plan.category] === true
-                                      ? " — category active"
-                                      : ""}
                                 </span>
                               </button>
                             )
@@ -293,13 +298,6 @@ export function GrantSubscriptionDialog({
                     ) : null}
                   </div>
                 )}
-                {selectedPlan && grantBlocked ? (
-                  <p className="text-xs text-amber-700">
-                    {planAlreadyActive
-                      ? "This plan is already active for the learner. Extend it instead."
-                      : `An active ${formatPlanCategory(selectedPlan.category)} subscription already exists. Extend or cancel it instead.`}
-                  </p>
-                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -378,7 +376,7 @@ export function GrantSubscriptionDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={saving || plansLoading || !planId || grantBlocked}
+                disabled={saving || plansLoading || !planId || plans.length === 0}
                 className="rounded-[6px] bg-brand-500 font-semibold text-white hover:bg-brand-600"
               >
                 Continue

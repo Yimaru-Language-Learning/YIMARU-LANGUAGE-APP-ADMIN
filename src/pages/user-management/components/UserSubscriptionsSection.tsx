@@ -134,85 +134,116 @@ function ActiveStatusBadge({
   )
 }
 
-function SubscriptionManageCard({
-  subscription,
+function ActiveSubscriptionsCard({
+  subscriptions,
   canExtend,
   canGrant,
   canCancel,
   grantEnabled,
+  extendEnabled,
   onExtend,
   onGrant,
   onCancel,
 }: {
-  subscription: UserSubscriptionRecord
+  subscriptions: UserSubscriptionRecord[]
   canExtend: boolean
   canGrant: boolean
   canCancel: boolean
   grantEnabled: boolean
+  extendEnabled: boolean
   onExtend: () => void
   onGrant: () => void
-  onCancel: () => void
+  onCancel: (subscription: UserSubscriptionRecord) => void
 }) {
-  const daysLeft = getDaysLeft(subscription)
-  const statusUpper = subscription.status.toUpperCase()
-  const isActive = subscription.is_currently_active || statusUpper === "ACTIVE"
-  const statusTone = isActive ? "active" : statusUpper === "PENDING" ? "pending" : "inactive"
-  const isLifetime = !canExtendSubscription(subscription)
-  const extendEnabled = canExtend && isActive && !isLifetime
-  const cancelEnabled = canCancel && isActive && statusUpper !== "CANCELLED"
+  const anyActive = subscriptions.some(
+    (subscription) =>
+      subscription.is_currently_active || subscription.status.toUpperCase() === "ACTIVE",
+  )
 
   return (
     <div className="rounded-2xl border border-grayScale-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-base font-bold text-grayScale-900">Subscription</h3>
-        <ActiveStatusBadge label={formatStatusLabel(subscription.status)} tone={statusTone} />
+        <div>
+          <h3 className="text-base font-bold text-grayScale-900">Subscriptions</h3>
+          <p className="mt-0.5 text-xs text-grayScale-500">
+            {subscriptions.length} active plan{subscriptions.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <ActiveStatusBadge
+          label={anyActive ? "Active" : formatStatusLabel(subscriptions[0]?.status || "Inactive")}
+          tone={anyActive ? "active" : "inactive"}
+        />
       </div>
 
-      <div className="mt-4 border-t border-grayScale-100 pt-4">
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <p className="text-xs font-medium text-grayScale-400">Current Plan</p>
-            <p className="mt-1 text-lg font-bold tracking-tight text-grayScale-900">
-              {formatPlanTitle(subscription)}
-            </p>
-            <p className="mt-0.5 text-xs text-grayScale-500">
-              {formatPlanCategory(subscription.plan_category)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-grayScale-400">Expires On</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <p className="text-lg font-bold tracking-tight text-grayScale-900">
-                {formatExpiryDate(subscription)}
-              </p>
-              {daysLeft != null ? (
-                <span
-                  className={cn(
-                    "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                    daysLeft <= 0
-                      ? "bg-destructive/10 text-destructive"
-                      : daysLeft <= 14
-                        ? "bg-orange-50 text-orange-600"
-                        : "bg-emerald-50 text-emerald-700",
-                  )}
-                >
-                  {formatDaysLeftLabel(daysLeft)}
-                </span>
-              ) : null}
+      <div className="mt-4 space-y-3 border-t border-grayScale-100 pt-4">
+        {subscriptions.map((subscription) => {
+          const daysLeft = getDaysLeft(subscription)
+          const statusUpper = subscription.status.toUpperCase()
+          const isActive =
+            subscription.is_currently_active || statusUpper === "ACTIVE"
+          const cancelEnabled =
+            canCancel && isActive && statusUpper !== "CANCELLED"
+
+          return (
+            <div
+              key={subscription.id}
+              className="rounded-xl border border-grayScale-100 bg-grayScale-50/70 px-4 py-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-grayScale-900">
+                    {formatPlanTitle(subscription)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-grayScale-500">
+                    {formatPlanCategory(subscription.plan_category)} · Expires{" "}
+                    {formatExpiryDate(subscription)}
+                    {daysLeft != null ? ` · ${formatDaysLeftLabel(daysLeft)}` : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ActiveStatusBadge
+                    label={formatStatusLabel(subscription.status)}
+                    tone={
+                      isActive
+                        ? "active"
+                        : statusUpper === "PENDING"
+                          ? "pending"
+                          : "inactive"
+                    }
+                  />
+                  {canCancel ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!cancelEnabled}
+                      title={
+                        !cancelEnabled
+                          ? "Cancel is only available when this subscription is active."
+                          : undefined
+                      }
+                      onClick={() => onCancel(subscription)}
+                    >
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )
+        })}
       </div>
 
       <div className="mt-6 flex flex-col gap-2">
-        {canExtend && !isLifetime ? (
+        {canExtend ? (
           <Button
             type="button"
             className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!extendEnabled}
             title={
               !extendEnabled
-                ? "Extend is only available for an active, non-lifetime subscription."
+                ? "Extend is only available when this learner has an active, non-lifetime subscription."
                 : undefined
             }
             onClick={onExtend}
@@ -222,41 +253,21 @@ function SubscriptionManageCard({
           </Button>
         ) : null}
 
-        {(canGrant || canCancel) && (
-          <div className="flex flex-wrap gap-2">
-            {canGrant ? (
-              <Button
-                type="button"
-                className="h-10 min-w-0 flex-1 rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!grantEnabled}
-                title={
-                  !grantEnabled
-                    ? "Grant is unavailable because this learner already has an active subscription for every available plan."
-                    : undefined
-                }
-                onClick={onGrant}
-              >
-                Grant Subscription
-              </Button>
-            ) : null}
-            {canCancel ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 min-w-0 flex-1 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 hover:bg-grayScale-50 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!cancelEnabled}
-                title={
-                  !cancelEnabled
-                    ? "Cancel is only available when this subscription is active."
-                    : undefined
-                }
-                onClick={onCancel}
-              >
-                Cancel
-              </Button>
-            ) : null}
-          </div>
-        )}
+        {canGrant ? (
+          <Button
+            type="button"
+            className="h-10 w-full rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!grantEnabled}
+            title={
+              !grantEnabled
+                ? "Grant is unavailable because every plan category already has an active subscription."
+                : undefined
+            }
+            onClick={onGrant}
+          >
+            Grant Subscription
+          </Button>
+        ) : null}
       </div>
     </div>
   )
@@ -284,7 +295,7 @@ function EmptySubscriptionCard({
   return (
     <div className="rounded-2xl border border-grayScale-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-base font-bold text-grayScale-900">Subscription</h3>
+        <h3 className="text-base font-bold text-grayScale-900">Subscriptions</h3>
         <ActiveStatusBadge
           label={formatStatusLabel(displayStatus || "Unsubscribed")}
           tone={tone}
@@ -408,23 +419,33 @@ export function UserSubscriptionsSection({
     }
   }, [userId])
 
-  const subscribedPlanIds = useMemo(() => {
-    return new Set(
-      activePlans
-        .filter(
-          (subscription) =>
-            subscription.is_currently_active ||
-            subscription.status.toUpperCase() === "ACTIVE",
-        )
-        .map((subscription) => subscription.plan_id),
-    )
-  }, [activePlans])
+  const activeCategories = useMemo(() => {
+    const fromSubs = activePlans
+      .filter(
+        (subscription) =>
+          subscription.is_currently_active ||
+          subscription.status.toUpperCase() === "ACTIVE",
+      )
+      .map((subscription) => subscription.plan_category)
+      .filter((category) => Boolean(category?.trim()))
 
-  // Disable grant only when every available active plan already has an active subscription.
-  const allActivePlansSubscribed =
-    catalogPlans.length > 0 &&
-    catalogPlans.every((plan) => subscribedPlanIds.has(plan.id))
-  const grantEnabled = showGrant && !allActivePlansSubscribed
+    const categories = new Set(fromSubs)
+    for (const [category, active] of Object.entries(
+      subscriptions?.active_by_category ?? {},
+    )) {
+      if (active) categories.add(category)
+    }
+    return categories
+  }, [activePlans, subscriptions?.active_by_category])
+
+  // Grant is available when at least one active catalog plan is in a category
+  // the learner does not already have covered.
+  const hasGrantablePlan =
+    catalogPlans.length === 0
+      ? true
+      : catalogPlans.some((plan) => !activeCategories.has(plan.category))
+  const grantEnabled = showGrant && hasGrantablePlan
+  const extendEnabled = canExtend && extendableActivePlans.length > 0
 
   const openExtend = (preferred?: UserSubscriptionRecord) => {
     const preferredId =
@@ -462,21 +483,17 @@ export function UserSubscriptionsSection({
         {!loading && !error && subscriptions ? (
           <>
             {activePlans.length > 0 ? (
-              <div className="space-y-4">
-                {activePlans.map((subscription) => (
-                  <SubscriptionManageCard
-                    key={subscription.id}
-                    subscription={subscription}
-                    canExtend={canExtend}
-                    canGrant={showGrant}
-                    canCancel={canCancel}
-                    grantEnabled={grantEnabled}
-                    onExtend={() => openExtend(subscription)}
-                    onGrant={() => setGrantOpen(true)}
-                    onCancel={() => setCancelTarget(subscription)}
-                  />
-                ))}
-              </div>
+              <ActiveSubscriptionsCard
+                subscriptions={activePlans}
+                canExtend={canExtend}
+                canGrant={showGrant}
+                canCancel={canCancel}
+                grantEnabled={grantEnabled}
+                extendEnabled={extendEnabled}
+                onExtend={() => openExtend()}
+                onGrant={() => setGrantOpen(true)}
+                onCancel={(subscription) => setCancelTarget(subscription)}
+              />
             ) : (
               <EmptySubscriptionCard
                 displayStatus={subscriptions.display_status}
@@ -666,7 +683,6 @@ export function UserSubscriptionsSection({
         userId={userId}
         userName={userName}
         activeByCategory={subscriptions?.active_by_category ?? {}}
-        activePlanIds={subscribedPlanIds}
         onGranted={onRefresh}
       />
 

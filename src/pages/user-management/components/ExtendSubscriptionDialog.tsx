@@ -130,7 +130,7 @@ export function ExtendSubscriptionDialog({
       })
     : "the plan price"
 
-  const showPlanPicker = subscriptions.length > 1
+  const showPlanPicker = subscriptions.length > 0
 
   return (
     <>
@@ -152,9 +152,8 @@ export function ExtendSubscriptionDialog({
                 Extend subscription
               </DialogTitle>
               <DialogDescription className="text-sm text-grayScale-500">
-                Extend by one plan period
-                {showPlanPicker ? ". Choose which active subscription to extend" : ""}
-                . Choose whether to record a payment at the plan price.
+                Extend by one plan period. Select which active subscription to extend, then
+                choose whether to record a payment at the plan price.
               </DialogDescription>
             </DialogHeader>
 

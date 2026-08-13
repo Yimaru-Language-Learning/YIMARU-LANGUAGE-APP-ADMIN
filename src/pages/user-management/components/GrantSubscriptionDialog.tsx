@@ -268,7 +268,7 @@ export function GrantSubscriptionDialog({
                                 role="option"
                                 aria-selected={selected}
                                 className={cn(
-                                  "w-full rounded-md px-2 py-2 text-left text-sm transition",
+                                  "w-full rounded-[6px] px-2 py-2 text-left text-sm transition",
                                   selected
                                     ? "bg-brand-100/50 text-brand-700"
                                     : "text-grayScale-600 hover:bg-grayScale-100",

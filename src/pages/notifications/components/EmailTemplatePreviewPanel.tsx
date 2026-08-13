@@ -76,7 +76,7 @@ export function EmailTemplatePreviewPanel({
             key={tab.id}
             type="button"
             className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+              "rounded-[6px] px-3 py-1.5 text-sm font-medium transition-colors",
               mode === tab.id
                 ? "bg-brand-100 text-brand-600"
                 : "text-grayScale-500 hover:bg-grayScale-100",

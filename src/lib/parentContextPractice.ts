@@ -39,6 +39,19 @@ export function normalizeParentContextPractice(raw: unknown): ParentContextPract
   }
 }
 
+export function unwrapPracticesPage(res: {
+  data?: GetPracticesByParentContextResponse & {
+    Data?: GetPracticesByParentContextResponse["data"]
+  }
+}): { items: ParentContextPractice[]; total_count?: number } {
+  const data = res.data?.data ?? res.data?.Data
+  const total = Number(data?.total_count)
+  return {
+    items: unwrapPracticesList(res),
+    total_count: Number.isFinite(total) && total >= 0 ? total : undefined,
+  }
+}
+
 export function unwrapPracticesList(
   res: {
     data?: GetPracticesByParentContextResponse & {

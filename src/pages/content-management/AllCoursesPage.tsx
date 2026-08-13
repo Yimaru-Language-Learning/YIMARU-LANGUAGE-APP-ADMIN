@@ -448,7 +448,7 @@ export function AllCoursesPage() {
                     onClick={() => safePage > 1 && setPage(safePage - 1)}
                     disabled={safePage === 1}
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                      "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                       safePage === 1 && "cursor-not-allowed opacity-50",
                     )}
                   >
@@ -465,7 +465,7 @@ export function AllCoursesPage() {
                         type="button"
                         onClick={() => setPage(n)}
                         className={cn(
-                          "h-8 w-8 rounded-md border text-sm font-medium",
+                          "h-8 w-8 rounded-[6px] border text-sm font-medium",
                           n === safePage
                             ? "border-brand-500 bg-brand-500 text-white"
                             : "bg-white text-grayScale-600 hover:bg-grayScale-50",
@@ -479,7 +479,7 @@ export function AllCoursesPage() {
                     onClick={() => safePage < totalPages && setPage(safePage + 1)}
                     disabled={safePage === totalPages}
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                      "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                       safePage === totalPages && "cursor-not-allowed opacity-50",
                     )}
                   >

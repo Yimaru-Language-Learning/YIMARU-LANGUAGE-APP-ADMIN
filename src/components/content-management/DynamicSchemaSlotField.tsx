@@ -286,7 +286,7 @@ function DynamicImageSlot({
               <ResolvedImage src={value} alt="" className="h-full w-full object-contain" />
               <button
                 type="button"
-                className="absolute right-1.5 top-1.5 rounded-full bg-white/95 p-1.5 text-[#9E2891] shadow-md hover:bg-white"
+                className="absolute right-1.5 top-1.5 rounded-[6px] bg-white/95 p-1.5 text-[#9E2891] shadow-md hover:bg-white"
                 onClick={() => onChange("")}
                 disabled={zoneDisabled}
                 aria-label="Remove image"
@@ -332,7 +332,7 @@ function DynamicImageSlot({
               if (file) void processFile(file)
             }}
             className={cn(
-              "flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#9E289133] bg-white p-4 text-center transition-colors",
+              "flex w-full cursor-pointer flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-[#9E289133] bg-white p-4 text-center transition-colors",
               "hover:border-[#9E289180] hover:bg-grayScale-50/30",
               dragActive && "border-[#9E2891] bg-[#9E289108]",
               zoneDisabled && "cursor-not-allowed opacity-60",
@@ -546,7 +546,7 @@ function DynamicAudioSlot({
               </div>
               <button
                 type="button"
-                className="shrink-0 rounded-md p-1.5 text-[#9E2891] transition hover:bg-white/80"
+                className="shrink-0 rounded-[6px] p-1.5 text-[#9E2891] transition hover:bg-white/80"
                 onClick={() => {
                   audioRef.current?.pause()
                   setPlaying(false)
@@ -596,7 +596,7 @@ function DynamicAudioSlot({
               if (file) void processFile(file)
             }}
             className={cn(
-              "flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#9E289133] bg-white p-4 text-center transition-colors",
+              "flex w-full cursor-pointer flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-[#9E289133] bg-white p-4 text-center transition-colors",
               "hover:border-[#9E289180] hover:bg-grayScale-50/30",
               dragActive && "border-[#9E2891] bg-[#9E289108]",
               zoneDisabled && "cursor-not-allowed opacity-60",
@@ -673,7 +673,7 @@ function DynamicMultipleChoiceSlot({
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="h-8 gap-1.5 rounded-lg border-brand-200 text-brand-600 hover:bg-brand-50"
+          className="h-8 gap-1.5 rounded-[6px] border-brand-200 text-brand-600 hover:bg-brand-50"
           onClick={() => updateValue(addMultipleChoiceOption(parsed))}
         >
           <Plus className="h-3.5 w-3.5" />

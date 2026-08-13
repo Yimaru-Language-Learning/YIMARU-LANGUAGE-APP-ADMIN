@@ -46,9 +46,18 @@ import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip"
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
-import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import type {
+  ContentAccessTier,
+  ExamPrepCatalogCourseItem,
+  ExamPrepCatalogUnitItem,
+  PracticePublishStatus,
+} from "../../types/course.types";
 import { DisplayValue } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../lib/fetchAllOffsetPages";
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -137,9 +146,12 @@ export function CourseManagementPage() {
   const loadCatalogCourse = useCallback(async () => {
     if (!Number.isFinite(catalogCourseId) || catalogCourseId < 1) return;
     try {
-      const response = await getExamPrepCatalogCourses({ limit: 100, offset: 0 });
-      const rows = response.data?.data?.catalog_courses;
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepCatalogCourseItem>(
+          await getExamPrepCatalogCourses({ limit, offset }),
+          "catalog_courses",
+        ),
+      );
       const row = list.find((c) => Number(c.id) === catalogCourseId);
       if (row) {
         setCatalogCourseName(row.name?.trim() || `Course ${catalogCourseId}`);
@@ -158,12 +170,12 @@ export function CourseManagementPage() {
     }
     setUnitsLoading(true);
     try {
-      const response = await getExamPrepCatalogUnits(catalogCourseId, {
-        limit: 20,
-        offset: 0,
-      });
-      const rows = response.data?.data?.units;
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepCatalogUnitItem>(
+          await getExamPrepCatalogUnits(catalogCourseId, { limit, offset }),
+          "units",
+        ),
+      );
       setUnits(
         list.map((row, index) => ({
           id: Number(row.id),
@@ -670,7 +682,7 @@ export function CourseManagementPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                      className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                       disabled={creating || uploadingThumbnail}
                       onClick={clearCreateUnitForm}
                     >
@@ -679,7 +691,7 @@ export function CourseManagementPage() {
                   </DialogClose>
                   <Button
                     type="button"
-                    className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                    className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                     disabled={creating || uploadingThumbnail}
                     onClick={() => void handleCreateUnit()}
                   >
@@ -795,7 +807,7 @@ export function CourseManagementPage() {
                 type="button"
                 variant="secondary"
                 size="icon"
-                className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                className="h-8 w-8 rounded-[6px] bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
                 onClick={() => openEditUnit(unit)}
                 aria-label={`Edit ${unit.name}`}
               >
@@ -805,7 +817,7 @@ export function CourseManagementPage() {
                 type="button"
                 variant="secondary"
                 size="icon"
-                className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                className="h-8 w-8 rounded-[6px] bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
                 onClick={() => setDeletingUnitId(unit.id)}
                 aria-label={`Delete ${unit.name}`}
               >
@@ -1007,7 +1019,7 @@ export function CourseManagementPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                 disabled={savingEdit || uploadingEditThumbnail}
                 onClick={closeEditUnit}
               >
@@ -1015,7 +1027,7 @@ export function CourseManagementPage() {
               </Button>
               <Button
                 type="button"
-                className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                 disabled={savingEdit || uploadingEditThumbnail}
                 onClick={() => void handleSaveEditUnit()}
               >

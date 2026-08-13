@@ -194,7 +194,7 @@ export function SubscriptionsExportPage() {
           <button
             type="button"
             onClick={clearFilters}
-            className="mt-4 flex items-center gap-1.5 rounded-lg border border-grayScale-200 bg-white px-3 py-1.5 text-xs font-medium text-grayScale-600 transition-colors hover:border-grayScale-300 hover:text-grayScale-800"
+            className="mt-4 flex items-center gap-1.5 rounded-[6px] border border-grayScale-200 bg-white px-3 py-1.5 text-xs font-medium text-grayScale-600 transition-colors hover:border-grayScale-300 hover:text-grayScale-800"
           >
             <Filter className="h-3.5 w-3.5" />
             Clear filters

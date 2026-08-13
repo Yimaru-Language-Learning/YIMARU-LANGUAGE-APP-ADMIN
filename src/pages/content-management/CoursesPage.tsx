@@ -317,7 +317,7 @@ export function CoursesPage() {
           <div className="flex items-center gap-3.5">
             <Link
               to="/content"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-grayScale-50 text-grayScale-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-[6px] bg-grayScale-50 text-grayScale-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -536,7 +536,7 @@ export function CoursesPage() {
                   onClick={() => safePage > 1 && setPage(safePage - 1)}
                   disabled={safePage === 1}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                     safePage === 1 && "cursor-not-allowed opacity-50",
                   )}
                 >
@@ -553,7 +553,7 @@ export function CoursesPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={cn(
-                        "h-8 w-8 rounded-md border text-sm font-medium",
+                        "h-8 w-8 rounded-[6px] border text-sm font-medium",
                         n === safePage
                           ? "border-brand-500 bg-brand-500 text-white"
                           : "bg-white text-grayScale-600 hover:bg-grayScale-50",
@@ -568,7 +568,7 @@ export function CoursesPage() {
                   onClick={() => safePage < totalPages && setPage(safePage + 1)}
                   disabled={safePage === totalPages}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                     safePage === totalPages && "cursor-not-allowed opacity-50",
                   )}
                 >
@@ -588,7 +588,7 @@ export function CoursesPage() {
               <h2 className="text-lg font-bold text-grayScale-700">Add New Sub-category</h2>
               <button
                 onClick={handleCloseModal}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -677,7 +677,7 @@ export function CoursesPage() {
               <h2 className="text-lg font-bold text-grayScale-700">Edit Sub-category</h2>
               <button
                 onClick={handleCloseEditModal}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -761,7 +761,7 @@ export function CoursesPage() {
               <h2 className="text-lg font-bold text-grayScale-700">Delete Sub-category</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>

@@ -53,7 +53,11 @@ import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
 } from "../../lib/contentListFilters";
-import { unwrapPracticesList } from "../../lib/parentContextPractice";
+import { unwrapPracticesPage } from "../../lib/parentContextPractice";
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../lib/fetchAllOffsetPages";
 import { AddModuleModal } from "./components/AddModuleModal";
 import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
 import { ModulePracticeCard } from "./components/ModulePracticeCard";
@@ -234,13 +238,22 @@ export function CourseDetailPage() {
     setError(null);
     try {
       const [courseOutcome, modulesOutcome] = await Promise.allSettled([
-        getProgramCourses(programId, { limit: 200, offset: 0 }),
-        getTopLevelCourseModules(courseIdNum, { limit: 100, offset: 0 }),
+        fetchAllOffsetPages(async (offset, limit) =>
+          offsetPageFromListEnvelope<ProgramCourseListItem>(
+            await getProgramCourses(programId, { limit, offset }),
+            "courses",
+          ),
+        ),
+        fetchAllOffsetPages(async (offset, limit) =>
+          offsetPageFromListEnvelope<TopLevelCourseModuleItem>(
+            await getTopLevelCourseModules(courseIdNum, { limit, offset }),
+            "modules",
+          ),
+        ),
       ]);
 
       if (courseOutcome.status === "fulfilled") {
-        const raw = courseOutcome.value.data?.data?.courses;
-        const list = Array.isArray(raw) ? raw : [];
+        const list = courseOutcome.value;
         const found = list.find((c) => c.id === courseIdNum) ?? null;
         setCourse(found);
         if (!found) {
@@ -253,8 +266,7 @@ export function CourseDetailPage() {
       }
 
       if (modulesOutcome.status === "fulfilled") {
-        const raw = modulesOutcome.value.data?.data?.modules;
-        const list = Array.isArray(raw) ? raw : [];
+        const list = modulesOutcome.value;
         const refreshed = await Promise.all(
           list.map(async (module) => {
             const icon = module.icon?.trim() ?? "";
@@ -312,11 +324,12 @@ export function CourseDetailPage() {
     setPracticesLoading(true);
     setPracticesLoadError(null);
     try {
-      const res = await getPracticesByParentCourse(courseIdNum, {
-        limit: 100,
-        offset: 0,
-      });
-      setPractices(unwrapPracticesList(res));
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        unwrapPracticesPage(
+          await getPracticesByParentCourse(courseIdNum, { limit, offset }),
+        ),
+      );
+      setPractices(list);
     } catch {
       setPractices([]);
       setPracticesLoadError("Failed to load practices. Please try again.");
@@ -735,7 +748,7 @@ export function CourseDetailPage() {
                           type="button"
                           variant="secondary"
                           size="icon"
-                          className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                          className="h-8 w-8 rounded-[6px] bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
                           aria-label={`Edit ${module.name}`}
                           onClick={() => openEditModule(module)}
                         >
@@ -745,7 +758,7 @@ export function CourseDetailPage() {
                           type="button"
                           variant="secondary"
                           size="icon"
-                          className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                          className="h-8 w-8 rounded-[6px] bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
                           aria-label={`Delete ${module.name}`}
                           onClick={() => setDeletingModule(module)}
                         >
@@ -892,7 +905,7 @@ export function CourseDetailPage() {
                   {practices.length === 0 ? (
                     <PracticeActionButton
                       variant="outline"
-                      className="flex h-12 items-center gap-2 rounded-xl border-brand-500 px-8 font-bold text-brand-500 transition-all hover:bg-brand-50"
+                      className="flex h-12 items-center gap-2 rounded-[6px] border-brand-500 px-8 font-bold text-brand-500 transition-all hover:bg-brand-50"
                       pathOptions={{
                         isExamPrep: false,
                         level: programIdParam,
@@ -923,7 +936,7 @@ export function CourseDetailPage() {
                       !deletingModuleInFlight && setDeletingModule(null)
                     }
                     disabled={deletingModuleInFlight}
-                    className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 disabled:pointer-events-none disabled:opacity-50"
+                    className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 disabled:pointer-events-none disabled:opacity-50"
                   >
                     <X className="h-5 w-5" />
                   </button>

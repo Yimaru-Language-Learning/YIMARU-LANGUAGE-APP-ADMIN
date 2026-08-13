@@ -231,7 +231,7 @@ function ActiveSubscriptionsCard({
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-8 rounded-lg text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                          className="h-8 rounded-[6px] text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={!cancelEnabled}
                           title={
                             !cancelEnabled
@@ -254,7 +254,7 @@ function ActiveSubscriptionsCard({
             {canExtend ? (
               <Button
                 type="button"
-                className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 w-full rounded-[6px] bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!extendEnabled}
                 title={
                   !extendEnabled
@@ -271,7 +271,7 @@ function ActiveSubscriptionsCard({
             {canGrant ? (
               <Button
                 type="button"
-                className="h-10 w-full rounded-xl bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 w-full rounded-[6px] bg-grayScale-100 text-sm font-semibold text-grayScale-700 hover:bg-grayScale-200 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!grantEnabled}
                 title={
                   !grantEnabled
@@ -339,7 +339,7 @@ function EmptySubscriptionCard({
             {canExtend ? (
               <Button
                 type="button"
-                className="h-10 w-full rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 w-full rounded-[6px] bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                 disabled
                 title="Extend is only available when this learner has an active subscription."
               >
@@ -352,7 +352,7 @@ function EmptySubscriptionCard({
                 {canGrant ? (
                   <Button
                     type="button"
-                    className="h-10 min-w-0 flex-1 rounded-xl bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-10 min-w-0 flex-1 rounded-[6px] bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!grantEnabled}
                     title={
                       !grantEnabled
@@ -368,7 +368,7 @@ function EmptySubscriptionCard({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-10 min-w-0 flex-1 rounded-xl border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-10 min-w-0 flex-1 rounded-[6px] border-grayScale-200 bg-white text-sm font-semibold text-grayScale-700 disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                     disabled
                     title="Cancel is only available when this learner has an active subscription."
                   >
@@ -615,7 +615,7 @@ export function UserSubscriptionsSection({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 rounded-lg text-xs disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="h-8 rounded-[6px] text-xs disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                                   disabled={!subscription.is_currently_active}
                                   title={
                                     !subscription.is_currently_active
@@ -632,7 +632,7 @@ export function UserSubscriptionsSection({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 rounded-lg text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="h-8 rounded-[6px] text-xs text-destructive disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-50"
                                   disabled={
                                     !subscription.is_currently_active ||
                                     subscription.status.toUpperCase() === "CANCELLED"

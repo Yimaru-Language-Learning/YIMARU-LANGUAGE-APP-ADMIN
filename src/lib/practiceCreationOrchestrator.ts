@@ -115,7 +115,12 @@ export async function executePracticeCreation(
 
   const byId = new Map(opts.definitions.map((d) => [d.id, d]))
 
-  const linkedParents = dedupeParents(opts.parents ?? [])
+  const linkedParents = dedupeParents([
+    ...(opts.parentKind && opts.parentId
+      ? [{ parent_kind: opts.parentKind, parent_id: opts.parentId }]
+      : []),
+    ...(opts.parents ?? []),
+  ])
   const createParents = buildCreatePracticeParentsPayload(linkedParents)
   const primaryParent = linkedParents[0] ?? null
 

@@ -852,7 +852,7 @@ export function AddNewPracticePage() {
                     </div>
                     <button
                       onClick={() => removeQuestion(question.id)}
-                      className="rounded-lg p-1.5 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      className="rounded-[6px] p-1.5 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -910,7 +910,7 @@ export function AddNewPracticePage() {
               <button
                 type="button"
                 onClick={addQuestion}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-200/90 bg-brand-50/20 px-4 py-3.5 text-sm font-semibold text-brand-600 transition-all hover:border-brand-300 hover:bg-brand-50/60 hover:text-brand-700 sm:py-3"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-[6px] border-2 border-dashed border-brand-200/90 bg-brand-50/20 px-4 py-3.5 text-sm font-semibold text-brand-600 transition-all hover:border-brand-300 hover:bg-brand-50/60 hover:text-brand-700 sm:py-3"
               >
                 <Plus className="h-4 w-4" />
                 Add another question

@@ -48,6 +48,10 @@ import type {
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
 import { DisplayValue } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../lib/fetchAllOffsetPages";
 
 export function ProgramCoursesPage() {
   const navigate = useNavigate();
@@ -165,18 +169,23 @@ export function ProgramCoursesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [coursesRes, programsRes] = await Promise.all([
-        getProgramCourses(programId, { limit: 100, offset: 0 }),
-        getLearningPrograms({ limit: 100, offset: 0 }),
+      const [courseList, programRows] = await Promise.all([
+        fetchAllOffsetPages(async (offset, limit) =>
+          offsetPageFromListEnvelope<ProgramCourseListItem>(
+            await getProgramCourses(programId, { limit, offset }),
+            "courses",
+          ),
+        ),
+        fetchAllOffsetPages(async (offset, limit) =>
+          offsetPageFromListEnvelope<LearningProgramListItem>(
+            await getLearningPrograms({ limit, offset }),
+            "programs",
+          ),
+        ),
       ]);
 
-      const programRows = programsRes.data?.data?.programs;
-      const list = Array.isArray(programRows) ? programRows : [];
-      const found = list.find((p) => p.id === programId) ?? null;
+      const found = programRows.find((p) => p.id === programId) ?? null;
       setProgram(found);
-
-      const raw = coursesRes.data?.data?.courses;
-      const courseList = Array.isArray(raw) ? raw : [];
       const sorted = [...courseList].sort(
         (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
       );
@@ -549,7 +558,7 @@ export function ProgramCoursesPage() {
                         />
                         <button
                           type="button"
-                          className="relative w-full cursor-pointer rounded-2xl border-2 border-dashed border-[#9E289133] bg-white p-10 text-left transition-all hover:border-[#9E289180] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="relative w-full cursor-pointer rounded-[6px] border-2 border-dashed border-[#9E289133] bg-white p-10 text-left transition-all hover:border-[#9E289180] disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={createSaving || createUploadingThumbnail}
                           onClick={() =>
                             createThumbnailFileInputRef.current?.click()
@@ -601,7 +610,7 @@ export function ProgramCoursesPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-12 min-w-[120px] rounded-xl border-grayScale-200 font-semibold"
+                        className="h-12 min-w-[120px] rounded-[6px] border-grayScale-200 font-semibold"
                         disabled={createSaving || createUploadingThumbnail}
                         onClick={() =>
                           handleCreateCourseDialogOpenChange(false)
@@ -611,7 +620,7 @@ export function ProgramCoursesPage() {
                       </Button>
                       <Button
                         type="submit"
-                        className="h-12 min-w-[160px] rounded-xl bg-brand-500 font-semibold hover:bg-brand-600"
+                        className="h-12 min-w-[160px] rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
                         disabled={createSaving || createUploadingThumbnail}
                       >
                         {createSaving ? "Creating…" : "Create Course"}
@@ -705,7 +714,7 @@ export function ProgramCoursesPage() {
                         type="button"
                         variant="secondary"
                         size="icon"
-                        className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                        className="h-8 w-8 rounded-[6px] bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
                         aria-label={`Edit ${course.name}`}
                         onClick={() => openEditCourse(course)}
                       >
@@ -715,7 +724,7 @@ export function ProgramCoursesPage() {
                         type="button"
                         variant="secondary"
                         size="icon"
-                        className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                        className="h-8 w-8 rounded-[6px] bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
                         aria-label={`Delete ${course.name}`}
                         onClick={() => setDeletingCourse(course)}
                       >
@@ -898,7 +907,7 @@ export function ProgramCoursesPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 shrink-0 rounded-xl border-grayScale-200 font-semibold"
+                    className="h-11 shrink-0 rounded-[6px] border-grayScale-200 font-semibold"
                     disabled={savingEdit || uploadingEditThumbnail}
                     onClick={() => editThumbnailFileInputRef.current?.click()}
                   >
@@ -958,7 +967,7 @@ export function ProgramCoursesPage() {
                 type="button"
                 onClick={() => !deleting && setDeletingCourse(null)}
                 disabled={deleting}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 disabled:pointer-events-none disabled:opacity-50"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 disabled:pointer-events-none disabled:opacity-50"
               >
                 <X className="h-5 w-5" />
               </button>

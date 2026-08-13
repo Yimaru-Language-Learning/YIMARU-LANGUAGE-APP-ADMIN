@@ -71,7 +71,7 @@ export function PracticeActionChoiceDialog({
               onOpenChange(false)
               navigate(createHref)
             }}
-            className="group flex flex-col gap-3 rounded-xl border border-grayScale-200 bg-white p-5 text-left transition-all hover:border-brand-300 hover:shadow-md"
+            className="group flex flex-col gap-3 rounded-[6px] border border-grayScale-200 bg-white p-5 text-left transition-all hover:border-brand-300 hover:shadow-md"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
               <Plus className="h-5 w-5" />
@@ -87,7 +87,7 @@ export function PracticeActionChoiceDialog({
           <button
             type="button"
             onClick={openAttachPage}
-            className="group flex flex-col gap-3 rounded-xl border border-grayScale-200 bg-white p-5 text-left transition-all hover:border-brand-300 hover:shadow-md"
+            className="group flex flex-col gap-3 rounded-[6px] border border-grayScale-200 bg-white p-5 text-left transition-all hover:border-brand-300 hover:shadow-md"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
               <Link2 className="h-5 w-5" />
@@ -105,7 +105,7 @@ export function PracticeActionChoiceDialog({
           <Button
             type="button"
             variant="outline"
-            className="w-full rounded-[8px]"
+            className="w-full rounded-[6px]"
             onClick={() => onOpenChange(false)}
           >
             Cancel

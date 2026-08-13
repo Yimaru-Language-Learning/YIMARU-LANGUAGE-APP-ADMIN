@@ -444,7 +444,7 @@ export function TeamMemberDetailPage() {
               <button
                 type="button"
                 onClick={() => setConfirmDialog(null)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>

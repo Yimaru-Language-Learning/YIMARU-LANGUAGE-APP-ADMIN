@@ -349,7 +349,7 @@ export function QuestionBankAttachDialog({
           <Button
             type="button"
             variant="outline"
-            className="rounded-lg"
+            className="rounded-[6px]"
             onClick={() => onOpenChange(false)}
             disabled={attaching}
           >
@@ -357,7 +357,7 @@ export function QuestionBankAttachDialog({
           </Button>
           <Button
             type="button"
-            className="rounded-lg bg-brand-500 text-white hover:bg-brand-600"
+            className="rounded-[6px] bg-brand-500 text-white hover:bg-brand-600"
             onClick={handleAttach}
             disabled={attaching || selectedIds.length === 0}
           >

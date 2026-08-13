@@ -314,7 +314,7 @@ export function VideoCard({
                 type="button"
                 variant="secondary"
                 size="icon"
-                className="h-8 w-8 rounded-md bg-white/95 text-brand-600 shadow-sm transition-colors hover:bg-brand-50"
+                className="h-8 w-8 rounded-[6px] bg-white/95 text-brand-600 shadow-sm transition-colors hover:bg-brand-50"
                 aria-label={`View practices for ${title}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -329,7 +329,7 @@ export function VideoCard({
                 type="button"
                 variant="secondary"
                 size="icon"
-                className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                className="h-8 w-8 rounded-[6px] bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
                 aria-label={`Edit ${title}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -344,7 +344,7 @@ export function VideoCard({
                 type="button"
                 variant="secondary"
                 size="icon"
-                className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                className="h-8 w-8 rounded-[6px] bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
                 aria-label={`Delete ${title}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -548,7 +548,7 @@ export function VideoCard({
           {!hoverModuleActions ? (
             <button
               type="button"
-              className="h-8 w-8 flex flex-shrink-0 items-center justify-center rounded-full hover:bg-grayScale-50 transition-colors text-grayScale-400"
+              className="h-8 w-8 flex flex-shrink-0 items-center justify-center rounded-[6px] hover:bg-grayScale-50 transition-colors text-grayScale-400"
             >
               <MoreVertical className="h-5 w-5" />
             </button>
@@ -574,7 +574,7 @@ export function VideoCard({
             <Button
               type="button"
               variant="outline"
-              className="h-9 w-full rounded-lg border-brand-200 text-[12px] font-bold text-brand-600 hover:bg-brand-50"
+              className="h-9 w-full rounded-[6px] border-brand-200 text-[12px] font-bold text-brand-600 hover:bg-brand-50"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddPractice();
@@ -592,7 +592,7 @@ export function VideoCard({
             <Button
               variant="outline"
               onClick={onEdit}
-              className="w-full h-10 rounded-xl border-grayScale-200 text-grayScale-600 font-bold hover:bg-grayScale-50 transition-all flex items-center justify-center gap-2"
+              className="w-full h-10 rounded-[6px] border-grayScale-200 text-grayScale-600 font-bold hover:bg-grayScale-50 transition-all flex items-center justify-center gap-2"
             >
               <Edit2 className="h-4 w-4" />
               Edit
@@ -602,7 +602,7 @@ export function VideoCard({
                 disabled={status === "Published"}
                 onClick={onPublish}
                 className={cn(
-                  "w-full h-10 rounded-xl font-bold transition-all shadow-sm",
+                  "w-full h-10 rounded-[6px] font-bold transition-all shadow-sm",
                   status === "Published"
                     ? "bg-[#E9D5E5] text-white opacity-100 cursor-default"
                     : "bg-brand-500 text-white hover:bg-brand-600 shadow-brand-500/10",

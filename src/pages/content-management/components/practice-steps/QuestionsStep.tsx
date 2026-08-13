@@ -677,7 +677,7 @@ export function QuestionsStep({
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 gap-2 rounded-lg border-grayScale-200 text-grayScale-700"
+            className="h-9 gap-2 rounded-[6px] border-grayScale-200 text-grayScale-700"
             onClick={collapseAllQuestions}
           >
             <ChevronsDownUp className="h-4 w-4" />
@@ -687,7 +687,7 @@ export function QuestionsStep({
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 gap-2 rounded-lg border-grayScale-200 text-grayScale-700"
+            className="h-9 gap-2 rounded-[6px] border-grayScale-200 text-grayScale-700"
             onClick={expandAllQuestions}
           >
             <ChevronsUpDown className="h-4 w-4" />
@@ -747,7 +747,7 @@ export function QuestionsStep({
                           {canReorder ? (
                             <button
                               {...dragHandleProps}
-                              className="mt-0.5 shrink-0 cursor-grab touch-none rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-grayScale-50 hover:text-grayScale-600 active:cursor-grabbing"
+                              className="mt-0.5 shrink-0 cursor-grab touch-none rounded-[6px] p-1 text-grayScale-400 transition-colors hover:bg-grayScale-50 hover:text-grayScale-600 active:cursor-grabbing"
                               aria-label={`Drag to reorder question ${i + 1}`}
                             >
                               <GripVertical className="h-5 w-5" />
@@ -805,7 +805,7 @@ export function QuestionsStep({
                             variant="ghost"
                             size="icon"
                             type="button"
-                            className="shrink-0 text-brand-500 hover:bg-brand-50 rounded-lg"
+                            className="shrink-0 text-brand-500 hover:bg-brand-50 rounded-[6px]"
                             onClick={() => {
                               const newQuestions = formData.questions.filter(
                                 (item: any) => item.id !== q.id,

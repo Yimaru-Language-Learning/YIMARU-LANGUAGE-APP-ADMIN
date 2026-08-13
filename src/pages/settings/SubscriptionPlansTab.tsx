@@ -232,7 +232,7 @@ export function SubscriptionPlansTab() {
                   type="button"
                   onClick={() => setStatusFilter(tab.id)}
                   className={cn(
-                    "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                    "rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-colors",
                     statusFilter === tab.id
                       ? "bg-brand-500 text-white"
                       : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",

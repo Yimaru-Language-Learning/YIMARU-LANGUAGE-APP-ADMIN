@@ -154,7 +154,7 @@ export function EmailComposeFields({
           type="button"
           onClick={switchToFreeForm}
           className={cn(
-            "rounded-full px-3 py-1.5 transition-colors",
+            "rounded-[6px] px-3 py-1.5 transition-colors",
             isFreeForm
               ? "bg-brand-500 text-white shadow-sm"
               : "text-grayScale-500 hover:text-grayScale-700",
@@ -167,7 +167,7 @@ export function EmailComposeFields({
           onClick={switchToTemplate}
           disabled={templatesLoading || templates.length === 0}
           className={cn(
-            "rounded-full px-3 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+            "rounded-[6px] px-3 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50",
             !isFreeForm
               ? "bg-brand-500 text-white shadow-sm"
               : "text-grayScale-500 hover:text-grayScale-700",

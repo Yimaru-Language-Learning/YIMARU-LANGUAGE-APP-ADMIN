@@ -25,6 +25,16 @@ import {
   sortBySortOrder,
   type BaseItem,
 } from "./ContentHierarchyList"
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../../lib/fetchAllOffsetPages"
+import type {
+  ExamPrepCatalogCourseItem,
+  ExamPrepCatalogUnitItem,
+  ExamPrepModuleLessonItem,
+  ExamPrepUnitModuleItem,
+} from "../../../types/course.types"
 
 interface CatalogCourse extends BaseItem {}
 interface Unit extends BaseItem {
@@ -36,8 +46,6 @@ interface UnitModule extends BaseItem {
 interface ModuleLesson extends BaseItem {
   moduleId: string
 }
-
-const FETCH_LIMIT = 500
 
 export function ExamPrepContentHierarchyList() {
   const [catalogCourses, setCatalogCourses] = useState<CatalogCourse[]>([])
@@ -52,13 +60,13 @@ export function ExamPrepContentHierarchyList() {
   const fetchHierarchy = useCallback(async () => {
     setLoading({ catalogCourse: true })
     try {
-      const coursesRes = await getExamPrepCatalogCourses({
-        limit: FETCH_LIMIT,
-        offset: 0,
-      })
-      const fetchedCourses: CatalogCourse[] = sortBySortOrder(
-        coursesRes.data?.data?.catalog_courses ?? [],
-      ).map((c) => ({
+      const catalogRows = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepCatalogCourseItem>(
+          await getExamPrepCatalogCourses({ limit, offset }),
+          "catalog_courses",
+        ),
+      )
+      const fetchedCourses: CatalogCourse[] = sortBySortOrder(catalogRows).map((c) => ({
         id: String(c.id),
         name: c.name,
         thumbnail: c.thumbnail ?? undefined,
@@ -76,11 +84,16 @@ export function ExamPrepContentHierarchyList() {
       setLoading((prev) => ({ ...prev, unit: true }))
       const unitsResults = await Promise.all(
         fetchedCourses.map((c) =>
-          getExamPrepCatalogUnits(Number(c.id), { limit: FETCH_LIMIT, offset: 0 }),
+          fetchAllOffsetPages(async (offset, limit) =>
+            offsetPageFromListEnvelope<ExamPrepCatalogUnitItem>(
+              await getExamPrepCatalogUnits(Number(c.id), { limit, offset }),
+              "units",
+            ),
+          ),
         ),
       )
-      const fetchedUnits: Unit[] = unitsResults.flatMap((res, idx) =>
-        sortBySortOrder(res.data?.data?.units ?? []).map((u) => ({
+      const fetchedUnits: Unit[] = unitsResults.flatMap((rows, idx) =>
+        sortBySortOrder(rows).map((u) => ({
           id: String(u.id),
           name: u.name,
           thumbnail: u.thumbnail ?? undefined,
@@ -99,11 +112,16 @@ export function ExamPrepContentHierarchyList() {
       setLoading((prev) => ({ ...prev, module: true }))
       const modulesResults = await Promise.all(
         fetchedUnits.map((u) =>
-          getExamPrepUnitModules(Number(u.id), { limit: FETCH_LIMIT, offset: 0 }),
+          fetchAllOffsetPages(async (offset, limit) =>
+            offsetPageFromListEnvelope<ExamPrepUnitModuleItem>(
+              await getExamPrepUnitModules(Number(u.id), { limit, offset }),
+              "modules",
+            ),
+          ),
         ),
       )
-      const fetchedModules: UnitModule[] = modulesResults.flatMap((res, idx) =>
-        sortBySortOrder(res.data?.data?.modules ?? []).map((m) => ({
+      const fetchedModules: UnitModule[] = modulesResults.flatMap((rows, idx) =>
+        sortBySortOrder(rows).map((m) => ({
           id: String(m.id),
           name: m.name,
           thumbnail: m.thumbnail ?? m.icon ?? undefined,
@@ -121,11 +139,16 @@ export function ExamPrepContentHierarchyList() {
       setLoading((prev) => ({ ...prev, lesson: true }))
       const lessonsResults = await Promise.all(
         fetchedModules.map((m) =>
-          getExamPrepModuleLessons(Number(m.id), { limit: FETCH_LIMIT, offset: 0 }),
+          fetchAllOffsetPages(async (offset, limit) =>
+            offsetPageFromListEnvelope<ExamPrepModuleLessonItem>(
+              await getExamPrepModuleLessons(Number(m.id), { limit, offset }),
+              "lessons",
+            ),
+          ),
         ),
       )
-      const fetchedLessons: ModuleLesson[] = lessonsResults.flatMap((res, idx) =>
-        sortBySortOrder(res.data?.data?.lessons ?? []).map((l) => ({
+      const fetchedLessons: ModuleLesson[] = lessonsResults.flatMap((rows, idx) =>
+        sortBySortOrder(rows).map((l) => ({
           id: String(l.id),
           name: l.title,
           thumbnail: l.thumbnail ?? undefined,

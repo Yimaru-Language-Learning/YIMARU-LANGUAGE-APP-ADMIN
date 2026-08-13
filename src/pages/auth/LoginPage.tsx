@@ -306,7 +306,7 @@ export function LoginPage() {
                 type="button"
                 onClick={handleGoogleClick}
                 disabled={googleLoading || !googleReady}
-                className="group mb-6 flex w-full items-center justify-center gap-3 rounded-xl border border-grayScale-200 bg-white px-4 py-3 text-sm font-medium text-grayScale-600 transition-all duration-200 hover:border-grayScale-300 hover:bg-grayScale-100 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                className="group mb-6 flex w-full items-center justify-center gap-3 rounded-[6px] border border-grayScale-200 bg-white px-4 py-3 text-sm font-medium text-grayScale-600 transition-all duration-200 hover:border-grayScale-300 hover:bg-grayScale-100 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {googleLoading ? (
                   <SpinnerIcon className="h-5 w-5" />
@@ -403,7 +403,7 @@ export function LoginPage() {
 
             <Button
               type="submit"
-              className="mt-2 h-11 w-full rounded-xl text-sm font-semibold tracking-wide"
+              className="mt-2 h-11 w-full rounded-[6px] text-sm font-semibold tracking-wide"
               disabled={loading}
             >
               {loading ? "Signing in…" : "Sign in"}

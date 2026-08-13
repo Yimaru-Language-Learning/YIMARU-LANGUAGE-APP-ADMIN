@@ -290,7 +290,7 @@ export function UserLearningActivitySection({
               <button
                 type="button"
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  "rounded-[6px] px-3 py-1.5 text-xs font-medium transition-colors",
                   track === "lms" ? "bg-brand-500 text-white" : "text-grayScale-500 hover:text-grayScale-700",
                 )}
                 onClick={() => setTrack("lms")}
@@ -300,7 +300,7 @@ export function UserLearningActivitySection({
               <button
                 type="button"
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  "rounded-[6px] px-3 py-1.5 text-xs font-medium transition-colors",
                   track === "exam_prep"
                     ? "bg-brand-500 text-white"
                     : "text-grayScale-500 hover:text-grayScale-700",

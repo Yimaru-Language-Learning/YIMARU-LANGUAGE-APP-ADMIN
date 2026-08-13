@@ -156,7 +156,9 @@ export function AddPracticeFlow() {
 
   const backLabel = isFromQuestionType
     ? "Back to Question Types"
-    : effectiveBackTo === "module"
+    : effectiveBackTo === "lesson"
+      ? "Back to Lesson"
+      : effectiveBackTo === "module"
       ? "Back to Module"
       : effectiveBackTo === "unit"
         ? "Back to Unit"
@@ -186,10 +188,35 @@ export function AddPracticeFlow() {
       if (effectiveBackTo === "courses" && programType && courseId) {
         return `/new-content/courses/${programType}/${courseId}`;
       }
+      if (
+        effectiveBackTo === "lesson" &&
+        programType &&
+        courseId &&
+        unitId &&
+        moduleId &&
+        lessonId
+      ) {
+        const titleQuery = lessonTitleRaw?.trim()
+          ? `?lessonTitle=${encodeURIComponent(lessonTitleDisplay || lessonTitleRaw)}`
+          : "";
+        return `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/lessons/${lessonId}/practices${titleQuery}`;
+      }
       if (programType) {
         return `/new-content/courses/${programType}`;
       }
       return "/new-content";
+    }
+    if (
+      effectiveBackTo === "lesson" &&
+      level &&
+      courseId &&
+      moduleId &&
+      lessonId
+    ) {
+      const titleQuery = lessonTitleRaw?.trim()
+        ? `?lessonTitle=${encodeURIComponent(lessonTitleDisplay || lessonTitleRaw)}`
+        : "";
+      return `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/practices${titleQuery}`;
     }
     if (effectiveBackTo === "module" && level && courseId && moduleId) {
       return `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`;
@@ -205,6 +232,9 @@ export function AddPracticeFlow() {
     courseId,
     unitId,
     moduleId,
+    lessonId,
+    lessonTitleRaw,
+    lessonTitleDisplay,
     level,
     isFromQuestionType,
   ]);
@@ -342,11 +372,12 @@ export function AddPracticeFlow() {
       });
       return;
     }
-    const parents = dedupeParents(
-      isExamPrep && parentContext
+    const parents = dedupeParents([
+      ...(parentContext
         ? [{ parent_kind: parentContext.kind, parent_id: parentContext.id }]
-        : formData.parents,
-    );
+        : []),
+      ...(formData.parents ?? []),
+    ]);
     const parentsErr = validatePracticeParents(parents, {
       required: !isFromQuestionType && !isExamPrep,
     });
@@ -759,7 +790,7 @@ export function AddPracticeFlow() {
             </h1>
             <Button
               variant="outline"
-              className="h-10 w-full rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
+              className="h-10 w-full rounded-[6px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
               onClick={goBack}
             >
               Cancel

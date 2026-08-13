@@ -785,14 +785,14 @@ export function EditPracticeFlow() {
             <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
               <Button
                 variant="outline"
-                className="h-10 w-full rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
+                className="h-10 w-full rounded-[6px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
                 disabled={submitting}
                 onClick={() => goBack()}
               >
                 Cancel
               </Button>
               <Button
-                className="h-10 w-full rounded-[8px] bg-brand-500 px-6 font-bold text-white shadow-md shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-50 sm:w-auto"
+                className="h-10 w-full rounded-[6px] bg-brand-500 px-6 font-bold text-white shadow-md shadow-brand-500/20 hover:bg-brand-600 disabled:opacity-50 sm:w-auto"
                 disabled={submitting || !hasUnsavedChanges}
                 onClick={handleSaveChanges}
               >

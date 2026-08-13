@@ -354,7 +354,7 @@ export function AddQuestionPage() {
           variant="ghost"
           size="icon"
           onClick={() => navigateBack(navigate, "/content/questions")}
-          className="h-9 w-9 shrink-0 rounded-lg bg-grayScale-50 hover:bg-brand-500/10 hover:text-brand-500"
+          className="h-9 w-9 shrink-0 rounded-[6px] bg-grayScale-50 hover:bg-brand-500/10 hover:text-brand-500"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>

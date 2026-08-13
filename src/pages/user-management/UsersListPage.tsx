@@ -82,7 +82,7 @@ function UserListFilterDropdown({
             id={id}
             disabled={disabled}
             className={cn(
-              "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600",
+              "flex h-9 w-full items-center justify-between gap-2 rounded-[6px] border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600",
               "outline-none focus-visible:ring-1 focus-visible:ring-brand-500",
               disabled && "cursor-not-allowed bg-grayScale-50 text-grayScale-400",
             )}
@@ -726,7 +726,7 @@ export function UsersListPage() {
               onClick={handlePrev}
               disabled={safePage === 1}
               className={cn(
-                "h-8 w-8 flex items-center justify-center rounded-md border bg-white text-grayScale-500",
+                "h-8 w-8 flex items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                 safePage === 1 && "opacity-50 cursor-not-allowed"
               )}
             >
@@ -744,7 +744,7 @@ export function UsersListPage() {
                   type="button"
                   onClick={() => setPage(n)}
                   className={cn(
-                    "h-8 w-8 rounded-md border text-sm font-medium",
+                    "h-8 w-8 rounded-[6px] border text-sm font-medium",
                     n === safePage
                       ? "border-brand-500 bg-brand-500 text-white"
                       : "bg-white text-grayScale-600 hover:bg-grayScale-50"
@@ -759,7 +759,7 @@ export function UsersListPage() {
               onClick={handleNext}
               disabled={safePage === pageCount}
               className={cn(
-                "h-8 w-8 flex items-center justify-center rounded-md border bg-white text-grayScale-500",
+                "h-8 w-8 flex items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                 safePage === pageCount && "opacity-50 cursor-not-allowed"
               )}
             >
@@ -776,7 +776,7 @@ export function UsersListPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Confirm Status Change</h2>
               <button
                 onClick={() => setConfirmDialog(null)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>

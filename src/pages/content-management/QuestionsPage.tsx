@@ -596,7 +596,7 @@ export function QuestionsPage() {
                   onClick={() => safePage > 1 && setPage(safePage - 1)}
                   disabled={safePage === 1}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                     safePage === 1 && "cursor-not-allowed opacity-50",
                   )}
                 >
@@ -613,7 +613,7 @@ export function QuestionsPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={cn(
-                        "h-8 w-8 rounded-md border text-sm font-medium",
+                        "h-8 w-8 rounded-[6px] border text-sm font-medium",
                         n === safePage
                           ? "border-brand-500 bg-brand-500 text-white"
                           : "bg-white text-grayScale-600 hover:bg-grayScale-50",
@@ -627,7 +627,7 @@ export function QuestionsPage() {
                   onClick={() => safePage < totalPages && setPage(safePage + 1)}
                   disabled={safePage === totalPages}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                     safePage === totalPages && "cursor-not-allowed opacity-50",
                   )}
                 >
@@ -648,7 +648,7 @@ export function QuestionsPage() {
               </h2>
               <button
                 onClick={() => setDeleteDialogOpen(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -681,7 +681,7 @@ export function QuestionsPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Question Details</h2>
               <button
                 onClick={() => setDetailsOpen(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -798,7 +798,7 @@ export function QuestionsPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Question</h2>
               <button
                 onClick={() => setEditOpen(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>

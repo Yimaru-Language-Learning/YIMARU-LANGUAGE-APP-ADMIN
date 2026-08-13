@@ -682,7 +682,7 @@ export function PracticeDetailsPage() {
               aria-selected={flowMode === "view"}
               onClick={() => setFlowMode("view")}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition",
+                "inline-flex items-center justify-center gap-1.5 rounded-[6px] px-4 py-2 text-sm font-semibold transition",
                 flowMode === "view"
                   ? "bg-white text-brand-600 shadow-sm"
                   : "text-grayScale-500 hover:text-grayScale-800",
@@ -697,7 +697,7 @@ export function PracticeDetailsPage() {
               aria-selected={flowMode === "create"}
               onClick={() => setFlowMode("create")}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition",
+                "inline-flex items-center justify-center gap-1.5 rounded-[6px] px-4 py-2 text-sm font-semibold transition",
                 flowMode === "create"
                   ? "bg-white text-brand-600 shadow-sm"
                   : "text-grayScale-500 hover:text-grayScale-800",

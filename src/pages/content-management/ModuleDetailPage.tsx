@@ -20,7 +20,11 @@ import type {
   PracticePublishStatus,
   TopLevelModuleLessonItem,
 } from "../../types/course.types";
-import { unwrapPracticesList } from "../../lib/parentContextPractice";
+import { unwrapPracticesPage } from "../../lib/parentContextPractice";
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../lib/fetchAllOffsetPages";
 import { parentsFromPractice } from "../../lib/practiceParents";
 import {
   isPracticeParentUnlinkNotLinkedError,
@@ -182,10 +186,14 @@ export function ModuleDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await getTopLevelCourseModules(cid, { limit: 100, offset: 0 });
+        const list = await fetchAllOffsetPages(async (offset, limit) =>
+          offsetPageFromListEnvelope<{ id: number; name: string; description?: string | null }>(
+            await getTopLevelCourseModules(cid, { limit, offset }),
+            "modules",
+          ),
+        );
         if (cancelled) return;
-        const list = res.data?.data?.modules;
-        if (Array.isArray(list)) {
+        if (list.length > 0) {
           const m = list.find((mod) => mod.id === id);
           if (m) {
             setLoadedModuleName(m.name);
@@ -229,17 +237,15 @@ export function ModuleDetailPage() {
         setLessonsLoadError(null);
       }
       try {
-        const res = await getModuleLessons(mid, { limit: 100, offset: 0 });
-        const list = res.data?.data?.lessons;
-        if (Array.isArray(list)) {
-          setLessons(
-            [...list].sort(
-              (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-            ),
-          );
-        } else {
-          setLessons([]);
-        }
+        const list = await fetchAllOffsetPages(async (offset, limit) =>
+          offsetPageFromListEnvelope<TopLevelModuleLessonItem>(
+            await getModuleLessons(mid, { limit, offset }),
+            "lessons",
+          ),
+        );
+        setLessons(
+          [...list].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+        );
         if (showPageLoading) {
           setLessonsLoadError(null);
         }
@@ -274,11 +280,12 @@ export function ModuleDetailPage() {
     setPracticesLoading(true);
     setPracticesLoadError(null);
     try {
-      const res = await getPracticesByParentModule(mid, {
-        limit: 100,
-        offset: 0,
-      });
-      setPractices(unwrapPracticesList(res));
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        unwrapPracticesPage(
+          await getPracticesByParentModule(mid, { limit, offset }),
+        ),
+      );
+      setPractices(list);
     } catch {
       setPractices([]);
       setPracticesLoadError("Failed to load practices. Please try again.");
@@ -633,7 +640,7 @@ export function ModuleDetailPage() {
                       moduleId,
                       lessonId: String(lesson.id),
                       lessonTitle: lesson.title,
-                      backTo: "module",
+                      backTo: "lesson",
                     })
                   }
                   onViewPractices={() =>
@@ -671,7 +678,7 @@ export function ModuleDetailPage() {
               </p>
               <Button
                 variant="outline"
-                className="h-12 px-8 rounded-xl border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
+                className="h-12 px-8 rounded-[6px] border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
                 onClick={() =>
                   navigate(
                     `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/add-video`,
@@ -748,7 +755,7 @@ export function ModuleDetailPage() {
                 {practices.length === 0 ? (
                   <PracticeActionButton
                     variant="outline"
-                    className="h-12 px-8 rounded-xl border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
+                    className="h-12 px-8 rounded-[6px] border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
                     pathOptions={modulePracticePathOptions}
                     parentLabel={displayModuleName}
                   >
@@ -877,7 +884,7 @@ export function ModuleDetailPage() {
                   !deletingLessonInFlight && setDeletingLesson(null)
                 }
                 disabled={deletingLessonInFlight}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 disabled:pointer-events-none disabled:opacity-50"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600 disabled:pointer-events-none disabled:opacity-50"
               >
                 <X className="h-5 w-5" />
               </button>

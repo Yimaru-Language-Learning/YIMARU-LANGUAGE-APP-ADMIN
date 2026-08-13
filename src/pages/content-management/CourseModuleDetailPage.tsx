@@ -41,6 +41,8 @@ import { vimeoResultToStoredUrl } from "../../lib/video-upload/upload-video";
 import { resolveThumbnailForPreview } from "../../lib/videoPreview";
 import type {
   ContentAccessTier,
+  ExamPrepModuleLessonItem,
+  ExamPrepUnitModuleItem,
   PracticePublishStatus,
 } from "../../types/course.types";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
@@ -51,6 +53,10 @@ import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
 } from "../../lib/contentListFilters";
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../lib/fetchAllOffsetPages";
 
 const LESSON_THUMB_GRADIENTS = [
   "from-[#CBD5E1] to-[#94A3B8]",
@@ -165,12 +171,12 @@ export function CourseModuleDetailPage() {
       return;
     }
     try {
-      const response = await getExamPrepUnitModules(parsedUnitId, {
-        limit: 100,
-        offset: 0,
-      });
-      const rows = response.data?.data?.modules;
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepUnitModuleItem>(
+          await getExamPrepUnitModules(parsedUnitId, { limit, offset }),
+          "modules",
+        ),
+      );
       const row = list.find((m) => Number(m.id) === parsedModuleId);
       if (row) {
         setModuleTitle(row.name?.trim() || `Module ${parsedModuleId}`);
@@ -222,12 +228,12 @@ export function CourseModuleDetailPage() {
     setLessonsLoading(true);
     setLessonsLoadError(null);
     try {
-      const response = await getExamPrepModuleLessons(parsedModuleId, {
-        limit: 20,
-        offset: 0,
-      });
-      const rows = response.data?.data?.lessons;
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepModuleLessonItem>(
+          await getExamPrepModuleLessons(parsedModuleId, { limit, offset }),
+          "lessons",
+        ),
+      );
       setLessons(
         list.map((row) => {
           const raw = row.duration_seconds ?? row.duration ?? null;
@@ -804,7 +810,7 @@ export function CourseModuleDetailPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                      className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                       disabled={creatingLesson || uploadingThumbnail || uploadingVideo}
                       onClick={clearCreateLessonForm}
                     >
@@ -814,7 +820,7 @@ export function CourseModuleDetailPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold hover:bg-grayScale-50"
+                    className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold hover:bg-grayScale-50"
                     disabled={creatingLesson || uploadingThumbnail || uploadingVideo}
                     onClick={() => void handleCreateLesson("DRAFT")}
                   >
@@ -822,7 +828,7 @@ export function CourseModuleDetailPage() {
                   </Button>
                   <Button
                     type="button"
-                    className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                    className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                     disabled={creatingLesson || uploadingThumbnail || uploadingVideo}
                     onClick={() => void handleCreateLesson("PUBLISHED")}
                   >
@@ -922,7 +928,7 @@ export function CourseModuleDetailPage() {
               </p>
               <Button
                 variant="outline"
-                className="h-12 px-8 rounded-xl border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
+                className="h-12 px-8 rounded-[6px] border-brand-500 text-brand-500 font-bold hover:bg-brand-50 transition-all flex items-center gap-2"
                 onClick={() => setCreateLessonOpen(true)}
               >
                 <Video className="h-5 w-5" />
@@ -1088,7 +1094,7 @@ export function CourseModuleDetailPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                 disabled={savingEdit || uploadingEditThumbnail || uploadingEditVideo}
                 onClick={closeEditLesson}
               >
@@ -1096,7 +1102,7 @@ export function CourseModuleDetailPage() {
               </Button>
               <Button
                 type="button"
-                className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                 disabled={savingEdit || uploadingEditThumbnail || uploadingEditVideo}
                 onClick={() => void handleSaveEditLesson()}
               >

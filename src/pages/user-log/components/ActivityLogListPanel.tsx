@@ -62,6 +62,7 @@ import { cn } from "../../../lib/utils"
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../../lib/csv-export"
 import { activityLogExportQuery } from "../../../lib/csvExportFilters"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
+import { fetchAllOffsetPages } from "../../../lib/fetchAllOffsetPages"
 import type { ActivityLog, ActivityLogFilters } from "../../../types/activity-log.types"
 import { ActorCell, ActorLabel } from "./ActorLabel"
 import { ActorHoverCard } from "./ActorHoverCard"
@@ -97,7 +98,6 @@ export function ActivityLogListPanel({
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [totalCount, setTotalCount] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -112,9 +112,8 @@ export function ActivityLogListPanel({
   const [detailLoading, setDetailLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const serverFilters = useMemo((): ActivityLogFilters => {
-    const offset = (page - 1) * pageSize
-    const filters: ActivityLogFilters = { limit: pageSize, offset }
+  const listFilters = useMemo((): ActivityLogFilters => {
+    const filters: ActivityLogFilters = {}
     if (fixedActorId != null) filters.actor_id = fixedActorId
     if (actionFilter) filters.action = actionFilter
     if (resourceTypeFilter) filters.resource_type = resourceTypeFilter
@@ -126,8 +125,6 @@ export function ActivityLogListPanel({
     if (dateBefore) filters.before = toRfc3339EndOfDay(dateBefore)
     return filters
   }, [
-    page,
-    pageSize,
     fixedActorId,
     actionFilter,
     resourceTypeFilter,
@@ -137,28 +134,29 @@ export function ActivityLogListPanel({
   ])
 
   const exportParams = useMemo(
-    () => activityLogExportQuery(serverFilters),
-    [serverFilters],
+    () => activityLogExportQuery(listFilters),
+    [listFilters],
   )
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await getActivityLogs(serverFilters)
-      setLogs(data.logs)
-      setTotalCount(data.total_count)
+      const all = await fetchAllOffsetPages(async (offset, limit) => {
+        const data = await getActivityLogs({ ...listFilters, limit, offset })
+        return { items: data.logs, total_count: data.total_count }
+      })
+      setLogs(all)
     } catch (e) {
       console.error("Failed to fetch activity logs:", e)
       setLogs([])
-      setTotalCount(0)
       const msg = getApiErrorMessage(e, "Failed to load activity logs")
       setError(msg)
       notifyApiError(e, "Failed to load activity logs")
     } finally {
       setLoading(false)
     }
-  }, [serverFilters])
+  }, [listFilters])
 
   useEffect(() => {
     void fetchLogs()
@@ -166,7 +164,7 @@ export function ActivityLogListPanel({
 
   useEffect(() => {
     setPage(1)
-  }, [actionFilter, resourceTypeFilter, resourceIdFilter, dateAfter, dateBefore, fixedActorId, pageSize])
+  }, [actionFilter, resourceTypeFilter, resourceIdFilter, dateAfter, dateBefore, fixedActorId, pageSize, searchQuery])
 
   const handleViewDetail = async (logId: number) => {
     setDialogOpen(true)
@@ -225,10 +223,15 @@ export function ActivityLogListPanel({
     })
   }, [logs, searchQuery])
 
+  const totalCount = filteredLogs.length
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage = Math.min(page, pageCount)
   const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
   const endEntry = Math.min(safePage * pageSize, totalCount)
+  const paginatedLogs = useMemo(() => {
+    const start = (safePage - 1) * pageSize
+    return filteredLogs.slice(start, start + pageSize)
+  }, [filteredLogs, safePage, pageSize])
   const showActorColumn = fixedActorId == null
   const columnCount = showActorColumn ? 6 : 5
 
@@ -284,7 +287,7 @@ export function ActivityLogListPanel({
               <p className="text-2xl font-bold text-grayScale-600">
                 {logs[0]?.created_at ? getRelativeActivityTime(logs[0].created_at) : <UnassignedLabel />}
               </p>
-              <p className="text-xs text-grayScale-400">Latest on this page</p>
+              <p className="text-xs text-grayScale-400">Latest loaded</p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
@@ -293,7 +296,7 @@ export function ActivityLogListPanel({
             </div>
             <div>
               <p className="text-2xl font-bold text-grayScale-600">{filteredLogs.length}</p>
-              <p className="text-xs text-grayScale-400">Rows after search (this page)</p>
+              <p className="text-xs text-grayScale-400">Rows after search</p>
             </div>
           </div>
         </div>
@@ -306,7 +309,7 @@ export function ActivityLogListPanel({
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
             <Input
-              placeholder="Search message, action, or metadata on this page…"
+              placeholder="Search message, action, or metadata…"
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -415,7 +418,7 @@ export function ActivityLogListPanel({
                   </div>
                 </TableCell>
               </TableRow>
-            ) : filteredLogs.length === 0 ? (
+            ) : paginatedLogs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columnCount} className="py-12 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -432,7 +435,7 @@ export function ActivityLogListPanel({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLogs.map((log) => (
+              paginatedLogs.map((log) => (
                 <TableRow key={log.id} className="group">
                   <TableCell>
                     <span

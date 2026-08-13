@@ -138,7 +138,7 @@ function NotificationItem({
               disabled={toggling}
               onClick={() => onToggleRead(notification.id, notification.is_read)}
               className={cn(
-                "grid h-7 w-7 place-items-center rounded-lg transition-colors",
+                "grid h-7 w-7 place-items-center rounded-[6px] transition-colors",
                 "opacity-0 group-hover:opacity-100 focus:opacity-100",
                 notification.is_read
                   ? "text-grayScale-400 hover:bg-brand-50 hover:text-brand-600"
@@ -628,7 +628,7 @@ export function NotificationsPage() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                      className="h-8 w-[130px] justify-between rounded-[6px] border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
                     >
                       <span className="truncate">{channelFilter === "all" ? "All" : channelFilter.toUpperCase()}</span>
                       <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />
@@ -652,7 +652,7 @@ export function NotificationsPage() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="h-8 w-[150px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                      className="h-8 w-[150px] justify-between rounded-[6px] border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
                     >
                       <span className="truncate">
                         {typeFilter === "all" ? "All types" : formatNotificationTypeLabel(typeFilter)}
@@ -678,7 +678,7 @@ export function NotificationsPage() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="h-8 w-[130px] justify-between rounded-lg border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
+                      className="h-8 w-[130px] justify-between rounded-[6px] border-grayScale-200 px-2.5 text-xs font-normal text-grayScale-600"
                     >
                       <span className="truncate">{levelFilter === "all" ? "All levels" : levelFilter}</span>
                       <ChevronDown className="ml-2 h-3.5 w-3.5 text-grayScale-400" />

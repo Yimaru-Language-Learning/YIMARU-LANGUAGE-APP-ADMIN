@@ -91,7 +91,7 @@ export function SidebarNavGroup({
         aria-controls={panelId}
         onClick={() => setExpanded((open) => !open)}
         className={cn(
-          "relative group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-grayScale-600 transition",
+          "relative group flex w-full items-center gap-3 rounded-[6px] px-3 py-2 text-left text-sm font-medium text-grayScale-600 transition",
           "hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
           isSectionActive &&
             "bg-brand-500/10 text-black dark:bg-brand-500/15 dark:text-white",

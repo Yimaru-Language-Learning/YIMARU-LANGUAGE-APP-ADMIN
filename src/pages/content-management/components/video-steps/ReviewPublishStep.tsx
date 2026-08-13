@@ -228,7 +228,7 @@ export function ReviewPublishStep({
             variant="outline"
             onClick={prevStep}
             disabled={publishing}
-            className="h-10 px-8 rounded-xl border-grayScale-200 font-bold text-grayScale-600 hover:bg-grayScale-50 transition-all shadow-sm"
+            className="h-10 px-8 rounded-[6px] border-grayScale-200 font-bold text-grayScale-600 hover:bg-grayScale-50 transition-all shadow-sm"
           >
             Back
           </Button>

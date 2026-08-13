@@ -123,7 +123,7 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 className={cn(
-                  "shrink-0 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600",
+                  "shrink-0 rounded-[6px] bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-600",
                   isCompact ? "mx-auto w-full max-w-[200px] sm:mx-0 sm:w-auto" : "mt-1",
                 )}
               >

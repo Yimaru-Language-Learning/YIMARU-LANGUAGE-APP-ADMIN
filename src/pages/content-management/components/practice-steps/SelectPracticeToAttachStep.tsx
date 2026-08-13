@@ -156,7 +156,7 @@ export function SelectPracticeToAttachStep({
           type="button"
           onClick={() => setUnlinkedOnly(false)}
           className={cn(
-            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+            "rounded-[6px] px-3 py-1 text-xs font-semibold transition-colors",
             !unlinkedOnly
               ? "bg-brand-500 text-white"
               : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",
@@ -168,7 +168,7 @@ export function SelectPracticeToAttachStep({
           type="button"
           onClick={() => setUnlinkedOnly(true)}
           className={cn(
-            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+            "rounded-[6px] px-3 py-1 text-xs font-semibold transition-colors",
             unlinkedOnly
               ? "bg-brand-500 text-white"
               : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",

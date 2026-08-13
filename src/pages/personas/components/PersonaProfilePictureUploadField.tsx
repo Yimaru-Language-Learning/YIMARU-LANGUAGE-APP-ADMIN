@@ -118,7 +118,7 @@ export function PersonaProfilePictureUploadField({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          "flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-200 bg-white p-6 text-center transition-colors",
+          "flex w-full cursor-pointer flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-brand-200 bg-white p-6 text-center transition-colors",
           "hover:border-brand-300 hover:bg-grayScale-50/40",
           dragActive && "border-brand-400 bg-brand-50/40",
           zoneDisabled && "cursor-not-allowed opacity-60",

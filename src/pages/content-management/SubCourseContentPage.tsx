@@ -631,13 +631,13 @@ export function SubModuleContentPage() {
                         <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => handleEditClick(practice)}
-                            className="rounded-lg p-1.5 text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-700"
+                            className="rounded-[6px] p-1.5 text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-700"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteClick(practice)}
-                            className="rounded-lg p-1.5 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                            className="rounded-[6px] p-1.5 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -718,7 +718,7 @@ export function SubModuleContentPage() {
                         <div className="relative">
                           <button 
                             onClick={() => setOpenVideoMenuId(openVideoMenuId === video.id ? null : video.id)}
-                            className="rounded-lg p-1.5 text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                            className="rounded-[6px] p-1.5 text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
                           >
                             <MoreVertical className="h-4 w-4" />
                           </button>
@@ -918,7 +918,7 @@ export function SubModuleContentPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Practice</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -949,7 +949,7 @@ export function SubModuleContentPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Practice</h2>
               <button
                 onClick={() => setShowEditPracticeModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1007,7 +1007,7 @@ export function SubModuleContentPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Add Video</h2>
               <button
                 onClick={() => { setShowAddVideoModal(false); setVideoFile(null) }}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1150,7 +1150,7 @@ export function SubModuleContentPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Video</h2>
               <button
                 onClick={() => setShowEditVideoModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1208,7 +1208,7 @@ export function SubModuleContentPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Video</h2>
               <button
                 onClick={() => setShowDeleteVideoModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1248,7 +1248,7 @@ export function SubModuleContentPage() {
               </div>
               <button
                 onClick={() => setShowPreviewModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>

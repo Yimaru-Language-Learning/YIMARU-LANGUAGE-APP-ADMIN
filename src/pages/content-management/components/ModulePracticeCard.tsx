@@ -117,7 +117,7 @@ export function ModulePracticeCard({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 flex-shrink-0 rounded-full text-grayScale-400 hover:bg-grayScale-50 hover:text-grayScale-600"
+                  className="h-8 w-8 flex-shrink-0 rounded-[6px] text-grayScale-400 hover:bg-grayScale-50 hover:text-grayScale-600"
                   disabled={statusUpdating}
                   aria-label={`Practice options: ${practice.title}`}
                   onClick={(e) => e.stopPropagation()}
@@ -177,7 +177,7 @@ export function ModulePracticeCard({
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full rounded-[10px] border-brand-500 text-[12px] font-bold text-brand-500 hover:bg-brand-50"
+              className="h-10 w-full rounded-[6px] border-brand-500 text-[12px] font-bold text-brand-500 hover:bg-brand-50"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.();
@@ -190,7 +190,7 @@ export function ModulePracticeCard({
               type="button"
               disabled={isPublished || statusUpdating}
               className={cn(
-                "h-10 w-full rounded-[10px] text-[12px] font-bold shadow-sm transition-all",
+                "h-10 w-full rounded-[6px] text-[12px] font-bold shadow-sm transition-all",
                 isPublished
                   ? "cursor-default bg-[#ECD5E9] text-[#9E2891] hover:bg-[#ECD5E9]"
                   : "bg-brand-500 text-white hover:bg-brand-600",

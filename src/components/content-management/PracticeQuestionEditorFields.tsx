@@ -887,7 +887,7 @@ export function PracticeQuestionEditorFields({
                     <button
                       type="button"
                       onClick={() => removeOption(optIdx)}
-                      className="rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      className="rounded-[6px] p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -897,7 +897,7 @@ export function PracticeQuestionEditorFields({
               <button
                 type="button"
                 onClick={addOption}
-                className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+                className="mt-1 flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
               >
                 <Plus className="h-4 w-4" />
                 Add Option
@@ -929,7 +929,7 @@ export function PracticeQuestionEditorFields({
                       ],
                     })
                   }
-                  className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex-1 rounded-[6px] border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                     value.options[i]?.isCorrect
                       ? "border-green-500 bg-green-50 text-green-700"
                       : "border-grayScale-200 text-grayScale-600 hover:border-grayScale-300"

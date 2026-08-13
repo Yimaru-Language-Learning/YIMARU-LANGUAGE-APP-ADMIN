@@ -83,7 +83,7 @@ export function TablePagination({
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={disabled || currentPage <= 1}
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+            "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
             (disabled || currentPage <= 1) && "cursor-not-allowed opacity-50",
           )}
           aria-label="Previous page"
@@ -102,7 +102,7 @@ export function TablePagination({
               disabled={disabled}
               onClick={() => onPageChange(n)}
               className={cn(
-                "h-8 w-8 rounded-md border text-sm font-medium",
+                "h-8 w-8 rounded-[6px] border text-sm font-medium",
                 n === currentPage
                   ? "border-brand-500 bg-brand-500 text-white"
                   : "bg-white text-grayScale-600 hover:bg-grayScale-50",
@@ -117,7 +117,7 @@ export function TablePagination({
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={disabled || currentPage >= totalPages}
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+            "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
             (disabled || currentPage >= totalPages) && "cursor-not-allowed opacity-50",
           )}
           aria-label="Next page"

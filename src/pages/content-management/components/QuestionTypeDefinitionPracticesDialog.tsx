@@ -148,7 +148,7 @@ export function QuestionTypeDefinitionPracticesDialog({
               <Button
                 type="button"
                 size="sm"
-                className="rounded-[8px] bg-brand-600 hover:bg-brand-500"
+                className="rounded-[6px] bg-brand-600 hover:bg-brand-500"
                 onClick={handleCreatePractice}
               >
                 <Plus className="mr-1.5 h-4 w-4" />
@@ -179,7 +179,7 @@ export function QuestionTypeDefinitionPracticesDialog({
                 <Button
                   type="button"
                   size="sm"
-                  className="mt-2 rounded-[8px] bg-brand-600 hover:bg-brand-500"
+                  className="mt-2 rounded-[6px] bg-brand-600 hover:bg-brand-500"
                   onClick={handleCreatePractice}
                 >
                   <Plus className="mr-1.5 h-4 w-4" />
@@ -218,7 +218,7 @@ export function QuestionTypeDefinitionPracticesDialog({
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-8 rounded-[8px] border-grayScale-200 px-3 text-xs font-semibold"
+                        className="h-8 rounded-[6px] border-grayScale-200 px-3 text-xs font-semibold"
                         disabled={editingPracticeId === practice.practice_id}
                         onClick={() => void handleEditPractice(practice)}
                       >
@@ -284,7 +284,7 @@ export function QuestionTypeDefinitionPracticesDialog({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="rounded-[8px] border-grayScale-200"
+                  className="rounded-[6px] border-grayScale-200"
                   disabled={!canPrev || loading}
                   onClick={() => setOffset((o) => Math.max(0, o - pageSize))}
                 >
@@ -295,7 +295,7 @@ export function QuestionTypeDefinitionPracticesDialog({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="rounded-[8px] border-grayScale-200"
+                  className="rounded-[6px] border-grayScale-200"
                   disabled={!canNext || loading}
                   onClick={() => setOffset((o) => o + pageSize)}
                 >

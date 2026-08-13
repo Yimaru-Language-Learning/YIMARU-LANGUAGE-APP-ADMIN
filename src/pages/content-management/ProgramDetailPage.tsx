@@ -36,7 +36,11 @@ import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip"
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
-import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import type {
+  ContentAccessTier,
+  ExamPrepCatalogCourseItem,
+  PracticePublishStatus,
+} from "../../types/course.types";
 import {
   filterBySearchAndPublishStatus,
   hasActiveContentFilters,
@@ -46,6 +50,10 @@ import { uploadImageFile } from "../../api/files.api";
 import uploadIcon from "../../assets/icons/upload.png";
 import { DisplayValue } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../lib/fetchAllOffsetPages";
 
 export function ProgramDetailPage() {
   const navigate = useNavigate();
@@ -111,9 +119,12 @@ export function ProgramDetailPage() {
     if (programType !== "proficiency") return;
     setCatalogLoading(true);
     try {
-      const response = await getExamPrepCatalogCourses({ limit: 20, offset: 0 });
-      const rows = response.data?.data?.catalog_courses;
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepCatalogCourseItem>(
+          await getExamPrepCatalogCourses({ limit, offset }),
+          "catalog_courses",
+        ),
+      );
       setCreatedCourses(
         list.map((row) => ({
           id: Number(row.id),
@@ -551,7 +562,7 @@ export function ProgramDetailPage() {
                     />
                     <button
                       type="button"
-                      className="relative w-full cursor-pointer rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white px-10 py-8 text-left transition-all hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="relative w-full cursor-pointer rounded-[6px] border-2 border-dashed border-grayScale-400 bg-white px-10 py-8 text-left transition-all hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
                       disabled={creating || uploadingThumbnail}
                       onClick={() => createThumbnailFileInputRef.current?.click()}
                     >
@@ -606,14 +617,14 @@ export function ProgramDetailPage() {
                   <DialogClose asChild>
                     <Button
                       variant="outline"
-                      className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                      className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                       disabled={creating || uploadingThumbnail}
                     >
                       Cancel
                     </Button>
                   </DialogClose>
                   <Button
-                    className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                    className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                     disabled={creating || uploadingThumbnail}
                     onClick={() => void handleCreateCourse()}
                   >
@@ -695,7 +706,7 @@ export function ProgramDetailPage() {
                   type="button"
                   variant="secondary"
                   size="icon"
-                  className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                  className="h-8 w-8 rounded-[6px] bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
                   onClick={() => openEditCourse(course)}
                   aria-label={`Edit ${course.name}`}
                 >
@@ -705,7 +716,7 @@ export function ProgramDetailPage() {
                   type="button"
                   variant="secondary"
                   size="icon"
-                  className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                  className="h-8 w-8 rounded-[6px] bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
                   onClick={() => setDeletingCourseId(Number(course.id))}
                   aria-label={`Delete ${course.name}`}
                 >
@@ -784,7 +795,7 @@ export function ProgramDetailPage() {
 
             {/* Action Button */}
             <Button
-              className="w-full mt-4 h-10 bg-brand-500  text-white rounded-[8px] font-bold flex items-center justify-center gap-2 group/btn"
+              className="w-full mt-4 h-10 bg-brand-500  text-white rounded-[6px] font-bold flex items-center justify-center gap-2 group/btn"
               onClick={() =>
                 navigate(`/new-content/courses/${programType}/${course.id}`)
               }
@@ -847,7 +858,7 @@ export function ProgramDetailPage() {
                 />
                 <button
                   type="button"
-                  className="relative w-full cursor-pointer rounded-[12px] border-2 border-dashed border-grayScale-400 bg-white px-10 py-8 text-left transition-all hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="relative w-full cursor-pointer rounded-[6px] border-2 border-dashed border-grayScale-400 bg-white px-10 py-8 text-left transition-all hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => editThumbnailFileInputRef.current?.click()}
                   disabled={savingEdit || uploadingEditThumbnail}
                 >
@@ -888,7 +899,7 @@ export function ProgramDetailPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                 onClick={closeEditCourse}
                 disabled={savingEdit || uploadingEditThumbnail}
               >
@@ -896,7 +907,7 @@ export function ProgramDetailPage() {
               </Button>
               <Button
                 type="button"
-                className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                 onClick={() => void handleSaveEditCourse()}
                 disabled={savingEdit || uploadingEditThumbnail}
               >

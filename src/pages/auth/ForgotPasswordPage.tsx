@@ -87,7 +87,7 @@ export function ForgotPasswordPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-xl px-6 text-sm font-semibold"
+                className="h-11 rounded-[6px] px-6 text-sm font-semibold"
                 onClick={() => {
                   setSubmitted(false)
                   setError(null)
@@ -143,7 +143,7 @@ export function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="mt-2 h-11 w-full rounded-xl text-sm font-semibold tracking-wide"
+                  className="mt-2 h-11 w-full rounded-[6px] text-sm font-semibold tracking-wide"
                 >
                   {submitting ? (
                     <span className="inline-flex items-center gap-2">

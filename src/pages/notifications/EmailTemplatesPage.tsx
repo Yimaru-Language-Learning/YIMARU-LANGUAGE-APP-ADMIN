@@ -139,7 +139,7 @@ export function EmailTemplatesPage() {
               type="button"
               onClick={() => setStatusFilter(tab)}
               className={cn(
-                "h-9 rounded-full px-3 text-xs font-semibold transition-colors",
+                "h-9 rounded-[6px] px-3 text-xs font-semibold transition-colors",
                 statusFilter === tab
                   ? "bg-brand-500 text-white"
                   : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",

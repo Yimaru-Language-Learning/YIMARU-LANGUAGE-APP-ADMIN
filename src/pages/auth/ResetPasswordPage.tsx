@@ -309,7 +309,7 @@ export function ResetPasswordPage() {
                 <Button
                   type="submit"
                   disabled={submitting || !canSubmit}
-                  className="mt-2 h-11 w-full rounded-xl text-sm font-semibold tracking-wide"
+                  className="mt-2 h-11 w-full rounded-[6px] text-sm font-semibold tracking-wide"
                 >
                   {submitting ? (
                     <span className="inline-flex items-center gap-2">

@@ -197,7 +197,7 @@ export function QuestionTypeLibraryPage() {
             </p>
           </div>
           <Link to="/new-content/question-types/create">
-            <Button className="h-12 px-8 rounded-[10px] bg-[#9E2891] font-bold text-white shadow-lg shadow-brand-500/10 hover:bg-[#8A237E] transition-all flex items-center gap-3">
+            <Button className="h-12 px-8 rounded-[6px] bg-[#9E2891] font-bold text-white shadow-lg shadow-brand-500/10 hover:bg-[#8A237E] transition-all flex items-center gap-3">
               <Plus className="h-5 w-5" />
               Create definition
             </Button>
@@ -223,7 +223,7 @@ export function QuestionTypeLibraryPage() {
               type="button"
               variant="outline"
               size="sm"
-              className="rounded-[8px] border-grayScale-200"
+              className="rounded-[6px] border-grayScale-200"
               disabled={loading}
               onClick={() => {
                 void load()
@@ -254,7 +254,7 @@ export function QuestionTypeLibraryPage() {
                     <button
                       type="button"
                       onClick={() => setQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-[6px] p-1 text-grayScale-400 hover:bg-grayScale-100 hover:text-grayScale-600"
                       aria-label="Clear search"
                     >
                       <X className="h-4 w-4" />
@@ -328,14 +328,14 @@ export function QuestionTypeLibraryPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="rounded-[8px]"
+                  className="rounded-[6px]"
                   onClick={clearFilters}
                 >
                   Clear filters
                 </Button>
               ) : (
                 <Link to="/new-content/question-types/create">
-                  <Button size="sm" className="rounded-[8px] bg-brand-600 hover:bg-brand-500">
+                  <Button size="sm" className="rounded-[6px] bg-brand-600 hover:bg-brand-500">
                     <Plus className="mr-2 h-4 w-4" />
                     Create definition
                   </Button>
@@ -414,7 +414,7 @@ export function QuestionTypeLibraryPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="rounded-[8px] border-grayScale-200"
+                    className="rounded-[6px] border-grayScale-200"
                     disabled={!canPrev || loading}
                     onClick={() => setOffset((o) => Math.max(0, o - pageSize))}
                   >
@@ -425,7 +425,7 @@ export function QuestionTypeLibraryPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="rounded-[8px] border-grayScale-200"
+                    className="rounded-[6px] border-grayScale-200"
                     disabled={!canNext || loading}
                     onClick={() => setOffset((o) => o + pageSize)}
                   >
@@ -511,7 +511,7 @@ function FilterChip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all",
+        "rounded-[6px] border px-3.5 py-1.5 text-xs font-semibold transition-all",
         active
           ? "border-brand-500 bg-brand-500 text-white shadow-sm shadow-brand-500/20"
           : "border-grayScale-200 bg-white text-grayScale-600 hover:border-brand-200 hover:text-brand-600",

@@ -153,7 +153,7 @@ export function ContextStep({
               <button
                 type="button"
                 onClick={() => setParentsExpanded((open) => !open)}
-                className="flex w-full items-center justify-between rounded-xl border border-grayScale-200 bg-grayScale-50/60 px-4 py-3 text-left transition-colors hover:bg-grayScale-50"
+                className="flex w-full items-center justify-between rounded-[6px] border border-grayScale-200 bg-grayScale-50/60 px-4 py-3 text-left transition-colors hover:bg-grayScale-50"
               >
                 <div>
                   <p className="text-sm font-semibold text-grayScale-800">Locations (optional)</p>

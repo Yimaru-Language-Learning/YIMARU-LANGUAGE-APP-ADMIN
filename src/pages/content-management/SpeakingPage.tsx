@@ -1356,7 +1356,7 @@ export function SpeakingPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-10 w-full justify-between rounded-md border border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-700 hover:bg-grayScale-50"
+                      className="h-10 w-full justify-between rounded-[6px] border border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-700 hover:bg-grayScale-50"
                     >
                       <span className="truncate">
                         {selectedPracticeId
@@ -1442,7 +1442,7 @@ export function SpeakingPage() {
                         <div className="inline-flex items-center gap-2">
                           <button
                             type="button"
-                            className="rounded-md border border-grayScale-200 bg-white p-1 text-grayScale-600 hover:bg-grayScale-50"
+                            className="rounded-[6px] border border-grayScale-200 bg-white p-1 text-grayScale-600 hover:bg-grayScale-50"
                             onClick={() => togglePracticeCollapsed(group.practiceId)}
                           >
                             {group.practiceId && collapsedPracticeIds.includes(group.practiceId) ? (
@@ -2044,7 +2044,7 @@ export function SpeakingPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-11 w-full justify-between rounded-xl border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-600 hover:bg-grayScale-50"
+                        className="h-11 w-full justify-between rounded-[6px] border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-600 hover:bg-grayScale-50"
                       >
                         <span className="truncate">
                           {selectedSubCourseOption
@@ -2097,7 +2097,7 @@ export function SpeakingPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-11 w-full justify-between rounded-xl border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-600 hover:bg-grayScale-50"
+                        className="h-11 w-full justify-between rounded-[6px] border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-600 hover:bg-grayScale-50"
                       >
                         <span>{setStatus}</span>
                         <ChevronDown className="h-4 w-4 text-grayScale-400" />
@@ -2198,7 +2198,7 @@ export function SpeakingPage() {
                               <Button
                                 type="button"
                                 variant="outline"
-                                className="h-11 w-full justify-between rounded-xl border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-600 hover:bg-grayScale-50"
+                                className="h-11 w-full justify-between rounded-[6px] border-grayScale-200 bg-white px-3 text-sm font-normal text-grayScale-600 hover:bg-grayScale-50"
                               >
                                 <span>{draft.difficulty}</span>
                                 <ChevronDown className="h-4 w-4 text-grayScale-400" />

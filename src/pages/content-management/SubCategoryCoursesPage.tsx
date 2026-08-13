@@ -83,7 +83,7 @@ export function SubCategoryCoursesPage() {
           <div className="flex items-start gap-3.5">
             <Link
               to={`/content/category/${categoryId}/courses`}
-              className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-grayScale-50 text-grayScale-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+              className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-[6px] bg-grayScale-50 text-grayScale-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -113,7 +113,7 @@ export function SubCategoryCoursesPage() {
                 navigate(`/content/category/${categoryId}/courses/${c.id}/sub-modules`)
               }
               className={cn(
-                "flex w-full items-center justify-between gap-4 rounded-xl border border-grayScale-200 bg-white px-4 py-4 text-left shadow-sm transition-all",
+                "flex w-full items-center justify-between gap-4 rounded-[6px] border border-grayScale-200 bg-white px-4 py-4 text-left shadow-sm transition-all",
                 "hover:border-brand-200 hover:bg-brand-50/40 hover:shadow-md",
               )}
             >

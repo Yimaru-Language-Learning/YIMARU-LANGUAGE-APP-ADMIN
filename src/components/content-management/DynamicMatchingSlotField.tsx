@@ -58,7 +58,7 @@ export function DynamicMatchingInputsSlot({
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="h-8 gap-1.5 rounded-lg border-brand-200 text-brand-600 hover:bg-brand-50"
+          className="h-8 gap-1.5 rounded-[6px] border-brand-200 text-brand-600 hover:bg-brand-50"
           onClick={() => updateValue(addMatchingInputRow(parsed))}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -153,7 +153,7 @@ export function DynamicMatchingAnswerSlot({
               variant="outline"
               size="sm"
               disabled={disabled}
-              className="h-8 rounded-lg"
+              className="h-8 rounded-[6px]"
               onClick={() =>
                 updateValue(defaultMatchingAnswerFromInputs(matchingInputs))
               }
@@ -166,7 +166,7 @@ export function DynamicMatchingAnswerSlot({
             variant="outline"
             size="sm"
             disabled={disabled}
-            className="h-8 gap-1.5 rounded-lg border-brand-200 text-brand-600 hover:bg-brand-50"
+            className="h-8 gap-1.5 rounded-[6px] border-brand-200 text-brand-600 hover:bg-brand-50"
             onClick={() => updateValue(addMatchingPair(parsed, matchingInputs))}
           >
             <Plus className="h-3.5 w-3.5" />

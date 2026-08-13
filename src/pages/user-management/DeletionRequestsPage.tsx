@@ -284,7 +284,7 @@ export function DeletionRequestsPage() {
           <div className="relative" ref={roleMenuRef}>
               <button
                 type="button"
-                className="flex h-11 w-full items-center justify-between rounded-xl border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600 shadow-sm transition hover:bg-grayScale-50 focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
+                className="flex h-11 w-full items-center justify-between rounded-[6px] border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600 shadow-sm transition hover:bg-grayScale-50 focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
                 onClick={() => {
                   setRoleMenuOpen((prev) => !prev)
                   setStatusMenuOpen(false)
@@ -310,7 +310,7 @@ export function DeletionRequestsPage() {
                     <button
                       type="button"
                       className={cn(
-                        "w-full rounded-md px-2 py-2 text-left text-sm transition",
+                        "w-full rounded-[6px] px-2 py-2 text-left text-sm transition",
                         role === ""
                           ? "bg-brand-100/50 text-brand-700"
                           : "text-grayScale-600 hover:bg-grayScale-100",
@@ -328,7 +328,7 @@ export function DeletionRequestsPage() {
                         key={roleName}
                         type="button"
                         className={cn(
-                          "w-full rounded-md px-2 py-2 text-left text-sm transition",
+                          "w-full rounded-[6px] px-2 py-2 text-left text-sm transition",
                           role === roleName
                             ? "bg-brand-100/50 text-brand-700"
                             : "text-grayScale-600 hover:bg-grayScale-100",
@@ -352,7 +352,7 @@ export function DeletionRequestsPage() {
             <div className="relative" ref={statusMenuRef}>
               <button
                 type="button"
-                className="flex h-11 w-full items-center justify-between rounded-xl border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600 shadow-sm transition hover:bg-grayScale-50 focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
+                className="flex h-11 w-full items-center justify-between rounded-[6px] border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600 shadow-sm transition hover:bg-grayScale-50 focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
                 onClick={() => {
                   setStatusMenuOpen((prev) => !prev)
                   setStateMenuOpen(false)
@@ -367,7 +367,7 @@ export function DeletionRequestsPage() {
                   <button
                     type="button"
                     className={cn(
-                      "w-full rounded-lg px-2.5 py-2 text-left text-sm transition",
+                      "w-full rounded-[6px] px-2.5 py-2 text-left text-sm transition",
                       status === ""
                         ? "bg-brand-100/50 text-brand-700"
                         : "text-grayScale-600 hover:bg-grayScale-100",
@@ -385,7 +385,7 @@ export function DeletionRequestsPage() {
                       key={statusOption}
                       type="button"
                       className={cn(
-                        "w-full rounded-lg px-2.5 py-2 text-left text-sm transition",
+                        "w-full rounded-[6px] px-2.5 py-2 text-left text-sm transition",
                         status === statusOption
                           ? "bg-brand-100/50 text-brand-700"
                           : "text-grayScale-600 hover:bg-grayScale-100",
@@ -408,7 +408,7 @@ export function DeletionRequestsPage() {
             <div className="relative" ref={stateMenuRef}>
               <button
                 type="button"
-                className="flex h-11 w-full items-center justify-between rounded-xl border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600 shadow-sm transition hover:bg-grayScale-50 focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
+                className="flex h-11 w-full items-center justify-between rounded-[6px] border border-grayScale-200 bg-white px-3 text-left text-sm text-grayScale-600 shadow-sm transition hover:bg-grayScale-50 focus:outline-none focus-visible:border-brand-400 focus-visible:ring-2 focus-visible:ring-brand-200"
                 onClick={() => {
                   setStateMenuOpen((prev) => !prev)
                   setStatusMenuOpen(false)
@@ -423,7 +423,7 @@ export function DeletionRequestsPage() {
                   <button
                     type="button"
                     className={cn(
-                      "w-full rounded-lg px-2.5 py-2 text-left text-sm transition",
+                      "w-full rounded-[6px] px-2.5 py-2 text-left text-sm transition",
                       state === ""
                         ? "bg-brand-100/50 text-brand-700"
                         : "text-grayScale-600 hover:bg-grayScale-100",
@@ -441,7 +441,7 @@ export function DeletionRequestsPage() {
                       key={stateOption}
                       type="button"
                       className={cn(
-                        "w-full rounded-lg px-2.5 py-2 text-left text-sm transition",
+                        "w-full rounded-[6px] px-2.5 py-2 text-left text-sm transition",
                         state === stateOption
                           ? "bg-brand-100/50 text-brand-700"
                           : "text-grayScale-600 hover:bg-grayScale-100",
@@ -612,7 +612,7 @@ export function DeletionRequestsPage() {
                   onClick={() => safePage > 1 && setPage(safePage - 1)}
                   disabled={safePage === 1}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                     safePage === 1 && "cursor-not-allowed opacity-50",
                   )}
                 >
@@ -629,7 +629,7 @@ export function DeletionRequestsPage() {
                       type="button"
                       onClick={() => setPage(n)}
                       className={cn(
-                        "h-8 w-8 rounded-md border text-sm font-medium",
+                        "h-8 w-8 rounded-[6px] border text-sm font-medium",
                         n === safePage
                           ? "border-brand-500 bg-brand-500 text-white"
                           : "bg-white text-grayScale-600 hover:bg-grayScale-50",
@@ -643,7 +643,7 @@ export function DeletionRequestsPage() {
                   onClick={() => safePage < totalPages && setPage(safePage + 1)}
                   disabled={safePage === totalPages}
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border bg-white text-grayScale-500",
+                    "flex h-8 w-8 items-center justify-center rounded-[6px] border bg-white text-grayScale-500",
                     safePage === totalPages && "cursor-not-allowed opacity-50",
                   )}
                 >

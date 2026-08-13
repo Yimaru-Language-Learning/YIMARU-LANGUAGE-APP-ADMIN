@@ -176,7 +176,7 @@ export function ContentOverviewPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/content"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-grayScale-100 bg-white text-grayScale-400 shadow-sm transition-all duration-200 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 hover:shadow-md"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-[6px] border border-grayScale-100 bg-white text-grayScale-400 shadow-sm transition-all duration-200 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 hover:shadow-md"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>

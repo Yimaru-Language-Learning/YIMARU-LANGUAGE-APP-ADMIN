@@ -186,21 +186,21 @@ export function VideoDetailStep({
                     <button
                       type="button"
                       onClick={() => handleCommand("bold")}
-                      className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-grayScale-900 transition-all font-serif font-bold text-[17px] pb-0.5 active:bg-grayScale-50"
+                      className="h-9 w-9 flex items-center justify-center rounded-[6px] hover:bg-white hover:shadow-sm text-grayScale-900 transition-all font-serif font-bold text-[17px] pb-0.5 active:bg-grayScale-50"
                     >
                       B
                     </button>
                     <button
                       type="button"
                       onClick={() => handleCommand("italic")}
-                      className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-grayScale-900 transition-all font-serif italic text-[17px] pr-0.5 active:bg-grayScale-50"
+                      className="h-9 w-9 flex items-center justify-center rounded-[6px] hover:bg-white hover:shadow-sm text-grayScale-900 transition-all font-serif italic text-[17px] pr-0.5 active:bg-grayScale-50"
                     >
                       I
                     </button>
                     <button
                       type="button"
                       onClick={() => handleCommand("insertUnorderedList")}
-                      className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-grayScale-900 transition-all active:bg-grayScale-50"
+                      className="h-9 w-9 flex items-center justify-center rounded-[6px] hover:bg-white hover:shadow-sm text-grayScale-900 transition-all active:bg-grayScale-50"
                     >
                       <List className="h-5 w-5" />
                     </button>
@@ -210,7 +210,7 @@ export function VideoDetailStep({
                         const url = prompt("Enter URL:");
                         if (url) handleCommand("createLink", url);
                       }}
-                      className="h-9 w-9 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-grayScale-900 transition-all active:bg-grayScale-50"
+                      className="h-9 w-9 flex items-center justify-center rounded-[6px] hover:bg-white hover:shadow-sm text-grayScale-900 transition-all active:bg-grayScale-50"
                     >
                       <LinkIcon className="h-4 w-4" />
                     </button>

@@ -838,7 +838,7 @@ export function CreateNotificationPage() {
                     type="button"
                     onClick={() => setAudienceMode("platform_role")}
                     className={cn(
-                      "rounded-lg px-3 py-2 transition-all",
+                      "rounded-[6px] px-3 py-2 transition-all",
                       audienceMode === "platform_role"
                         ? "bg-brand-500 text-white shadow-sm"
                         : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
@@ -853,7 +853,7 @@ export function CreateNotificationPage() {
                       setUserSearchQuery("")
                     }}
                     className={cn(
-                      "rounded-lg px-3 py-2 transition-all",
+                      "rounded-[6px] px-3 py-2 transition-all",
                       audienceMode === "platform_selected"
                         ? "bg-brand-500 text-white shadow-sm"
                         : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
@@ -866,7 +866,7 @@ export function CreateNotificationPage() {
                       type="button"
                       onClick={() => setAudienceMode("direct")}
                       className={cn(
-                        "rounded-lg px-3 py-2 transition-all",
+                        "rounded-[6px] px-3 py-2 transition-all",
                         audienceMode === "direct"
                           ? "bg-brand-500 text-white shadow-sm"
                           : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
@@ -1051,7 +1051,7 @@ export function CreateNotificationPage() {
                       type="button"
                       onClick={() => setAudienceMode("team_role")}
                       className={cn(
-                        "rounded-lg px-3 py-2 transition-all",
+                        "rounded-[6px] px-3 py-2 transition-all",
                         audienceMode === "team_role"
                           ? "bg-brand-500 text-white shadow-sm"
                           : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
@@ -1066,7 +1066,7 @@ export function CreateNotificationPage() {
                         setTeamSearchQuery("")
                       }}
                       className={cn(
-                        "rounded-lg px-3 py-2 transition-all",
+                        "rounded-[6px] px-3 py-2 transition-all",
                         audienceMode === "team_selected"
                           ? "bg-brand-500 text-white shadow-sm"
                           : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",

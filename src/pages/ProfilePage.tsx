@@ -317,7 +317,7 @@ export function ProfilePage() {
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 gap-1.5 rounded-lg text-xs font-medium text-grayScale-500"
+            className="h-8 gap-1.5 rounded-[6px] text-xs font-medium text-grayScale-500"
             onClick={startEditing}
           >
             <Pencil className="h-3.5 w-3.5" />

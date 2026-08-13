@@ -1,22 +1,11 @@
 import { notifyApiError } from "../../lib/apiErrors"
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AlertCircle,
-  ArrowLeft,
-  BookOpen,
-  Calendar,
-  Clock,
-  Edit2,
-  Hash,
-  Loader2,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, RefreshCw } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   deleteExamPrepPractice,
+  deleteParentLinkedPractice,
   getExamPrepLessonPractices,
   getPracticesByParentLesson,
   setExamPrepPracticePublishStatus,
@@ -25,14 +14,11 @@ import {
 import { parentsFromPractice } from "../../lib/practiceParents";
 import {
   isPracticeParentUnlinkNotLinkedError,
-  mapPracticeParentUnlinkError,
   unlinkPracticeFromParent,
 } from "../../lib/practiceParentUnlink";
-import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { PracticeActionButton } from "./components/PracticeActionButton";
 import { ModulePracticeCard } from "./components/ModulePracticeCard";
-import { Card, CardContent } from "../../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -43,27 +29,19 @@ import {
 import type {
   ExamPrepLessonPractice,
   GetExamPrepLessonPracticesResponse,
-  GetPracticesByParentContextResponse,
   ParentContextPractice,
   PracticeParent,
   PracticePublishStatus,
 } from "../../types/course.types";
-import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
+import { ContentPageDescription } from "./components/ContentPageDescription";
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
 } from "../../lib/contentListFilters";
-import { resolveThumbnailForPreview } from "../../lib/videoPreview";
 import { cn } from "../../lib/utils";
-
-function unwrapPracticesEnvelope(
-  res: { data?: GetPracticesByParentContextResponse & { Data?: GetPracticesByParentContextResponse["data"] } },
-): GetPracticesByParentContextResponse["data"] | null {
-  const b = res.data;
-  if (!b) return null;
-  return b.data ?? b.Data ?? null;
-}
+import { fetchAllOffsetPages } from "../../lib/fetchAllOffsetPages";
+import { unwrapPracticesPage } from "../../lib/parentContextPractice";
 
 function unwrapExamPrepPracticesEnvelope(
   res: { data?: GetExamPrepLessonPracticesResponse & { Data?: GetExamPrepLessonPracticesResponse["data"] } },
@@ -90,171 +68,6 @@ function mapExamPrepPracticeToCard(
     persona_id: practice.persona_id,
     created_at: practice.created_at,
   };
-}
-
-function formatPracticeDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
-
-function PracticeCard({
-  practice,
-  index,
-  total,
-  onEdit,
-  onUnlink,
-  onDelete,
-  onTogglePublishStatus,
-  publishStatusUpdating,
-}: {
-  practice: ParentContextPractice;
-  index: number;
-  total: number;
-  onEdit?: () => void;
-  onUnlink?: () => void;
-  onDelete?: () => void;
-  onTogglePublishStatus?: (nextStatus: PracticePublishStatus) => void;
-  publishStatusUpdating?: boolean;
-}) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const thumb = resolveThumbnailForPreview(practice.story_image);
-  const showThumb = Boolean(thumb) && !imgFailed;
-
-  return (
-    <Card
-      className={cn(
-        "overflow-hidden border-grayScale-100/90 bg-white shadow-sm transition-all duration-300",
-        "hover:border-brand-200/60 hover:shadow-md hover:shadow-brand-500/5",
-      )}
-    >
-      <CardContent className="p-0">
-        <div className="flex flex-col lg:flex-row lg:items-stretch">
-          <div className="relative shrink-0 lg:w-[280px]">
-            <div
-              className={cn(
-                "relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-grayScale-100 to-grayScale-50 lg:aspect-auto lg:h-full lg:min-h-[220px]",
-                !showThumb && "grid min-h-[180px] place-items-center lg:min-h-[220px]",
-              )}
-            >
-              {showThumb ? (
-                <>
-                  <img
-                    src={thumb!}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    onError={() => setImgFailed(true)}
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-grayScale-400">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 shadow-inner ring-1 ring-grayScale-200/80">
-                    <BookOpen className="h-7 w-7" />
-                  </div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider">
-                    No cover image
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col p-6 sm:p-7">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-500">
-                  Practice {index + 1} of {total}
-                </span>
-                <Badge variant="secondary" className="font-mono text-[10px] font-semibold">
-                  ID {practice.id}
-                </Badge>
-                <ContentPublishStatusChip
-                  publishStatus={practice.publish_status}
-                  updating={publishStatusUpdating}
-                  contentLabel="practice"
-                  onToggle={onTogglePublishStatus}
-                />
-              </div>
-              {onUnlink ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 text-grayScale-700 hover:bg-grayScale-100"
-                  onClick={onUnlink}
-                >
-                  Unlink
-                </Button>
-              ) : null}
-              {onDelete ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  onClick={onDelete}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </Button>
-              ) : null}
-            </div>
-
-            <h2 className="text-xl font-semibold leading-snug tracking-tight text-grayScale-900 sm:text-[1.35rem]">
-              {practice.title}
-            </h2>
-
-            {practice.story_description?.trim() ? (
-              <div className="mt-4 rounded-xl border border-grayScale-100 bg-grayScale-50/80 px-4 py-3.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-grayScale-400">
-                  Story & instructions
-                </p>
-                <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-grayScale-700">
-                  {practice.story_description}
-                </p>
-              </div>
-            ) : null}
-
-            {practice.quick_tips?.trim() ? (
-              <div className="mt-4 border-l-[3px] border-amber-400 bg-gradient-to-r from-amber-50/90 to-amber-50/30 py-3 pl-4 pr-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-900/75">
-                  Quick tips
-                </p>
-                <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-grayScale-800">
-                  {practice.quick_tips}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-grayScale-100 pt-5">
-              <Badge variant="secondary" className="gap-1.5 pl-2 pr-2.5 py-1 font-medium normal-case">
-                <Hash className="h-3 w-3 opacity-70" aria-hidden />
-                Question set {practice.question_set_id}
-              </Badge>
-              <Badge variant="secondary" className="gap-1.5 pl-2 pr-2.5 py-1 font-medium normal-case">
-                <Clock className="h-3 w-3 opacity-70" aria-hidden />
-                {formatPracticeDate(practice.created_at)}
-              </Badge>
-              {onEdit ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="ml-auto h-9 rounded-[10px] border-brand-500 text-xs font-bold text-brand-500 hover:bg-brand-50"
-                  onClick={onEdit}
-                >
-                  <Edit2 className="mr-1.5 h-3.5 w-3.5" />
-                  Edit
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 export function LessonPracticesPage() {
@@ -319,27 +132,27 @@ export function LessonPracticesPage() {
     setLoadError(null);
     try {
       if (isExamPrep) {
-        const res = await getExamPrepLessonPractices(lid, { limit: 100, offset: 0 });
-        const envelope = unwrapExamPrepPracticesEnvelope(res);
-        const list = Array.isArray(envelope?.practices)
-          ? envelope.practices.map(mapExamPrepPracticeToCard)
-          : [];
+        const list = await fetchAllOffsetPages(async (offset, limit) => {
+          const res = await getExamPrepLessonPractices(lid, { limit, offset });
+          const envelope = unwrapExamPrepPracticesEnvelope(res);
+          const practices = Array.isArray(envelope?.practices)
+            ? envelope.practices.map(mapExamPrepPracticeToCard)
+            : [];
+          return {
+            items: practices,
+            total_count: envelope?.total_count,
+          };
+        });
         setPractices(list);
-        setTotalCount(
-          typeof envelope?.total_count === "number"
-            ? envelope.total_count
-            : list.length,
-        );
+        setTotalCount(list.length);
       } else {
-        const res = await getPracticesByParentLesson(lid, { limit: 100, offset: 0 });
-        const envelope = unwrapPracticesEnvelope(res);
-        const list = Array.isArray(envelope?.practices) ? envelope.practices : [];
-        setPractices(list);
-        setTotalCount(
-          typeof envelope?.total_count === "number"
-            ? envelope.total_count
-            : list.length,
+        const list = await fetchAllOffsetPages(async (offset, limit) =>
+          unwrapPracticesPage(
+            await getPracticesByParentLesson(lid, { limit, offset }),
+          ),
         );
+        setPractices(list);
+        setTotalCount(list.length);
       }
     } catch (error) {
       setPractices([]);
@@ -368,7 +181,7 @@ export function LessonPracticesPage() {
       moduleId,
       lessonId: validLesson ? String(lid) : null,
       lessonTitle: lessonTitle || displayTitle,
-      backTo: isExamPrep ? "lesson" : "module",
+      backTo: "lesson",
     }),
     [
       isExamPrep,
@@ -444,14 +257,14 @@ export function LessonPracticesPage() {
       toast.success(`Practice removed from ${displayTitle}`);
       setPracticeToUnlink(null);
       await load();
-    } catch (e) {
-      if (isPracticeParentUnlinkNotLinkedError(e)) {
+    } catch (error) {
+      if (isPracticeParentUnlinkNotLinkedError(error)) {
         toast.info("This location was already removed.");
         setPracticeToUnlink(null);
         await load();
         return;
       }
-      notifyApiError(err, "Could not remove from lesson");
+      notifyApiError(error, "Could not remove from lesson");
     } finally {
       setUnlinking(false);
     }
@@ -461,7 +274,11 @@ export function LessonPracticesPage() {
     if (!practiceToDelete) return;
     setDeleting(true);
     try {
-      await deleteExamPrepPractice(practiceToDelete.id);
+      if (isExamPrep) {
+        await deleteExamPrepPractice(practiceToDelete.id);
+      } else {
+        await deleteParentLinkedPractice(practiceToDelete.id);
+      }
       toast.success("Practice deleted");
       setPracticeToDelete(null);
       await load();
@@ -474,223 +291,136 @@ export function LessonPracticesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F4F6FB] via-white to-[#F8FAFC]">
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-500/[0.06] blur-3xl" />
-        <div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-violet-500/[0.05] blur-3xl" />
+    <div className="space-y-10 pt-10 pb-20 animate-in fade-in duration-500">
+      <div className="flex items-center gap-2">
+        <Link
+          to={backHref}
+          className="flex items-center gap-2 text-[15px] font-medium text-grayScale-600 transition-colors hover:text-brand-500"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          Back to module
+        </Link>
       </div>
 
-      <div
-        className={cn(
-          "mx-auto px-4 pb-24 pt-8 sm:px-6 lg:px-8",
-          isExamPrep ? "max-w-7xl" : "max-w-4xl",
-        )}
-      >
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <Link
-            to={backHref}
-            className="group mb-6 inline-flex items-center gap-2 rounded-full border border-transparent px-1 py-1 text-[14px] font-medium text-grayScale-600 transition-colors hover:border-grayScale-200 hover:bg-white/80 hover:text-brand-600"
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-medium tracking-tight text-grayScale-900">
+            {displayTitle}
+          </h1>
+          <ContentPageDescription className="mt-1 text-[14px] text-grayScale-500">
+            Review speaking practices linked to this lesson.
+          </ContentPageDescription>
+          {!loading && !loadError ? (
+            <p className="mt-2 text-sm text-grayScale-500">
+              {totalCount} practice{totalCount === 1 ? "" : "s"} linked to this
+              lesson
+              {totalCount > practices.length
+                ? ` · showing ${practices.length}`
+                : ""}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-[6px] border-grayScale-200 text-grayScale-600"
+            disabled={loading}
+            onClick={() => void load()}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-grayScale-100 transition-transform group-hover:-translate-x-0.5">
-              <ArrowLeft className="h-4 w-4" />
-            </span>
-            Back to module
-          </Link>
+            <RefreshCw
+              className={cn("h-4 w-4", loading && "animate-spin")}
+            />
+            Refresh
+          </Button>
+          <PracticeActionButton
+            className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
+            pathOptions={practicePathOptions}
+            parentLabel={displayTitle}
+          >
+            <Calendar className="h-4 w-4" />
+            Add Practice
+          </PracticeActionButton>
+        </div>
+      </div>
 
-          <Card className="mb-10 border-grayScale-100/80 bg-white/90 shadow-md shadow-grayScale-200/40 backdrop-blur-sm">
-            <CardContent className="p-6 sm:p-8">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex min-w-0 gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/25">
-                    <BookOpen className="h-7 w-7" strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-500/90">
-                      Lesson practices
-                    </p>
-                    <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-grayScale-900 sm:text-3xl">
-                      {displayTitle}
-                    </h1>
-                    <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-grayScale-500">
-                      Review speaking practices linked to this lesson. Thumbnails
-                      and copy come from your published practice content.
-                    </p>
-                    {!loading && !loadError ? (
-                      <div className="mt-4 flex flex-wrap items-center gap-2">
-                        <Badge variant="default" className="px-3 py-1 text-xs font-semibold">
-                          {practices.length}{" "}
-                          {practices.length === 1 ? "practice" : "practices"}
-                        </Badge>
-                        {totalCount > practices.length ? (
-                          <span className="text-[12px] text-grayScale-500">
-                            Showing {practices.length} of {totalCount}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
-                  <PracticeActionButton
-                    type="button"
-                    className="h-11 rounded-xl bg-brand-500 px-6 font-semibold shadow-md shadow-brand-500/20 hover:bg-brand-600"
-                    pathOptions={practicePathOptions}
-                    parentLabel={displayTitle}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Add practice
-                  </PracticeActionButton>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl border-grayScale-200 font-semibold text-grayScale-700 hover:bg-grayScale-50"
-                    disabled={loading}
-                    onClick={() => void load()}
-                  >
-                    <RefreshCw
-                      className={cn("mr-2 h-4 w-4", loading && "animate-spin")}
-                    />
-                    Refresh
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {loading ? (
-            <Card className="border-grayScale-100 bg-white/95 py-20 shadow-sm">
-              <CardContent className="flex flex-col items-center justify-center gap-4 pt-6">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 ring-1 ring-brand-100">
-                  <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
-                </div>
-                <div className="text-center">
-                  <p className="text-[16px] font-semibold text-grayScale-800">
-                    Loading practices
-                  </p>
-                  <p className="mt-1 text-[14px] text-grayScale-500">
-                    Fetching content for this lesson…
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : loadError ? (
-            <Card className="border-red-100 bg-gradient-to-br from-red-50/90 to-white shadow-sm">
-              <CardContent className="flex flex-col items-center gap-5 py-14 text-center sm:py-16">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 text-red-600">
-                  <AlertCircle className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="text-lg font-semibold text-grayScale-900">
-                    Something went wrong
-                  </p>
-                  <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-grayScale-600">
-                    {loadError}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-xl border-grayScale-300 font-semibold"
-                  onClick={() => void load()}
-                >
-                  Try again
-                </Button>
-              </CardContent>
-            </Card>
-          ) : practices.length === 0 ? (
-            <Card className="border-dashed border-grayScale-200 bg-white/90 shadow-sm">
-              <CardContent className="flex flex-col items-center px-6 py-16 text-center sm:py-20">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-50 to-brand-50 ring-1 ring-brand-100/60">
-                  <Sparkles className="h-9 w-9 text-brand-500" strokeWidth={1.5} />
-                </div>
-                <p className="text-xl font-semibold text-grayScale-900">
-                  No practices yet
-                </p>
-                <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-grayScale-500">
-                  This lesson does not have any linked practices. Create one to
-                  give learners a structured speaking activity after the video.
-                </p>
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <PracticeActionButton
-                    type="button"
-                    className="h-11 rounded-xl bg-brand-500 px-8 font-semibold shadow-md shadow-brand-500/15 hover:bg-brand-600"
-                    pathOptions={practicePathOptions}
-                    parentLabel={displayTitle}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Create practice
-                  </PracticeActionButton>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl border-grayScale-200 px-8 font-semibold"
-                    asChild
-                  >
-                    <Link to={backHref}>Return to module</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 text-[15px] font-medium text-grayScale-500">
+          Loading practices…
+        </div>
+      ) : loadError ? (
+        <div className="mx-auto max-w-lg rounded-2xl border border-amber-100 bg-amber-50/80 px-6 py-8 text-center text-sm text-amber-900">
+          {loadError}
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+            >
+              Try again
+            </Button>
+          </div>
+        </div>
+      ) : practices.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+          <BookOpen className="mb-3 h-10 w-10 text-grayScale-300" />
+          <p className="text-sm font-medium text-grayScale-600">
+            No practices for this lesson yet
+          </p>
+          <p className="mt-1 max-w-md text-sm text-grayScale-400">
+            Add a practice to give learners a structured speaking activity after
+            the video.
+          </p>
+          <PracticeActionButton
+            variant="outline"
+            className="mt-6 rounded-[6px] border-brand-500 text-brand-500"
+            pathOptions={practicePathOptions}
+            parentLabel={displayTitle}
+          >
+            <Calendar className="h-4 w-4" />
+            Add Practice
+          </PracticeActionButton>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          <ContentListSearchFilterBar
+            search={listSearch}
+            onSearchChange={setListSearch}
+            publishStatusFilter={publishStatusFilter}
+            onPublishStatusFilterChange={setPublishStatusFilter}
+            searchPlaceholder="Search practices by title or description…"
+            searchAriaLabel="Search practices"
+          />
+          {filteredPractices.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
+              <p className="text-sm font-medium text-grayScale-600">
+                No practices match your search or status filter
+              </p>
+            </div>
           ) : (
-            <div className="space-y-5">
-              <ContentListSearchFilterBar
-                search={listSearch}
-                onSearchChange={setListSearch}
-                publishStatusFilter={publishStatusFilter}
-                onPublishStatusFilterChange={setPublishStatusFilter}
-                searchPlaceholder="Search practices by title or description…"
-                searchAriaLabel="Search practices"
-              />
-              {filteredPractices.length === 0 ? (
-                <Card className="border-dashed border-grayScale-200 bg-white/90 shadow-sm">
-                  <CardContent className="px-6 py-14 text-center">
-                    <p className="text-sm font-medium text-grayScale-600">
-                      No practices match your search or status filter
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : isExamPrep ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                  {filteredPractices.map((p) => (
-                    <ModulePracticeCard
-                      key={p.id}
-                      practice={p}
-                      statusUpdating={publishStatusUpdatingId === p.id}
-                      searchQuery={listSearch}
-                      onEdit={() => void navigate(editPracticeHref(p.id))}
-                      onPublish={() =>
-                        void handlePracticePublishStatus(p.id, "PUBLISHED")
-                      }
-                      onSaveAsDraft={() =>
-                        void handlePracticePublishStatus(p.id, "DRAFT")
-                      }
-                      onUnlink={() => setPracticeToUnlink(p)}
-                      onDelete={() => setPracticeToDelete(p)}
-                    />
-                  ))}
-                </div>
-              ) : (
-              filteredPractices.map((p, i) => (
-                <PracticeCard
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {filteredPractices.map((p) => (
+                <ModulePracticeCard
                   key={p.id}
                   practice={p}
-                  index={i}
-                  total={filteredPractices.length}
+                  statusUpdating={publishStatusUpdatingId === p.id}
+                  searchQuery={listSearch}
                   onEdit={() => void navigate(editPracticeHref(p.id))}
-                  onUnlink={() => setPracticeToUnlink(p)}
-                  onDelete={isExamPrep ? () => setPracticeToDelete(p) : undefined}
-                  publishStatusUpdating={publishStatusUpdatingId === p.id}
-                  onTogglePublishStatus={(nextStatus) =>
-                    void handlePracticePublishStatus(p.id, nextStatus)
+                  onPublish={() =>
+                    void handlePracticePublishStatus(p.id, "PUBLISHED")
                   }
+                  onSaveAsDraft={() =>
+                    void handlePracticePublishStatus(p.id, "DRAFT")
+                  }
+                  onUnlink={() => setPracticeToUnlink(p)}
+                  onDelete={() => setPracticeToDelete(p)}
                 />
-              ))
-              )}
+              ))}
             </div>
           )}
         </div>
-      </div>
+      )}
 
       <Dialog
         open={practiceToUnlink !== null}
@@ -698,16 +428,16 @@ export function LessonPracticesPage() {
           if (!open && !unlinking) setPracticeToUnlink(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Remove from this lesson?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-grayScale-600">
-            <span className="font-semibold text-grayScale-900">
+            <span className="font-semibold text-grayScale-800">
               {practiceToUnlink?.title}
             </span>{" "}
             will be detached from{" "}
-            <span className="font-semibold text-grayScale-900">{displayTitle}</span>.
+            <span className="font-semibold text-grayScale-800">{displayTitle}</span>.
             {practiceToUnlink &&
             parentsFromPractice(practiceToUnlink).filter(
               (p) =>
@@ -719,7 +449,7 @@ export function LessonPracticesPage() {
               ? " The practice will be unlinked until you attach it again. Questions are kept."
               : " Other locations are unaffected."}
           </p>
-          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
             <Button
               type="button"
               variant="outline"
@@ -745,17 +475,17 @@ export function LessonPracticesPage() {
           if (!open && !deleting) setPracticeToDelete(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Delete this practice permanently?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-grayScale-600">
-            <span className="font-semibold text-grayScale-900">
+            <span className="font-semibold text-grayScale-800">
               {practiceToDelete?.title}
             </span>{" "}
             and all of its questions will be deleted. This cannot be undone.
           </p>
-          <DialogFooter className="border-t border-grayScale-100 px-6 py-4">
+          <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
             <Button
               type="button"
               variant="outline"

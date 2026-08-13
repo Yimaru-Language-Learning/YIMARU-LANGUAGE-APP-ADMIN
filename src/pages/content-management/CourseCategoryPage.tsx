@@ -80,7 +80,7 @@ export function CourseCategoryPage() {
           </div>
           <button
             onClick={fetchCategories}
-            className="mt-1 inline-flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-red-600"
+            className="mt-1 inline-flex items-center gap-2 rounded-[6px] bg-red-500 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-red-600"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Retry
@@ -178,7 +178,7 @@ export function CourseCategoryPage() {
                     </span>
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 bg-white text-red-500 hover:bg-red-50"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] border border-red-200 bg-white text-red-500 hover:bg-red-50"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -295,7 +295,7 @@ export function CourseCategoryPage() {
                       <button
                         key={name}
                         type="button"
-                        className="group inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] text-grayScale-600 shadow-sm ring-1 ring-grayScale-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200"
+                        className="group inline-flex items-center gap-1 rounded-[6px] bg-white px-2 py-0.5 text-[11px] text-grayScale-600 shadow-sm ring-1 ring-grayScale-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200"
                         onClick={() =>
                           setPendingSubCategories((prev) =>
                             prev.filter((subName) => subName !== name),

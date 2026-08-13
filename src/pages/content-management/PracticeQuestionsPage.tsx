@@ -678,7 +678,7 @@ export function PracticeQuestionsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 rounded-lg text-grayScale-400 hover:text-brand-600"
+                            className="h-8 w-8 rounded-[6px] text-grayScale-400 hover:text-brand-600"
                             onClick={() => handleEditClick(question)}
                           >
                             <Edit className="h-4 w-4" />
@@ -686,7 +686,7 @@ export function PracticeQuestionsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 rounded-lg text-grayScale-400 hover:bg-red-50 hover:text-red-500"
+                            className="h-8 w-8 rounded-[6px] text-grayScale-400 hover:bg-red-50 hover:text-red-500"
                             onClick={() => handleDeleteClick(question)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -801,7 +801,7 @@ export function PracticeQuestionsPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Delete Question</h2>
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -831,7 +831,7 @@ export function PracticeQuestionsPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Add New Question</h2>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -919,7 +919,7 @@ export function PracticeQuestionsPage() {
                               <button
                                 type="button"
                                 onClick={() => removeDraftOption(index)}
-                                className="rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                className="rounded-[6px] p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
                               >
                                 <X className="h-4 w-4" />
                               </button>
@@ -929,7 +929,7 @@ export function PracticeQuestionsPage() {
                         <button
                           type="button"
                           onClick={addDraftOption}
-                          className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+                          className="mt-1 flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
                         >
                           <Plus className="h-4 w-4" />
                           Add Option
@@ -958,7 +958,7 @@ export function PracticeQuestionsPage() {
                                 ],
                               }))
                             }
-                            className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            className={`flex-1 rounded-[6px] border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                               draft.options[i]?.isCorrect
                                 ? "border-green-500 bg-green-50 text-green-700"
                                 : "border-grayScale-200 text-grayScale-600 hover:border-grayScale-300"
@@ -1047,7 +1047,7 @@ export function PracticeQuestionsPage() {
               <h2 className="text-lg font-semibold text-grayScale-900">Edit Question</h2>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="grid h-8 w-8 place-items-center rounded-lg text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-grayScale-400 transition-colors hover:bg-grayScale-100 hover:text-grayScale-600"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1135,7 +1135,7 @@ export function PracticeQuestionsPage() {
                               <button
                                 type="button"
                                 onClick={() => removeDraftOption(index)}
-                                className="rounded-lg p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                className="rounded-[6px] p-1 text-grayScale-400 transition-colors hover:bg-red-50 hover:text-red-500"
                               >
                                 <X className="h-4 w-4" />
                               </button>
@@ -1145,7 +1145,7 @@ export function PracticeQuestionsPage() {
                         <button
                           type="button"
                           onClick={addDraftOption}
-                          className="mt-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+                          className="mt-1 flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
                         >
                           <Plus className="h-4 w-4" />
                           Add Option
@@ -1174,7 +1174,7 @@ export function PracticeQuestionsPage() {
                                 ],
                               }))
                             }
-                            className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            className={`flex-1 rounded-[6px] border-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                               draft.options[i]?.isCorrect
                                 ? "border-green-500 bg-green-50 text-green-700"
                                 : "border-grayScale-200 text-grayScale-600 hover:border-grayScale-300"

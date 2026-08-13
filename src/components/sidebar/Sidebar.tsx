@@ -215,7 +215,7 @@ export function Sidebar({
           {isCollapsed && (
             <button
               type="button"
-              className="grid h-10 w-10 place-items-center rounded-md border border-grayScale-200 text-grayScale-400 transition-all hover:bg-grayScale-100 hover:text-brand-600 dark:border-grayScale-200/20 dark:hover:bg-white/5 dark:hover:text-brand-400"
+              className="grid h-10 w-10 place-items-center rounded-[6px] border border-grayScale-200 text-grayScale-400 transition-all hover:bg-grayScale-100 hover:text-brand-600 dark:border-grayScale-200/20 dark:hover:bg-white/5 dark:hover:text-brand-400"
               onClick={onToggleCollapse}
               aria-label="Expand sidebar"
             >
@@ -225,7 +225,7 @@ export function Sidebar({
           {!isCollapsed && (
             <button
               type="button"
-              className="hidden h-10 w-10 rounded-md place-items-center border border-grayScale-200 text-grayScale-400 transition-all hover:bg-grayScale-100 hover:text-brand-600 lg:grid dark:border-grayScale-200/20 dark:hover:bg-white/5 dark:hover:text-brand-400"
+              className="hidden h-10 w-10 rounded-[6px] place-items-center border border-grayScale-200 text-grayScale-400 transition-all hover:bg-grayScale-100 hover:text-brand-600 lg:grid dark:border-grayScale-200/20 dark:hover:bg-white/5 dark:hover:text-brand-400"
               onClick={onToggleCollapse}
               aria-label="Collapse sidebar"
             >
@@ -234,7 +234,7 @@ export function Sidebar({
           )}
           <button
             type="button"
-            className="grid h-7 w-7 place-items-center rounded-lg text-grayScale-400 hover:bg-grayScale-100 hover:text-brand-600 lg:hidden dark:hover:bg-white/5 dark:hover:text-brand-400"
+            className="grid h-7 w-7 place-items-center rounded-[6px] text-grayScale-400 hover:bg-grayScale-100 hover:text-brand-600 lg:hidden dark:hover:bg-white/5 dark:hover:text-brand-400"
             onClick={onClose}
             aria-label="Close sidebar"
           >
@@ -424,7 +424,7 @@ export function Sidebar({
               window.location.href = "/login";
             }}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-grayScale-500 transition hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
+              "flex w-full items-center gap-3 rounded-[6px] px-3 py-2 text-sm font-medium text-grayScale-500 transition hover:bg-grayScale-100 hover:text-brand-600 dark:text-grayScale-400 dark:hover:bg-white/5 dark:hover:text-brand-400",
               isCollapsed && "justify-center gap-0 p-2",
             )}
             title={isCollapsed ? "Logout" : undefined}

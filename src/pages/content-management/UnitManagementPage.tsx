@@ -42,7 +42,12 @@ import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip"
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
-import type { ContentAccessTier, PracticePublishStatus } from "../../types/course.types";
+import type {
+  ContentAccessTier,
+  ExamPrepCatalogUnitItem,
+  ExamPrepUnitModuleItem,
+  PracticePublishStatus,
+} from "../../types/course.types";
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -52,6 +57,10 @@ import { UnitPracticesPanel } from "./components/UnitPracticesPanel";
 import { cn } from "../../lib/utils";
 import { DisplayValue } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
+import {
+  fetchAllOffsetPages,
+  offsetPageFromListEnvelope,
+} from "../../lib/fetchAllOffsetPages";
 
 export function UnitManagementPage() {
   const navigate = useNavigate();
@@ -172,12 +181,12 @@ export function UnitManagementPage() {
       return;
     }
     try {
-      const response = await getExamPrepCatalogUnits(catalogCourseId, {
-        limit: 100,
-        offset: 0,
-      });
-      const rows = response.data?.data?.units;
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepCatalogUnitItem>(
+          await getExamPrepCatalogUnits(catalogCourseId, { limit, offset }),
+          "units",
+        ),
+      );
       const row = list.find((u) => Number(u.id) === parsedUnitId);
       if (row) {
         setUnitDisplayName(row.name?.trim() || `Unit ${parsedUnitId}`);
@@ -201,12 +210,12 @@ export function UnitManagementPage() {
     }
     setModulesLoading(true);
     try {
-      const response = await getExamPrepUnitModules(parsedUnitId, {
-        limit: 20,
-        offset: 0,
-      });
-      const rows = response.data?.data?.modules;
-      const list = Array.isArray(rows) ? rows : [];
+      const list = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<ExamPrepUnitModuleItem>(
+          await getExamPrepUnitModules(parsedUnitId, { limit, offset }),
+          "modules",
+        ),
+      );
       setModules(
         list.map((row, index) => ({
           id: Number(row.id),
@@ -614,7 +623,7 @@ export function UnitManagementPage() {
                 <DialogTitle className="text-[20px] font-bold relative top-2 text-grayScale-900">
                   Create Modules
                 </DialogTitle>
-                <DialogClose className="rounded-full p-1.5 hover:bg-grayScale-50 transition-colors">
+                <DialogClose className="rounded-[6px] p-1.5 hover:bg-grayScale-50 transition-colors">
                   <X className="h-5 w-5 text-grayScale-400" />
                   <span className="sr-only">Close</span>
                 </DialogClose>
@@ -764,7 +773,7 @@ export function UnitManagementPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                    className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                     disabled={creating || uploadingThumbnail || uploadingIcon}
                     onClick={clearCreateModuleForm}
                   >
@@ -773,7 +782,7 @@ export function UnitManagementPage() {
                 </DialogClose>
                 <Button
                   type="button"
-                  className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                  className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                   onClick={() => void handleCreateModule()}
                   disabled={creating || uploadingThumbnail || uploadingIcon}
                 >
@@ -889,7 +898,7 @@ export function UnitManagementPage() {
                   type="button"
                   variant="secondary"
                   size="icon"
-                  className="h-8 w-8 rounded-md bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
+                  className="h-8 w-8 rounded-[6px] bg-white/95 text-grayScale-600 shadow-sm transition-colors hover:bg-white"
                   onClick={() => openEditModule(module)}
                   aria-label={`Edit ${module.name}`}
                 >
@@ -899,7 +908,7 @@ export function UnitManagementPage() {
                   type="button"
                   variant="secondary"
                   size="icon"
-                  className="h-8 w-8 rounded-md bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                  className="h-8 w-8 rounded-[6px] bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50"
                   onClick={() => setDeletingModuleId(module.id)}
                   aria-label={`Delete ${module.name}`}
                 >
@@ -1154,7 +1163,7 @@ export function UnitManagementPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 px-8 rounded-[8px] border-grayScale-200 text-grayScale-700 font-bold"
+                className="h-11 px-8 rounded-[6px] border-grayScale-200 text-grayScale-700 font-bold"
                 disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
                 onClick={closeEditModule}
               >
@@ -1162,7 +1171,7 @@ export function UnitManagementPage() {
               </Button>
               <Button
                 type="button"
-                className="h-11 px-8 rounded-[8px] bg-brand-500 text-white font-bold hover:bg-brand-600"
+                className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
                 onClick={() => void handleSaveEditModule()}
                 disabled={savingEdit || uploadingEditThumbnail || uploadingEditIcon}
               >

@@ -53,7 +53,7 @@ export function SensitiveRevealToggle({
       type="button"
       onClick={toggle}
       className={cn(
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-grayScale-500 transition-colors hover:bg-grayScale-100 hover:text-grayScale-800",
+        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-grayScale-500 transition-colors hover:bg-grayScale-100 hover:text-grayScale-800",
         className,
       )}
       aria-label={revealed ? `Hide ${label}` : `Show ${label}`}
@@ -115,7 +115,7 @@ export function SensitiveChart({
         <button
           type="button"
           onClick={toggle}
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-white/40 text-sm font-medium text-grayScale-600 backdrop-blur-[1px] transition-colors hover:bg-white/55 hover:text-grayScale-800"
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-[6px] bg-white/40 text-sm font-medium text-grayScale-600 backdrop-blur-[1px] transition-colors hover:bg-white/55 hover:text-grayScale-800"
         >
           <Eye className="h-5 w-5" />
           Show revenue

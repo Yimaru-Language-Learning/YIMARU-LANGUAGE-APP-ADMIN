@@ -197,7 +197,7 @@ export function LessonMediaUploadField({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          "flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#9E289133] bg-white p-10 text-center transition-colors",
+          "flex w-full cursor-pointer flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-[#9E289133] bg-white p-10 text-center transition-colors",
           "hover:border-[#9E289180] hover:bg-grayScale-50/30",
           dragActive && "border-[#9E2891] bg-[#9E289108]",
           zoneDisabled && "cursor-not-allowed opacity-60",

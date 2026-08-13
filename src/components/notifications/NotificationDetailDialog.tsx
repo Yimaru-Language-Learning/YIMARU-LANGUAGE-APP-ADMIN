@@ -74,7 +74,7 @@ export function NotificationDetailDialog({
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-lg"
+                className="rounded-[6px]"
                 onClick={onRetry}
               >
                 Try again
@@ -236,7 +236,7 @@ function DetailsTab({
         <div className="border-t border-grayScale-100 pt-4">
           <Button
             size="sm"
-            className="h-9 rounded-lg bg-destructive px-4 text-xs font-medium text-white hover:bg-destructive/90"
+            className="h-9 rounded-[6px] bg-destructive px-4 text-xs font-medium text-white hover:bg-destructive/90"
             onClick={onDelete}
           >
             Delete notification

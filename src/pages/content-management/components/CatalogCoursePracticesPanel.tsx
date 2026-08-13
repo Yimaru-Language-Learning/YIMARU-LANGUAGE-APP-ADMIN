@@ -9,6 +9,7 @@ import {
   setExamPrepPracticePublishStatus,
 } from "../../../api/courses.api"
 import { unwrapPracticesList } from "../../../lib/parentContextPractice"
+import { fetchAllOffsetPages } from "../../../lib/fetchAllOffsetPages"
 import { parentsFromPractice } from "../../../lib/practiceParents"
 import {
   isPracticeParentUnlinkNotLinkedError,
@@ -85,10 +86,16 @@ export function CatalogCoursePracticesPanel({
     setLoading(true)
     setLoadError(null)
     try {
-      const res = await getExamPrepCatalogCoursePractices(catalogCourseId)
-      const { practices: list, totalCount: total } = extractPracticesPage(res)
+      const list = await fetchAllOffsetPages(async (offset, limit) => {
+        const res = await getExamPrepCatalogCoursePractices(catalogCourseId, {
+          limit,
+          offset,
+        })
+        const { practices, totalCount } = extractPracticesPage(res)
+        return { items: practices, total_count: totalCount }
+      })
       setPractices(list)
-      setTotalCount(total)
+      setTotalCount(list.length)
     } catch (error) {
       setPractices([])
       setTotalCount(0)

@@ -73,7 +73,7 @@ function SortableSequenceRow({
     >
       <button
         type="button"
-        className="flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-md text-grayScale-400 hover:bg-white hover:text-grayScale-600 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-[6px] text-grayScale-400 hover:bg-white hover:text-grayScale-600 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
         disabled={disabled}
         aria-label={`Drag item ${itemId}`}
         {...attributes}
@@ -159,7 +159,7 @@ export function DynamicSequenceOrderSlot({
           variant="outline"
           size="sm"
           disabled={disabled || !canAdd}
-          className="h-8 gap-1.5 rounded-lg border-brand-200 text-brand-600 hover:bg-brand-50"
+          className="h-8 gap-1.5 rounded-[6px] border-brand-200 text-brand-600 hover:bg-brand-50"
           onClick={() => updateValue(addSequenceOrderItem(parsed, maxItems))}
         >
           <Plus className="h-3.5 w-3.5" />

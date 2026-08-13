@@ -53,7 +53,7 @@ export function AttachProgramPracticeFlow() {
         <div className="flex flex-col gap-4 w-full max-w-[440px]">
           <Button
             onClick={() => navigate(backPath)}
-            className="h-14 rounded-[12px] bg-[#9E2891] font-bold shadow-xl shadow-brand-500/20 text-[16px] text-white "
+            className="h-14 rounded-[6px] bg-[#9E2891] font-bold shadow-xl shadow-brand-500/20 text-[16px] text-white "
           >
             Go back to Program
           </Button>
@@ -63,7 +63,7 @@ export function AttachProgramPracticeFlow() {
               setIsPublished(false);
               setCurrentStep(1);
             }}
-            className="h-14 rounded-[12px] border-[#9E2891] text-[#9E2891] font-bold text-[16px] bg-white "
+            className="h-14 rounded-[6px] border-[#9E2891] text-[#9E2891] font-bold text-[16px] bg-white "
           >
             Attach More Practice
           </Button>

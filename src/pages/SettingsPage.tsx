@@ -317,7 +317,7 @@ function AppearanceTab() {
                   type="button"
                   onClick={() => setTheme(id)}
                   className={cn(
-                    "flex flex-col items-stretch gap-3 rounded-[8px] border-2 p-3 text-left transition-all",
+                    "flex flex-col items-stretch gap-3 rounded-[6px] border-2 p-3 text-left transition-all",
                     selected
                       ? "border-brand-500 bg-brand-500/10 shadow-sm ring-1 ring-brand-500/30"
                       : "border-grayScale-200 bg-grayScale-50 hover:border-grayScale-300 hover:bg-grayScale-100",

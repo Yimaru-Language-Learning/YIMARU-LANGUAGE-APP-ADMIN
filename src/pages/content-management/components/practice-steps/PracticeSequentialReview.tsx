@@ -84,7 +84,7 @@ export function ReviewAudioPlayer({
     >
       <button
         type="button"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-500 text-white shadow-sm transition-colors hover:bg-brand-600"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-brand-500 text-white shadow-sm transition-colors hover:bg-brand-600"
         aria-label={`Play ${fileName}`}
         onClick={() => {
           const audio = new Audio(src);
@@ -196,7 +196,7 @@ export function PracticeSequentialReview({
             <button
               type="button"
               onClick={onEditContext}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+              className="flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
             >
               <Edit className="h-3.5 w-3.5" />
               Edit
@@ -335,7 +335,7 @@ export function PracticeSequentialReview({
                 <button
                   type="button"
                   onClick={onEditQuestions}
-                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
+                  className="flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-sm font-medium text-brand-500 transition-colors hover:bg-brand-50 hover:text-brand-600"
                 >
                   <Edit className="h-3.5 w-3.5" />
                   Edit

@@ -35,7 +35,7 @@ export function AddVideoPage() {
             variant="ghost"
             size="icon"
             onClick={() => navigate("/content/courses")}
-            className="h-9 w-9 rounded-lg border border-grayScale-200 bg-white shadow-sm transition-colors hover:bg-grayScale-50 hover:border-grayScale-300"
+            className="h-9 w-9 rounded-[6px] border border-grayScale-200 bg-white shadow-sm transition-colors hover:bg-grayScale-50 hover:border-grayScale-300"
           >
             <ArrowLeft className="h-4 w-4 text-grayScale-500" />
           </Button>

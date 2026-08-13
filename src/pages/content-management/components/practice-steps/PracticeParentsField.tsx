@@ -244,7 +244,7 @@ export function PracticeParentsField({
         size="sm"
         disabled={disabled || Boolean(unlinkingKey)}
         onClick={addRow}
-        className="rounded-[8px] border-grayScale-200 text-xs font-semibold"
+        className="rounded-[6px] border-grayScale-200 text-xs font-semibold"
       >
         <Plus className="mr-1.5 h-3.5 w-3.5" />
         Add location

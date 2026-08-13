@@ -201,7 +201,7 @@ export function AddModuleModal({
               <Button
                 type="button"
                 variant="outline"
-                className="h-12 min-w-[120px] rounded-xl border-grayScale-200 font-semibold"
+                className="h-12 min-w-[120px] rounded-[6px] border-grayScale-200 font-semibold"
                 disabled={submitting || iconUploadBusy}
               >
                 Cancel
@@ -209,7 +209,7 @@ export function AddModuleModal({
             </DialogClose>
             <Button
               type="submit"
-              className="h-12 min-w-[160px] rounded-xl bg-brand-500 font-semibold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-600"
+              className="h-12 min-w-[160px] rounded-[6px] bg-brand-500 font-semibold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-600"
               disabled={submitting || iconUploadBusy}
             >
               {submitting ? "Creating…" : "Create module"}

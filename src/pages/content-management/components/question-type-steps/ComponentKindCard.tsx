@@ -15,7 +15,7 @@ export function ComponentKindCard({ label, Icon, selected, onClick }: ComponentK
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full flex flex-col items-start justify-between p-4 min-h-[132px] rounded-[16px] border text-left transition-all group relative",
+        "w-full flex flex-col items-start justify-between p-4 min-h-[132px] rounded-[6px] border text-left transition-all group relative",
         selected
           ? "border-[#9E2891] bg-white dark:bg-grayScale-100 shadow-[0_4px_12px_rgba(158,40,145,0.08)] ring-1 ring-[#9E2891]"
           : "border-grayScale-200 bg-white dark:bg-grayScale-50 hover:border-grayScale-300 hover:bg-grayScale-50/80 dark:hover:bg-grayScale-100/80",

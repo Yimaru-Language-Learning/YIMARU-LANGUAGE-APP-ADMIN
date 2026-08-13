@@ -195,7 +195,7 @@ export function SubModulesPage() {
         <div className="flex items-start gap-3 min-w-0">
           <Link
             to={`/content/category/${categoryId}/courses`}
-            className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-grayScale-200 bg-white text-grayScale-500 shadow-sm transition-all hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
+            className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-[6px] border border-grayScale-200 bg-white text-grayScale-500 shadow-sm transition-all hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>

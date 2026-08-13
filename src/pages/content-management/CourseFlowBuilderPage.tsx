@@ -125,7 +125,7 @@ function SortableChip({
       <button
         type="button"
         className={cn(
-          "grid h-6 w-6 shrink-0 place-items-center rounded-md transition-colors",
+          "grid h-6 w-6 shrink-0 place-items-center rounded-[6px] transition-colors",
           active
             ? "text-white/80 hover:bg-white/15 hover:text-white"
             : "text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500",
@@ -171,7 +171,7 @@ function SortableRow({
       <div className="flex items-center gap-2 border-b border-grayScale-100 px-2.5 py-2">
         <button
           type="button"
-          className="grid h-6 w-6 place-items-center rounded-md text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500"
+          className="grid h-6 w-6 place-items-center rounded-[6px] text-grayScale-300 hover:bg-grayScale-100 hover:text-grayScale-500"
           {...attributes}
           {...listeners}
         >
@@ -760,7 +760,7 @@ export function CourseFlowBuilderPage() {
                                 return next
                               })
                             }}
-                            className="flex w-full flex-col items-start gap-2 rounded-lg border border-grayScale-100 bg-grayScale-50 px-3 py-2 text-left sm:flex-row sm:items-center sm:justify-between"
+                            className="flex w-full flex-col items-start gap-2 rounded-[6px] border border-grayScale-100 bg-grayScale-50 px-3 py-2 text-left sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-grayScale-700">{subCourse.title}</p>

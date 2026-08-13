@@ -53,7 +53,7 @@ export function NotificationSchedulePicker({
           type="button"
           disabled={disabled}
           className={cn(
-            "flex h-11 w-full items-center justify-between rounded-xl border border-grayScale-200 bg-grayScale-50/70 px-3 text-sm text-grayScale-700 shadow-sm transition-all",
+            "flex h-11 w-full items-center justify-between rounded-[6px] border border-grayScale-200 bg-grayScale-50/70 px-3 text-sm text-grayScale-700 shadow-sm transition-all",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-100",
             disabled && "cursor-not-allowed opacity-50",
             className,

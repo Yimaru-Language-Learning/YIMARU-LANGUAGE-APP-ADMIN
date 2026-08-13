@@ -192,7 +192,7 @@ export function AddVideoFlow() {
           <PageBackLink fallbackTo={backPath} label="Back to module" className="text-grayScale-500" />
           <Button
             variant="outline"
-            className="h-10 w-full rounded-[8px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
+            className="h-10 w-full rounded-[6px] border-grayScale-200 bg-white px-6 font-bold text-grayScale-600 hover:bg-grayScale-50 sm:w-auto"
             onClick={goBack}
           >
             Cancel

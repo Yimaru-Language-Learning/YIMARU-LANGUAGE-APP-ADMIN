@@ -207,7 +207,7 @@ export function QuestionTypeGroupDetailPage() {
                     Create a definition in this group or move an existing one here from the library.
                   </p>
                   <Link to={`/new-content/question-types/create?groupId=${group.id}`}>
-                    <Button size="sm" className="rounded-[8px] bg-brand-600 hover:bg-brand-500">
+                    <Button size="sm" className="rounded-[6px] bg-brand-600 hover:bg-brand-500">
                       <Plus className="mr-2 h-4 w-4" />
                       Create definition
                     </Button>

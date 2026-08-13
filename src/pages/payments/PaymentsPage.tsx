@@ -815,7 +815,7 @@ export function PaymentsPage() {
                 {/* Actions */}
                 {selected.payment_url && (
                   <div className="mt-5 border-t border-grayScale-100 pt-4">
-                    <Button size="sm" className="h-9 rounded-lg bg-brand-600 px-4 text-xs font-medium text-white hover:bg-brand-500" asChild>
+                    <Button size="sm" className="h-9 rounded-[6px] bg-brand-600 px-4 text-xs font-medium text-white hover:bg-brand-500" asChild>
                       <a href={selected.payment_url} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                         Open checkout

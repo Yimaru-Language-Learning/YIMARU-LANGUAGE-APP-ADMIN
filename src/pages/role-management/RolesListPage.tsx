@@ -363,14 +363,14 @@ export function RolesListPage({ embedded = false }: RolesListPageProps) {
               type="button"
               onClick={() => setRoleCategoryFilter(value)}
               className={cn(
-                "h-9 rounded-full px-3 text-xs font-semibold transition-colors",
+                "h-9 rounded-[6px] px-3 text-xs font-semibold transition-colors",
                 roleCategoryFilter === value
                   ? "bg-brand-500 text-white"
                   : "bg-grayScale-100 text-grayScale-600 hover:bg-grayScale-200",
               )}
             >
               {label}
-          </button>
+            </button>
         ))}
       </div>
 

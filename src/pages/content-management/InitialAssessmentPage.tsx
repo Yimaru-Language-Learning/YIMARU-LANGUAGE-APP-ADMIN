@@ -620,7 +620,7 @@ export function InitialAssessmentPage() {
               aria-selected={selected}
               onClick={() => setSelectedLevel(level)}
               className={cn(
-                "rounded-full px-3.5 py-1.5 text-sm font-semibold transition",
+                "rounded-[6px] px-3.5 py-1.5 text-sm font-semibold transition",
                 selected
                   ? "bg-brand-500 text-white"
                   : "border border-grayScale-200 bg-white text-grayScale-600 hover:border-grayScale-300",
@@ -934,7 +934,7 @@ export function InitialAssessmentPage() {
               <button
                 type="button"
                 onClick={closeQuestionForm}
-                className="rounded-lg p-1 hover:bg-grayScale-100"
+                className="rounded-[6px] p-1 hover:bg-grayScale-100"
                 disabled={savingQuestion}
               >
                 <X className="h-4 w-4" />

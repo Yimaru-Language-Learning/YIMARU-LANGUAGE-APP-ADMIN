@@ -80,7 +80,7 @@ export function PersonaStep({
                 type="button"
                 onClick={() => setSelectedPersona(persona.id)}
                 className={cn(
-                  "group relative w-full cursor-pointer rounded-2xl border-2 bg-white p-6 text-left transition-all duration-300",
+                  "group relative w-full cursor-pointer rounded-[6px] border-2 bg-white p-6 text-left transition-all duration-300",
                   isSelected
                     ? "border-brand-500 shadow-md shadow-brand-100/50"
                     : "border-grayScale-100 hover:border-brand-200",

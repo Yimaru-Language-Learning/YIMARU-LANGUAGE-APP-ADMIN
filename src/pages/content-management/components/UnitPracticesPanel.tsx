@@ -87,18 +87,15 @@ export function UnitPracticesPanel({
     setLoading(true)
     setLoadError(null)
     try {
-      const res = await getExamPrepUnitPractices(unitId, {
-        limit: 20,
-        offset: 0,
-      })
+      const res = await getExamPrepUnitPractices(unitId)
       const { practices: list, totalCount: total } = extractPracticesPage(res)
       setPractices(list)
       setTotalCount(total)
-    } catch {
+    } catch (error) {
       setPractices([])
       setTotalCount(0)
       setLoadError("Could not load practices for this unit.")
-      notifyApiError(err, "Failed to load practices")
+      notifyApiError(error, "Failed to load practices")
     } finally {
       setLoading(false)
     }

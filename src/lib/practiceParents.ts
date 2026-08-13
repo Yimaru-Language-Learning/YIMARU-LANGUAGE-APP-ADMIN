@@ -45,8 +45,9 @@ export function parentsFromPractice(practice: {
   parent_kind?: string
   parent_id?: number
 }): PracticeParent[] {
-  if (practice.parents == null) return []
-  if (practice.parents.length > 0) return dedupeParents(practice.parents)
+  if (Array.isArray(practice.parents) && practice.parents.length > 0) {
+    return dedupeParents(practice.parents)
+  }
   const kind = practice.parent_kind?.trim().toUpperCase() ?? ""
   const parent_id = practice.parent_id
   if (isPracticeParentKind(kind) && parent_id != null && parent_id > 0) {

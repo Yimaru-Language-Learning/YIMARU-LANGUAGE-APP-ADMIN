@@ -366,7 +366,29 @@ export function EditPracticeFlow() {
         if (cancelled) return;
         const loadedPersona =
           mapped.personaId != null ? String(mapped.personaId) : null;
-        setFormData(mapped.formData);
+        const lid = lessonId ? Number(lessonId) : NaN;
+        const mid = moduleId ? Number(moduleId) : NaN;
+        const uid = unitId ? Number(unitId) : NaN;
+        const cid = courseId ? Number(courseId) : NaN;
+        const routeParent: PracticeParent | null = Number.isFinite(lid) && lid > 0
+          ? { parent_kind: "LESSON", parent_id: lid }
+          : isModuleContext && !isExamPrep && Number.isFinite(mid) && mid > 0
+            ? { parent_kind: "MODULE", parent_id: mid }
+            : isUnitContext && isExamPrep && Number.isFinite(uid) && uid > 0
+              ? { parent_kind: "UNIT", parent_id: uid }
+              : isCourseContext && Number.isFinite(cid) && cid > 0
+                ? {
+                    parent_kind: isExamPrep ? "CATALOG_COURSE" : "COURSE",
+                    parent_id: cid,
+                  }
+                : null;
+        const formParents =
+          mapped.parents.length > 0
+            ? mapped.parents
+            : routeParent
+              ? [routeParent]
+              : mapped.formData.parents;
+        setFormData({ ...mapped.formData, parents: formParents });
         setPreservedQuestionSet(mapped.preservedQuestionSet);
         initialParentsRef.current = mapped.parents;
         setLoadedPersonaId(mapped.personaId);
@@ -389,7 +411,20 @@ export function EditPracticeFlow() {
     return () => {
       cancelled = true;
     };
-  }, [validPracticeId, practiceId, isExamPrep, typeDefinitions, definitionsLoading]);
+  }, [
+    validPracticeId,
+    practiceId,
+    isExamPrep,
+    typeDefinitions,
+    definitionsLoading,
+    lessonId,
+    moduleId,
+    unitId,
+    courseId,
+    isModuleContext,
+    isUnitContext,
+    isCourseContext,
+  ]);
 
   useEffect(() => {
     if (loadedPersonaId == null || personasLoading) return;

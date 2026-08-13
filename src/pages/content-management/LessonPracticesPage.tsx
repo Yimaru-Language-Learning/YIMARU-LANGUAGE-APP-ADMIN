@@ -341,11 +341,11 @@ export function LessonPracticesPage() {
             : list.length,
         );
       }
-    } catch {
+    } catch (error) {
       setPractices([]);
       setTotalCount(0);
       setLoadError("Could not load practices for this lesson.");
-      notifyApiError(err, "Failed to load practices");
+      notifyApiError(error, "Failed to load practices");
     } finally {
       setLoading(false);
     }

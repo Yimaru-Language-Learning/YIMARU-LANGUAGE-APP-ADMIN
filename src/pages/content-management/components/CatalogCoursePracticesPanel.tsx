@@ -85,18 +85,15 @@ export function CatalogCoursePracticesPanel({
     setLoading(true)
     setLoadError(null)
     try {
-      const res = await getExamPrepCatalogCoursePractices(catalogCourseId, {
-        limit: 20,
-        offset: 0,
-      })
+      const res = await getExamPrepCatalogCoursePractices(catalogCourseId)
       const { practices: list, totalCount: total } = extractPracticesPage(res)
       setPractices(list)
       setTotalCount(total)
-    } catch {
+    } catch (error) {
       setPractices([])
       setTotalCount(0)
       setLoadError("Could not load practices for this catalog course.")
-      notifyApiError(err, "Failed to load practices")
+      notifyApiError(error, "Failed to load practices")
     } finally {
       setLoading(false)
     }

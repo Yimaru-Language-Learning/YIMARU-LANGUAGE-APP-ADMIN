@@ -33,6 +33,7 @@ import {
   DEFAULT_TABLE_PAGE_SIZE,
 } from "../../lib/tablePagination"
 import { UnassignedLabel } from "../../lib/displayValue"
+import { fromDatetimeLocalAppValue } from "../../lib/datetime"
 import {
   getNotificationMessage,
   getNotificationTitle,
@@ -54,13 +55,6 @@ const READ_OPTIONS = [
   { value: "false", label: "Unread only" },
   { value: "true", label: "Read only" },
 ] as const
-
-function toRfc3339FromDatetimeLocal(value: string): string | undefined {
-  if (!value.trim()) return undefined
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return undefined
-  return date.toISOString()
-}
 
 function recipientLabel(notification: Notification): string {
   const parts: string[] = []
@@ -121,11 +115,11 @@ export function AllNotificationsPage() {
         ...(parsedUserId != null ? { user_id: parsedUserId } : {}),
         ...(readFilter === "true" ? { is_read: true } : {}),
         ...(readFilter === "false" ? { is_read: false } : {}),
-        ...(toRfc3339FromDatetimeLocal(afterFilter)
-          ? { after: toRfc3339FromDatetimeLocal(afterFilter) }
+        ...(fromDatetimeLocalAppValue(afterFilter)
+          ? { after: fromDatetimeLocalAppValue(afterFilter) }
           : {}),
-        ...(toRfc3339FromDatetimeLocal(beforeFilter)
-          ? { before: toRfc3339FromDatetimeLocal(beforeFilter) }
+        ...(fromDatetimeLocalAppValue(beforeFilter)
+          ? { before: fromDatetimeLocalAppValue(beforeFilter) }
           : {}),
       })
       setRows(res.data.notifications)

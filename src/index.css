@@ -312,4 +312,207 @@
   .yimaru-toast[data-sonner-toast][data-styled="true"] {
     padding-right: 2.25rem;
   }
+
+  [data-sonner-toaster][data-y-position="bottom"][data-x-position="right"] {
+    bottom: 1.25rem;
+    right: 1.25rem;
+  }
+
+  [data-sonner-toast].yimaru-realtime-popup-host {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    --y: translate(115%, 115%);
+    opacity: 0;
+    transition:
+      transform 480ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 480ms cubic-bezier(0.16, 1, 0.3, 1),
+      height 400ms ease;
+  }
+
+  [data-sonner-toast].yimaru-realtime-popup-host[data-mounted="true"] {
+    --y: translate(0, 0);
+    opacity: 1;
+  }
+
+  [data-sonner-toast].yimaru-realtime-popup-host[data-removed="true"][data-front="true"][data-swipe-out="false"] {
+    --y: translate(115%, 115%);
+    opacity: 0;
+    transition:
+      transform 360ms cubic-bezier(0.4, 0, 1, 1),
+      opacity 280ms ease;
+  }
+
+  [data-sonner-toast].yimaru-realtime-popup-host[data-removed="true"][data-front="false"][data-swipe-out="false"] {
+    --y: translate(60%, 60%);
+    opacity: 0;
+  }
+
+  .yimaru-realtime-popup {
+    --yimaru-popup-accent: #9e2891;
+    width: min(380px, calc(100vw - 2rem));
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid var(--gs-200);
+    border-left: 3px solid var(--yimaru-popup-accent);
+    background: #fff;
+    color: hsl(var(--foreground));
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 12px 32px rgba(15, 23, 42, 0.12);
+  }
+
+  html.dark .yimaru-realtime-popup {
+    background: hsl(var(--card));
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.25),
+      0 16px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .yimaru-realtime-popup--success {
+    --yimaru-popup-accent: #059669;
+  }
+
+  .yimaru-realtime-popup--error {
+    --yimaru-popup-accent: #dc2626;
+  }
+
+  .yimaru-realtime-popup--warning {
+    --yimaru-popup-accent: #d97706;
+  }
+
+  .yimaru-realtime-popup--info {
+    --yimaru-popup-accent: #9e2891;
+  }
+
+  .yimaru-realtime-popup__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem 0.5rem 0.875rem;
+    border-bottom: 1px solid var(--gs-100);
+    background: var(--gs-50);
+  }
+
+  html.dark .yimaru-realtime-popup__header {
+    background: hsl(var(--muted) / 0.35);
+    border-bottom-color: hsl(var(--border));
+  }
+
+  .yimaru-realtime-popup__meta {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .yimaru-realtime-popup__type {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--yimaru-popup-accent);
+  }
+
+  .yimaru-realtime-popup__dot {
+    width: 0.2rem;
+    height: 0.2rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    background: var(--gs-300);
+  }
+
+  .yimaru-realtime-popup__time {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--gs-500);
+    white-space: nowrap;
+  }
+
+  .yimaru-realtime-popup__close {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+    border-radius: 0.375rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--gs-400);
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .yimaru-realtime-popup__close:hover {
+    background: #fff;
+    border-color: var(--gs-200);
+    color: var(--gs-600);
+  }
+
+  html.dark .yimaru-realtime-popup__close:hover {
+    background: hsl(var(--background));
+  }
+
+  .yimaru-realtime-popup__body {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 0.875rem 1rem;
+  }
+
+  .yimaru-realtime-popup__icon {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    border-radius: 0.625rem;
+  }
+
+  .yimaru-realtime-popup__content {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .yimaru-realtime-popup__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    color: hsl(var(--foreground));
+  }
+
+  .yimaru-realtime-popup__message {
+    margin-top: 0.25rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--gs-600);
+  }
+
+  .yimaru-realtime-popup__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.625rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--yimaru-popup-accent);
+    transition: opacity 0.15s ease;
+  }
+
+  .yimaru-realtime-popup__action:hover {
+    opacity: 0.8;
+  }
 }

@@ -29,6 +29,7 @@ import type { Role } from "../../types/rbac.types"
 import { mapDeletionRequestApiItem } from "../../types/user.types"
 import { UnassignedLabel } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
+import { fromDatetimeLocalAppValue } from "../../lib/datetime"
 
 const stateBadge: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -90,12 +91,7 @@ export function DeletionRequestsPage() {
   const statusMenuRef = useRef<HTMLDivElement | null>(null)
   const stateMenuRef = useRef<HTMLDivElement | null>(null)
 
-  const toRfc3339 = (value: string) => {
-    if (!value) return undefined
-    const normalized = value.includes("T") ? value : value.replace(" ", "T")
-    const date = new Date(normalized)
-    return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
-  }
+  const toRfc3339 = (value: string) => fromDatetimeLocalAppValue(value)
 
   const fetchData = useCallback(async () => {
     setLoading(true)

@@ -55,6 +55,7 @@ import {
   buildSubscriptionStatusPie,
 } from "../lib/analytics"
 import type { DashboardData, DashboardFilters } from "../types/analytics.types"
+import { formatAppDateTime } from "../lib/datetime"
 import { formatAverageStars } from "../lib/ratingsDisplay"
 import { formatPlanDuration } from "../lib/subscriptionPlans"
 import type { SubscriptionPlan } from "../types/subscription.types"
@@ -184,14 +185,7 @@ export function DashboardPage() {
     ? getSubscriptionMetrics(dashboard.subscriptions)
     : null
 
-  const generatedAt = dashboard
-    ? new Date(dashboard.generated_at).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : ""
+  const generatedAt = dashboard ? formatAppDateTime(dashboard.generated_at) : ""
 
   const registrationPeakIndex = registrationData.reduce((best, row, idx) => {
     return row.count > (registrationData[best]?.count ?? 0) ? idx : best

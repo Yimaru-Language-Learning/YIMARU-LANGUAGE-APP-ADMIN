@@ -8,7 +8,7 @@ import type {
 } from "../types/notification.types"
 import { getUsers } from "../api/users.api"
 import { getTeamMembers } from "../api/team.api"
-import { formatAppDateTime } from "./datetime"
+import { formatAppDateTime, toRfc3339FromAppLocal } from "./datetime"
 import { TEAM_ROLE_OPTIONS } from "./teamRoles"
 
 export const PLATFORM_ROLES: { value: PlatformRole; label: string }[] = [
@@ -28,9 +28,7 @@ export const TEAM_ROLES: { value: TeamRole; label: string }[] = TEAM_ROLE_OPTION
 )
 
 export type NotificationAudienceMode =
-  | "platform_role"
   | "platform_selected"
-  | "team_role"
   | "team_selected"
   | "direct"
 
@@ -81,35 +79,7 @@ export function toRfc3339Utc(
   hour: string,
   minute: string,
 ): string | null {
-  const y = Number(year)
-  const m = Number(month)
-  const d = Number(day)
-  const h = Number(hour)
-  const min = Number(minute)
-
-  const formatOk =
-    year.length === 4 &&
-    month.length === 2 &&
-    day.length === 2 &&
-    hour.length === 2 &&
-    minute.length === 2
-  const dateValue = new Date(y, m - 1, d)
-  const dateOk =
-    formatOk &&
-    m >= 1 &&
-    m <= 12 &&
-    d >= 1 &&
-    d <= 31 &&
-    dateValue.getFullYear() === y &&
-    dateValue.getMonth() === m - 1 &&
-    dateValue.getDate() === d
-  const timeOk = h >= 0 && h <= 23 && min >= 0 && min <= 59
-
-  if (!dateOk || !timeOk) return null
-
-  const utc = new Date(Date.UTC(y, m - 1, d, h, min, 0, 0))
-  if (utc.getTime() <= Date.now()) return null
-  return utc.toISOString()
+  return toRfc3339FromAppLocal(year, month, day, hour, minute)
 }
 
 export function parseDirectRecipients(raw: string): string[] {
@@ -205,7 +175,7 @@ export function isAudienceModeValidForChannel(
   channel: string,
 ): boolean {
   if (mode === "direct") return channel === "sms" || channel === "email"
-  if (mode === "team_role" || mode === "team_selected") {
+  if (mode === "team_selected") {
     return channelSupportsTeamTargeting(channel)
   }
   return true

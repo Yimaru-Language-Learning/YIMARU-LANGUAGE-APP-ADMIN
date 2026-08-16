@@ -47,6 +47,11 @@ import {
   displayUserFavouriteTopic,
   displayUserCountry,
 } from "../../lib/userProfileFieldDisplay"
+import {
+  formatAppDateTime,
+  formatAppLongDate,
+  formatAppRelativeDateTime,
+} from "../../lib/datetime"
 
 const activityIcons = {
   completed: CheckCircle2,
@@ -84,52 +89,15 @@ function formatStatusLabel(status: string): string {
 }
 
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr?.trim()) return NOT_ASSIGNED_LABEL;
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatAppLongDate(dateStr, NOT_ASSIGNED_LABEL)
 }
 
 function formatDateTime(value?: string | null, emptyLabel = NOT_ASSIGNED_LABEL): string {
-  if (!value?.trim()) return emptyLabel;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return NOT_ASSIGNED_LABEL;
-  return parsed.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatAppDateTime(value, emptyLabel)
 }
 
 function formatActivityOccurredAt(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "unassigned";
-
-  const now = new Date();
-  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const dayDiff = Math.round((startToday - startThat) / 86_400_000);
-
-  const timePart = d.toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  if (dayDiff === 0) return `Today, ${timePart}`;
-  if (dayDiff === 1) return `Yesterday, ${timePart}`;
-
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatAppRelativeDateTime(iso)
 }
 
 function getAccountStatusClasses(status: string): string {

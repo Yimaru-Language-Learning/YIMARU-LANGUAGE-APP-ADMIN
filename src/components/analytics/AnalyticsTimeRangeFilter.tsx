@@ -5,6 +5,7 @@ import { Input } from "../ui/input"
 import { Button } from "../ui/button"
 import { Select } from "../ui/select"
 import { formatPaymentMethod } from "../../lib/payments"
+import { APP_TIMEZONE, APP_TIMEZONE_OFFSET } from "../../lib/datetime"
 import type { DashboardFilters } from "../../types/analytics.types"
 
 const MONTH_LABELS = [
@@ -62,10 +63,10 @@ export function getDashboardFilterLabel(filters: DashboardFilters): string {
       month: "short",
       day: "numeric",
       year: "numeric",
-      timeZone: "UTC",
+      timeZone: APP_TIMEZONE,
     }
-    const from = new Date(`${filters.from}T00:00:00Z`)
-    const to = new Date(`${filters.to}T00:00:00Z`)
+    const from = new Date(`${filters.from}T00:00:00${APP_TIMEZONE_OFFSET}`)
+    const to = new Date(`${filters.to}T00:00:00${APP_TIMEZONE_OFFSET}`)
     rangeLabel = `${from.toLocaleDateString("en-US", opts)} – ${to.toLocaleDateString("en-US", opts)}`
   }
 

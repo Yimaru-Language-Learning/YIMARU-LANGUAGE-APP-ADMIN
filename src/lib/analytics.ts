@@ -4,6 +4,7 @@ import type {
   DateRevenue,
   LabelCount,
 } from "../types/analytics.types"
+import { APP_TIMEZONE } from "./datetime"
 
 /** Canonical subscription row statuses shown in analytics breakdowns. */
 export const SUBSCRIPTION_STATUS_BREAKDOWN = [
@@ -140,7 +141,7 @@ export function formatAnalyticsSeriesDate(dateStr: string): string {
     return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      timeZone: "UTC",
+      timeZone: APP_TIMEZONE,
     })
   }
   const d = new Date(dateStr)
@@ -148,7 +149,7 @@ export function formatAnalyticsSeriesDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    timeZone: "UTC",
+    timeZone: APP_TIMEZONE,
   })
 }
 
@@ -161,7 +162,7 @@ function formatShortDate(iso: string) {
       month: "short",
       day: "numeric",
       year: "numeric",
-      timeZone: "UTC",
+      timeZone: APP_TIMEZONE,
     })
   }
   const d = new Date(iso)
@@ -169,7 +170,7 @@ function formatShortDate(iso: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: APP_TIMEZONE,
   })
 }
 

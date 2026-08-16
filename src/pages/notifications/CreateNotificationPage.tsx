@@ -13,6 +13,7 @@ import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import { NotificationSchedulePicker } from "../../components/notifications/NotificationSchedulePicker"
 import { EmailComposeFields } from "../../components/notifications/EmailComposeFields"
 import { cn } from "../../lib/utils"
+import { SearchHighlight, getSearchTokens } from "../../components/SearchHighlight"
 import { Stepper } from "../../components/ui/stepper"
 import {
   sendBulkEmail,
@@ -33,11 +34,9 @@ import {
   IN_APP_TYPES,
   isAudienceModeValidForChannel,
   parseDirectRecipients,
-  PLATFORM_ROLES,
-  TEAM_ROLES,
   type NotificationAudienceMode,
 } from "../../lib/notificationBulk"
-import { formatTeamRoleLabel } from "../../lib/teamRoles"
+import { formatAppDateTime } from "../../lib/datetime"
 import {
   BulkSendSummaryPanel,
   type BulkSendSummary,
@@ -45,8 +44,6 @@ import {
 import type {
   InAppNotificationLevel,
   NotificationChannel,
-  PlatformRole,
-  TeamRole,
 } from "../../types/notification.types"
 import type { EmailTemplate } from "../../types/emailTemplate.types"
 import type { UserApiDTO } from "../../types/user.types"
@@ -69,23 +66,14 @@ const CHANNELS: {
 
 function buildAudienceLabel(
   audienceMode: NotificationAudienceMode,
-  platformRole: PlatformRole,
-  teamRole: TeamRole,
   selectedUserIds: number[],
   selectedTeamMemberIds: number[],
   directRecipients: string,
   channel: NotificationChannel,
 ): string {
-  if (audienceMode === "platform_role") {
-    const role = PLATFORM_ROLES.find((r) => r.value === platformRole)?.label ?? platformRole
-    return `All platform ${role.toLowerCase()}`
-  }
   if (audienceMode === "platform_selected") {
     const count = selectedUserIds.length
     return `${count} selected platform user${count === 1 ? "" : "s"}`
-  }
-  if (audienceMode === "team_role") {
-    return `All team ${formatTeamRoleLabel(teamRole).toLowerCase()}`
   }
   if (audienceMode === "team_selected") {
     const count = selectedTeamMemberIds.length
@@ -134,10 +122,8 @@ export function CreateNotificationPage() {
   const navigate = useNavigate()
 
   const [channel, setChannel] = useState<NotificationChannel>("push")
-  const [audienceMode, setAudienceMode] = useState<NotificationAudienceMode>("platform_role")
+  const [audienceMode, setAudienceMode] = useState<NotificationAudienceMode>("platform_selected")
   const [sendMode, setSendMode] = useState<SendMode>("now")
-  const [platformRole, setPlatformRole] = useState<PlatformRole>("STUDENT")
-  const [teamRole, setTeamRole] = useState<TeamRole>("ADMIN")
   const [users, setUsers] = useState<UserApiDTO[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [recipientsLoading, setRecipientsLoading] = useState(false)
@@ -216,13 +202,18 @@ export function CreateNotificationPage() {
   }, [channel])
 
   const filteredUsers = useMemo(() => {
-    const q = userSearchQuery.trim().toLowerCase()
-    if (!q) return users
+    const tokens = getSearchTokens(userSearchQuery).map((token) => token.toLowerCase())
+    if (tokens.length === 0) return users
     return users.filter((user) => {
-      const fullName = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim().toLowerCase()
-      const email = (user.email ?? "").toLowerCase()
-      const phone = (user.phone_number ?? "").toLowerCase()
-      return fullName.includes(q) || email.includes(q) || phone.includes(q)
+      const haystack = [
+        `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim(),
+        user.email ?? "",
+        user.phone_number ?? "",
+        String(user.id),
+      ]
+        .join(" ")
+        .toLowerCase()
+      return tokens.every((token) => haystack.includes(token))
     })
   }, [users, userSearchQuery])
 
@@ -237,12 +228,17 @@ export function CreateNotificationPage() {
   )
 
   const filteredTeamMembers = useMemo(() => {
-    const q = teamSearchQuery.trim().toLowerCase()
-    if (!q) return teamMembers
+    const tokens = getSearchTokens(teamSearchQuery).map((token) => token.toLowerCase())
+    if (tokens.length === 0) return teamMembers
     return teamMembers.filter((member) => {
-      const fullName = `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim().toLowerCase()
-      const email = (member.email ?? "").toLowerCase()
-      return fullName.includes(q) || email.includes(q)
+      const haystack = [
+        `${member.first_name ?? ""} ${member.last_name ?? ""}`.trim(),
+        member.email ?? "",
+        String(member.id),
+      ]
+        .join(" ")
+        .toLowerCase()
+      return tokens.every((token) => haystack.includes(token))
     })
   }, [teamMembers, teamSearchQuery])
 
@@ -265,9 +261,7 @@ export function CreateNotificationPage() {
     setTitle("")
     setMessage("")
     setHtmlBody("")
-    setAudienceMode("platform_role")
-    setPlatformRole("STUDENT")
-    setTeamRole("ADMIN")
+    setAudienceMode("platform_selected")
     setSelectedUserIds([])
     setSelectedTeamMemberIds([])
     setUserSearchQuery("")
@@ -281,6 +275,8 @@ export function CreateNotificationPage() {
     setInAppLevel("info")
     setEmailTemplateSlug("")
     setEmailTemplateVariables({})
+    setCurrentStep(1)
+    setSendSummary(null)
   }
 
   const selectedEmailTemplate = useMemo(
@@ -308,6 +304,29 @@ export function CreateNotificationPage() {
     selectedEmailTemplate,
     emailTemplateVariables,
   ])
+
+  const validateTargeting = useCallback((): boolean => {
+    if (audienceMode === "platform_selected") {
+      if (selectedUserIds.length === 0) {
+        toast.error("Select at least one platform user")
+        return false
+      }
+      return true
+    }
+    if (audienceMode === "team_selected") {
+      if (selectedTeamMemberIds.length === 0) {
+        toast.error("Select at least one team member")
+        return false
+      }
+      return true
+    }
+    const direct = parseDirectRecipients(directRecipients)
+    if (direct.length === 0) {
+      toast.error(channel === "sms" ? "Enter at least one phone number" : "Enter at least one email")
+      return false
+    }
+    return true
+  }, [audienceMode, selectedUserIds, selectedTeamMemberIds, directRecipients, channel])
 
   const validateStep = useCallback(
     (step: number): boolean => {
@@ -343,7 +362,18 @@ export function CreateNotificationPage() {
       }
       return true
     },
-    [channel, title, message, htmlBody, emailTemplateSlug, emailTemplateVariables, selectedEmailTemplate, isScheduling, scheduledAt],
+    [
+      channel,
+      title,
+      message,
+      htmlBody,
+      emailTemplateSlug,
+      emailTemplateVariables,
+      selectedEmailTemplate,
+      isScheduling,
+      scheduledAt,
+      validateTargeting,
+    ],
   )
 
   const goNext = useCallback(() => {
@@ -355,39 +385,9 @@ export function CreateNotificationPage() {
     setCurrentStep((s) => Math.max(s - 1, 1))
   }, [])
 
-  const validateTargeting = (): boolean => {
-    if (audienceMode === "platform_role" || audienceMode === "team_role") return true
-    if (audienceMode === "platform_selected") {
-      if (selectedUserIds.length === 0) {
-        toast.error("Select at least one platform user")
-        return false
-      }
-      return true
-    }
-    if (audienceMode === "team_selected") {
-      if (selectedTeamMemberIds.length === 0) {
-        toast.error("Select at least one team member")
-        return false
-      }
-      return true
-    }
-    const direct = parseDirectRecipients(directRecipients)
-    if (direct.length === 0) {
-      toast.error(channel === "sms" ? "Enter at least one phone number" : "Enter at least one email")
-      return false
-    }
-    return true
-  }
-
   const buildTargeting = () => {
-    if (audienceMode === "platform_role") {
-      return { role: platformRole }
-    }
     if (audienceMode === "platform_selected") {
       return { user_ids: selectedUserIds }
-    }
-    if (audienceMode === "team_role") {
-      return { team_role: teamRole }
     }
     if (audienceMode === "team_selected") {
       return { team_member_ids: selectedTeamMemberIds }
@@ -432,8 +432,6 @@ export function CreateNotificationPage() {
     const schedule = isScheduling && scheduledAt ? { scheduled_at: scheduledAt } : {}
     const audienceLabel = buildAudienceLabel(
       audienceMode,
-      platformRole,
-      teamRole,
       selectedUserIds,
       selectedTeamMemberIds,
       directRecipients,
@@ -470,7 +468,6 @@ export function CreateNotificationPage() {
         if ("user_ids" in targeting) {
           form.append("user_ids", JSON.stringify(targeting.user_ids))
         }
-        if ("team_role" in targeting) form.append("team_role", targeting.team_role)
         if ("team_member_ids" in targeting) {
           form.append("team_member_ids", JSON.stringify(targeting.team_member_ids))
         }
@@ -519,7 +516,7 @@ export function CreateNotificationPage() {
           apiMessage: result.message || undefined,
         })
         toast.success("Notification scheduled", {
-          description: `Job #${result.data.id} · ${new Date(result.data.scheduled_at).toLocaleString()}`,
+          description: `Job #${result.data.id} · ${formatAppDateTime(result.data.scheduled_at)}`,
           action: {
             label: "View scheduled",
             onClick: () => navigate("/notifications/scheduled"),
@@ -554,8 +551,6 @@ export function CreateNotificationPage() {
           description: toastDetail,
         })
       }
-
-      resetForm()
     } catch (err) {
       notifyApiError(err, "Failed to send notification")
     } finally {
@@ -639,7 +634,7 @@ export function CreateNotificationPage() {
                       const v = e.target.value as NotificationChannel
                       setChannel(v)
                       if (!isAudienceModeValidForChannel(audienceMode, v)) {
-                        setAudienceMode("platform_role")
+                        setAudienceMode("platform_selected")
                       }
                       if (v === "sms") setTitle("")
                     }}
@@ -816,8 +811,7 @@ export function CreateNotificationPage() {
           <Card
               className={cn(
                 "border shadow-none",
-                audienceMode === "platform_role" ||
-                  audienceMode === "platform_selected" ||
+                audienceMode === "platform_selected" ||
                   audienceMode === "direct"
                   ? "border-brand-200 ring-1 ring-brand-100"
                   : "border-grayScale-100",
@@ -834,18 +828,6 @@ export function CreateNotificationPage() {
                   </div>
                 </div>
                 <div className="inline-flex flex-wrap gap-1.5 text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setAudienceMode("platform_role")}
-                    className={cn(
-                      "rounded-[6px] px-3 py-2 transition-all",
-                      audienceMode === "platform_role"
-                        ? "bg-brand-500 text-white shadow-sm"
-                        : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
-                    )}
-                  >
-                    Platform role
-                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -876,27 +858,6 @@ export function CreateNotificationPage() {
                     </button>
                   )}
                 </div>
-
-                {audienceMode === "platform_role" && (
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                      Platform role
-                    </label>
-                    <Select
-                      value={platformRole}
-                      onChange={(e) => setPlatformRole(e.target.value as PlatformRole)}
-                    >
-                      {PLATFORM_ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <p className="mt-1 text-[10px] text-grayScale-400">
-                      Sends to all learners/users with this platform role.
-                    </p>
-                  </div>
-                )}
 
                 {audienceMode === "direct" && (
                   <div>
@@ -1012,9 +973,16 @@ export function CreateNotificationPage() {
                                 }}
                               />
                               <span className="truncate">
-                                {user.first_name} {user.last_name}
+                                <SearchHighlight
+                                  text={`${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()}
+                                  query={userSearchQuery}
+                                />
                                 <span className="ml-1 text-[10px] text-grayScale-400">
-                                  · {user.email ?? user.phone_number ?? `ID ${user.id}`}
+                                  ·{" "}
+                                  <SearchHighlight
+                                    text={user.email ?? user.phone_number ?? `ID ${user.id}`}
+                                    query={userSearchQuery}
+                                  />
                                 </span>
                               </span>
                             </label>
@@ -1031,7 +999,7 @@ export function CreateNotificationPage() {
               <Card
                 className={cn(
                   "border shadow-none",
-                  audienceMode === "team_role" || audienceMode === "team_selected"
+                  audienceMode === "team_selected"
                     ? "border-brand-200 ring-1 ring-brand-100"
                     : "border-grayScale-100",
                 )}
@@ -1049,18 +1017,6 @@ export function CreateNotificationPage() {
                   <div className="inline-flex flex-wrap gap-1.5 text-xs font-medium">
                     <button
                       type="button"
-                      onClick={() => setAudienceMode("team_role")}
-                      className={cn(
-                        "rounded-[6px] px-3 py-2 transition-all",
-                        audienceMode === "team_role"
-                          ? "bg-brand-500 text-white shadow-sm"
-                          : "border border-grayScale-200 bg-white text-grayScale-500 hover:border-grayScale-300 hover:text-grayScale-700",
-                      )}
-                    >
-                      Team role
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => {
                         setAudienceMode("team_selected")
                         setTeamSearchQuery("")
@@ -1075,27 +1031,6 @@ export function CreateNotificationPage() {
                       Team members
                     </button>
                   </div>
-
-                  {audienceMode === "team_role" && (
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-grayScale-500">
-                        Team role
-                      </label>
-                      <Select
-                        value={teamRole}
-                        onChange={(e) => setTeamRole(e.target.value as TeamRole)}
-                      >
-                        {TEAM_ROLES.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </Select>
-                      <p className="mt-1 text-[10px] text-grayScale-400">
-                        Sends to all staff with this team role.
-                      </p>
-                    </div>
-                  )}
 
                   {audienceMode === "team_selected" && (
                     <div className="space-y-2">
@@ -1144,6 +1079,11 @@ export function CreateNotificationPage() {
                         >
                           Unselect all
                         </button>
+                        {teamSearchQuery.trim() && filteredTeamMembers.length > 0 && (
+                          <span className="ml-auto text-[10px] text-grayScale-400">
+                            {filteredTeamMembers.length} shown
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="max-h-64 space-y-1.5 overflow-y-auto p-2">
@@ -1158,6 +1098,13 @@ export function CreateNotificationPage() {
                           No team members available to select.
                         </div>
                       )}
+                      {!teamRecipientsLoading &&
+                        teamMembers.length > 0 &&
+                        filteredTeamMembers.length === 0 && (
+                          <div className="py-4 text-center text-xs text-grayScale-400">
+                            No team members match &ldquo;{teamSearchQuery.trim()}&rdquo;.
+                          </div>
+                        )}
                       {!teamRecipientsLoading &&
                         filteredTeamMembers.map((member) => {
                           const checked = selectedTeamMemberIds.includes(member.id)
@@ -1174,6 +1121,9 @@ export function CreateNotificationPage() {
                                 className="h-3.5 w-3.5 rounded border-grayScale-300"
                                 checked={checked}
                                 onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setAudienceMode("team_selected")
+                                  }
                                   setSelectedTeamMemberIds((prev) =>
                                     e.target.checked
                                       ? [...prev, member.id]
@@ -1182,9 +1132,16 @@ export function CreateNotificationPage() {
                                 }}
                               />
                               <span className="truncate">
-                                {member.first_name} {member.last_name}
+                                <SearchHighlight
+                                  text={`${member.first_name ?? ""} ${member.last_name ?? ""}`.trim()}
+                                  query={teamSearchQuery}
+                                />
                                 <span className="ml-1 text-[10px] text-grayScale-400">
-                                  · {member.email || `ID ${member.id}`}
+                                  ·{" "}
+                                  <SearchHighlight
+                                    text={member.email ?? `ID ${member.id}`}
+                                    query={teamSearchQuery}
+                                  />
                                 </span>
                               </span>
                             </label>

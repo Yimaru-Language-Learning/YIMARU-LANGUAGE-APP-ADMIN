@@ -24,6 +24,7 @@ import { DisplayValue, NOT_ASSIGNED_LABEL, UnassignedLabel, displayValue, isUnas
 import { getTeamMemberById, updateTeamMemberStatus } from "../../api/team.api"
 import type { TeamMemberDetail } from "../../types/team.types"
 import { ActivityLogListPanel } from "../user-log/components/ActivityLogListPanel"
+import { formatAppDateTime, formatAppLongDate } from "../../lib/datetime"
 
 function formatStatusLabel(status: string): string {
   const value = status.trim()
@@ -35,30 +36,14 @@ function formatStatusLabel(status: string): string {
 }
 
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr?.trim()) return NOT_ASSIGNED_LABEL
-  const date = new Date(dateStr)
-  if (Number.isNaN(date.getTime())) return dateStr
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
+  return formatAppLongDate(dateStr, NOT_ASSIGNED_LABEL)
 }
 
 function formatDateTime(
   dateStr: string | null | undefined,
   emptyLabel: string = NOT_ASSIGNED_LABEL,
 ): string {
-  if (!dateStr?.trim()) return emptyLabel
-  const date = new Date(dateStr)
-  if (Number.isNaN(date.getTime())) return dateStr
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return formatAppDateTime(dateStr, emptyLabel)
 }
 
 function getRelativeTime(dateStr: string | null | undefined): string {

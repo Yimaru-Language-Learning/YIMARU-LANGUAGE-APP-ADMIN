@@ -10,6 +10,7 @@ import {
 } from "../ui/dropdown-menu"
 import { cn } from "../../lib/utils"
 import { formatScheduledAtLabel, toRfc3339Utc } from "../../lib/notificationBulk"
+import { APP_TIMEZONE_LABEL, getAppDateTimeParts, getAppNowCalendarDate } from "../../lib/datetime"
 
 function digitsOnly(value: string, maxLength: number) {
   return value.replace(/\D/g, "").slice(0, maxLength)
@@ -37,17 +38,42 @@ export function NotificationSchedulePicker({
 
   const label = useMemo(() => formatScheduledAtLabel(value), [value])
 
-  const clearFields = () => {
+  const clearLocalFields = () => {
     setYear("")
     setMonth("")
     setDay("")
     setHour("")
     setMinute("")
+  }
+
+  const clearFields = () => {
+    clearLocalFields()
     onChange("")
   }
 
+  const syncFieldsFromValue = (nextValue: string) => {
+    const parts = getAppDateTimeParts(nextValue)
+    if (!parts) {
+      clearLocalFields()
+      return
+    }
+    setYear(parts.year)
+    setMonth(parts.month)
+    setDay(parts.day)
+    setHour(parts.hour)
+    setMinute(parts.minute)
+  }
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (nextOpen) {
+      if (value) syncFieldsFromValue(value)
+      else clearLocalFields()
+    }
+  }
+
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -67,7 +93,9 @@ export function NotificationSchedulePicker({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[320px] p-3">
-        <p className="mb-2 text-xs font-semibold text-grayScale-500">Schedule notification</p>
+        <p className="mb-2 text-xs font-semibold text-grayScale-500">
+          Schedule notification ({APP_TIMEZONE_LABEL})
+        </p>
         <div className="space-y-2">
           <div>
             <label className="mb-1 block text-[11px] font-medium text-grayScale-500">Date</label>
@@ -104,7 +132,9 @@ export function NotificationSchedulePicker({
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-grayScale-500">Time (UTC)</label>
+            <label className="mb-1 block text-[11px] font-medium text-grayScale-500">
+              Time ({APP_TIMEZONE_LABEL})
+            </label>
             <div className="flex items-center gap-1.5">
               <Input
                 type="text"
@@ -136,10 +166,10 @@ export function NotificationSchedulePicker({
               size="sm"
               className="h-8"
               onClick={() => {
-                const now = new Date()
-                setYear(String(now.getUTCFullYear()))
-                setMonth(String(now.getUTCMonth() + 1).padStart(2, "0"))
-                setDay(String(now.getUTCDate()).padStart(2, "0"))
+                const [y, m, d] = getAppNowCalendarDate().split("-")
+                setYear(y)
+                setMonth(m)
+                setDay(d)
               }}
             >
               Today
@@ -156,7 +186,7 @@ export function NotificationSchedulePicker({
               const rfc3339 = toRfc3339Utc(year, month, day, hour, minute)
               if (!rfc3339) {
                 toast.error("Invalid schedule time", {
-                  description: "Use YYYY-MM-DD and HH:MM (24h UTC). Time must be in the future.",
+                  description: `Use YYYY-MM-DD and HH:MM (24h ${APP_TIMEZONE_LABEL}). Time must be in the future.`,
                 })
                 return
               }

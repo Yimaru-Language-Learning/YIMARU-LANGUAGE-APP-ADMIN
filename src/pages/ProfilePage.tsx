@@ -25,29 +25,14 @@ import type { TeamMeProfile } from "../types/team.types";
 import { ProfileAvatarUpload } from "../components/profile/ProfileAvatarUpload";
 import { PersonaProfilePictureUploadField } from "./personas/components/PersonaProfilePictureUploadField";
 import { UnassignedLabel, isUnassignedLabel, DisplayValue } from "../lib/displayValue"
+import { formatAppDateTime, formatAppLongDate } from "../lib/datetime"
 
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "unassigned";
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatAppLongDate(dateStr, "unassigned")
 }
 
 function formatDateTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "unassigned";
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatAppDateTime(dateStr, "unassigned")
 }
 
 function formatRoleLabel(role: string): string {

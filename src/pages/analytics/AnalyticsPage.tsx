@@ -63,6 +63,7 @@ import {
   formatRevenueAxisTick,
 } from "../../lib/analytics"
 import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
+import { formatAppDateTime } from "../../lib/datetime"
 import { isUnassignedLabel } from "../../lib/displayValue"
 import {
   displayUserAgeGroup,
@@ -466,13 +467,7 @@ export function AnalyticsPage() {
       viewers: d.viewers_reached,
     })) ?? []
 
-  const generatedAt = new Date(dashboard.generated_at).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  const generatedAt = formatAppDateTime(dashboard.generated_at)
 
   return (
     <SensitiveRevealProvider>

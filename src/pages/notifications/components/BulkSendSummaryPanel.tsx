@@ -13,6 +13,7 @@ import { Badge } from "../../../components/ui/badge"
 import { Button } from "../../../components/ui/button"
 import { Card, CardContent } from "../../../components/ui/card"
 import { channelLabel, formatScheduledAtLabel } from "../../../lib/notificationBulk"
+import { formatAppDateTimeSeconds } from "../../../lib/datetime"
 import { cn } from "../../../lib/utils"
 import type { NotificationChannel } from "../../../types/notification.types"
 import { UnassignedLabel } from "../../../lib/displayValue"
@@ -107,14 +108,7 @@ export function BulkSendSummaryPanel({ summary, onDismiss }: BulkSendSummaryPane
         : "Notification sent successfully"
     : "Notification scheduled"
 
-  const completedLabel = new Date(summary.completedAt).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
+  const completedLabel = formatAppDateTimeSeconds(summary.completedAt)
 
   const progressTotal = isImmediate ? Math.max(summary.total, 1) : 1
 
@@ -272,7 +266,7 @@ export function BulkSendSummaryPanel({ summary, onDismiss }: BulkSendSummaryPane
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-grayScale-100/80 pt-3">
           <p className="text-[11px] text-grayScale-400">
-            This summary is temporary and clears when you dismiss it or send again.
+            This summary is temporary. Dismiss it or use Clear to start a new notification.
           </p>
           <div className="flex flex-wrap gap-2">
             {!isImmediate ? (

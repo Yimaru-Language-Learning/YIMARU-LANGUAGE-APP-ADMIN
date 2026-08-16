@@ -29,22 +29,7 @@ import { usersExportQuery } from "../../lib/csvExportFilters"
 import { UnassignedLabel } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
 import { displayUserRegion, displayUserCountry } from "../../lib/userProfileFieldDisplay"
-
-function formatJoinedAt(iso: string): string {
-  if (!iso?.trim()) return "unassigned"
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return "unassigned"
-  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
-}
-
-/** Convert `<input type="datetime-local" />` value to RFC3339 for GET /users. */
-function toRfc3339FromDatetimeLocal(value: string): string | undefined {
-  const t = value?.trim()
-  if (!t) return undefined
-  const d = new Date(t)
-  if (Number.isNaN(d.getTime())) return undefined
-  return d.toISOString()
-}
+import { APP_TIMEZONE_LABEL, formatAppDateTime, fromDatetimeLocalAppValue } from "../../lib/datetime"
 
 /** Portaled menu — native `<select>` lists break inside `overflow-y-auto` shells (e.g. app main). */
 function UserListFilterDropdown({
@@ -184,8 +169,8 @@ export function UsersListPage() {
           page,
           page_size: pageSize,
           query: search || undefined,
-          created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
-          created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
+          created_after: fromDatetimeLocalAppValue(createdAfterLocal),
+          created_before: fromDatetimeLocalAppValue(createdBeforeLocal),
           country: countryFilter.trim() || undefined,
           region:
             (!countryFilter.trim() || countryFilter.trim().toLowerCase() === "ethiopia") &&
@@ -352,8 +337,8 @@ export function UsersListPage() {
     () =>
       usersExportQuery({
         query: search || undefined,
-        created_after: toRfc3339FromDatetimeLocal(createdAfterLocal),
-        created_before: toRfc3339FromDatetimeLocal(createdBeforeLocal),
+        created_after: fromDatetimeLocalAppValue(createdAfterLocal),
+        created_before: fromDatetimeLocalAppValue(createdBeforeLocal),
         country: countryFilter.trim() || undefined,
         region:
           (!countryFilter.trim() || countryFilter.trim().toLowerCase() === "ethiopia") &&
@@ -497,7 +482,7 @@ export function UsersListPage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <div className="flex flex-col gap-1">
               <label htmlFor="filter-created-after" className="text-xs font-medium text-grayScale-500">
-                Created on or after
+                Created on or after ({APP_TIMEZONE_LABEL})
               </label>
               <input
                 id="filter-created-after"
@@ -512,7 +497,7 @@ export function UsersListPage() {
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="filter-created-before" className="text-xs font-medium text-grayScale-500">
-                Created on or before
+                Created on or before ({APP_TIMEZONE_LABEL})
               </label>
               <input
                 id="filter-created-before"
@@ -663,7 +648,7 @@ export function UsersListPage() {
                       {displayUserRegion(u.region)}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-grayScale-500 whitespace-nowrap">
-                      {formatJoinedAt(u.createdAt)}
+                      {formatAppDateTime(u.createdAt, "unassigned")}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell align-top text-sm text-grayScale-600">
                       <span

@@ -6,14 +6,22 @@ import { toast } from "sonner"
 import { Badge } from "../ui/badge"
 import { cn } from "../../lib/utils"
 import { SpinnerIcon } from "../ui/spinner-icon"
+import { ToggleSwitch } from "../ui/toggle-switch"
 import { resolveNotificationDetail } from "../../api/notifications.api"
 import { useNotifications } from "../../hooks/useNotifications"
 import { NotificationDetailDialog } from "../notifications/NotificationDetailDialog"
+import { showNotificationRealtimePopup } from "../notifications/showNotificationRealtimePopup"
 import {
   DEFAULT_NOTIFICATION_TYPE_CONFIG,
   formatNotificationTimestamp,
   NOTIFICATION_TYPE_CONFIG,
 } from "../../lib/notificationDisplay"
+import {
+  getNotificationPopupEnabled,
+  NOTIFICATION_POPUP_PREFERENCE_EVENT,
+  setNotificationPopupEnabled,
+} from "../../lib/notificationPopupPreference"
+import { NOTIFICATION_REALTIME_EVENT } from "../../lib/notificationsWebSocket"
 import {
   getNotificationMessage,
   getNotificationTitle,
@@ -148,6 +156,7 @@ function NotificationItem({
 
 export function NotificationDropdown() {
   const [open, setOpen] = useState(false)
+  const [popupEnabled, setPopupEnabled] = useState(() => getNotificationPopupEnabled())
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState(false)
@@ -158,6 +167,7 @@ export function NotificationDropdown() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const slideTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const pendingDeleteRef = useRef<PendingDelete | null>(null)
+  const popupShownIdsRef = useRef<Set<string>>(new Set())
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const {
@@ -301,6 +311,39 @@ export function NotificationDropdown() {
   )
 
   useEffect(() => {
+    const onPreferenceChange = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail
+      if (typeof enabled === "boolean") {
+        setPopupEnabled(enabled)
+      }
+    }
+
+    window.addEventListener(NOTIFICATION_POPUP_PREFERENCE_EVENT, onPreferenceChange)
+    return () => {
+      window.removeEventListener(NOTIFICATION_POPUP_PREFERENCE_EVENT, onPreferenceChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onRealtime = (event: Event) => {
+      if (!popupEnabled) return
+
+      const notification = (event as CustomEvent<Notification>).detail
+      if (!notification) return
+      if (notification.delivery_channel && notification.delivery_channel !== "in_app") return
+      if (popupShownIdsRef.current.has(notification.id)) return
+
+      popupShownIdsRef.current.add(notification.id)
+      showNotificationRealtimePopup(notification, {
+        onOpen: (item) => handleOpenNotification(item),
+      })
+    }
+
+    window.addEventListener(NOTIFICATION_REALTIME_EVENT, onRealtime)
+    return () => window.removeEventListener(NOTIFICATION_REALTIME_EVENT, onRealtime)
+  }, [popupEnabled, handleOpenNotification])
+
+  useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
@@ -343,25 +386,37 @@ export function NotificationDropdown() {
 
         {open && (
           <div className="animate-in fade-in-0 zoom-in-95 absolute right-0 top-12 z-50 w-[min(380px,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] rounded-xl bg-white shadow-lg ring-1 ring-black/5">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2">
                 <h3 className="text-sm font-semibold text-grayScale-800">Notifications</h3>
                 {unreadCount > 0 && (
                   <Badge variant="default" className="px-1.5 py-0 text-[10px]">
                     {unreadCount}
                   </Badge>
                 )}
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    className="ml-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-grayScale-500 transition-colors hover:bg-grayScale-100 hover:text-grayScale-700"
+                    onClick={markAllAsRead}
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    Mark all read
+                  </button>
+                )}
               </div>
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-grayScale-500 transition-colors hover:bg-grayScale-100 hover:text-grayScale-700"
-                  onClick={markAllAsRead}
-                >
-                  <CheckCheck className="h-3.5 w-3.5" />
-                  Mark all read
-                </button>
-              )}
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-[10px] font-medium text-grayScale-500">Pop-ups</span>
+                <ToggleSwitch
+                  checked={popupEnabled}
+                  onCheckedChange={() => {
+                    const next = !popupEnabled
+                    setPopupEnabled(next)
+                    setNotificationPopupEnabled(next)
+                  }}
+                  aria-label="Show in-app notification pop-ups"
+                />
+              </div>
             </div>
 
             <div className="max-h-[480px] overflow-y-auto">

@@ -27,7 +27,7 @@ import {
   validateEmailComposeInput,
 } from "../../lib/notificationEmailCompose"
 import {
-  fetchAllPlatformUsers,
+  fetchAllPlatformUsersMatching,
   fetchAllTeamMembers,
   formatScheduledAtLabel,
   IN_APP_LEVELS,
@@ -36,6 +36,11 @@ import {
   parseDirectRecipients,
   type NotificationAudienceMode,
 } from "../../lib/notificationBulk"
+import {
+  EMPTY_PLATFORM_AUDIENCE_FILTERS,
+  type PlatformAudienceFilters,
+} from "../../lib/platformAudienceFilters"
+import { PlatformAudienceFilterPanel } from "../../components/notifications/PlatformAudienceFilterPanel"
 import { formatAppDateTime } from "../../lib/datetime"
 import {
   BulkSendSummaryPanel,
@@ -125,6 +130,9 @@ export function CreateNotificationPage() {
   const [audienceMode, setAudienceMode] = useState<NotificationAudienceMode>("platform_selected")
   const [sendMode, setSendMode] = useState<SendMode>("now")
   const [users, setUsers] = useState<UserApiDTO[]>([])
+  const [platformFilters, setPlatformFilters] = useState<PlatformAudienceFilters>(
+    EMPTY_PLATFORM_AUDIENCE_FILTERS,
+  )
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [recipientsLoading, setRecipientsLoading] = useState(false)
   const [teamRecipientsLoading, setTeamRecipientsLoading] = useState(false)
@@ -149,12 +157,23 @@ export function CreateNotificationPage() {
   const [currentStep, setCurrentStep] = useState(1)
 
   useEffect(() => {
+    if (audienceMode !== "platform_selected") return
+    let cancelled = false
     setRecipientsLoading(true)
-    fetchAllPlatformUsers()
-      .then(setUsers)
-      .catch(() => setUsers([]))
-      .finally(() => setRecipientsLoading(false))
-  }, [])
+    fetchAllPlatformUsersMatching(platformFilters)
+      .then((nextUsers) => {
+        if (!cancelled) setUsers(nextUsers)
+      })
+      .catch(() => {
+        if (!cancelled) setUsers([])
+      })
+      .finally(() => {
+        if (!cancelled) setRecipientsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [audienceMode, platformFilters])
 
   useEffect(() => {
     if (channel !== "email" && channel !== "in_app") {
@@ -217,11 +236,6 @@ export function CreateNotificationPage() {
     })
   }, [users, userSearchQuery])
 
-  const selectedUsers = useMemo(
-    () => users.filter((u) => selectedUserIds.includes(u.id)),
-    [users, selectedUserIds],
-  )
-
   const filteredSelectedCount = useMemo(
     () => filteredUsers.filter((u) => selectedUserIds.includes(u.id)).length,
     [filteredUsers, selectedUserIds],
@@ -265,6 +279,7 @@ export function CreateNotificationPage() {
     setSelectedUserIds([])
     setSelectedTeamMemberIds([])
     setUserSearchQuery("")
+    setPlatformFilters(EMPTY_PLATFORM_AUDIENCE_FILTERS)
     setTeamSearchQuery("")
     setDirectRecipients("")
     setScheduledAt("")
@@ -881,11 +896,16 @@ export function CreateNotificationPage() {
                 )}
 
                 {audienceMode === "platform_selected" && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <PlatformAudienceFilterPanel
+                      filters={platformFilters}
+                      onChange={setPlatformFilters}
+                    />
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-medium text-grayScale-500">Select users</p>
                       <span className="text-[10px] text-grayScale-400">
-                        {selectedUsers.length} selected
+                        {selectedUserIds.length} selected
+                        {users.length > 0 ? ` · ${users.length} loaded` : ""}
                       </span>
                     </div>
                     <div className="overflow-hidden rounded-lg border border-grayScale-100 bg-grayScale-50/60">
@@ -901,7 +921,7 @@ export function CreateNotificationPage() {
                           disabled={recipientsLoading}
                         />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
                           disabled={recipientsLoading || filteredUsers.length === 0}
@@ -941,7 +961,7 @@ export function CreateNotificationPage() {
                       )}
                       {!recipientsLoading && users.length === 0 && (
                         <div className="py-4 text-center text-xs text-grayScale-400">
-                          No users available to select.
+                          No users match the current filters.
                         </div>
                       )}
                       {!recipientsLoading && users.length > 0 && filteredUsers.length === 0 && (

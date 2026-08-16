@@ -10,6 +10,11 @@ import { getUsers } from "../api/users.api"
 import { getTeamMembers } from "../api/team.api"
 import { formatAppDateTime, toRfc3339FromAppLocal } from "./datetime"
 import { TEAM_ROLE_OPTIONS } from "./teamRoles"
+import {
+  platformAudienceFiltersToGetUsersParams,
+  EMPTY_PLATFORM_AUDIENCE_FILTERS,
+  type PlatformAudienceFilters,
+} from "./platformAudienceFilters"
 
 export const PLATFORM_ROLES: { value: PlatformRole; label: string }[] = [
   { value: "STUDENT", label: "Students" },
@@ -130,22 +135,44 @@ export function channelLabel(channel: string): string {
   }
 }
 
-export async function fetchAllPlatformUsers(): Promise<UserApiDTO[]> {
-  const pageSize = 50
-  const firstRes = await getUsers({ page: 1, page_size: pageSize })
-  const firstBatch = firstRes.data?.data?.users ?? []
-  const total = firstRes.data?.data?.total ?? firstBatch.length
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+export async function fetchPlatformUsersPage(
+  filters: PlatformAudienceFilters,
+  page: number,
+  pageSize: number,
+  query?: string,
+): Promise<{ users: UserApiDTO[]; total: number }> {
+  const params = platformAudienceFiltersToGetUsersParams(filters, {
+    page,
+    page_size: pageSize,
+    query: query?.trim() || undefined,
+  })
+  const res = await getUsers(params)
+  return {
+    users: res.data?.data?.users ?? [],
+    total: res.data?.data?.total ?? 0,
+  }
+}
 
-  if (totalPages <= 1) return firstBatch
+export async function fetchAllPlatformUsersMatching(
+  filters: PlatformAudienceFilters,
+  query?: string,
+): Promise<UserApiDTO[]> {
+  const pageSize = 50
+  const first = await fetchPlatformUsersPage(filters, 1, pageSize, query)
+  const totalPages = Math.max(1, Math.ceil(first.total / pageSize))
+  if (totalPages <= 1) return first.users
 
   const remaining = await Promise.all(
     Array.from({ length: totalPages - 1 }, (_, i) =>
-      getUsers({ page: i + 2, page_size: pageSize }),
+      fetchPlatformUsersPage(filters, i + 2, pageSize, query),
     ),
   )
-  const rest = remaining.flatMap((r) => r.data?.data?.users ?? [])
-  return [...firstBatch, ...rest]
+  return [...first.users, ...remaining.flatMap((page) => page.users)]
+}
+
+/** @deprecated Prefer fetchPlatformUsersPage with audience filters */
+export async function fetchAllPlatformUsers(): Promise<UserApiDTO[]> {
+  return fetchAllPlatformUsersMatching(EMPTY_PLATFORM_AUDIENCE_FILTERS)
 }
 
 export async function fetchAllTeamMembers(): Promise<TeamMember[]> {

@@ -396,7 +396,7 @@ export function normalizeUserSubscriptions(raw: unknown): UserSubscriptionsData 
   };
 }
 
-/** Query params for GET /users (RFC3339 for created_*; subscription_status: ACTIVE | PENDING | Unsubscribed).
+/** Query params for GET /users (RFC3339 for created_* / last_login_*; subscription_status: ACTIVE | PENDING | Unsubscribed | EXPIRED).
  * status: ACTIVE | PENDING | SUSPENDED | DEACTIVATED | INACTIVE (all statuses except ACTIVE).
  */
 export interface GetUsersParams {
@@ -410,25 +410,94 @@ export interface GetUsersParams {
   country?: string
   region?: string
   subscription_status?: string
+  education_level?: string
+  occupation?: string
+  age_group?: string
+  favourite_topic?: string
+  language_goal?: string
+  learning_goal?: string
+  knowledge_level?: string
+  plan_id?: number
+  plan_category?: string
+  auto_renew?: boolean
+  has_ever_paid?: boolean
+  expires_within_days?: number
+  last_login_before?: string
+  last_login_after?: string
+  days_since_last_login_min?: number
+  days_since_last_login_max?: number
+  profile_completed?: boolean
+  initial_assessment_completed?: boolean
+  min_lessons_completed?: number
+  min_modules_completed?: number
+  min_profile_completion_pct?: number
+  device_platform?: string
+  has_active_device?: boolean
 }
 
-export function buildUsersListQuery(params: GetUsersParams): Record<string, string | number> {
-  const q: Record<string, string | number> = {}
-  const addString = (key: string, value: string | undefined) => {
-    const v = value?.trim()
-    if (!v) return
-    q[key] = v
-  }
+function addOptionalString(
+  q: Record<string, string | number | boolean>,
+  key: string,
+  value: string | undefined,
+) {
+  const v = value?.trim()
+  if (!v) return
+  q[key] = v
+}
+
+function addOptionalNumber(
+  q: Record<string, string | number | boolean>,
+  key: string,
+  value: number | undefined,
+) {
+  if (value === undefined || !Number.isFinite(value)) return
+  q[key] = value
+}
+
+function addOptionalBoolean(
+  q: Record<string, string | number | boolean>,
+  key: string,
+  value: boolean | undefined,
+) {
+  if (value === undefined) return
+  q[key] = value
+}
+
+export function buildUsersListQuery(params: GetUsersParams): Record<string, string | number | boolean> {
+  const q: Record<string, string | number | boolean> = {}
   if (params.page !== undefined) q.page = params.page
   if (params.page_size !== undefined) q.page_size = params.page_size
-  addString("role", params.role)
-  addString("status", params.status)
-  addString("query", params.query)
-  addString("created_before", params.created_before)
-  addString("created_after", params.created_after)
-  addString("country", params.country)
-  addString("region", params.region)
-  addString("subscription_status", params.subscription_status)
+  addOptionalString(q, "role", params.role)
+  addOptionalString(q, "status", params.status)
+  addOptionalString(q, "query", params.query)
+  addOptionalString(q, "created_before", params.created_before)
+  addOptionalString(q, "created_after", params.created_after)
+  addOptionalString(q, "country", params.country)
+  addOptionalString(q, "region", params.region)
+  addOptionalString(q, "subscription_status", params.subscription_status)
+  addOptionalString(q, "education_level", params.education_level)
+  addOptionalString(q, "occupation", params.occupation)
+  addOptionalString(q, "age_group", params.age_group)
+  addOptionalString(q, "favourite_topic", params.favourite_topic)
+  addOptionalString(q, "language_goal", params.language_goal)
+  addOptionalString(q, "learning_goal", params.learning_goal)
+  addOptionalString(q, "knowledge_level", params.knowledge_level)
+  addOptionalString(q, "plan_category", params.plan_category)
+  addOptionalString(q, "device_platform", params.device_platform)
+  addOptionalString(q, "last_login_before", params.last_login_before)
+  addOptionalString(q, "last_login_after", params.last_login_after)
+  addOptionalNumber(q, "plan_id", params.plan_id)
+  addOptionalNumber(q, "expires_within_days", params.expires_within_days)
+  addOptionalNumber(q, "days_since_last_login_min", params.days_since_last_login_min)
+  addOptionalNumber(q, "days_since_last_login_max", params.days_since_last_login_max)
+  addOptionalNumber(q, "min_lessons_completed", params.min_lessons_completed)
+  addOptionalNumber(q, "min_modules_completed", params.min_modules_completed)
+  addOptionalNumber(q, "min_profile_completion_pct", params.min_profile_completion_pct)
+  addOptionalBoolean(q, "auto_renew", params.auto_renew)
+  addOptionalBoolean(q, "has_ever_paid", params.has_ever_paid)
+  addOptionalBoolean(q, "profile_completed", params.profile_completed)
+  addOptionalBoolean(q, "initial_assessment_completed", params.initial_assessment_completed)
+  addOptionalBoolean(q, "has_active_device", params.has_active_device)
   return q
 }
 

@@ -766,6 +766,7 @@ export const unlinkExamPrepPracticeParent = (
 ) =>
   http.delete<UpdatePracticeParentsResponse>(
     `/exam-prep/practices/${practiceId}/parents/${parent.parent_kind.toUpperCase()}/${parent.parent_id}`,
+    { skipErrorToast: true },
   )
 
 /** DELETE /exam-prep/practices/:practiceId */
@@ -967,6 +968,7 @@ export const unlinkPracticeParent = (
 ) =>
   http.delete<UpdatePracticeParentsResponse>(
     `/practices/${practiceId}/parents/${parent.parent_kind.toUpperCase()}/${parent.parent_id}`,
+    { skipErrorToast: true },
   )
 
 /** PUT /practices/:id */

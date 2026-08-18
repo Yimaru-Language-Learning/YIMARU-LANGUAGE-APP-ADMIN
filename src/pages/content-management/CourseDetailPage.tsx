@@ -550,20 +550,22 @@ export function CourseDetailPage() {
               </ContentPageDescription>
             </div>
             <div className="flex items-center gap-4">
-              <PracticeActionButton
-                variant="outline"
-                className="rounded-[6px] border-brand-500 text-brand-500 "
-                pathOptions={{
-                  isExamPrep: false,
-                  level: programIdParam,
-                  courseId: courseIdParam,
-                  backTo: "modules",
-                }}
-                parentLabel={displayTitle}
-              >
-                <Calendar className="h-4 w-4" />
-                Add Practice
-              </PracticeActionButton>
+              {practices.length === 0 ? (
+                <PracticeActionButton
+                  variant="outline"
+                  className="rounded-[6px] border-brand-500 text-brand-500 "
+                  pathOptions={{
+                    isExamPrep: false,
+                    level: programIdParam,
+                    courseId: courseIdParam,
+                    backTo: "modules",
+                  }}
+                  parentLabel={displayTitle}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Add Practice
+                </PracticeActionButton>
+              ) : null}
               <Button
                 className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
                 onClick={() => setIsAddModuleOpen(true)}

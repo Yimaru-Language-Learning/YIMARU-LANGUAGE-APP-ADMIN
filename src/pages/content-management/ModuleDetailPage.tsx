@@ -28,7 +28,7 @@ import {
 import { parentsFromPractice } from "../../lib/practiceParents";
 import {
   isPracticeParentUnlinkNotLinkedError,
-  mapPracticeParentUnlinkError,
+  resolveModuleContextUnlinkParent,
   unlinkPracticeFromParent,
 } from "../../lib/practiceParentUnlink";
 import { Button } from "../../components/ui/button";
@@ -352,19 +352,31 @@ export function ModuleDetailPage() {
     }
   };
 
-  const moduleParent = useMemo((): PracticeParent | null => {
+  const moduleLessonIds = useMemo(
+    () => lessons.map((lesson) => lesson.id).filter((id) => id > 0),
+    [lessons],
+  );
+
+  const practiceUnlinkParent = useMemo((): PracticeParent | null => {
     const mid = Number(moduleId);
-    if (!Number.isFinite(mid) || mid < 1) return null;
-    return { parent_kind: "MODULE", parent_id: mid };
-  }, [moduleId]);
+    if (!practiceToUnlink || !Number.isFinite(mid) || mid < 1) return null;
+    return resolveModuleContextUnlinkParent(
+      practiceToUnlink,
+      mid,
+      moduleLessonIds,
+    );
+  }, [moduleId, moduleLessonIds, practiceToUnlink]);
 
   const confirmUnlinkPractice = async () => {
-    if (!practiceToUnlink || !moduleParent) return;
+    if (!practiceToUnlink || !practiceUnlinkParent) {
+      toast.error("This practice is not linked to this module.");
+      return;
+    }
     setUnlinkingPractice(true);
     try {
       await unlinkPracticeFromParent({
         practiceId: practiceToUnlink.id,
-        parent: moduleParent,
+        parent: practiceUnlinkParent,
         isExamPrep: false,
       });
       toast.success(`Practice removed from ${displayModuleName}`);
@@ -377,7 +389,7 @@ export function ModuleDetailPage() {
         await loadModulePractices();
         return;
       }
-      notifyApiError(err, "Could not remove from module");
+      notifyApiError(e, "Could not remove from module");
     } finally {
       setUnlinkingPractice(false);
     }
@@ -529,15 +541,17 @@ export function ModuleDetailPage() {
           </ContentPageDescription>
         </div>
         <div className="flex items-center gap-3">
-          <PracticeActionButton
-            variant="outline"
-            className="rounded-[6px] border-brand-500 text-brand-500 "
-            pathOptions={modulePracticePathOptions}
-            parentLabel={displayModuleName}
-          >
-            <Calendar className="h-4 w-4" />
-            Add Practice
-          </PracticeActionButton>
+          {practices.length === 0 ? (
+            <PracticeActionButton
+              variant="outline"
+              className="rounded-[6px] border-brand-500 text-brand-500 "
+              pathOptions={modulePracticePathOptions}
+              parentLabel={displayModuleName}
+            >
+              <Calendar className="h-4 w-4" />
+              Add Practice
+            </PracticeActionButton>
+          ) : null}
           <Button
             className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
             onClick={() =>
@@ -632,16 +646,19 @@ export function ModuleDetailPage() {
                   onEdit={() => openEditLesson(lesson)}
                   onDelete={() => setDeletingLesson(lesson)}
                   description={lesson.description}
-                  onAddPractice={() =>
-                    setLessonPracticeChoice({
-                      isExamPrep: false,
-                      level,
-                      courseId,
-                      moduleId,
-                      lessonId: String(lesson.id),
-                      lessonTitle: lesson.title,
-                      backTo: "lesson",
-                    })
+                  onAddPractice={
+                    lesson.has_practice
+                      ? undefined
+                      : () =>
+                          setLessonPracticeChoice({
+                            isExamPrep: false,
+                            level,
+                            courseId,
+                            moduleId,
+                            lessonId: String(lesson.id),
+                            lessonTitle: lesson.title,
+                            backTo: "lesson",
+                          })
                   }
                   onViewPractices={() =>
                     navigate(
@@ -926,7 +943,7 @@ export function ModuleDetailPage() {
         </div>
       )}
 
-      {practiceToUnlink && moduleParent ? (
+      {practiceToUnlink && practiceUnlinkParent ? (
         <Dialog
           open={practiceToUnlink != null}
           onOpenChange={(open) => {
@@ -948,8 +965,8 @@ export function ModuleDetailPage() {
                 {parentsFromPractice(practiceToUnlink).filter(
                   (p) =>
                     !(
-                      p.parent_kind === moduleParent.parent_kind &&
-                      p.parent_id === moduleParent.parent_id
+                      p.parent_kind === practiceUnlinkParent.parent_kind &&
+                      p.parent_id === practiceUnlinkParent.parent_id
                     ),
                 ).length === 0
                   ? " The practice will be unlinked until re-attached."

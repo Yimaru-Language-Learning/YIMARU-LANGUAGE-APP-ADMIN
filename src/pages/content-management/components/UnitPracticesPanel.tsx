@@ -172,7 +172,7 @@ export function UnitPracticesPanel({
         await load()
         return
       }
-      notifyApiError(err, "Could not remove location")
+      notifyApiError(e, "Could not remove location")
     } finally {
       setUnlinking(false)
     }

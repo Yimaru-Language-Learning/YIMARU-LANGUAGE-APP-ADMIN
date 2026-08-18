@@ -310,6 +310,12 @@ export function LessonPracticesPage() {
           <ContentPageDescription className="mt-1 text-[14px] text-grayScale-500">
             Review speaking practices linked to this lesson.
           </ContentPageDescription>
+          {!isExamPrep && practices.length >= 1 ? (
+            <p className="mt-2 text-sm text-grayScale-500">
+              This lesson already has a practice. Remove or unlink it before adding
+              another.
+            </p>
+          ) : null}
           {!loading && !loadError ? (
             <p className="mt-2 text-sm text-grayScale-500">
               {totalCount} practice{totalCount === 1 ? "" : "s"} linked to this
@@ -333,14 +339,16 @@ export function LessonPracticesPage() {
             />
             Refresh
           </Button>
-          <PracticeActionButton
-            className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
-            pathOptions={practicePathOptions}
-            parentLabel={displayTitle}
-          >
-            <Calendar className="h-4 w-4" />
-            Add Practice
-          </PracticeActionButton>
+          {!isExamPrep && practices.length === 0 ? (
+            <PracticeActionButton
+              className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
+              pathOptions={practicePathOptions}
+              parentLabel={displayTitle}
+            >
+              <Calendar className="h-4 w-4" />
+              Add Practice
+            </PracticeActionButton>
+          ) : null}
         </div>
       </div>
 

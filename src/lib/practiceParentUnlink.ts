@@ -67,6 +67,27 @@ export function resolveModuleContextUnlinkParent(
   )
 }
 
+/** Parent row to DELETE when removing a practice from a course's practice tab. */
+export function resolveCourseContextUnlinkParent(
+  practice: ParentContextPractice,
+  courseId: number,
+  moduleIdsInCourse: number[],
+): PracticeParent | null {
+  const parents = parentsFromPractice(practice)
+  const courseLink = parents.find(
+    (p) => p.parent_kind === "COURSE" && p.parent_id === courseId,
+  )
+  if (courseLink) return courseLink
+
+  const moduleIds = new Set(moduleIdsInCourse.filter((id) => id > 0))
+  const moduleLink = parents.find(
+    (p) => p.parent_kind === "MODULE" && moduleIds.has(p.parent_id),
+  )
+  if (moduleLink) return moduleLink
+
+  return parents.find((p) => p.parent_kind === "LESSON") ?? null
+}
+
 export async function unlinkPracticeFromParent(opts: {
   practiceId: number
   parent: PracticeParent

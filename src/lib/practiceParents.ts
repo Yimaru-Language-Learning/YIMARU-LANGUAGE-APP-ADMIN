@@ -156,3 +156,6 @@ export function primaryPracticeParent(parents: PracticeParent[]): PracticeParent
 export function newParentRow(kind: PracticeParentKind = "LESSON"): PracticeParent {
   return { parent_kind: kind, parent_id: 0 }
 }
+
+export const learnEnglishPracticeLimitHint =
+  "This location already has a practice. Remove or unlink it before adding another."

@@ -29,6 +29,7 @@ import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.s
 import alertSrc from "../../assets/Alert.svg";
 import {
   deleteTopLevelCourseModule,
+  deleteParentLinkedPractice,
   getPracticesByParentCourse,
   getProgramCourses,
   getTopLevelCourseModules,
@@ -41,6 +42,7 @@ import { refreshFileUrl, resolveFileUrl } from "../../api/files.api";
 import type {
   ParentContextPractice,
   ContentAccessTier,
+  PracticeParent,
   PracticePublishStatus,
   ProgramCourseListItem,
   TopLevelCourseModuleItem,
@@ -63,6 +65,12 @@ import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
 import { ModulePracticeCard } from "./components/ModulePracticeCard";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
 import { DisplayValue } from "../../lib/displayValue"
+import { learnEnglishPracticeLimitHint, parentsFromPractice } from "../../lib/practiceParents"
+import {
+  isPracticeParentUnlinkNotLinkedError,
+  resolveCourseContextUnlinkParent,
+  unlinkPracticeFromParent,
+} from "../../lib/practiceParentUnlink"
 import { SearchHighlight } from "../../components/SearchHighlight"
 
 const MODULE_CARD_GRADIENT = "from-[#8E44AD] to-[#C39BD3]" as const;
@@ -197,6 +205,12 @@ export function CourseDetailPage() {
   const [publishStatusPracticeId, setPublishStatusPracticeId] = useState<
     number | null
   >(null);
+  const [practiceToUnlink, setPracticeToUnlink] =
+    useState<ParentContextPractice | null>(null);
+  const [practiceToDelete, setPracticeToDelete] =
+    useState<ParentContextPractice | null>(null);
+  const [unlinkingPractice, setUnlinkingPractice] = useState(false);
+  const [deletingPractice, setDeletingPractice] = useState(false);
   const [publishStatusModuleId, setPublishStatusModuleId] = useState<
     number | null
   >(null);
@@ -396,6 +410,65 @@ export function CourseDetailPage() {
     }
   };
 
+  const courseModuleIds = useMemo(
+    () => modules.map((module) => module.id).filter((id) => id > 0),
+    [modules],
+  );
+
+  const practiceUnlinkParent = useMemo((): PracticeParent | null => {
+    if (!practiceToUnlink || !Number.isFinite(courseIdNum) || courseIdNum < 1) {
+      return null;
+    }
+    return resolveCourseContextUnlinkParent(
+      practiceToUnlink,
+      courseIdNum,
+      courseModuleIds,
+    );
+  }, [courseIdNum, courseModuleIds, practiceToUnlink]);
+
+  const confirmUnlinkPractice = async () => {
+    if (!practiceToUnlink || !practiceUnlinkParent) {
+      toast.error("This practice is not linked to this course.");
+      return;
+    }
+    setUnlinkingPractice(true);
+    try {
+      await unlinkPracticeFromParent({
+        practiceId: practiceToUnlink.id,
+        parent: practiceUnlinkParent,
+        isExamPrep: false,
+      });
+      toast.success(`Practice removed from ${displayTitle}`);
+      setPracticeToUnlink(null);
+      await loadCoursePractices();
+    } catch (e) {
+      if (isPracticeParentUnlinkNotLinkedError(e)) {
+        toast.info("This location was already removed.");
+        setPracticeToUnlink(null);
+        await loadCoursePractices();
+        return;
+      }
+      notifyApiError(e, "Could not remove from course");
+    } finally {
+      setUnlinkingPractice(false);
+    }
+  };
+
+  const confirmDeletePractice = async () => {
+    if (!practiceToDelete) return;
+    setDeletingPractice(true);
+    try {
+      await deleteParentLinkedPractice(practiceToDelete.id);
+      toast.success("Practice deleted");
+      setPracticeToDelete(null);
+      await loadCoursePractices();
+    } catch (e: unknown) {
+      notifyApiError(e, "Failed to delete practice");
+    } finally {
+      setDeletingPractice(false);
+    }
+  };
+
   const handleModulePublishStatus = async (
     moduleId: number,
     nextStatus: PracticePublishStatus,
@@ -550,22 +623,24 @@ export function CourseDetailPage() {
               </ContentPageDescription>
             </div>
             <div className="flex items-center gap-4">
-              {practices.length === 0 ? (
-                <PracticeActionButton
-                  variant="outline"
-                  className="rounded-[6px] border-brand-500 text-brand-500 "
-                  pathOptions={{
-                    isExamPrep: false,
-                    level: programIdParam,
-                    courseId: courseIdParam,
-                    backTo: "modules",
-                  }}
-                  parentLabel={displayTitle}
-                >
-                  <Calendar className="h-4 w-4" />
-                  Add Practice
-                </PracticeActionButton>
-              ) : null}
+              <PracticeActionButton
+                variant="outline"
+                className="rounded-[6px] border-brand-500 text-brand-500 "
+                pathOptions={{
+                  isExamPrep: false,
+                  level: programIdParam,
+                  courseId: courseIdParam,
+                  backTo: "modules",
+                }}
+                parentLabel={displayTitle}
+                disabled={practices.length > 0}
+                title={
+                  practices.length > 0 ? learnEnglishPracticeLimitHint : undefined
+                }
+              >
+                <Calendar className="h-4 w-4" />
+                Add Practice
+              </PracticeActionButton>
               <Button
                 className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
                 onClick={() => setIsAddModuleOpen(true)}
@@ -884,6 +959,8 @@ export function CourseDetailPage() {
                       onSaveAsDraft={() =>
                         void handlePracticePublishStatus(practice.id, "DRAFT")
                       }
+                      onUnlink={() => setPracticeToUnlink(practice)}
+                      onDelete={() => setPracticeToDelete(practice)}
                     />
                   ))}
                 </div>
@@ -924,6 +1001,90 @@ export function CourseDetailPage() {
               )}
             </div>
           )}
+
+          {practiceToUnlink && practiceUnlinkParent ? (
+            <Dialog
+              open={practiceToUnlink != null}
+              onOpenChange={(open) => {
+                if (!open && !unlinkingPractice) setPracticeToUnlink(null);
+              }}
+            >
+              <DialogContent className="max-w-md rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle>Remove from this course?</DialogTitle>
+                  <DialogDescription>
+                    <span className="font-semibold text-grayScale-800">
+                      {practiceToUnlink.title}
+                    </span>{" "}
+                    will be detached from{" "}
+                    <span className="font-semibold text-grayScale-800">
+                      {displayTitle}
+                    </span>
+                    .
+                    {parentsFromPractice(practiceToUnlink).filter(
+                      (p) =>
+                        !(
+                          p.parent_kind === practiceUnlinkParent.parent_kind &&
+                          p.parent_id === practiceUnlinkParent.parent_id
+                        ),
+                    ).length === 0
+                      ? " The practice will be unlinked until re-attached."
+                      : " Other locations are unaffected."}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPracticeToUnlink(null)}
+                    disabled={unlinkingPractice}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => void confirmUnlinkPractice()}
+                    disabled={unlinkingPractice}
+                  >
+                    {unlinkingPractice ? "Removing…" : "Remove from course"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : null}
+
+          <Dialog
+            open={practiceToDelete != null}
+            onOpenChange={(open) => {
+              if (!open && !deletingPractice) setPracticeToDelete(null);
+            }}
+          >
+            <DialogContent className="max-w-md rounded-2xl">
+              <DialogHeader>
+                <DialogTitle>Delete this practice permanently?</DialogTitle>
+                <DialogDescription>
+                  <span className="font-semibold text-grayScale-800">
+                    {practiceToDelete?.title}
+                  </span>{" "}
+                  and all of its questions will be deleted. This cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 border-t border-grayScale-100 px-6 py-4 sm:justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setPracticeToDelete(null)}
+                  disabled={deletingPractice}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-red-500 hover:bg-red-600"
+                  onClick={() => void confirmDeletePractice()}
+                  disabled={deletingPractice}
+                >
+                  {deletingPractice ? "Deleting…" : "Delete practice"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {deletingModule && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">

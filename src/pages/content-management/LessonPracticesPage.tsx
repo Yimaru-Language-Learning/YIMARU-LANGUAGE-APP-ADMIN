@@ -11,7 +11,10 @@ import {
   setExamPrepPracticePublishStatus,
   setLearnEnglishPracticePublishStatus,
 } from "../../api/courses.api";
-import { parentsFromPractice } from "../../lib/practiceParents";
+import {
+  learnEnglishPracticeLimitHint,
+  parentsFromPractice,
+} from "../../lib/practiceParents";
 import {
   isPracticeParentUnlinkNotLinkedError,
   unlinkPracticeFromParent,
@@ -312,8 +315,7 @@ export function LessonPracticesPage() {
           </ContentPageDescription>
           {!isExamPrep && practices.length >= 1 ? (
             <p className="mt-2 text-sm text-grayScale-500">
-              This lesson already has a practice. Remove or unlink it before adding
-              another.
+              {learnEnglishPracticeLimitHint}
             </p>
           ) : null}
           {!loading && !loadError ? (
@@ -339,16 +341,20 @@ export function LessonPracticesPage() {
             />
             Refresh
           </Button>
-          {!isExamPrep && practices.length === 0 ? (
-            <PracticeActionButton
-              className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
-              pathOptions={practicePathOptions}
-              parentLabel={displayTitle}
-            >
-              <Calendar className="h-4 w-4" />
-              Add Practice
-            </PracticeActionButton>
-          ) : null}
+          <PracticeActionButton
+            className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
+            pathOptions={practicePathOptions}
+            parentLabel={displayTitle}
+            disabled={!isExamPrep && practices.length >= 1}
+            title={
+              !isExamPrep && practices.length >= 1
+                ? learnEnglishPracticeLimitHint
+                : undefined
+            }
+          >
+            <Calendar className="h-4 w-4" />
+            Add Practice
+          </PracticeActionButton>
         </div>
       </div>
 

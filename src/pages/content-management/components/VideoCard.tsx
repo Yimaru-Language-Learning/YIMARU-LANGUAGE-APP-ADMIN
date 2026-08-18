@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { isAdminOrSuperAdminRole } from "../../../lib/sessionRole";
+import { learnEnglishPracticeLimitHint } from "../../../lib/practiceParents";
 import { cn } from "../../../lib/utils";
 import { SearchHighlight } from "../../../components/SearchHighlight";
 import {
@@ -85,6 +86,8 @@ interface VideoCardProps {
   onDelete?: () => void;
   /** When set (e.g. on module lesson cards), shows an "Add practice" control scoped to this lesson. */
   onAddPractice?: () => void;
+  /** When true, the lesson card shows a disabled "Add practice" control. */
+  addPracticeDisabled?: boolean;
   /** When set with hoverModuleActions, shows a book icon next to edit/delete on thumbnail hover. */
   onViewPractices?: () => void;
   onPublish?: () => void;
@@ -113,6 +116,7 @@ export function VideoCard({
   onDelete,
   onPublish,
   onAddPractice,
+  addPracticeDisabled = false,
   onViewPractices,
   onTogglePublishStatus,
   publishStatusUpdating = false,
@@ -575,8 +579,11 @@ export function VideoCard({
               type="button"
               variant="outline"
               className="h-9 w-full rounded-[6px] border-brand-200 text-[12px] font-bold text-brand-600 hover:bg-brand-50"
+              disabled={addPracticeDisabled}
+              title={addPracticeDisabled ? learnEnglishPracticeLimitHint : undefined}
               onClick={(e) => {
                 e.stopPropagation();
+                if (addPracticeDisabled) return;
                 onAddPractice();
               }}
             >

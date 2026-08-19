@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog"
 import { ContentListSearchFilterBar } from "./ContentListSearchFilterBar"
-import { ModulePracticeCard } from "./ModulePracticeCard"
+import { PracticeSelectableGrid } from "./PracticeSelectableGrid"
 import {
   filterBySearchAndPublishStatus,
   type PublishStatusFilter,
@@ -249,21 +249,26 @@ export function CatalogCoursePracticesPanel({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {filteredPractices.map((practice) => (
-            <ModulePracticeCard
-              key={practice.id}
-              practice={practice}
-              statusUpdating={publishStatusUpdatingId === practice.id}
-              searchQuery={listSearch}
-              onEdit={() => navigate(editPracticeHref(practice.id))}
-              onPublish={() => void handlePracticePublishStatus(practice.id, "PUBLISHED")}
-              onSaveAsDraft={() => void handlePracticePublishStatus(practice.id, "DRAFT")}
-              onUnlink={() => setPracticeToUnlink(practice)}
-              onDelete={() => setPracticeToDelete(practice)}
-            />
-          ))}
-        </div>
+        <PracticeSelectableGrid
+          practices={filteredPractices}
+          searchQuery={listSearch}
+          locationLabel={courseName}
+          unlinkContext={{ scope: "catalog_course", catalogCourseId }}
+          isExamPrep
+          publishStatusUpdatingId={publishStatusUpdatingId}
+          onReload={load}
+          unlinkActionLabel="Remove from course"
+          deleteActionLabel="Delete selected"
+          onEdit={(practice) => navigate(editPracticeHref(practice.id))}
+          onPublish={(practiceId) =>
+            void handlePracticePublishStatus(practiceId, "PUBLISHED")
+          }
+          onSaveAsDraft={(practiceId) =>
+            void handlePracticePublishStatus(practiceId, "DRAFT")
+          }
+          onUnlink={(practice) => setPracticeToUnlink(practice)}
+          onDelete={(practice) => setPracticeToDelete(practice)}
+        />
       )}
 
       <Dialog

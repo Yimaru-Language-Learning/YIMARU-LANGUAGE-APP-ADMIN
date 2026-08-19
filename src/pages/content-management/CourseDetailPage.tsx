@@ -62,7 +62,7 @@ import {
 } from "../../lib/fetchAllOffsetPages";
 import { AddModuleModal } from "./components/AddModuleModal";
 import { ModuleIconUploadField } from "./components/ModuleIconUploadField";
-import { ModulePracticeCard } from "./components/ModulePracticeCard";
+import { PracticeSelectableGrid } from "./components/PracticeSelectableGrid";
 import { PublishPracticeButton } from "./components/PublishPracticeButton";
 import { DisplayValue } from "../../lib/displayValue"
 import { learnEnglishPracticeLimitHint, parentsFromPractice } from "../../lib/practiceParents"
@@ -938,32 +938,33 @@ export function CourseDetailPage() {
                   {practicesLoadError}
                 </div>
               ) : filteredPractices.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                  {filteredPractices.map((practice) => (
-                    <ModulePracticeCard
-                      key={practice.id}
-                      practice={practice}
-                      statusUpdating={publishStatusPracticeId === practice.id}
-                      searchQuery={practiceSearch}
-                      onEdit={() =>
-                        navigate(
-                          `/new-content/learn-english/${programIdParam}/courses/${courseIdNum}/edit-practice/${practice.id}?backTo=courses`,
-                        )
-                      }
-                      onPublish={() =>
-                        void handlePracticePublishStatus(
-                          practice.id,
-                          "PUBLISHED",
-                        )
-                      }
-                      onSaveAsDraft={() =>
-                        void handlePracticePublishStatus(practice.id, "DRAFT")
-                      }
-                      onUnlink={() => setPracticeToUnlink(practice)}
-                      onDelete={() => setPracticeToDelete(practice)}
-                    />
-                  ))}
-                </div>
+                <PracticeSelectableGrid
+                  practices={filteredPractices}
+                  searchQuery={practiceSearch}
+                  locationLabel={displayTitle}
+                  unlinkContext={{
+                    scope: "course",
+                    courseId: courseIdNum,
+                    moduleIds: courseModuleIds,
+                  }}
+                  publishStatusUpdatingId={publishStatusPracticeId}
+                  onReload={loadCoursePractices}
+                  unlinkActionLabel="Remove from course"
+                  deleteActionLabel="Delete selected"
+                  onEdit={(practice) =>
+                    navigate(
+                      `/new-content/learn-english/${programIdParam}/courses/${courseIdNum}/edit-practice/${practice.id}?backTo=courses`,
+                    )
+                  }
+                  onPublish={(practiceId) =>
+                    void handlePracticePublishStatus(practiceId, "PUBLISHED")
+                  }
+                  onSaveAsDraft={(practiceId) =>
+                    void handlePracticePublishStatus(practiceId, "DRAFT")
+                  }
+                  onUnlink={(practice) => setPracticeToUnlink(practice)}
+                  onDelete={(practice) => setPracticeToDelete(practice)}
+                />
               ) : (
                 <div className="mx-auto flex max-w-4xl flex-col items-center justify-center rounded-[40px] border-2 border-dashed border-[#F1F5F9] bg-white px-4 py-32 shadow-sm">
                   <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#FAF5FF]">

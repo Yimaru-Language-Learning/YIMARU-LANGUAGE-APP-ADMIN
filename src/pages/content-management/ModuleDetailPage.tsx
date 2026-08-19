@@ -49,7 +49,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { resolveThumbnailForPreview } from "../../lib/videoPreview";
 import { cn } from "../../lib/utils";
 import { LessonMediaUploadField } from "./components/LessonMediaUploadField";
-import { ModulePracticeCard } from "./components/ModulePracticeCard";
+import { PracticeSelectableGrid } from "./components/PracticeSelectableGrid";
 import { VideoCard } from "./components/VideoCard";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
 import { ContentPageDescription } from "./components/ContentPageDescription";
@@ -746,32 +746,33 @@ export function ModuleDetailPage() {
                 {practicesLoadError}
               </div>
             ) : filteredPractices.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredPractices.map((practice) => (
-                  <ModulePracticeCard
-                    key={practice.id}
-                    practice={practice}
-                    statusUpdating={publishStatusPracticeId === practice.id}
-                    searchQuery={practiceSearch}
-                    onEdit={() =>
-                      navigate(
-                        `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/edit-practice/${practice.id}?backTo=module`,
-                      )
-                    }
-                    onPublish={() =>
-                      void handlePracticePublishStatus(
-                        practice.id,
-                        "PUBLISHED",
-                      )
-                    }
-                    onSaveAsDraft={() =>
-                      void handlePracticePublishStatus(practice.id, "DRAFT")
-                    }
-                    onUnlink={() => setPracticeToUnlink(practice)}
-                    onDelete={() => setPracticeToDelete(practice)}
-                  />
-                ))}
-              </div>
+              <PracticeSelectableGrid
+                practices={filteredPractices}
+                searchQuery={practiceSearch}
+                locationLabel={displayModuleName}
+                unlinkContext={{
+                  scope: "module",
+                  moduleId: Number(moduleId),
+                  lessonIds: moduleLessonIds,
+                }}
+                publishStatusUpdatingId={publishStatusPracticeId}
+                onReload={loadModulePractices}
+                unlinkActionLabel="Remove from module"
+                deleteActionLabel="Delete selected"
+                onEdit={(practice) =>
+                  navigate(
+                    `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/edit-practice/${practice.id}?backTo=module`,
+                  )
+                }
+                onPublish={(practiceId) =>
+                  void handlePracticePublishStatus(practiceId, "PUBLISHED")
+                }
+                onSaveAsDraft={(practiceId) =>
+                  void handlePracticePublishStatus(practiceId, "DRAFT")
+                }
+                onUnlink={(practice) => setPracticeToUnlink(practice)}
+                onDelete={(practice) => setPracticeToDelete(practice)}
+              />
             ) : (
               <div className="flex flex-col items-center justify-center py-32 px-4 rounded-[40px] border-2 border-dashed border-[#F1F5F9] bg-white max-w-4xl mx-auto shadow-sm">
                 <div className="h-20 w-20 rounded-full bg-[#FAF5FF] flex items-center justify-center mb-6">

@@ -31,6 +31,9 @@ type ModulePracticeCardProps = {
   onSaveAsDraft?: () => void;
   onUnlink?: () => void;
   onDelete?: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (selected: boolean) => void;
 };
 
 export function ModulePracticeCard({
@@ -42,6 +45,9 @@ export function ModulePracticeCard({
   onSaveAsDraft,
   onUnlink,
   onDelete,
+  selectable = false,
+  selected = false,
+  onSelectedChange,
 }: ModulePracticeCardProps) {
   const isPublished = isPracticePublished(practice);
   const statusLabel = practicePublishStatus(practice) ?? "DRAFT";
@@ -81,8 +87,25 @@ export function ModulePracticeCard({
 
   return (
     <>
-      <Card className="group flex flex-col overflow-hidden rounded-[20px] border border-grayScale-50 bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-grayScale-400/5">
+      <Card className={cn(
+        "group flex flex-col overflow-hidden rounded-[20px] border bg-white shadow-sm transition-all hover:shadow-xl hover:shadow-grayScale-400/5",
+        selected ? "border-brand-400 ring-2 ring-brand-200" : "border-grayScale-50",
+      )}>
         <div className="relative h-44 w-full overflow-hidden bg-gradient-to-br from-[#E0F2FE] to-[#BFDBFE]">
+          {selectable ? (
+            <label className="absolute left-3 top-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-[6px] bg-white/95 shadow-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-grayScale-300 text-brand-500 focus:ring-brand-500"
+                checked={selected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onSelectedChange?.(e.target.checked);
+                }}
+                aria-label={`Select ${practice.title}`}
+              />
+            </label>
+          ) : null}
           {thumbnailSrc && !thumbFailed ? (
             <ResolvedImage
               src={thumbnailSrc}

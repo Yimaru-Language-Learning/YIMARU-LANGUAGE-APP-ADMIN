@@ -21,7 +21,7 @@ import {
 } from "../../lib/practiceParentUnlink";
 import { Button } from "../../components/ui/button";
 import { PracticeActionButton } from "./components/PracticeActionButton";
-import { ModulePracticeCard } from "./components/ModulePracticeCard";
+import { PracticeSelectableGrid } from "./components/PracticeSelectableGrid";
 import {
   Dialog,
   DialogContent,
@@ -413,25 +413,26 @@ export function LessonPracticesPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {filteredPractices.map((p) => (
-                <ModulePracticeCard
-                  key={p.id}
-                  practice={p}
-                  statusUpdating={publishStatusUpdatingId === p.id}
-                  searchQuery={listSearch}
-                  onEdit={() => void navigate(editPracticeHref(p.id))}
-                  onPublish={() =>
-                    void handlePracticePublishStatus(p.id, "PUBLISHED")
-                  }
-                  onSaveAsDraft={() =>
-                    void handlePracticePublishStatus(p.id, "DRAFT")
-                  }
-                  onUnlink={() => setPracticeToUnlink(p)}
-                  onDelete={() => setPracticeToDelete(p)}
-                />
-              ))}
-            </div>
+            <PracticeSelectableGrid
+              practices={filteredPractices}
+              searchQuery={listSearch}
+              locationLabel={displayTitle}
+              unlinkContext={{ scope: "lesson", lessonId: lid }}
+              isExamPrep={isExamPrep}
+              publishStatusUpdatingId={publishStatusUpdatingId}
+              onReload={load}
+              unlinkActionLabel="Remove from lesson"
+              deleteActionLabel="Delete selected"
+              onEdit={(practice) => void navigate(editPracticeHref(practice.id))}
+              onPublish={(practiceId) =>
+                void handlePracticePublishStatus(practiceId, "PUBLISHED")
+              }
+              onSaveAsDraft={(practiceId) =>
+                void handlePracticePublishStatus(practiceId, "DRAFT")
+              }
+              onUnlink={(practice) => setPracticeToUnlink(practice)}
+              onDelete={(practice) => setPracticeToDelete(practice)}
+            />
           )}
         </div>
       )}

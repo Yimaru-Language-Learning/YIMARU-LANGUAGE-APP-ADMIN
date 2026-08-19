@@ -12,8 +12,10 @@ import { unwrapPracticesList } from "../../../lib/parentContextPractice"
 import { fetchAllOffsetPages } from "../../../lib/fetchAllOffsetPages"
 import { parentsFromPractice } from "../../../lib/practiceParents"
 import {
+  hasUnitDirectPracticeLink,
   isPracticeParentUnlinkNotLinkedError,
-  mapPracticeParentUnlinkError,
+  listUnitContextUnlinkParents,
+  practiceUnlinkBlockedMessage,
   unlinkPracticeFromParent,
 } from "../../../lib/practiceParentUnlink"
 import { Button } from "../../../components/ui/button"
@@ -32,7 +34,6 @@ import {
 } from "../../../lib/contentListFilters"
 import type {
   ParentContextPractice,
-  PracticeParent,
   PracticePublishStatus,
 } from "../../../types/course.types"
 
@@ -148,20 +149,30 @@ export function UnitPracticesPanel({
     }
   }
 
-  const unitParent = useMemo(
-    (): PracticeParent => ({ parent_kind: "UNIT", parent_id: unitId }),
+  const unitUnlinkContext = useMemo(
+    () => ({ scope: "unit" as const, unitId }),
     [unitId],
   )
 
   const confirmUnlinkPractice = async () => {
     if (!practiceToUnlink) return
+    const parents = listUnitContextUnlinkParents(practiceToUnlink, unitId)
+    if (parents.length === 0) {
+      toast.error(
+        practiceUnlinkBlockedMessage(practiceToUnlink, unitUnlinkContext) ??
+          "This practice is not linked to this unit.",
+      )
+      return
+    }
     setUnlinking(true)
     try {
-      await unlinkPracticeFromParent({
-        practiceId: practiceToUnlink.id,
-        parent: unitParent,
-        isExamPrep: true,
-      })
+      for (const parent of parents) {
+        await unlinkPracticeFromParent({
+          practiceId: practiceToUnlink.id,
+          parent,
+          isExamPrep: true,
+        })
+      }
       toast.success(`Practice removed from ${unitName}`)
       setPracticeToUnlink(null)
       await load()
@@ -252,7 +263,7 @@ export function UnitPracticesPanel({
           practices={filteredPractices}
           searchQuery={listSearch}
           locationLabel={unitName}
-          unlinkContext={{ scope: "unit", unitId }}
+          unlinkContext={unitUnlinkContext}
           isExamPrep
           publishStatusUpdatingId={publishStatusUpdatingId}
           onReload={load}
@@ -265,7 +276,16 @@ export function UnitPracticesPanel({
           onSaveAsDraft={(practiceId) =>
             void handlePracticePublishStatus(practiceId, "DRAFT")
           }
-          onUnlink={(practice) => setPracticeToUnlink(practice)}
+          onUnlink={(practice) => {
+            if (!hasUnitDirectPracticeLink(practice, unitId)) {
+              toast.info(
+                practiceUnlinkBlockedMessage(practice, unitUnlinkContext) ??
+                  "This practice is not directly linked to this unit.",
+              )
+              return
+            }
+            setPracticeToUnlink(practice)
+          }}
           onDelete={(practice) => setPracticeToDelete(practice)}
         />
       )}

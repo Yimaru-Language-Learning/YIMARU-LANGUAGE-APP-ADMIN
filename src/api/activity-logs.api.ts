@@ -114,6 +114,7 @@ function buildQueryParams(filters?: ActivityLogFilters): Record<string, string |
   if (filters?.resource_id != null) params.resource_id = filters.resource_id
   if (filters?.after?.trim()) params.after = filters.after.trim()
   if (filters?.before?.trim()) params.before = filters.before.trim()
+  if (filters?.search?.trim()) params.search = filters.search.trim()
   return params
 }
 

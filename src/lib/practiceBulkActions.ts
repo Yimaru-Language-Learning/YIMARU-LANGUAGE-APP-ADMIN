@@ -2,23 +2,15 @@ import {
   deleteExamPrepPractice,
   deleteParentLinkedPractice,
 } from "../api/courses.api"
-import type { ParentContextPractice, PracticeParent } from "../types/course.types"
-import { parentsFromPractice } from "./practiceParents"
+import type { ParentContextPractice } from "../types/course.types"
 import {
   isPracticeParentUnlinkNotLinkedError,
-  listCourseContextUnlinkParents,
-  listModuleContextUnlinkParents,
-  resolveCourseContextUnlinkParent,
-  resolveModuleContextUnlinkParent,
+  listPracticeUnlinkParentsForScope,
+  type PracticeUnlinkScope,
   unlinkPracticeFromParent,
 } from "./practiceParentUnlink"
 
-export type PracticeUnlinkContext =
-  | { scope: "course"; courseId: number; moduleIds: number[]; lessonIds?: number[] }
-  | { scope: "module"; moduleId: number; lessonIds: number[] }
-  | { scope: "lesson"; lessonId: number }
-  | { scope: "unit"; unitId: number }
-  | { scope: "catalog_course"; catalogCourseId: number }
+export type PracticeUnlinkContext = PracticeUnlinkScope
 
 export type BulkPracticeActionResult = {
   succeeded: number
@@ -26,76 +18,11 @@ export type BulkPracticeActionResult = {
   failed: number
 }
 
-export function resolvePracticeUnlinkParent(
-  practice: ParentContextPractice,
-  context: PracticeUnlinkContext,
-): PracticeParent | null {
-  switch (context.scope) {
-    case "course":
-      return resolveCourseContextUnlinkParent(
-        practice,
-        context.courseId,
-        context.moduleIds,
-        context.lessonIds ?? [],
-      )
-    case "module":
-      return resolveModuleContextUnlinkParent(
-        practice,
-        context.moduleId,
-        context.lessonIds,
-      )
-    case "lesson":
-      return (
-        parentsFromPractice(practice).find(
-          (p) =>
-            p.parent_kind === "LESSON" && p.parent_id === context.lessonId,
-        ) ?? null
-      )
-    case "unit":
-      return (
-        parentsFromPractice(practice).find(
-          (p) => p.parent_kind === "UNIT" && p.parent_id === context.unitId,
-        ) ?? null
-      )
-    case "catalog_course":
-      return (
-        parentsFromPractice(practice).find(
-          (p) =>
-            p.parent_kind === "CATALOG_COURSE" &&
-            p.parent_id === context.catalogCourseId,
-        ) ?? null
-      )
-  }
-}
-
 export function listPracticeUnlinkParents(
   practice: ParentContextPractice,
   context: PracticeUnlinkContext,
-): PracticeParent[] {
-  switch (context.scope) {
-    case "course":
-      return listCourseContextUnlinkParents(
-        practice,
-        context.courseId,
-        context.moduleIds,
-        context.lessonIds ?? [],
-      )
-    case "module":
-      return listModuleContextUnlinkParents(
-        practice,
-        context.moduleId,
-        context.lessonIds,
-      )
-    case "lesson": {
-      const parent = resolvePracticeUnlinkParent(practice, context)
-      return parent ? [parent] : []
-    }
-    case "unit":
-    case "catalog_course": {
-      const parent = resolvePracticeUnlinkParent(practice, context)
-      return parent ? [parent] : []
-    }
-  }
+) {
+  return listPracticeUnlinkParentsForScope(practice, context)
 }
 
 export async function bulkUnlinkPractices(opts: {
@@ -188,7 +115,7 @@ export function formatBulkPracticeActionToast(
       kind: "info",
       message:
         action === "unlink"
-          ? "Selected practices were already removed from this location."
+          ? "Selected practices are not directly linked to this location (they may appear via a child module or lesson)."
           : "No practices were deleted.",
     }
   }
@@ -206,7 +133,7 @@ export function formatBulkPracticeActionToast(
   if (action === "unlink") {
     let message = `Removed ${succeeded} practice${succeeded === 1 ? "" : "s"} from ${locationLabel}.`
     if (skipped > 0) {
-      message += ` ${skipped} ${skipped === 1 ? "was" : "were"} already removed or could not be matched.`
+      message += ` ${skipped} ${skipped === 1 ? "was" : "were"} not directly linked here.`
     }
     if (failed > 0) {
       message += ` ${failed} failed.`

@@ -16,7 +16,10 @@ import {
   parentsFromPractice,
 } from "../../lib/practiceParents";
 import {
+  hasLessonDirectPracticeLink,
   isPracticeParentUnlinkNotLinkedError,
+  listLessonContextUnlinkParents,
+  practiceUnlinkBlockedMessage,
   unlinkPracticeFromParent,
 } from "../../lib/practiceParentUnlink";
 import { Button } from "../../components/ui/button";
@@ -33,7 +36,6 @@ import type {
   ExamPrepLessonPractice,
   GetExamPrepLessonPracticesResponse,
   ParentContextPractice,
-  PracticeParent,
   PracticePublishStatus,
 } from "../../types/course.types";
 import { ContentListSearchFilterBar } from "./components/ContentListSearchFilterBar";
@@ -243,20 +245,35 @@ export function LessonPracticesPage() {
     }
   };
 
-  const lessonParent = useMemo(
-    (): PracticeParent => ({ parent_kind: "LESSON", parent_id: lid }),
+  const lessonUnlinkContext = useMemo(
+    () => ({ scope: "lesson" as const, lessonId: lid }),
     [lid],
   );
 
+  const practiceUnlinkParents = useMemo(() => {
+    if (!practiceToUnlink) return [];
+    return listLessonContextUnlinkParents(practiceToUnlink, lid);
+  }, [lid, practiceToUnlink]);
+
   const confirmUnlinkPractice = async () => {
-    if (!practiceToUnlink) return;
+    if (!practiceToUnlink || practiceUnlinkParents.length === 0) {
+      toast.error(
+        practiceToUnlink
+          ? practiceUnlinkBlockedMessage(practiceToUnlink, lessonUnlinkContext) ??
+              "This practice is not linked to this lesson."
+          : "This practice is not linked to this lesson.",
+      );
+      return;
+    }
     setUnlinking(true);
     try {
-      await unlinkPracticeFromParent({
-        practiceId: practiceToUnlink.id,
-        parent: lessonParent,
-        isExamPrep,
-      });
+      for (const parent of practiceUnlinkParents) {
+        await unlinkPracticeFromParent({
+          practiceId: practiceToUnlink.id,
+          parent,
+          isExamPrep,
+        });
+      }
       toast.success(`Practice removed from ${displayTitle}`);
       setPracticeToUnlink(null);
       await load();
@@ -417,7 +434,7 @@ export function LessonPracticesPage() {
               practices={filteredPractices}
               searchQuery={listSearch}
               locationLabel={displayTitle}
-              unlinkContext={{ scope: "lesson", lessonId: lid }}
+              unlinkContext={lessonUnlinkContext}
               isExamPrep={isExamPrep}
               publishStatusUpdatingId={publishStatusUpdatingId}
               onReload={load}
@@ -430,7 +447,16 @@ export function LessonPracticesPage() {
               onSaveAsDraft={(practiceId) =>
                 void handlePracticePublishStatus(practiceId, "DRAFT")
               }
-              onUnlink={(practice) => setPracticeToUnlink(practice)}
+              onUnlink={(practice) => {
+                if (!hasLessonDirectPracticeLink(practice, lid)) {
+                  toast.info(
+                    practiceUnlinkBlockedMessage(practice, lessonUnlinkContext) ??
+                      "This practice is not directly linked to this lesson.",
+                  );
+                  return;
+                }
+                setPracticeToUnlink(practice);
+              }}
               onDelete={(practice) => setPracticeToDelete(practice)}
             />
           )}

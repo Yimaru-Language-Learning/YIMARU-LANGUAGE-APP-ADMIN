@@ -45,91 +45,210 @@ export function isPracticeParentUnlinkNotLinkedError(err: unknown): boolean {
   return msg.includes("not linked")
 }
 
-/** Parent row to DELETE when removing a practice from a module's practice tab. */
-export function resolveModuleContextUnlinkParent(
+function directParentsMatching(
   practice: ParentContextPractice,
-  moduleId: number,
-  lessonIdsInModule: number[],
-): PracticeParent | null {
-  return (
-    listModuleContextUnlinkParents(practice, moduleId, lessonIdsInModule)[0] ??
-    null
-  )
-}
-
-/** All parent rows to remove when detaching a practice from a module practice tab. */
-export function listModuleContextUnlinkParents(
-  practice: ParentContextPractice,
-  moduleId: number,
-  lessonIdsInModule: number[],
+  kind: PracticeParent["parent_kind"],
+  parentId: number,
 ): PracticeParent[] {
-  const parents = parentsFromPractice(practice)
-  const lessonIds = new Set(lessonIdsInModule.filter((id) => id > 0))
-  const targets: PracticeParent[] = []
-
-  for (const parent of parents) {
-    if (parent.parent_kind === "COURSE") continue
-    if (parent.parent_kind === "MODULE" && parent.parent_id === moduleId) {
-      targets.push(parent)
-    } else if (
-      parent.parent_kind === "LESSON" &&
-      lessonIds.has(parent.parent_id)
-    ) {
-      targets.push(parent)
-    }
-  }
-
-  return dedupeParents(targets)
-}
-
-/** Parent row to DELETE when removing a practice from a course's practice tab. */
-export function resolveCourseContextUnlinkParent(
-  practice: ParentContextPractice,
-  courseId: number,
-  moduleIdsInCourse: number[],
-  lessonIdsInCourse: number[] = [],
-): PracticeParent | null {
-  return (
-    listCourseContextUnlinkParents(
-      practice,
-      courseId,
-      moduleIdsInCourse,
-      lessonIdsInCourse,
-    )[0] ?? null
+  return dedupeParents(
+    parentsFromPractice(practice).filter(
+      (parent) => parent.parent_kind === kind && parent.parent_id === parentId,
+    ),
   )
 }
 
-/** All parent rows to remove when detaching a practice from a course practice tab. */
+/** Learn English — course practice tab (direct COURSE link only). */
 export function listCourseContextUnlinkParents(
   practice: ParentContextPractice,
   courseId: number,
-  moduleIdsInCourse: number[],
-  lessonIdsInCourse: number[] = [],
 ): PracticeParent[] {
-  const parents = parentsFromPractice(practice)
+  return directParentsMatching(practice, "COURSE", courseId)
+}
+
+export function resolveCourseContextUnlinkParent(
+  practice: ParentContextPractice,
+  courseId: number,
+): PracticeParent | null {
+  return listCourseContextUnlinkParents(practice, courseId)[0] ?? null
+}
+
+export function hasCourseDirectPracticeLink(
+  practice: ParentContextPractice,
+  courseId: number,
+): boolean {
+  return listCourseContextUnlinkParents(practice, courseId).length > 0
+}
+
+/** Learn English — module practice tab (direct MODULE link only). */
+export function listModuleContextUnlinkParents(
+  practice: ParentContextPractice,
+  moduleId: number,
+): PracticeParent[] {
+  return directParentsMatching(practice, "MODULE", moduleId)
+}
+
+export function resolveModuleContextUnlinkParent(
+  practice: ParentContextPractice,
+  moduleId: number,
+): PracticeParent | null {
+  return listModuleContextUnlinkParents(practice, moduleId)[0] ?? null
+}
+
+export function hasModuleDirectPracticeLink(
+  practice: ParentContextPractice,
+  moduleId: number,
+): boolean {
+  return listModuleContextUnlinkParents(practice, moduleId).length > 0
+}
+
+/** Learn English / Exam Prep — lesson practice tab (direct LESSON link only). */
+export function listLessonContextUnlinkParents(
+  practice: ParentContextPractice,
+  lessonId: number,
+): PracticeParent[] {
+  return directParentsMatching(practice, "LESSON", lessonId)
+}
+
+export function hasLessonDirectPracticeLink(
+  practice: ParentContextPractice,
+  lessonId: number,
+): boolean {
+  return listLessonContextUnlinkParents(practice, lessonId).length > 0
+}
+
+/** Exam Prep — unit practice tab (direct UNIT link only). */
+export function listUnitContextUnlinkParents(
+  practice: ParentContextPractice,
+  unitId: number,
+): PracticeParent[] {
+  return directParentsMatching(practice, "UNIT", unitId)
+}
+
+export function hasUnitDirectPracticeLink(
+  practice: ParentContextPractice,
+  unitId: number,
+): boolean {
+  return listUnitContextUnlinkParents(practice, unitId).length > 0
+}
+
+/** Exam Prep — catalog course practice tab (direct CATALOG_COURSE link only). */
+export function listCatalogCourseContextUnlinkParents(
+  practice: ParentContextPractice,
+  catalogCourseId: number,
+): PracticeParent[] {
+  return directParentsMatching(practice, "CATALOG_COURSE", catalogCourseId)
+}
+
+export function hasCatalogCourseDirectPracticeLink(
+  practice: ParentContextPractice,
+  catalogCourseId: number,
+): boolean {
+  return listCatalogCourseContextUnlinkParents(practice, catalogCourseId).length > 0
+}
+
+export function isPracticeLinkedViaDescendantInCourse(
+  practice: ParentContextPractice,
+  courseId: number,
+  moduleIdsInCourse: number[],
+  lessonIdsInCourse: number[],
+): boolean {
+  if (hasCourseDirectPracticeLink(practice, courseId)) return false
   const moduleIds = new Set(moduleIdsInCourse.filter((id) => id > 0))
   const lessonIds = new Set(lessonIdsInCourse.filter((id) => id > 0))
-  const targets: PracticeParent[] = []
+  return parentsFromPractice(practice).some(
+    (parent) =>
+      (parent.parent_kind === "MODULE" && moduleIds.has(parent.parent_id)) ||
+      (parent.parent_kind === "LESSON" && lessonIds.has(parent.parent_id)),
+  )
+}
 
-  for (const parent of parents) {
-    if (parent.parent_kind === "COURSE" && parent.parent_id === courseId) {
-      targets.push(parent)
-    } else if (
-      parent.parent_kind === "MODULE" &&
-      moduleIds.has(parent.parent_id)
-    ) {
-      targets.push(parent)
-    } else if (
-      parent.parent_kind === "LESSON" &&
-      (lessonIds.size === 0 || lessonIds.has(parent.parent_id))
-    ) {
-      if (lessonIds.size > 0) {
-        targets.push(parent)
-      }
-    }
+export function isPracticeLinkedViaLessonInModule(
+  practice: ParentContextPractice,
+  moduleId: number,
+  lessonIdsInModule: number[],
+): boolean {
+  if (hasModuleDirectPracticeLink(practice, moduleId)) return false
+  const lessonIds = new Set(lessonIdsInModule.filter((id) => id > 0))
+  return parentsFromPractice(practice).some(
+    (parent) =>
+      parent.parent_kind === "LESSON" && lessonIds.has(parent.parent_id),
+  )
+}
+
+export type PracticeUnlinkScope =
+  | { scope: "course"; courseId: number; moduleIds?: number[]; lessonIds?: number[] }
+  | { scope: "module"; moduleId: number; lessonIds?: number[] }
+  | { scope: "lesson"; lessonId: number }
+  | { scope: "unit"; unitId: number }
+  | { scope: "catalog_course"; catalogCourseId: number }
+
+export function listPracticeUnlinkParentsForScope(
+  practice: ParentContextPractice,
+  context: PracticeUnlinkScope,
+): PracticeParent[] {
+  switch (context.scope) {
+    case "course":
+      return listCourseContextUnlinkParents(practice, context.courseId)
+    case "module":
+      return listModuleContextUnlinkParents(practice, context.moduleId)
+    case "lesson":
+      return listLessonContextUnlinkParents(practice, context.lessonId)
+    case "unit":
+      return listUnitContextUnlinkParents(practice, context.unitId)
+    case "catalog_course":
+      return listCatalogCourseContextUnlinkParents(
+        practice,
+        context.catalogCourseId,
+      )
   }
+}
 
-  return dedupeParents(targets)
+export function hasDirectPracticeLinkForScope(
+  practice: ParentContextPractice,
+  context: PracticeUnlinkScope,
+): boolean {
+  return listPracticeUnlinkParentsForScope(practice, context).length > 0
+}
+
+export function practiceUnlinkBlockedMessage(
+  practice: ParentContextPractice,
+  context: PracticeUnlinkScope,
+): string | null {
+  if (hasDirectPracticeLinkForScope(practice, context)) return null
+
+  switch (context.scope) {
+    case "course": {
+      if (
+        isPracticeLinkedViaDescendantInCourse(
+          practice,
+          context.courseId,
+          context.moduleIds ?? [],
+          context.lessonIds ?? [],
+        )
+      ) {
+        return "This practice is linked to a module or lesson, not this course. Open that location to unlink it."
+      }
+      return "This practice is not linked to this course."
+    }
+    case "module": {
+      if (
+        isPracticeLinkedViaLessonInModule(
+          practice,
+          context.moduleId,
+          context.lessonIds ?? [],
+        )
+      ) {
+        return "This practice is linked to a lesson, not this module. Open the lesson to unlink it."
+      }
+      return "This practice is not linked to this module."
+    }
+    case "lesson":
+      return "This practice is not linked to this lesson."
+    case "unit":
+      return "This practice is not linked to this unit."
+    case "catalog_course":
+      return "This practice is not linked to this catalog course."
+  }
 }
 
 export async function unlinkPracticeFromParent(opts: {

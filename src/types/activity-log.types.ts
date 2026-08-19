@@ -47,6 +47,7 @@ export interface ActivityLogFilters {
   resource_id?: number
   after?: string
   before?: string
+  search?: string
   limit?: number
   offset?: number
 }

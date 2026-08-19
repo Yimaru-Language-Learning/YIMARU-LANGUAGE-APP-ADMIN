@@ -12,8 +12,10 @@ import { unwrapPracticesList } from "../../../lib/parentContextPractice"
 import { fetchAllOffsetPages } from "../../../lib/fetchAllOffsetPages"
 import { parentsFromPractice } from "../../../lib/practiceParents"
 import {
+  hasCatalogCourseDirectPracticeLink,
   isPracticeParentUnlinkNotLinkedError,
-  mapPracticeParentUnlinkError,
+  listCatalogCourseContextUnlinkParents,
+  practiceUnlinkBlockedMessage,
   unlinkPracticeFromParent,
 } from "../../../lib/practiceParentUnlink"
 import { Button } from "../../../components/ui/button"
@@ -32,7 +34,6 @@ import {
 } from "../../../lib/contentListFilters"
 import type {
   ParentContextPractice,
-  PracticeParent,
   PracticePublishStatus,
 } from "../../../types/course.types"
 
@@ -149,20 +150,33 @@ export function CatalogCoursePracticesPanel({
     }
   }
 
-  const catalogParent = useMemo(
-    (): PracticeParent => ({ parent_kind: "CATALOG_COURSE", parent_id: catalogCourseId }),
+  const catalogUnlinkContext = useMemo(
+    () => ({ scope: "catalog_course" as const, catalogCourseId }),
     [catalogCourseId],
   )
 
   const confirmUnlinkPractice = async () => {
     if (!practiceToUnlink) return
+    const parents = listCatalogCourseContextUnlinkParents(
+      practiceToUnlink,
+      catalogCourseId,
+    )
+    if (parents.length === 0) {
+      toast.error(
+        practiceUnlinkBlockedMessage(practiceToUnlink, catalogUnlinkContext) ??
+          "This practice is not linked to this catalog course.",
+      )
+      return
+    }
     setUnlinking(true)
     try {
-      await unlinkPracticeFromParent({
-        practiceId: practiceToUnlink.id,
-        parent: catalogParent,
-        isExamPrep: true,
-      })
+      for (const parent of parents) {
+        await unlinkPracticeFromParent({
+          practiceId: practiceToUnlink.id,
+          parent,
+          isExamPrep: true,
+        })
+      }
       toast.success(`Practice removed from ${courseName}`)
       setPracticeToUnlink(null)
       await load()
@@ -253,7 +267,7 @@ export function CatalogCoursePracticesPanel({
           practices={filteredPractices}
           searchQuery={listSearch}
           locationLabel={courseName}
-          unlinkContext={{ scope: "catalog_course", catalogCourseId }}
+          unlinkContext={catalogUnlinkContext}
           isExamPrep
           publishStatusUpdatingId={publishStatusUpdatingId}
           onReload={load}
@@ -266,7 +280,16 @@ export function CatalogCoursePracticesPanel({
           onSaveAsDraft={(practiceId) =>
             void handlePracticePublishStatus(practiceId, "DRAFT")
           }
-          onUnlink={(practice) => setPracticeToUnlink(practice)}
+          onUnlink={(practice) => {
+            if (!hasCatalogCourseDirectPracticeLink(practice, catalogCourseId)) {
+              toast.info(
+                practiceUnlinkBlockedMessage(practice, catalogUnlinkContext) ??
+                  "This practice is not directly linked to this catalog course.",
+              )
+              return
+            }
+            setPracticeToUnlink(practice)
+          }}
           onDelete={(practice) => setPracticeToDelete(practice)}
         />
       )}

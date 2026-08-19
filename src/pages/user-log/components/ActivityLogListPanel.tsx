@@ -62,7 +62,6 @@ import { cn } from "../../../lib/utils"
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../../lib/csv-export"
 import { activityLogExportQuery } from "../../../lib/csvExportFilters"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
-import { fetchAllOffsetPages } from "../../../lib/fetchAllOffsetPages"
 import type { ActivityLog, ActivityLogFilters } from "../../../types/activity-log.types"
 import { ActorCell, ActorLabel } from "./ActorLabel"
 import { ActorHoverCard } from "./ActorHoverCard"
@@ -96,6 +95,7 @@ export function ActivityLogListPanel({
   scrollable = false,
 }: ActivityLogListPanelProps) {
   const [logs, setLogs] = useState<ActivityLog[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -105,6 +105,7 @@ export function ActivityLogListPanel({
   const [resourceTypeFilter, setResourceTypeFilter] = useState("")
   const [resourceIdFilter, setResourceIdFilter] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [dateAfter, setDateAfter] = useState("")
   const [dateBefore, setDateBefore] = useState("")
 
@@ -123,6 +124,7 @@ export function ActivityLogListPanel({
     }
     if (dateAfter) filters.after = toRfc3339StartOfDay(dateAfter)
     if (dateBefore) filters.before = toRfc3339EndOfDay(dateBefore)
+    if (debouncedSearch) filters.search = debouncedSearch
     return filters
   }, [
     fixedActorId,
@@ -131,6 +133,7 @@ export function ActivityLogListPanel({
     resourceIdFilter,
     dateAfter,
     dateBefore,
+    debouncedSearch,
   ])
 
   const exportParams = useMemo(
@@ -142,21 +145,32 @@ export function ActivityLogListPanel({
     setLoading(true)
     setError(null)
     try {
-      const all = await fetchAllOffsetPages(async (offset, limit) => {
-        const data = await getActivityLogs({ ...listFilters, limit, offset })
-        return { items: data.logs, total_count: data.total_count }
+      const offset = (page - 1) * pageSize
+      const data = await getActivityLogs({
+        ...listFilters,
+        limit: pageSize,
+        offset,
       })
-      setLogs(all)
+      setLogs(data.logs)
+      setTotalCount(data.total_count)
     } catch (e) {
       console.error("Failed to fetch activity logs:", e)
       setLogs([])
+      setTotalCount(0)
       const msg = getApiErrorMessage(e, "Failed to load activity logs")
       setError(msg)
       notifyApiError(e, "Failed to load activity logs")
     } finally {
       setLoading(false)
     }
-  }, [listFilters])
+  }, [listFilters, page, pageSize])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim())
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchQuery])
 
   useEffect(() => {
     void fetchLogs()
@@ -164,7 +178,16 @@ export function ActivityLogListPanel({
 
   useEffect(() => {
     setPage(1)
-  }, [actionFilter, resourceTypeFilter, resourceIdFilter, dateAfter, dateBefore, fixedActorId, pageSize, searchQuery])
+  }, [
+    actionFilter,
+    resourceTypeFilter,
+    resourceIdFilter,
+    dateAfter,
+    dateBefore,
+    fixedActorId,
+    pageSize,
+    debouncedSearch,
+  ])
 
   const handleViewDetail = async (logId: number) => {
     setDialogOpen(true)
@@ -202,36 +225,11 @@ export function ActivityLogListPanel({
 
   const hasActiveFilters = activeFilterCount > 0 || Boolean(searchQuery.trim())
 
-  const filteredLogs = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    if (!q) return logs
-    return logs.filter((log) => {
-      const haystack = [
-        log.message,
-        log.action,
-        log.actor_name,
-        log.actor_email,
-        log.actor_role,
-        log.resource_type,
-        log.resource_id != null ? String(log.resource_id) : "",
-        JSON.stringify(log.metadata ?? {}),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-      return haystack.includes(q)
-    })
-  }, [logs, searchQuery])
-
-  const totalCount = filteredLogs.length
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage = Math.min(page, pageCount)
   const startEntry = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
   const endEntry = Math.min(safePage * pageSize, totalCount)
-  const paginatedLogs = useMemo(() => {
-    const start = (safePage - 1) * pageSize
-    return filteredLogs.slice(start, start + pageSize)
-  }, [filteredLogs, safePage, pageSize])
+  const paginatedLogs = logs
   const showActorColumn = fixedActorId == null
   const columnCount = showActorColumn ? 6 : 5
 
@@ -287,7 +285,7 @@ export function ActivityLogListPanel({
               <p className="text-2xl font-bold text-grayScale-600">
                 {logs[0]?.created_at ? getRelativeActivityTime(logs[0].created_at) : <UnassignedLabel />}
               </p>
-              <p className="text-xs text-grayScale-400">Latest loaded</p>
+              <p className="text-xs text-grayScale-400">Latest on this page</p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-xl border bg-white p-4">
@@ -295,8 +293,8 @@ export function ActivityLogListPanel({
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-grayScale-600">{filteredLogs.length}</p>
-              <p className="text-xs text-grayScale-400">Rows after search</p>
+              <p className="text-2xl font-bold text-grayScale-600">{paginatedLogs.length}</p>
+              <p className="text-xs text-grayScale-400">Rows on this page</p>
             </div>
           </div>
         </div>

@@ -28,8 +28,10 @@ import {
 } from "../../lib/fetchAllOffsetPages";
 import { learnEnglishPracticeLimitHint, parentsFromPractice } from "../../lib/practiceParents";
 import {
+  hasModuleDirectPracticeLink,
   isPracticeParentUnlinkNotLinkedError,
   listModuleContextUnlinkParents,
+  practiceUnlinkBlockedMessage,
   unlinkPracticeFromParent,
 } from "../../lib/practiceParentUnlink";
 import { Button } from "../../components/ui/button";
@@ -361,19 +363,29 @@ export function ModuleDetailPage() {
     [lessons],
   );
 
+  const moduleUnlinkContext = useMemo(
+    () => ({
+      scope: "module" as const,
+      moduleId: Number(moduleId),
+      lessonIds: moduleLessonIds,
+    }),
+    [moduleId, moduleLessonIds],
+  );
+
   const practiceUnlinkParents = useMemo((): PracticeParent[] => {
     const mid = Number(moduleId);
     if (!practiceToUnlink || !Number.isFinite(mid) || mid < 1) return [];
-    return listModuleContextUnlinkParents(
-      practiceToUnlink,
-      mid,
-      moduleLessonIds,
-    );
-  }, [moduleId, moduleLessonIds, practiceToUnlink]);
+    return listModuleContextUnlinkParents(practiceToUnlink, mid);
+  }, [moduleId, practiceToUnlink]);
 
   const confirmUnlinkPractice = async () => {
     if (!practiceToUnlink || practiceUnlinkParents.length === 0) {
-      toast.error("This practice is not linked to this module.");
+      toast.error(
+        practiceToUnlink
+          ? practiceUnlinkBlockedMessage(practiceToUnlink, moduleUnlinkContext) ??
+              "This practice is not linked to this module."
+          : "This practice is not linked to this module.",
+      );
       return;
     }
     setUnlinkingPractice(true);
@@ -752,11 +764,7 @@ export function ModuleDetailPage() {
                 practices={filteredPractices}
                 searchQuery={practiceSearch}
                 locationLabel={displayModuleName}
-                unlinkContext={{
-                  scope: "module",
-                  moduleId: Number(moduleId),
-                  lessonIds: moduleLessonIds,
-                }}
+                unlinkContext={moduleUnlinkContext}
                 publishStatusUpdatingId={publishStatusPracticeId}
                 onReload={loadModulePractices}
                 unlinkActionLabel="Remove from module"
@@ -772,7 +780,17 @@ export function ModuleDetailPage() {
                 onSaveAsDraft={(practiceId) =>
                   void handlePracticePublishStatus(practiceId, "DRAFT")
                 }
-                onUnlink={(practice) => setPracticeToUnlink(practice)}
+                onUnlink={(practice) => {
+                  const mid = Number(moduleId);
+                  if (!hasModuleDirectPracticeLink(practice, mid)) {
+                    toast.info(
+                      practiceUnlinkBlockedMessage(practice, moduleUnlinkContext) ??
+                        "This practice is not directly linked to this module.",
+                    );
+                    return;
+                  }
+                  setPracticeToUnlink(practice);
+                }}
                 onDelete={(practice) => setPracticeToDelete(practice)}
               />
             ) : (

@@ -5,7 +5,7 @@ import {
 } from "../api/courses.api"
 import type { ParentContextPractice, PracticeParent } from "../types/course.types"
 import { normalizeParentContextPractice } from "./parentContextPractice"
-import { formatPracticeParentLabel, parentsFromPractice } from "./practiceParents"
+import { formatPracticeParentLabel, parentsFromPractice, dedupeParents } from "./practiceParents"
 
 export function unlinkParentConfirmMessage(
   locationLabel: string,
@@ -51,20 +51,35 @@ export function resolveModuleContextUnlinkParent(
   moduleId: number,
   lessonIdsInModule: number[],
 ): PracticeParent | null {
-  const parents = parentsFromPractice(practice)
-  const moduleLink = parents.find(
-    (p) => p.parent_kind === "MODULE" && p.parent_id === moduleId,
-  )
-  if (moduleLink) return moduleLink
-
-  const lessonIds = new Set(lessonIdsInModule.filter((id) => id > 0))
-  if (lessonIds.size === 0) return null
-
   return (
-    parents.find(
-      (p) => p.parent_kind === "LESSON" && lessonIds.has(p.parent_id),
-    ) ?? null
+    listModuleContextUnlinkParents(practice, moduleId, lessonIdsInModule)[0] ??
+    null
   )
+}
+
+/** All parent rows to remove when detaching a practice from a module practice tab. */
+export function listModuleContextUnlinkParents(
+  practice: ParentContextPractice,
+  moduleId: number,
+  lessonIdsInModule: number[],
+): PracticeParent[] {
+  const parents = parentsFromPractice(practice)
+  const lessonIds = new Set(lessonIdsInModule.filter((id) => id > 0))
+  const targets: PracticeParent[] = []
+
+  for (const parent of parents) {
+    if (parent.parent_kind === "COURSE") continue
+    if (parent.parent_kind === "MODULE" && parent.parent_id === moduleId) {
+      targets.push(parent)
+    } else if (
+      parent.parent_kind === "LESSON" &&
+      lessonIds.has(parent.parent_id)
+    ) {
+      targets.push(parent)
+    }
+  }
+
+  return dedupeParents(targets)
 }
 
 /** Parent row to DELETE when removing a practice from a course's practice tab. */
@@ -72,20 +87,49 @@ export function resolveCourseContextUnlinkParent(
   practice: ParentContextPractice,
   courseId: number,
   moduleIdsInCourse: number[],
+  lessonIdsInCourse: number[] = [],
 ): PracticeParent | null {
+  return (
+    listCourseContextUnlinkParents(
+      practice,
+      courseId,
+      moduleIdsInCourse,
+      lessonIdsInCourse,
+    )[0] ?? null
+  )
+}
+
+/** All parent rows to remove when detaching a practice from a course practice tab. */
+export function listCourseContextUnlinkParents(
+  practice: ParentContextPractice,
+  courseId: number,
+  moduleIdsInCourse: number[],
+  lessonIdsInCourse: number[] = [],
+): PracticeParent[] {
   const parents = parentsFromPractice(practice)
-  const courseLink = parents.find(
-    (p) => p.parent_kind === "COURSE" && p.parent_id === courseId,
-  )
-  if (courseLink) return courseLink
-
   const moduleIds = new Set(moduleIdsInCourse.filter((id) => id > 0))
-  const moduleLink = parents.find(
-    (p) => p.parent_kind === "MODULE" && moduleIds.has(p.parent_id),
-  )
-  if (moduleLink) return moduleLink
+  const lessonIds = new Set(lessonIdsInCourse.filter((id) => id > 0))
+  const targets: PracticeParent[] = []
 
-  return parents.find((p) => p.parent_kind === "LESSON") ?? null
+  for (const parent of parents) {
+    if (parent.parent_kind === "COURSE" && parent.parent_id === courseId) {
+      targets.push(parent)
+    } else if (
+      parent.parent_kind === "MODULE" &&
+      moduleIds.has(parent.parent_id)
+    ) {
+      targets.push(parent)
+    } else if (
+      parent.parent_kind === "LESSON" &&
+      (lessonIds.size === 0 || lessonIds.has(parent.parent_id))
+    ) {
+      if (lessonIds.size > 0) {
+        targets.push(parent)
+      }
+    }
+  }
+
+  return dedupeParents(targets)
 }
 
 export async function unlinkPracticeFromParent(opts: {

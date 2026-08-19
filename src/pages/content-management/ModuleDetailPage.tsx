@@ -29,7 +29,7 @@ import {
 import { learnEnglishPracticeLimitHint, parentsFromPractice } from "../../lib/practiceParents";
 import {
   isPracticeParentUnlinkNotLinkedError,
-  resolveModuleContextUnlinkParent,
+  listModuleContextUnlinkParents,
   unlinkPracticeFromParent,
 } from "../../lib/practiceParentUnlink";
 import { Button } from "../../components/ui/button";
@@ -361,10 +361,10 @@ export function ModuleDetailPage() {
     [lessons],
   );
 
-  const practiceUnlinkParent = useMemo((): PracticeParent | null => {
+  const practiceUnlinkParents = useMemo((): PracticeParent[] => {
     const mid = Number(moduleId);
-    if (!practiceToUnlink || !Number.isFinite(mid) || mid < 1) return null;
-    return resolveModuleContextUnlinkParent(
+    if (!practiceToUnlink || !Number.isFinite(mid) || mid < 1) return [];
+    return listModuleContextUnlinkParents(
       practiceToUnlink,
       mid,
       moduleLessonIds,
@@ -372,17 +372,19 @@ export function ModuleDetailPage() {
   }, [moduleId, moduleLessonIds, practiceToUnlink]);
 
   const confirmUnlinkPractice = async () => {
-    if (!practiceToUnlink || !practiceUnlinkParent) {
+    if (!practiceToUnlink || practiceUnlinkParents.length === 0) {
       toast.error("This practice is not linked to this module.");
       return;
     }
     setUnlinkingPractice(true);
     try {
-      await unlinkPracticeFromParent({
-        practiceId: practiceToUnlink.id,
-        parent: practiceUnlinkParent,
-        isExamPrep: false,
-      });
+      for (const parent of practiceUnlinkParents) {
+        await unlinkPracticeFromParent({
+          practiceId: practiceToUnlink.id,
+          parent,
+          isExamPrep: false,
+        });
+      }
       toast.success(`Practice removed from ${displayModuleName}`);
       setPracticeToUnlink(null);
       await loadModulePractices();
@@ -964,7 +966,7 @@ export function ModuleDetailPage() {
         </div>
       )}
 
-      {practiceToUnlink && practiceUnlinkParent ? (
+      {practiceToUnlink && practiceUnlinkParents.length > 0 ? (
         <Dialog
           open={practiceToUnlink != null}
           onOpenChange={(open) => {
@@ -985,9 +987,10 @@ export function ModuleDetailPage() {
                 .
                 {parentsFromPractice(practiceToUnlink).filter(
                   (p) =>
-                    !(
-                      p.parent_kind === practiceUnlinkParent.parent_kind &&
-                      p.parent_id === practiceUnlinkParent.parent_id
+                    !practiceUnlinkParents.some(
+                      (target) =>
+                        target.parent_kind === p.parent_kind &&
+                        target.parent_id === p.parent_id,
                     ),
                 ).length === 0
                   ? " The practice will be unlinked until re-attached."

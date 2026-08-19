@@ -30,6 +30,7 @@ import alertSrc from "../../assets/Alert.svg";
 import {
   deleteTopLevelCourseModule,
   deleteParentLinkedPractice,
+  getModuleLessons,
   getPracticesByParentCourse,
   getProgramCourses,
   getTopLevelCourseModules,
@@ -46,6 +47,7 @@ import type {
   PracticePublishStatus,
   ProgramCourseListItem,
   TopLevelCourseModuleItem,
+  TopLevelModuleLessonItem,
 } from "../../types/course.types";
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
@@ -68,7 +70,7 @@ import { DisplayValue } from "../../lib/displayValue"
 import { learnEnglishPracticeLimitHint, parentsFromPractice } from "../../lib/practiceParents"
 import {
   isPracticeParentUnlinkNotLinkedError,
-  resolveCourseContextUnlinkParent,
+  listCourseContextUnlinkParents,
   unlinkPracticeFromParent,
 } from "../../lib/practiceParentUnlink"
 import { SearchHighlight } from "../../components/SearchHighlight"
@@ -211,6 +213,7 @@ export function CourseDetailPage() {
     useState<ParentContextPractice | null>(null);
   const [unlinkingPractice, setUnlinkingPractice] = useState(false);
   const [deletingPractice, setDeletingPractice] = useState(false);
+  const [courseLessonIds, setCourseLessonIds] = useState<number[]>([]);
   const [publishStatusModuleId, setPublishStatusModuleId] = useState<
     number | null
   >(null);
@@ -415,29 +418,68 @@ export function CourseDetailPage() {
     [modules],
   );
 
-  const practiceUnlinkParent = useMemo((): PracticeParent | null => {
-    if (!practiceToUnlink || !Number.isFinite(courseIdNum) || courseIdNum < 1) {
-      return null;
+  const loadCourseLessonIds = useCallback(async () => {
+    if (courseModuleIds.length === 0) {
+      setCourseLessonIds([]);
+      return;
     }
-    return resolveCourseContextUnlinkParent(
+    try {
+      const lessonLists = await Promise.all(
+        courseModuleIds.map((moduleId) =>
+          fetchAllOffsetPages(async (offset, limit) =>
+            offsetPageFromListEnvelope<TopLevelModuleLessonItem>(
+              await getModuleLessons(moduleId, { limit, offset }),
+              "lessons",
+            ),
+          ),
+        ),
+      );
+      setCourseLessonIds(
+        lessonLists
+          .flatMap((list) => list.map((lesson) => lesson.id))
+          .filter((id) => id > 0),
+      );
+    } catch {
+      setCourseLessonIds([]);
+    }
+  }, [courseModuleIds]);
+
+  useEffect(() => {
+    if (activeTab !== "practice") return;
+    void loadCourseLessonIds();
+  }, [activeTab, loadCourseLessonIds]);
+
+  const practiceUnlinkParents = useMemo((): PracticeParent[] => {
+    if (!practiceToUnlink || !Number.isFinite(courseIdNum) || courseIdNum < 1) {
+      return [];
+    }
+    return listCourseContextUnlinkParents(
       practiceToUnlink,
       courseIdNum,
       courseModuleIds,
+      courseLessonIds,
     );
-  }, [courseIdNum, courseModuleIds, practiceToUnlink]);
+  }, [
+    courseIdNum,
+    courseLessonIds,
+    courseModuleIds,
+    practiceToUnlink,
+  ]);
 
   const confirmUnlinkPractice = async () => {
-    if (!practiceToUnlink || !practiceUnlinkParent) {
+    if (!practiceToUnlink || practiceUnlinkParents.length === 0) {
       toast.error("This practice is not linked to this course.");
       return;
     }
     setUnlinkingPractice(true);
     try {
-      await unlinkPracticeFromParent({
-        practiceId: practiceToUnlink.id,
-        parent: practiceUnlinkParent,
-        isExamPrep: false,
-      });
+      for (const parent of practiceUnlinkParents) {
+        await unlinkPracticeFromParent({
+          practiceId: practiceToUnlink.id,
+          parent,
+          isExamPrep: false,
+        });
+      }
       toast.success(`Practice removed from ${displayTitle}`);
       setPracticeToUnlink(null);
       await loadCoursePractices();
@@ -946,6 +988,7 @@ export function CourseDetailPage() {
                     scope: "course",
                     courseId: courseIdNum,
                     moduleIds: courseModuleIds,
+                    lessonIds: courseLessonIds,
                   }}
                   publishStatusUpdatingId={publishStatusPracticeId}
                   onReload={loadCoursePractices}
@@ -1003,7 +1046,7 @@ export function CourseDetailPage() {
             </div>
           )}
 
-          {practiceToUnlink && practiceUnlinkParent ? (
+          {practiceToUnlink && practiceUnlinkParents.length > 0 ? (
             <Dialog
               open={practiceToUnlink != null}
               onOpenChange={(open) => {
@@ -1024,9 +1067,10 @@ export function CourseDetailPage() {
                     .
                     {parentsFromPractice(practiceToUnlink).filter(
                       (p) =>
-                        !(
-                          p.parent_kind === practiceUnlinkParent.parent_kind &&
-                          p.parent_id === practiceUnlinkParent.parent_id
+                        !practiceUnlinkParents.some(
+                          (target) =>
+                            target.parent_kind === p.parent_kind &&
+                            target.parent_id === p.parent_id,
                         ),
                     ).length === 0
                       ? " The practice will be unlinked until re-attached."

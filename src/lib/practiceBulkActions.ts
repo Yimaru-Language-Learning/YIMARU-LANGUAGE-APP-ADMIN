@@ -6,13 +6,15 @@ import type { ParentContextPractice, PracticeParent } from "../types/course.type
 import { parentsFromPractice } from "./practiceParents"
 import {
   isPracticeParentUnlinkNotLinkedError,
+  listCourseContextUnlinkParents,
+  listModuleContextUnlinkParents,
   resolveCourseContextUnlinkParent,
   resolveModuleContextUnlinkParent,
   unlinkPracticeFromParent,
 } from "./practiceParentUnlink"
 
 export type PracticeUnlinkContext =
-  | { scope: "course"; courseId: number; moduleIds: number[] }
+  | { scope: "course"; courseId: number; moduleIds: number[]; lessonIds?: number[] }
   | { scope: "module"; moduleId: number; lessonIds: number[] }
   | { scope: "lesson"; lessonId: number }
   | { scope: "unit"; unitId: number }
@@ -34,6 +36,7 @@ export function resolvePracticeUnlinkParent(
         practice,
         context.courseId,
         context.moduleIds,
+        context.lessonIds ?? [],
       )
     case "module":
       return resolveModuleContextUnlinkParent(
@@ -65,6 +68,36 @@ export function resolvePracticeUnlinkParent(
   }
 }
 
+export function listPracticeUnlinkParents(
+  practice: ParentContextPractice,
+  context: PracticeUnlinkContext,
+): PracticeParent[] {
+  switch (context.scope) {
+    case "course":
+      return listCourseContextUnlinkParents(
+        practice,
+        context.courseId,
+        context.moduleIds,
+        context.lessonIds ?? [],
+      )
+    case "module":
+      return listModuleContextUnlinkParents(
+        practice,
+        context.moduleId,
+        context.lessonIds,
+      )
+    case "lesson": {
+      const parent = resolvePracticeUnlinkParent(practice, context)
+      return parent ? [parent] : []
+    }
+    case "unit":
+    case "catalog_course": {
+      const parent = resolvePracticeUnlinkParent(practice, context)
+      return parent ? [parent] : []
+    }
+  }
+}
+
 export async function bulkUnlinkPractices(opts: {
   practices: ParentContextPractice[]
   context: PracticeUnlinkContext
@@ -77,24 +110,39 @@ export async function bulkUnlinkPractices(opts: {
   }
 
   for (const practice of opts.practices) {
-    const parent = resolvePracticeUnlinkParent(practice, opts.context)
-    if (!parent) {
+    const parents = listPracticeUnlinkParents(practice, opts.context)
+    if (parents.length === 0) {
       result.skipped += 1
       continue
     }
-    try {
-      await unlinkPracticeFromParent({
-        practiceId: practice.id,
-        parent,
-        isExamPrep: opts.isExamPrep,
-      })
-      result.succeeded += 1
-    } catch (error) {
-      if (isPracticeParentUnlinkNotLinkedError(error)) {
-        result.skipped += 1
-      } else {
-        result.failed += 1
+
+    let practiceSucceeded = false
+    let practiceFailed = false
+    let practiceSkipped = false
+
+    for (const parent of parents) {
+      try {
+        await unlinkPracticeFromParent({
+          practiceId: practice.id,
+          parent,
+          isExamPrep: opts.isExamPrep,
+        })
+        practiceSucceeded = true
+      } catch (error) {
+        if (isPracticeParentUnlinkNotLinkedError(error)) {
+          practiceSkipped = true
+        } else {
+          practiceFailed = true
+        }
       }
+    }
+
+    if (practiceFailed) {
+      result.failed += 1
+    } else if (practiceSucceeded) {
+      result.succeeded += 1
+    } else if (practiceSkipped) {
+      result.skipped += 1
     }
   }
 

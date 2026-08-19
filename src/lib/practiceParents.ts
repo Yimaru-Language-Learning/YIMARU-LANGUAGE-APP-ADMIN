@@ -18,7 +18,7 @@ export function normalizePracticeParent(row: unknown): PracticeParent | null {
   const kind = String(o.parent_kind ?? o.ParentKind ?? o.parentKind ?? "")
     .trim()
     .toUpperCase()
-  const parent_id = Number(o.parent_id ?? o.ParentId ?? o.parentId ?? o.id ?? o.ID)
+  const parent_id = Number(o.parent_id ?? o.ParentId ?? o.parentId)
   if (!isPracticeParentKind(kind)) return null
   if (!Number.isFinite(parent_id) || parent_id <= 0) return null
   return { parent_kind: kind, parent_id }

@@ -1,6 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { navigateBack } from "../../lib/navigateBack";
+import { Link } from "react-router-dom";
 import { cn } from "../../lib/utils";
 
 type PageBackLinkProps = {
@@ -16,12 +15,9 @@ export function PageBackLink({
   className,
   iconClassName,
 }: PageBackLinkProps) {
-  const navigate = useNavigate();
-
   return (
-    <button
-      type="button"
-      onClick={() => navigateBack(navigate, fallbackTo)}
+    <Link
+      to={fallbackTo}
       className={cn(
         "group flex w-fit items-center gap-2 text-[15px] font-medium text-grayScale-600 transition-colors hover:text-brand-500",
         className,
@@ -34,6 +30,6 @@ export function PageBackLink({
         )}
       />
       {label}
-    </button>
+    </Link>
   );
 }

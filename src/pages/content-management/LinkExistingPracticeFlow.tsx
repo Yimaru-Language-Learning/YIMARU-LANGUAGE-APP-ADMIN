@@ -121,17 +121,19 @@ export function LinkExistingPracticeFlow() {
   ])
 
   const backLabel =
-    effectiveBackTo === "module"
-      ? "Back to Module"
-      : effectiveBackTo === "unit"
-        ? "Back to Unit"
-        : effectiveBackTo === "modules"
-        ? "Back to Modules"
-        : effectiveBackTo === "courses"
-          ? "Back to Course"
-          : isExamPrep
-            ? "Back to Program"
-            : "Back to Courses"
+    effectiveBackTo === "lesson"
+      ? "Back to Lessons"
+      : effectiveBackTo === "module"
+        ? "Back to Module"
+        : effectiveBackTo === "unit"
+          ? "Back to Unit"
+          : effectiveBackTo === "modules"
+            ? "Back to Modules"
+            : effectiveBackTo === "courses"
+              ? "Back to Course"
+              : isExamPrep
+                ? "Back to Program"
+                : "Back to Courses"
 
   const backPath = useMemo(() => {
     if (isExamPrep) {
@@ -150,10 +152,35 @@ export function LinkExistingPracticeFlow() {
       if (effectiveBackTo === "courses" && programType && courseId) {
         return `/new-content/courses/${programType}/${courseId}`
       }
+      if (
+        effectiveBackTo === "lesson" &&
+        programType &&
+        courseId &&
+        unitId &&
+        moduleId &&
+        lessonId
+      ) {
+        const titleQuery = lessonTitleRaw?.trim()
+          ? `?lessonTitle=${encodeURIComponent(lessonTitleDisplay || lessonTitleRaw)}`
+          : ""
+        return `/new-content/courses/${programType}/${courseId}/${unitId}/${moduleId}/lessons/${lessonId}/practices${titleQuery}`
+      }
       if (programType) {
         return `/new-content/courses/${programType}`
       }
       return "/new-content"
+    }
+    if (
+      effectiveBackTo === "lesson" &&
+      level &&
+      courseId &&
+      moduleId &&
+      lessonId
+    ) {
+      const titleQuery = lessonTitleRaw?.trim()
+        ? `?lessonTitle=${encodeURIComponent(lessonTitleDisplay || lessonTitleRaw)}`
+        : ""
+      return `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}/practices${titleQuery}`
     }
     if (effectiveBackTo === "module" && level && courseId && moduleId) {
       return `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}`
@@ -169,6 +196,9 @@ export function LinkExistingPracticeFlow() {
     courseId,
     unitId,
     moduleId,
+    lessonId,
+    lessonTitleRaw,
+    lessonTitleDisplay,
     level,
   ])
 

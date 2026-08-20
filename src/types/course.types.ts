@@ -126,6 +126,8 @@ export interface ProgramCourseListItem {
   module_count?: number
   lesson_count?: number
   practice_count?: number
+  /** True when this course has a direct COURSE parent practice link. */
+  has_practice?: boolean
   /** Legacy aggregate field names; prefer module_count, lesson_count, practice_count. */
   modules_count?: number
   videos_count?: number
@@ -560,6 +562,8 @@ export interface TopLevelCourseModuleItem {
   publish_status?: PracticePublishStatus | string | null
   access_tier?: ContentAccessTier | string | null
   created_at: string
+  /** True when this module has a direct MODULE parent practice link. */
+  has_practice?: boolean
 }
 
 export interface GetTopLevelCourseModulesResponse {

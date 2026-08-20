@@ -19,6 +19,7 @@ import type {
   ParentContextPractice,
   PracticeParent,
   PracticePublishStatus,
+  TopLevelCourseModuleItem,
   TopLevelModuleLessonItem,
 } from "../../types/course.types";
 import { unwrapPracticesPage } from "../../lib/parentContextPractice";
@@ -71,6 +72,7 @@ const LESSON_THUMB_GRADIENTS = [
 type ModuleDetailState = {
   moduleName?: string;
   moduleDescription?: string;
+  moduleHasPractice?: boolean;
 };
 
 export function ModuleDetailPage() {
@@ -136,6 +138,10 @@ export function ModuleDetailPage() {
   const [practicesLoadError, setPracticesLoadError] = useState<string | null>(
     null,
   );
+  const [directPracticesLoaded, setDirectPracticesLoaded] = useState(false);
+  const [loadedModuleHasPractice, setLoadedModuleHasPractice] = useState<
+    boolean | null
+  >(navState?.moduleHasPractice ?? null);
   const [publishStatusPracticeId, setPublishStatusPracticeId] = useState<
     number | null
   >(null);
@@ -193,7 +199,7 @@ export function ModuleDetailPage() {
     (async () => {
       try {
         const list = await fetchAllOffsetPages(async (offset, limit) =>
-          offsetPageFromListEnvelope<{ id: number; name: string; description?: string | null }>(
+          offsetPageFromListEnvelope<TopLevelCourseModuleItem>(
             await getTopLevelCourseModules(cid, { limit, offset }),
             "modules",
           ),
@@ -204,9 +210,11 @@ export function ModuleDetailPage() {
           if (m) {
             setLoadedModuleName(m.name);
             setLoadedModuleDescription(m.description ?? "");
+            setLoadedModuleHasPractice(Boolean(m.has_practice));
           } else {
             setLoadedModuleName(null);
             setLoadedModuleDescription("");
+            setLoadedModuleHasPractice(null);
           }
         } else {
           setLoadedModuleName(null);
@@ -296,14 +304,20 @@ export function ModuleDetailPage() {
       setPractices([]);
       setPracticesLoadError("Failed to load practices. Please try again.");
     } finally {
+      setDirectPracticesLoaded(true);
       setPracticesLoading(false);
     }
   }, [moduleId]);
 
   useEffect(() => {
-    if (activeTab !== "practice") return;
     void loadModulePractices();
-  }, [activeTab, loadModulePractices]);
+  }, [loadModulePractices]);
+
+  const moduleHasDirectPractice = useMemo(() => {
+    if (practices.length > 0) return true;
+    if (directPracticesLoaded) return false;
+    return loadedModuleHasPractice === true;
+  }, [directPracticesLoaded, loadedModuleHasPractice, practices.length]);
 
   const filteredLessons = useMemo(
     () =>
@@ -579,9 +593,9 @@ export function ModuleDetailPage() {
             className="rounded-[6px] border-brand-500 text-brand-500 "
             pathOptions={modulePracticePathOptions}
             parentLabel={displayModuleName}
-            disabled={practices.length > 0}
+            disabled={moduleHasDirectPractice}
             title={
-              practices.length > 0 ? learnEnglishPracticeLimitHint : undefined
+              moduleHasDirectPractice ? learnEnglishPracticeLimitHint : undefined
             }
           >
             <Calendar className="h-4 w-4" />
@@ -695,7 +709,7 @@ export function ModuleDetailPage() {
                   addPracticeDisabled={!!lesson.has_practice}
                   onViewPractices={() =>
                     navigate(
-                      `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/lessons/${lesson.id}/practices?lessonTitle=${encodeURIComponent(lesson.title ?? "")}`,
+                      `/new-content/learn-english/${level}/courses/${courseId}/modules/${moduleId}/lessons/${lesson.id}/practices?lessonTitle=${encodeURIComponent(lesson.title ?? "")}${lesson.has_practice ? "&hasPractice=1" : ""}`,
                     )
                   }
                   onTogglePublishStatus={(nextStatus) =>

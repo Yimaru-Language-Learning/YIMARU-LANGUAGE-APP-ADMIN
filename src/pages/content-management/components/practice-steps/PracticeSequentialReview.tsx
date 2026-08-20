@@ -5,6 +5,7 @@ import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { cn } from "../../../../lib/utils";
 import { UnassignedLabel, isUnassignedLabel } from "../../../../lib/displayValue"
+import { RichTextContent } from "../../../../components/ui/rich-text-content";
 
 export type PracticeReviewQuestion = {
   id: string;
@@ -278,9 +279,14 @@ export function PracticeSequentialReview({
           <Info className="h-4 w-4 text-brand-500" />
         </div>
         <div className="rounded-xl border border-grayScale-200 bg-white px-5 py-4 shadow-sm">
-          <p className="text-sm leading-relaxed text-grayScale-600">
-            {isUnassignedLabel(guidanceText) ? <UnassignedLabel /> : guidanceText}
-          </p>
+          {isUnassignedLabel(guidanceText) ? (
+            <UnassignedLabel />
+          ) : (
+            <RichTextContent
+              html={guidanceText}
+              className="text-sm leading-relaxed text-grayScale-600"
+            />
+          )}
         </div>
       </div>
 

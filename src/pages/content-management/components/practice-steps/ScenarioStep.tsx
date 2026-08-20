@@ -5,9 +5,11 @@ import { Upload, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { Input } from "../../../../components/ui/input";
-import { Textarea } from "../../../../components/ui/textarea";
+import { RichTextEditor } from "../../../../components/ui/rich-text-editor";
 import { toast } from "sonner";
 import { uploadImageFile } from "../../../../api/files.api";
+import { hasRichTextContent } from "../../../../lib/richText";
+
 interface ScenarioStepProps {
   formData: any;
   setFormData: (data: any) => void;
@@ -35,15 +37,15 @@ export function ScenarioStep({
       if (!url) throw new Error("Missing URL");
       setFormData({ ...formData, storyImageUrl: url });
       toast.success("Story image uploaded");
-    } catch {
-      notifyApiError(err, "Could not upload image");
+    } catch (e) {
+      notifyApiError(e, "Could not upload image");
     } finally {
       setUploadingBanner(false);
     }
   };
 
   const canContinue =
-    Boolean(formData.title?.trim()) && Boolean(formData.description?.trim());
+    Boolean(formData.title?.trim()) && hasRichTextContent(formData.description);
 
   return (
     <div className="space-y-6">
@@ -174,36 +176,24 @@ export function ScenarioStep({
           <label className="text-sm font-medium text-grayScale-700">
             Story description <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <Textarea
-              placeholder="Describe the scenario…"
-              className="min-h-[160px] rounded-xl resize-none p-4 border-grayScale-200 focus:border-brand-500 leading-relaxed placeholder:text-grayScale-500 bg-white"
-              maxLength={1000}
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  description: e.target.value,
-                })
-              }
-            />
-            <div className="absolute bottom-4 right-4 text-xs font-bold text-grayScale-500">
-              {formData.description.length} / 1000
-            </div>
-          </div>
+          <RichTextEditor
+            value={formData.description ?? ""}
+            onChange={(description) => setFormData({ ...formData, description })}
+            placeholder="Describe the scenario…"
+            maxLength={2000}
+            editorClassName="min-h-[160px]"
+          />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-grayScale-700">
             Quick tips <span className="text-grayScale-400">(optional)</span>
           </label>
-          <Textarea
+          <RichTextEditor
             value={formData.tips ?? ""}
-            onChange={(e) =>
-              setFormData({ ...formData, tips: e.target.value })
-            }
+            onChange={(tips) => setFormData({ ...formData, tips })}
             placeholder="Learner-facing tips (quick_tips)"
-            className="min-h-[80px] rounded-xl border-grayScale-200"
             maxLength={1000}
+            editorClassName="min-h-[80px]"
           />
         </div>
       </Card>

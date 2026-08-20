@@ -45,6 +45,7 @@ import { QuestionsStep } from "./components/practice-steps/QuestionsStep";
 import { ReviewStep } from "./components/practice-steps/ReviewStep";
 import { personaIdNumber } from "./components/practice-steps/constants";
 import { useActivePersonas } from "../../hooks/useActivePersonas";
+import { hasRichTextContent } from "../../lib/richText";
 
 const STEP_LABELS = ["Practice", "Persona", "Questions", "Review"] as const;
 
@@ -448,7 +449,7 @@ export function EditPracticeFlow() {
       toast.error("Invalid practice", { description: "Missing practice id in the URL." });
       return;
     }
-    if (!formData.title.trim() || !formData.description.trim()) {
+    if (!formData.title.trim() || !hasRichTextContent(formData.description)) {
       toast.error("Title and story description are required", {
         description: "Complete the first step before saving.",
       });

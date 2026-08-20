@@ -26,6 +26,7 @@ import {
   formatPracticeParentsSummary,
   validatePracticeParents,
 } from "../../lib/practiceParents";
+import { hasRichTextContent } from "../../lib/richText";
 
 import { ContextStep } from "./components/practice-steps/ContextStep";
 import { ScenarioStep } from "./components/practice-steps/ScenarioStep";
@@ -384,7 +385,7 @@ export function AddPracticeFlow() {
       return;
     }
     const createParents = buildCreatePracticeParentsPayload(parents);
-    if (!formData.title.trim() || !formData.description.trim()) {
+    if (!formData.title.trim() || !hasRichTextContent(formData.description)) {
       toast.error("Title and story description are required", {
         description: "Complete the first step before publishing.",
       });

@@ -24,7 +24,6 @@ interface ReviewStepProps {
   };
   selectedPersona?: string | null;
   personas?: PersonaCardModel[];
-  isLessonPractice?: boolean;
   lessonTitle?: string | null;
   programLabel?: string | null;
   courseLabel?: string | null;
@@ -47,7 +46,6 @@ export function ReviewStep({
   formData,
   selectedPersona = null,
   personas = [],
-  isLessonPractice = false,
   lessonTitle = null,
   programLabel = null,
   courseLabel = null,

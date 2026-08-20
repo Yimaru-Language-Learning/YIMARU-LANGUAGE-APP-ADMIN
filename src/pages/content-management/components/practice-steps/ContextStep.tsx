@@ -4,12 +4,13 @@ import { ArrowRight, ChevronDown, ChevronUp, Loader2, Upload } from "lucide-reac
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { Input } from "../../../../components/ui/input";
-import { Textarea } from "../../../../components/ui/textarea";
+import { RichTextEditor } from "../../../../components/ui/rich-text-editor";
 import { toast } from "sonner";
 import { uploadImageFile } from "../../../../api/files.api";
 import type { PracticeParent, AuthoringProfile } from "../../../../types/course.types";
 import { PracticeParentsField } from "./PracticeParentsField";
 import { formatPracticeParentsSummary } from "../../../../lib/practiceParents";
+import { hasRichTextContent } from "../../../../lib/richText";
 
 interface ContextStepProps {
   formData: {
@@ -24,8 +25,6 @@ interface ContextStepProps {
   setFormData: (data: ContextStepProps["formData"]) => void;
   nextStep: () => void;
   onCancel: () => void;
-  /** Lesson-linked practice: no title, story description, or story image on step 1. */
-  isLessonPractice?: boolean;
   lessonTitle?: string | null;
   parentSummary?: string | null;
   /** Learn English LMS — show multi-parent picker. */
@@ -49,7 +48,6 @@ export function ContextStep({
   setFormData,
   nextStep,
   onCancel,
-  isLessonPractice = false,
   lessonTitle = null,
   parentSummary = null,
   showParentsEditor = false,
@@ -75,16 +73,15 @@ export function ContextStep({
       if (!url) throw new Error("Missing image URL from upload");
       setFormData({ ...formData, storyImageUrl: url });
       toast.success("Story image uploaded");
-    } catch {
-      notifyApiError(err, "Could not upload story image");
+    } catch (e) {
+      notifyApiError(e, "Could not upload story image");
     } finally {
       setUploadingStory(false);
     }
   };
 
-  const canContinue = isLessonPractice
-    ? true
-    : Boolean(formData.title?.trim()) && Boolean(formData.description?.trim());
+  const canContinue =
+    Boolean(formData.title?.trim()) && hasRichTextContent(formData.description);
 
   const parentsSummary =
     formData.parents && formData.parents.length > 0
@@ -95,22 +92,20 @@ export function ContextStep({
     <Card className="overflow-hidden border-grayScale-300 rounded-2xl bg-white animate-in fade-in duration-500">
       <div className="border-b border-grayScale-50 px-8 pt-8 pb-4">
         <h2 className="text-xl font-bold text-grayScale-900 leading-none">
-          {isLessonPractice ? "Practice options" : "Practice details"}
+          Practice details
         </h2>
         <p className="text-grayScale-600 text-base mt-3">
-          {isLessonPractice ? (
+          Story fields and question set options used when saving the practice.
+          {lessonTitle?.trim() ? (
             <>
-              Story fields and question set options used when saving the practice. Linked to{" "}
+              {" "}
+              Linked to{" "}
               <span className="font-medium text-grayScale-800">
-                {lessonTitle?.trim() || "the selected lesson"}
+                {lessonTitle.trim()}
               </span>
               .
             </>
-          ) : (
-            <>
-              Story fields and question set options used when saving the practice.
-            </>
-          )}
+          ) : null}
         </p>
       </div>
 
@@ -194,91 +189,84 @@ export function ContextStep({
           )
         ) : null}
 
-        {!isLessonPractice ? (
-          <>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Practice title <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={formData.title ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                placeholder="e.g. Module conversation drill"
-                className="h-11 rounded-xl border-grayScale-200"
-              />
-            </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-grayScale-700">
+            Practice title <span className="text-red-500">*</span>
+          </label>
+          <Input
+            value={formData.title ?? ""}
+            onChange={(e) =>
+              setFormData({ ...formData, title: e.target.value })
+            }
+            placeholder={
+              lessonTitle?.trim()
+                ? `e.g. ${lessonTitle.trim()} practice`
+                : "e.g. Module conversation drill"
+            }
+            className="h-11 rounded-xl border-grayScale-200"
+          />
+        </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-grayScale-700">
-                Story description <span className="text-red-500">*</span>
-              </label>
-              <Textarea
-                value={formData.description ?? ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                placeholder="Short scenario for learners…"
-                className="min-h-[120px] rounded-xl border-grayScale-200"
-                maxLength={2000}
-              />
-            </div>
-          </>
-        ) : null}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-grayScale-700">
+            Story description <span className="text-red-500">*</span>
+          </label>
+          <RichTextEditor
+            value={formData.description ?? ""}
+            onChange={(description) => setFormData({ ...formData, description })}
+            placeholder="Short scenario for learners…"
+            maxLength={2000}
+          />
+        </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-grayScale-700">
             Quick tips <span className="text-grayScale-400">(optional)</span>
           </label>
-          <Textarea
+          <RichTextEditor
             value={formData.tips ?? ""}
-            onChange={(e) =>
-              setFormData({ ...formData, tips: e.target.value })
-            }
+            onChange={(tips) => setFormData({ ...formData, tips })}
             placeholder="Optional tips shown to learners before they start"
-            className="min-h-[80px] rounded-xl border-grayScale-200"
             maxLength={1000}
+            editorClassName="min-h-[80px]"
           />
         </div>
 
-        {!isLessonPractice ? (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-grayScale-700">
-              Story image <span className="text-grayScale-400">(optional)</span>
-            </label>
-            <Input
-              value={formData.storyImageUrl ?? ""}
-              onChange={(e) =>
-                setFormData({ ...formData, storyImageUrl: e.target.value })
-              }
-              placeholder="https://… or upload"
-              className="h-11 rounded-xl border-grayScale-200 font-mono text-[13px]"
-            />
-            <input
-              ref={storyFileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleStoryImageFile}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={uploadingStory}
-              onClick={() => storyFileRef.current?.click()}
-              className="gap-2"
-            >
-              {uploadingStory ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4" />
-              )}
-              Upload image
-            </Button>
-          </div>
-        ) : null}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-grayScale-700">
+            Story image <span className="text-grayScale-400">(optional)</span>
+          </label>
+          <Input
+            value={formData.storyImageUrl ?? ""}
+            onChange={(e) =>
+              setFormData({ ...formData, storyImageUrl: e.target.value })
+            }
+            placeholder="https://… or upload"
+            className="h-11 rounded-xl border-grayScale-200 font-mono text-[13px]"
+          />
+          <input
+            ref={storyFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleStoryImageFile}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploadingStory}
+            onClick={() => storyFileRef.current?.click()}
+            className="gap-2"
+          >
+            {uploadingStory ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            Upload image
+          </Button>
+        </div>
 
         <label className="flex cursor-pointer items-center gap-3 text-sm text-grayScale-700">
           <input

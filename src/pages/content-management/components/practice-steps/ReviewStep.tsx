@@ -83,24 +83,19 @@ export function ReviewStep({
     if (moduleLabel?.trim()) {
       items.push({ label: "Module", value: moduleLabel.trim() });
     }
-    if (isLessonPractice && lessonTitle?.trim()) {
+    if (lessonTitle?.trim()) {
       items.push({ label: "Lesson", value: lessonTitle.trim() });
     }
     return items;
-  }, [programLabel, courseLabel, moduleLabel, isLessonPractice, lessonTitle]);
+  }, [programLabel, courseLabel, moduleLabel, lessonTitle]);
 
-  const practiceTitle = isLessonPractice
-    ? lessonTitle?.trim() || parentSummary || "Lesson practice"
-    : formData.title?.trim() || "Untitled Practice";
+  const practiceTitle =
+    formData.title?.trim() || lessonTitle?.trim() || parentSummary || "Untitled Practice";
 
   const guidanceText =
-    formData.tips?.trim() ||
-    (!isLessonPractice ? formData.description?.trim() : "") ||
-    "unassigned";
+    formData.tips?.trim() || formData.description?.trim() || "unassigned";
 
-  const thumbnailUrl = isLessonPractice
-    ? null
-    : formData.storyImageUrl?.trim() || null;
+  const thumbnailUrl = formData.storyImageUrl?.trim() || null;
 
   return (
     <PracticeSequentialReview

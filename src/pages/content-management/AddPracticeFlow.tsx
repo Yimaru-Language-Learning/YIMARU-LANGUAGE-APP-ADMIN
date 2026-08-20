@@ -102,8 +102,6 @@ export function AddPracticeFlow() {
     const lid = lessonId ? Number(lessonId) : NaN;
     return Number.isFinite(lid) && lid > 0;
   }, [lessonId]);
-  /** Learn English lesson practices skip story fields; exam prep lessons use the full form. */
-  const isLearnEnglishLessonPractice = isLessonPractice && !isExamPrep;
 
   const parentContext = useMemo((): {
     kind: PracticeParentKind;
@@ -386,10 +384,7 @@ export function AddPracticeFlow() {
       return;
     }
     const createParents = buildCreatePracticeParentsPayload(parents);
-    if (
-      !isLearnEnglishLessonPractice &&
-      (!formData.title.trim() || !formData.description.trim())
-    ) {
+    if (!formData.title.trim() || !formData.description.trim()) {
       toast.error("Title and story description are required", {
         description: "Complete the first step before publishing.",
       });
@@ -451,10 +446,6 @@ export function AddPracticeFlow() {
       return;
     }
 
-    const lessonDefaultTitle =
-      lessonTitleDisplay?.trim() ||
-      (lessonId ? `Lesson ${lessonId} practice` : "Lesson practice");
-
     const useExamPrepLessonApi =
       isExamPrep &&
       isLessonPractice &&
@@ -491,22 +482,12 @@ export function AddPracticeFlow() {
         examPrepUnitId: useExamPrepUnitApi ? parentContext!.id : undefined,
         isExamPrep,
         status,
-        questionSetTitle: isLearnEnglishLessonPractice
-          ? lessonDefaultTitle
-          : formData.title.trim() || "Practice set",
-        questionSetDescription: isLearnEnglishLessonPractice
-          ? null
-          : formData.description.trim() || null,
+        questionSetTitle: formData.title.trim() || "Practice set",
+        questionSetDescription: formData.description.trim() || null,
         shuffleQuestions: formData.shuffleQuestions,
-        practiceTitle: isLearnEnglishLessonPractice
-          ? lessonDefaultTitle
-          : formData.title.trim() || "Untitled practice",
-        storyDescription: isLearnEnglishLessonPractice
-          ? ""
-          : formData.description.trim(),
-        storyImage: isLearnEnglishLessonPractice
-          ? ""
-          : formData.storyImageUrl.trim(),
+        practiceTitle: formData.title.trim() || "Untitled practice",
+        storyDescription: formData.description.trim(),
+        storyImage: formData.storyImageUrl.trim(),
         quickTips: formData.tips.trim(),
         personaName: persona?.name ?? null,
         personaId,
@@ -528,8 +509,6 @@ export function AddPracticeFlow() {
           },
           questions: mappedQuestions,
           definitions: typeDefinitions,
-          isLearnEnglishLessonPractice,
-          lessonDefaultTitle,
         });
       }
       toast.success("Practice created successfully");
@@ -652,7 +631,6 @@ export function AddPracticeFlow() {
               setFormData={setFormData}
               nextStep={nextStep}
               onCancel={goBack}
-              isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               parentSummary={parentSummary}
             />
@@ -688,7 +666,6 @@ export function AddPracticeFlow() {
               formData={formData}
               selectedPersona={selectedPersona}
               personas={personas}
-              isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               programLabel={programLabel}
               courseLabel={courseId ? `Course ${courseId}` : null}
@@ -755,7 +732,6 @@ export function AddPracticeFlow() {
             formData={formData}
             selectedPersona={selectedPersona}
             personas={personas}
-            isLessonPractice={isLearnEnglishLessonPractice}
             lessonTitle={lessonTitleDisplay}
             programLabel={programLabel}
             courseLabel={courseId ? `Course ${courseId}` : null}

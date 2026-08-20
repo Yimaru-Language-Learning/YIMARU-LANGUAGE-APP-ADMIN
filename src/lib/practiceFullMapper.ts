@@ -740,8 +740,6 @@ export interface BuildPracticeFullUpdateInput {
   preservedQuestionSet: PreservedQuestionSetFields
   questions: PracticeEditQuestionInput[]
   definitions: QuestionTypeDefinition[]
-  isLearnEnglishLessonPractice: boolean
-  lessonDefaultTitle?: string
 }
 
 export function buildPracticeFullUpdateRequest(
@@ -764,16 +762,9 @@ export function buildPracticeFullUpdateRequest(
     if (err) throw new Error(err)
   }
 
-  const lessonTitle = opts.lessonDefaultTitle?.trim() || "Lesson practice"
-  const practiceTitle = opts.isLearnEnglishLessonPractice
-    ? lessonTitle
-    : opts.formData.title.trim() || "Untitled practice"
-  const storyDescription = opts.isLearnEnglishLessonPractice
-    ? ""
-    : opts.formData.description.trim()
-  const storyImage = opts.isLearnEnglishLessonPractice
-    ? ""
-    : opts.formData.storyImageUrl.trim()
+  const practiceTitle = opts.formData.title.trim() || "Untitled practice"
+  const storyDescription = opts.formData.description.trim()
+  const storyImage = opts.formData.storyImageUrl.trim()
 
   const byId = new Map(opts.definitions.map((d) => [d.id, d]))
   const toUpdate = opts.questions
@@ -868,12 +859,8 @@ export function buildPracticeFullUpdateRequest(
       authoring_profile: opts.formData.authoringProfile,
     },
     question_set: {
-      title: opts.isLearnEnglishLessonPractice
-        ? lessonTitle
-        : opts.formData.title.trim() || "Practice set",
-      description: opts.isLearnEnglishLessonPractice
-        ? null
-        : opts.formData.description.trim() || null,
+      title: opts.formData.title.trim() || "Practice set",
+      description: opts.formData.description.trim() || null,
       time_limit_minutes: opts.preservedQuestionSet.timeLimitMinutes,
       passing_score: opts.preservedQuestionSet.passingScore,
       shuffle_questions: opts.formData.shuffleQuestions,

@@ -27,8 +27,6 @@ export interface PracticeEditInput {
   preservedQuestionSet: PreservedQuestionSetFields
   questions: PracticeEditQuestionInput[]
   definitions: QuestionTypeDefinition[]
-  isLearnEnglishLessonPractice: boolean
-  lessonDefaultTitle?: string
   parents?: PracticeParent[]
   parentsChanged?: boolean
 }
@@ -43,8 +41,6 @@ export async function executePracticeUpdate(
     preservedQuestionSet: opts.preservedQuestionSet,
     questions: opts.questions,
     definitions: opts.definitions,
-    isLearnEnglishLessonPractice: opts.isLearnEnglishLessonPractice,
-    lessonDefaultTitle: opts.lessonDefaultTitle,
   })
 
   if (opts.isExamPrep) {
@@ -75,8 +71,6 @@ export interface SyncStimulusBlocksAfterCreateInput {
   preservedQuestionSet: PreservedQuestionSetFields
   questions: PracticeEditQuestionInput[]
   definitions: QuestionTypeDefinition[]
-  isLearnEnglishLessonPractice: boolean
-  lessonDefaultTitle?: string
 }
 
 /** After multi-step create, apply authoring profile + stimulus blocks via full PUT. */
@@ -109,8 +103,6 @@ export async function syncStimulusBlocksAfterCreate(
     preservedQuestionSet: opts.preservedQuestionSet,
     questions: questionsWithIds,
     definitions: opts.definitions,
-    isLearnEnglishLessonPractice: opts.isLearnEnglishLessonPractice,
-    lessonDefaultTitle: opts.lessonDefaultTitle,
   })
 
   if (opts.isExamPrep) {

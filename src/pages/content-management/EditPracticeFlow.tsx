@@ -448,10 +448,7 @@ export function EditPracticeFlow() {
       toast.error("Invalid practice", { description: "Missing practice id in the URL." });
       return;
     }
-    if (
-      !isLearnEnglishLessonPractice &&
-      (!formData.title.trim() || !formData.description.trim())
-    ) {
+    if (!formData.title.trim() || !formData.description.trim()) {
       toast.error("Title and story description are required", {
         description: "Complete the first step before saving.",
       });
@@ -510,10 +507,6 @@ export function EditPracticeFlow() {
       return;
     }
 
-    const lessonDefaultTitle =
-      lessonTitleDisplay?.trim() ||
-      (lessonId ? `Lesson ${lessonId} practice` : "Lesson practice");
-
     if (!isExamPrep) {
       const parentsErr = validatePracticeParents(formData.parents, {
         required: !parentsOptional,
@@ -544,8 +537,6 @@ export function EditPracticeFlow() {
         },
         questions: mappedQuestions,
         definitions: typeDefinitions,
-        isLearnEnglishLessonPractice,
-        lessonDefaultTitle,
         parents: dedupeParents(formData.parents),
         parentsChanged: !practiceParentsEqual(
           formData.parents,
@@ -631,7 +622,6 @@ export function EditPracticeFlow() {
               setFormData={setFormData}
               nextStep={nextStep}
               onCancel={() => goBack()}
-              isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               parentSummary={reviewParentSummary}
               showParentsEditor={!isLearnEnglishLessonPractice}
@@ -683,7 +673,6 @@ export function EditPracticeFlow() {
               formData={formData}
               selectedPersona={selectedPersona}
               personas={personas}
-              isLessonPractice={isLearnEnglishLessonPractice}
               lessonTitle={lessonTitleDisplay}
               programLabel={programLabel}
               courseLabel={courseId ? `Course ${courseId}` : null}
@@ -748,7 +737,6 @@ export function EditPracticeFlow() {
             formData={formData}
             selectedPersona={selectedPersona}
             personas={personas}
-            isLessonPractice={isLearnEnglishLessonPractice}
             lessonTitle={lessonTitleDisplay}
             programLabel={programLabel}
             courseLabel={courseId ? `Course ${courseId}` : null}

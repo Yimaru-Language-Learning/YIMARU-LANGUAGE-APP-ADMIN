@@ -206,6 +206,7 @@ export function CourseDetailPage() {
   const [practicesLoadError, setPracticesLoadError] = useState<string | null>(
     null,
   );
+  const [directPracticesLoaded, setDirectPracticesLoaded] = useState(false);
   const [publishStatusPracticeId, setPublishStatusPracticeId] = useState<
     number | null
   >(null);
@@ -353,14 +354,27 @@ export function CourseDetailPage() {
       setPractices([]);
       setPracticesLoadError("Failed to load practices. Please try again.");
     } finally {
+      setDirectPracticesLoaded(true);
       setPracticesLoading(false);
     }
   }, [courseIdNum]);
 
   useEffect(() => {
-    if (activeTab !== "practice") return;
     void loadCoursePractices();
-  }, [activeTab, loadCoursePractices]);
+  }, [loadCoursePractices]);
+
+  const courseHasDirectPractice = useMemo(() => {
+    if (practices.length > 0) return true;
+    if (directPracticesLoaded) return false;
+    return (
+      Boolean(course?.has_practice) || Number(course?.practice_count ?? 0) > 0
+    );
+  }, [
+    course?.has_practice,
+    course?.practice_count,
+    directPracticesLoaded,
+    practices.length,
+  ]);
 
   const filteredModules = useMemo(
     () =>
@@ -682,9 +696,9 @@ export function CourseDetailPage() {
                   backTo: "modules",
                 }}
                 parentLabel={displayTitle}
-                disabled={practices.length > 0}
+                disabled={courseHasDirectPractice}
                 title={
-                  practices.length > 0 ? learnEnglishPracticeLimitHint : undefined
+                  courseHasDirectPractice ? learnEnglishPracticeLimitHint : undefined
                 }
               >
                 <Calendar className="h-4 w-4" />
@@ -946,6 +960,7 @@ export function CourseDetailPage() {
                                     moduleName: module.name,
                                     moduleDescription:
                                       module.description?.trim() ?? "",
+                                    moduleHasPractice: Boolean(module.has_practice),
                                   },
                                 },
                               )

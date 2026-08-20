@@ -87,6 +87,7 @@ export function LessonPracticesPage() {
   }>();
   const [searchParams] = useSearchParams();
   const lessonTitle = searchParams.get("lessonTitle")?.trim() || "";
+  const lessonHasPracticeHint = searchParams.get("hasPractice") === "1";
 
   const isExamPrep = Boolean(programType?.trim());
   const backHref = isExamPrep
@@ -107,6 +108,7 @@ export function LessonPracticesPage() {
   const [listSearch, setListSearch] = useState("");
   const [publishStatusFilter, setPublishStatusFilter] =
     useState<PublishStatusFilter>("all");
+  const [practicesLoaded, setPracticesLoaded] = useState(false);
 
   const filteredPractices = useMemo(
     () =>
@@ -165,6 +167,7 @@ export function LessonPracticesPage() {
       setLoadError("Could not load practices for this lesson.");
       notifyApiError(error, "Failed to load practices");
     } finally {
+      setPracticesLoaded(true);
       setLoading(false);
     }
   }, [isExamPrep, lid, validLesson]);
@@ -175,6 +178,18 @@ export function LessonPracticesPage() {
 
   const displayTitle =
     lessonTitle || (validLesson ? `Lesson #${lid}` : "Lesson practices");
+
+  const lessonHasDirectPractice = useMemo(() => {
+    if (!isExamPrep && (practices.length > 0 || totalCount > 0)) return true;
+    if (!isExamPrep && practicesLoaded) return false;
+    return !isExamPrep && lessonHasPracticeHint;
+  }, [
+    isExamPrep,
+    lessonHasPracticeHint,
+    practices.length,
+    practicesLoaded,
+    totalCount,
+  ]);
 
   const practicePathOptions = useMemo(
     () => ({
@@ -362,11 +377,9 @@ export function LessonPracticesPage() {
             className="rounded-[6px] bg-brand-500 font-semibold hover:bg-brand-600"
             pathOptions={practicePathOptions}
             parentLabel={displayTitle}
-            disabled={!isExamPrep && practices.length >= 1}
+            disabled={lessonHasDirectPractice}
             title={
-              !isExamPrep && practices.length >= 1
-                ? learnEnglishPracticeLimitHint
-                : undefined
+              lessonHasDirectPractice ? learnEnglishPracticeLimitHint : undefined
             }
           >
             <Calendar className="h-4 w-4" />

@@ -22,15 +22,23 @@ import {
   DialogClose,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
 import { toast } from "sonner";
 import { ResolvedImage } from "../../components/media/ResolvedImage";
 import {
   createExamPrepCatalogCourse,
+  createProgramCourse,
+  deleteExamPrepCatalogCourse,
+  deleteTopLevelCourse,
   getExamPrepCatalogCourses,
+  getLearningPrograms,
+  getProgramCourses,
   setExamPrepCatalogCourseAccessTier,
   setExamPrepCatalogCoursePublishStatus,
+  setProgramCourseAccessTier,
+  setProgramCoursePublishStatus,
   updateExamPrepCatalogCourse,
-  deleteExamPrepCatalogCourse,
+  updateTopLevelCourse,
 } from "../../api/courses.api";
 import { ContentPublishStatusChip } from "./components/ContentPublishStatusChip";
 import { ContentAccessTierChip } from "./components/ContentAccessTierChip";
@@ -39,7 +47,9 @@ import { ContentPageDescription } from "./components/ContentPageDescription";
 import type {
   ContentAccessTier,
   ExamPrepCatalogCourseItem,
+  LearningProgramListItem,
   PracticePublishStatus,
+  ProgramCourseListItem,
 } from "../../types/course.types";
 import {
   filterBySearchAndPublishStatus,
@@ -55,29 +65,37 @@ import {
   offsetPageFromListEnvelope,
 } from "../../lib/fetchAllOffsetPages";
 
+type CourseListRow = {
+  id: number;
+  programId?: number;
+  programName?: string;
+  name: string;
+  description: string;
+  thumbnail?: string | null;
+  sortOrder: number;
+  publishStatus: PracticePublishStatus | string | null;
+  accessTier: ContentAccessTier | string | null;
+  unitsCount: number;
+  modulesCount: number;
+  lessonsCount: number;
+};
+
 export function ProgramDetailPage() {
   const navigate = useNavigate();
   const { programType } = useParams<{ programType: string }>();
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
+  const [createSortOrder, setCreateSortOrder] = useState("");
+  const [createProgramId, setCreateProgramId] = useState("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createThumbnailFromUpload, setCreateThumbnailFromUpload] = useState(false);
   const [creating, setCreating] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const createThumbnailFileInputRef = useRef<HTMLInputElement>(null);
-  const [createdCourses, setCreatedCourses] = useState<
-    {
-      id: number;
-      name: string;
-      description: string;
-      thumbnail?: string | null;
-      sortOrder: number;
-      publishStatus: PracticePublishStatus | string | null;
-      accessTier: ContentAccessTier | string | null;
-      unitsCount: number;
-      modulesCount: number;
-      lessonsCount: number;
-    }[]
+  const [createdCourses, setCreatedCourses] = useState<CourseListRow[]>([]);
+  const [learningPrograms, setLearningPrograms] = useState<
+    LearningProgramListItem[]
   >([]);
   const [publishStatusUpdatingId, setPublishStatusUpdatingId] = useState<
     number | null
@@ -88,6 +106,7 @@ export function ProgramDetailPage() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("1");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -114,48 +133,110 @@ export function ProgramDetailPage() {
 
   const currentProgram =
     programs[programType || "proficiency"] || programs.proficiency;
+  const isProficiency = programType === "proficiency";
+  const isSkillBased = programType === "skill-based";
 
-  const loadCatalogCourses = useCallback(async () => {
-    if (programType !== "proficiency") return;
+  const mapExamPrepCourse = (row: ExamPrepCatalogCourseItem): CourseListRow => ({
+    id: Number(row.id),
+    name: row.name?.trim() || `Course ${row.id}`,
+    description: row.description?.trim() || "",
+    thumbnail: row.thumbnail?.trim() || null,
+    sortOrder: Number(row.sort_order ?? 0),
+    publishStatus: row.publish_status ?? null,
+    accessTier: row.access_tier ?? null,
+    unitsCount: Number(row.units_count ?? 0),
+    modulesCount: Number(row.modules_count ?? 0),
+    lessonsCount: Number(row.lessons_count ?? 0),
+  });
+
+  const mapProgramCourse = (
+    row: ProgramCourseListItem,
+    programName?: string,
+  ): CourseListRow => ({
+    id: Number(row.id),
+    programId: Number(row.program_id),
+    programName: programName?.trim() || undefined,
+    name: row.name?.trim() || `Course ${row.id}`,
+    description: row.description?.trim() || "",
+    thumbnail: row.thumbnail?.trim() || row.thumbnail_url?.trim() || null,
+    sortOrder: Number(row.sort_order ?? 0),
+    publishStatus: row.publish_status ?? null,
+    accessTier: row.access_tier ?? null,
+    unitsCount: 0,
+    modulesCount: Number(row.module_count ?? row.modules_count ?? 0),
+    lessonsCount: Number(row.lesson_count ?? 0),
+  });
+
+  const loadCourses = useCallback(async () => {
+    if (!isProficiency && !isSkillBased) return;
     setCatalogLoading(true);
     try {
-      const list = await fetchAllOffsetPages(async (offset, limit) =>
-        offsetPageFromListEnvelope<ExamPrepCatalogCourseItem>(
-          await getExamPrepCatalogCourses({ limit, offset }),
-          "catalog_courses",
+      if (isProficiency) {
+        const list = await fetchAllOffsetPages(async (offset, limit) =>
+          offsetPageFromListEnvelope<ExamPrepCatalogCourseItem>(
+            await getExamPrepCatalogCourses({ limit, offset }),
+            "catalog_courses",
+          ),
+        );
+        setCreatedCourses(list.map(mapExamPrepCourse));
+        setLearningPrograms([]);
+        return;
+      }
+
+      const programsList = await fetchAllOffsetPages(async (offset, limit) =>
+        offsetPageFromListEnvelope<LearningProgramListItem>(
+          await getLearningPrograms({ limit, offset }),
+          "programs",
         ),
       );
+      setLearningPrograms(programsList);
+      const programNameById = new Map(
+        programsList.map((program) => [program.id, program.name?.trim() || ""]),
+      );
+
+      const coursePages = await Promise.all(
+        programsList.map((program) =>
+          fetchAllOffsetPages(async (offset, limit) =>
+            offsetPageFromListEnvelope<ProgramCourseListItem>(
+              await getProgramCourses(program.id, { limit, offset }),
+              "courses",
+            ),
+          ),
+        ),
+      );
+
       setCreatedCourses(
-        list.map((row) => ({
-          id: Number(row.id),
-          name: row.name?.trim() || `Course ${row.id}`,
-          description: row.description?.trim() || "",
-          thumbnail: row.thumbnail?.trim() || null,
-          sortOrder: Number(row.sort_order ?? 0),
-          publishStatus: row.publish_status ?? null,
-          accessTier: row.access_tier ?? null,
-          unitsCount: Number(row.units_count ?? 0),
-          modulesCount: Number(row.modules_count ?? 0),
-          lessonsCount: Number(row.lessons_count ?? 0),
-        })),
+        coursePages
+          .flat()
+          .map((row) =>
+            mapProgramCourse(row, programNameById.get(row.program_id)),
+          )
+          .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id),
       );
     } catch (error) {
       console.error(error);
-      notifyApiError(error, "Failed to fetch catalog courses");
+      notifyApiError(
+        error,
+        isProficiency ? "Failed to fetch catalog courses" : "Failed to fetch courses",
+      );
       setCreatedCourses([]);
+      if (isSkillBased) {
+        setLearningPrograms([]);
+      }
     } finally {
       setCatalogLoading(false);
     }
-  }, [programType]);
+  }, [isProficiency, isSkillBased]);
 
   useEffect(() => {
-    void loadCatalogCourses();
-  }, [loadCatalogCourses]);
-  const proficiencyCourses = useMemo(
-    () => [
-      ...currentProgram.courses,
-      ...createdCourses.map((course) => ({
+    void loadCourses();
+  }, [loadCourses]);
+  const displayCourses = useMemo(
+    () =>
+      createdCourses.map((course) => ({
         id: course.id,
+        programId: course.programId,
+        programName: course.programName,
         name: course.name,
         description: course.description,
         units_count: course.unitsCount,
@@ -168,22 +249,25 @@ export function ProgramDetailPage() {
         access_tier: course.accessTier,
         buttonText: "View Detail",
       })),
-    ],
-    [createdCourses, currentProgram.courses],
+    [createdCourses],
   );
   const [listSearch, setListSearch] = useState("");
   const [publishStatusFilter, setPublishStatusFilter] =
     useState<PublishStatusFilter>("all");
 
-  const filteredProficiencyCourses = useMemo(
+  const filteredCourses = useMemo(
     () =>
-      filterBySearchAndPublishStatus(proficiencyCourses, {
+      filterBySearchAndPublishStatus(displayCourses, {
         search: listSearch,
         publishStatusFilter,
-        getSearchFields: (c) => [c.name, c.description],
+        getSearchFields: (c) => [
+          c.name,
+          c.description,
+          c.programName ?? "",
+        ],
         getPublishStatus: (c) => c.publish_status,
       }),
-    [listSearch, proficiencyCourses, publishStatusFilter],
+    [listSearch, displayCourses, publishStatusFilter],
   );
 
   const handleCoursePublishStatus = async (
@@ -192,9 +276,15 @@ export function ProgramDetailPage() {
   ) => {
     setPublishStatusUpdatingId(courseId);
     try {
-      await setExamPrepCatalogCoursePublishStatus(courseId, {
-        publish_status: nextStatus,
-      });
+      if (isProficiency) {
+        await setExamPrepCatalogCoursePublishStatus(courseId, {
+          publish_status: nextStatus,
+        });
+      } else {
+        await setProgramCoursePublishStatus(courseId, {
+          publish_status: nextStatus,
+        });
+      }
       setCreatedCourses((prev) =>
         prev.map((c) =>
           c.id === courseId ? { ...c, publishStatus: nextStatus } : c,
@@ -216,9 +306,15 @@ export function ProgramDetailPage() {
   ) => {
     setAccessTierUpdatingId(courseId);
     try {
-      await setExamPrepCatalogCourseAccessTier(courseId, {
-        access_tier: nextTier,
-      });
+      if (isProficiency) {
+        await setExamPrepCatalogCourseAccessTier(courseId, {
+          access_tier: nextTier,
+        });
+      } else {
+        await setProgramCourseAccessTier(courseId, {
+          access_tier: nextTier,
+        });
+      }
       setCreatedCourses((prev) =>
         prev.map((c) =>
           c.id === courseId ? { ...c, accessTier: nextTier } : c,
@@ -283,11 +379,16 @@ export function ProgramDetailPage() {
     return uploadedUrl;
   };
 
+  const clearCreateCourseForm = () => {
+    setCreateName("");
+    setCreateDescription("");
+    setCreateSortOrder("");
+    setCreateProgramId("");
+    setCreateThumbnail("");
+    setCreateThumbnailFromUpload(false);
+  };
+
   const handleCreateCourse = async () => {
-    if (programType !== "proficiency") {
-      toast.error("Create Course is supported only for proficiency catalog.");
-      return;
-    }
     const name = createName.trim();
     if (!name) {
       toast.error("Course name is required");
@@ -310,33 +411,46 @@ export function ProgramDetailPage() {
         thumbnailToSend = uploadedUrl;
       }
 
-      const response = await createExamPrepCatalogCourse({
-        name,
-        description: null,
-        thumbnail: thumbnailToSend,
-      });
-      const row = response.data?.data;
-      if (!row?.id) {
-        throw new Error("Missing created course payload");
+      if (isProficiency) {
+        const response = await createExamPrepCatalogCourse({
+          name,
+          description: null,
+          thumbnail: thumbnailToSend,
+        });
+        const row = response.data?.data;
+        if (!row?.id) {
+          throw new Error("Missing created course payload");
+        }
+      } else if (isSkillBased) {
+        const programId = Number(createProgramId);
+        if (!Number.isFinite(programId) || programId < 1) {
+          toast.error("Please select a program");
+          return;
+        }
+        const sortOrderRaw = createSortOrder.trim();
+        if (!sortOrderRaw) {
+          toast.error("Sort order is required");
+          return;
+        }
+        const sort_order = Number(sortOrderRaw);
+        if (!Number.isInteger(sort_order) || sort_order < 0) {
+          toast.error("Sort order must be a whole number of 0 or greater");
+          return;
+        }
+        await createProgramCourse(programId, {
+          name,
+          description: createDescription.trim(),
+          thumbnail: thumbnailToSend ?? "",
+          sort_order,
+        });
+      } else {
+        toast.error("Unsupported program type");
+        return;
       }
-      setCreatedCourses((prev) => [
-        {
-          id: row.id,
-          name: row.name ?? name,
-          description: row.description?.trim() || "",
-          thumbnail: row.thumbnail?.trim() || null,
-          sortOrder: Number(row.sort_order ?? 0),
-          unitsCount: Number(row.units_count ?? 0),
-          modulesCount: Number(row.modules_count ?? 0),
-          lessonsCount: Number(row.lessons_count ?? 0),
-        },
-        ...prev,
-      ]);
-      await loadCatalogCourses();
+
+      await loadCourses();
       toast.success("Course created");
-      setCreateName("");
-      setCreateThumbnail("");
-      setCreateThumbnailFromUpload(false);
+      clearCreateCourseForm();
       setCreateOpen(false);
     } catch (error: unknown) {
       console.error(error);
@@ -346,11 +460,12 @@ export function ProgramDetailPage() {
     }
   };
 
-  const openEditCourse = (course: (typeof proficiencyCourses)[number]) => {
+  const openEditCourse = (course: (typeof displayCourses)[number]) => {
     const idNum = Number(course.id);
     if (!Number.isFinite(idNum)) return;
     setEditingCourseId(idNum);
     setEditName(String(course.name ?? ""));
+    setEditDescription(String(course.description ?? ""));
     setEditThumbnail(String(course.thumbnail ?? ""));
     setEditSortOrder(String(course.sort_order ?? 1));
   };
@@ -359,6 +474,7 @@ export function ProgramDetailPage() {
     if (savingEdit || uploadingEditThumbnail) return;
     setEditingCourseId(null);
     setEditName("");
+    setEditDescription("");
     setEditThumbnail("");
     setEditSortOrder("1");
   };
@@ -406,31 +522,49 @@ export function ProgramDetailPage() {
       const minioThumbnail = await resolveThumbnailToMinioUrl(editThumbnail);
       const existing = createdCourses.find((c) => c.id === editingCourseId);
       const preservedDescription =
-        typeof existing?.description === "string" ? existing.description.trim() || null : null;
-      const response = await updateExamPrepCatalogCourse(editingCourseId, {
-        name,
-        description: preservedDescription,
-        thumbnail: minioThumbnail || null,
-        sort_order: sortOrderNum,
-      });
-      const row = response.data?.data;
-      setCreatedCourses((prev) =>
-        prev.map((course) =>
-          course.id === editingCourseId
-            ? {
-                ...course,
-                name: row?.name ?? name,
-                description: row?.description?.trim() || preservedDescription || "",
-                thumbnail: row?.thumbnail?.trim() || null,
-                sortOrder: Number(row?.sort_order ?? sortOrderNum),
-                unitsCount: Number(row?.units_count ?? course.unitsCount ?? 0),
-                modulesCount: Number(row?.modules_count ?? course.modulesCount ?? 0),
-                lessonsCount: Number(row?.lessons_count ?? course.lessonsCount ?? 0),
-              }
-            : course,
-        ),
-      );
-      await loadCatalogCourses();
+        typeof existing?.description === "string"
+          ? existing.description.trim() || null
+          : null;
+
+      if (isProficiency) {
+        const response = await updateExamPrepCatalogCourse(editingCourseId, {
+          name,
+          description: preservedDescription,
+          thumbnail: minioThumbnail || null,
+          sort_order: sortOrderNum,
+        });
+        const row = response.data?.data;
+        setCreatedCourses((prev) =>
+          prev.map((course) =>
+            course.id === editingCourseId
+              ? {
+                  ...course,
+                  name: row?.name ?? name,
+                  description:
+                    row?.description?.trim() || preservedDescription || "",
+                  thumbnail: row?.thumbnail?.trim() || null,
+                  sortOrder: Number(row?.sort_order ?? sortOrderNum),
+                  unitsCount: Number(row?.units_count ?? course.unitsCount ?? 0),
+                  modulesCount: Number(
+                    row?.modules_count ?? course.modulesCount ?? 0,
+                  ),
+                  lessonsCount: Number(
+                    row?.lessons_count ?? course.lessonsCount ?? 0,
+                  ),
+                }
+              : course,
+          ),
+        );
+      } else {
+        await updateTopLevelCourse(editingCourseId, {
+          name,
+          description: editDescription.trim(),
+          thumbnail: minioThumbnail,
+          sort_order: sortOrderNum,
+        });
+      }
+
+      await loadCourses();
       toast.success("Course updated");
       closeEditCourse();
     } catch (error: unknown) {
@@ -445,8 +579,12 @@ export function ProgramDetailPage() {
     if (!deletingCourseId) return;
     setDeletingCourse(true);
     try {
-      await deleteExamPrepCatalogCourse(deletingCourseId);
-      await loadCatalogCourses();
+      if (isProficiency) {
+        await deleteExamPrepCatalogCourse(deletingCourseId);
+      } else {
+        await deleteTopLevelCourse(deletingCourseId);
+      }
+      await loadCourses();
       toast.success("Course deleted");
       setDeletingCourseId(null);
     } catch (error: unknown) {
@@ -517,6 +655,7 @@ export function ProgramDetailPage() {
             open={createOpen}
             onOpenChange={(open) => {
               if (!open && (creating || uploadingThumbnail)) return;
+              if (!open) clearCreateCourseForm();
               setCreateOpen(open);
             }}
           >
@@ -535,6 +674,72 @@ export function ProgramDetailPage() {
                 </DialogHeader>
 
                 <div className="min-h-0 flex-1 space-y-8 overflow-y-auto p-8">
+                  {isSkillBased ? (
+                    <>
+                      <div className="space-y-3">
+                        <label className="text-[15px] text-grayScale-800">
+                          Program
+                        </label>
+                        {learningPrograms.length === 0 ? (
+                          <p className="text-sm text-grayScale-500">
+                            No learning programs found. Create a program first
+                            from{" "}
+                            <Link
+                              to="/new-content/learn-english"
+                              className="font-semibold text-brand-500 hover:underline"
+                            >
+                              Learn English
+                            </Link>
+                            .
+                          </p>
+                        ) : (
+                          <select
+                            value={createProgramId}
+                            onChange={(e) => setCreateProgramId(e.target.value)}
+                            className="h-12 w-full rounded-[8px] border border-grayScale-400 bg-white px-4 text-[15px] text-grayScale-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            disabled={creating}
+                          >
+                            <option value="">Select a program…</option>
+                            {learningPrograms.map((program) => (
+                              <option key={program.id} value={String(program.id)}>
+                                {program.name?.trim() || `Program ${program.id}`}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[15px] text-grayScale-800">
+                          Description
+                        </label>
+                        <Textarea
+                          value={createDescription}
+                          onChange={(e) => setCreateDescription(e.target.value)}
+                          placeholder="Short summary of the course"
+                          rows={3}
+                          className="min-h-[88px] resize-y rounded-[8px] border-grayScale-400 px-4 text-[15px]"
+                          disabled={creating || uploadingThumbnail}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[15px] text-grayScale-800">
+                          Sort Order
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={createSortOrder}
+                          onChange={(e) => setCreateSortOrder(e.target.value)}
+                          placeholder="e.g. 1"
+                          className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
+                          disabled={creating}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
                   <div className="space-y-3">
                     <label className="text-[15px] text-grayScale-800">
                       Name
@@ -542,7 +747,11 @@ export function ProgramDetailPage() {
                     <Input
                       value={createName}
                       onChange={(e) => setCreateName(e.target.value)}
-                      placeholder="e.g. TOEFL, IELTS"
+                      placeholder={
+                        isSkillBased
+                          ? "e.g. English For Professionals"
+                          : "e.g. TOEFL, IELTS"
+                      }
                       className="h-12 border-grayScale-400 rounded-[8px] px-4 placeholder:text-grayScale-400 text-[15px] focus:ring-brand-500/20"
                       disabled={creating}
                     />
@@ -625,7 +834,11 @@ export function ProgramDetailPage() {
                   </DialogClose>
                   <Button
                     className="h-11 px-8 rounded-[6px] bg-brand-500 text-white font-bold hover:bg-brand-600"
-                    disabled={creating || uploadingThumbnail}
+                    disabled={
+                      creating ||
+                      uploadingThumbnail ||
+                      (isSkillBased && learningPrograms.length === 0)
+                    }
                     onClick={() => void handleCreateCourse()}
                   >
                     {creating ? "Creating..." : "Create Course"}
@@ -654,33 +867,38 @@ export function ProgramDetailPage() {
 
       {/* Cards Grid */}
       <div className="mt-10 space-y-6">
-        {programType === "proficiency" && !catalogLoading && proficiencyCourses.length > 0 ? (
+        {!catalogLoading && displayCourses.length > 0 ? (
           <ContentListSearchFilterBar
             search={listSearch}
             onSearchChange={setListSearch}
             publishStatusFilter={publishStatusFilter}
             onPublishStatusFilterChange={setPublishStatusFilter}
-            searchPlaceholder="Search courses by name or description…"
-            searchAriaLabel="Search catalog courses"
+            searchPlaceholder={
+              isSkillBased
+                ? "Search courses by name, description, or program…"
+                : "Search courses by name or description…"
+            }
+            searchAriaLabel={
+              isSkillBased ? "Search skill-based courses" : "Search catalog courses"
+            }
           />
         ) : null}
         <div className="flex flex-wrap gap-8">
-        {programType === "proficiency" && catalogLoading ? (
-          <p className="text-sm text-grayScale-500">Loading catalog courses...</p>
+        {catalogLoading ? (
+          <p className="text-sm text-grayScale-500">Loading courses...</p>
         ) : null}
-        {(programType === "proficiency"
-          ? proficiencyCourses
-          : currentProgram.courses
-        ).length === 0 && !catalogLoading ? (
+        {displayCourses.length === 0 && !catalogLoading ? (
           <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
             <p className="text-sm font-medium text-grayScale-600">
-              No catalog courses yet
+              {isSkillBased ? "No skill-based courses yet" : "No catalog courses yet"}
             </p>
             <p className="mt-1 text-sm text-grayScale-400">
-              Create your first Duolingo/IELTS catalog course to start organizing units, modules, and lessons.
+              {isSkillBased
+                ? "Create your first course under a learning program to start organizing modules and lessons."
+                : "Create your first Duolingo/IELTS catalog course to start organizing units, modules, and lessons."}
             </p>
           </div>
-        ) : programType === "proficiency" && filteredProficiencyCourses.length === 0 ? (
+        ) : filteredCourses.length === 0 ? (
           <div className="w-full rounded-xl border border-dashed border-grayScale-200 bg-grayScale-50/50 px-6 py-14 text-center">
             <p className="text-sm font-medium text-grayScale-600">
               No courses match your search or status filter
@@ -692,16 +910,12 @@ export function ProgramDetailPage() {
             ) : null}
           </div>
         ) : (
-          (programType === "proficiency"
-            ? filteredProficiencyCourses
-            : currentProgram.courses
-          ).map((course: any) => (
+          filteredCourses.map((course: any) => (
             <Card
               key={course.id}
               className="group relative bg-white w-[500px] rounded-[20px] border border-grayScale-100 p-6 flex flex-col items-start shadow-sm hover:shadow-md transition-shadow"
             >
-            {programType === "proficiency" ? (
-              <div className="absolute right-3 top-3 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+            <div className="absolute right-3 top-3 z-10 flex translate-y-1 gap-1 opacity-0 pointer-events-none transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
                 <Button
                   type="button"
                   variant="secondary"
@@ -723,7 +937,6 @@ export function ProgramDetailPage() {
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
-            ) : null}
             {/* Logo */}
             <div className="h-16 flex items-center">
               {course.thumbnail ? (
@@ -743,25 +956,28 @@ export function ProgramDetailPage() {
 
             {/* Content */}
             <div className="space-y-4 pt-2 flex-1">
-              {programType === "proficiency" ? (
-                <div className="flex flex-wrap gap-2">
-                  <ContentPublishStatusChip
-                    publishStatus={course.publish_status}
-                    updating={publishStatusUpdatingId === Number(course.id)}
-                    contentLabel="course"
-                    onToggle={(nextStatus) =>
-                      void handleCoursePublishStatus(Number(course.id), nextStatus)
-                    }
-                  />
-                  <ContentAccessTierChip
-                    accessTier={course.access_tier}
-                    updating={accessTierUpdatingId === Number(course.id)}
-                    contentLabel="course"
-                    onToggle={(nextTier) =>
-                      void handleCourseAccessTier(Number(course.id), nextTier)
-                    }
-                  />
-                </div>
+              <div className="flex flex-wrap gap-2">
+                <ContentPublishStatusChip
+                  publishStatus={course.publish_status}
+                  updating={publishStatusUpdatingId === Number(course.id)}
+                  contentLabel="course"
+                  onToggle={(nextStatus) =>
+                    void handleCoursePublishStatus(Number(course.id), nextStatus)
+                  }
+                />
+                <ContentAccessTierChip
+                  accessTier={course.access_tier}
+                  updating={accessTierUpdatingId === Number(course.id)}
+                  contentLabel="course"
+                  onToggle={(nextTier) =>
+                    void handleCourseAccessTier(Number(course.id), nextTier)
+                  }
+                />
+              </div>
+              {isSkillBased && course.programName ? (
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-brand-500">
+                  <SearchHighlight text={course.programName} query={listSearch} />
+                </p>
               ) : null}
               <h3 className="text-[18px] font-medium text-grayScale-900">
                 <SearchHighlight text={course.name} query={listSearch} />
@@ -773,12 +989,14 @@ export function ProgramDetailPage() {
 
             {/* Badges/Stats */}
             <div className="flex items-center pt-4 gap-4">
-              <div className="h-10 px-4 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-700">
-                <ClipboardList className="h-3 w-3 text-grayScale-400" />
-                <span className="text-[12px] ">
-                  {Number(course.units_count ?? 0)} Units
-                </span>
-              </div>
+              {isProficiency ? (
+                <div className="h-10 px-4 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-700">
+                  <ClipboardList className="h-3 w-3 text-grayScale-400" />
+                  <span className="text-[12px] ">
+                    {Number(course.units_count ?? 0)} Units
+                  </span>
+                </div>
+              ) : null}
               <div className="h-10 px-4 rounded-[6px] bg-grayScale-100 border border-grayScale-100 flex items-center gap-2 text-grayScale-700">
                 <ListChecks className="h-3 w-3 text-grayScale-400" />
                 <span className="text-[12px] ">
@@ -796,9 +1014,15 @@ export function ProgramDetailPage() {
             {/* Action Button */}
             <Button
               className="w-full mt-4 h-10 bg-brand-500  text-white rounded-[6px] font-bold flex items-center justify-center gap-2 group/btn"
-              onClick={() =>
-                navigate(`/new-content/courses/${programType}/${course.id}`)
-              }
+              onClick={() => {
+                if (isSkillBased && course.programId) {
+                  navigate(
+                    `/new-content/learn-english/${course.programId}/courses/${course.id}`,
+                  );
+                  return;
+                }
+                navigate(`/new-content/courses/${programType}/${course.id}`);
+              }}
             >
               {course.buttonText}
               <ChevronRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-1" />
@@ -833,6 +1057,21 @@ export function ProgramDetailPage() {
                   disabled={savingEdit || uploadingEditThumbnail}
                 />
               </div>
+
+              {isSkillBased ? (
+                <div className="space-y-3">
+                  <label className="text-[15px] text-grayScale-800">
+                    Description
+                  </label>
+                  <Textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="min-h-[88px] resize-y rounded-[8px] border-grayScale-400 px-4 text-[15px]"
+                    disabled={savingEdit || uploadingEditThumbnail}
+                  />
+                </div>
+              ) : null}
 
               <div className="space-y-3">
                 <label className="text-[15px] text-grayScale-800">Sort Order</label>

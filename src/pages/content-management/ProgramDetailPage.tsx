@@ -46,6 +46,7 @@ import { ContentListSearchFilterBar } from "./components/ContentListSearchFilter
 import { ContentPageDescription } from "./components/ContentPageDescription";
 import type {
   ContentAccessTier,
+  ExamPrepCatalogCategory,
   ExamPrepCatalogCourseItem,
   LearningProgramListItem,
   PracticePublishStatus,
@@ -69,6 +70,7 @@ type CourseListRow = {
   id: number;
   programId?: number;
   programName?: string;
+  category?: ExamPrepCatalogCategory | string | null;
   name: string;
   description: string;
   thumbnail?: string | null;
@@ -88,6 +90,7 @@ export function ProgramDetailPage() {
   const [createDescription, setCreateDescription] = useState("");
   const [createSortOrder, setCreateSortOrder] = useState("");
   const [createProgramId, setCreateProgramId] = useState("");
+  const [createCategory, setCreateCategory] = useState<ExamPrepCatalogCategory | "">("");
   const [createThumbnail, setCreateThumbnail] = useState("");
   const [createThumbnailFromUpload, setCreateThumbnailFromUpload] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -107,6 +110,7 @@ export function ProgramDetailPage() {
   const [editingCourseId, setEditingCourseId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState<ExamPrepCatalogCategory | "">("");
   const [editThumbnail, setEditThumbnail] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("1");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -138,6 +142,7 @@ export function ProgramDetailPage() {
 
   const mapExamPrepCourse = (row: ExamPrepCatalogCourseItem): CourseListRow => ({
     id: Number(row.id),
+    category: row.category ?? null,
     name: row.name?.trim() || `Course ${row.id}`,
     description: row.description?.trim() || "",
     thumbnail: row.thumbnail?.trim() || null,
@@ -237,6 +242,7 @@ export function ProgramDetailPage() {
         id: course.id,
         programId: course.programId,
         programName: course.programName,
+        category: course.category,
         name: course.name,
         description: course.description,
         units_count: course.unitsCount,
@@ -384,6 +390,7 @@ export function ProgramDetailPage() {
     setCreateDescription("");
     setCreateSortOrder("");
     setCreateProgramId("");
+    setCreateCategory("");
     setCreateThumbnail("");
     setCreateThumbnailFromUpload(false);
   };
@@ -412,9 +419,14 @@ export function ProgramDetailPage() {
       }
 
       if (isProficiency) {
+        if (createCategory !== "IELTS" && createCategory !== "DUOLINGO") {
+          toast.error("Please select an exam category");
+          return;
+        }
         const response = await createExamPrepCatalogCourse({
           name,
           description: null,
+          category: createCategory,
           thumbnail: thumbnailToSend,
         });
         const row = response.data?.data;
@@ -466,6 +478,11 @@ export function ProgramDetailPage() {
     setEditingCourseId(idNum);
     setEditName(String(course.name ?? ""));
     setEditDescription(String(course.description ?? ""));
+    setEditCategory(
+      course.category === "IELTS" || course.category === "DUOLINGO"
+        ? course.category
+        : "",
+    );
     setEditThumbnail(String(course.thumbnail ?? ""));
     setEditSortOrder(String(course.sort_order ?? 1));
   };
@@ -475,6 +492,7 @@ export function ProgramDetailPage() {
     setEditingCourseId(null);
     setEditName("");
     setEditDescription("");
+    setEditCategory("");
     setEditThumbnail("");
     setEditSortOrder("1");
   };
@@ -527,9 +545,14 @@ export function ProgramDetailPage() {
           : null;
 
       if (isProficiency) {
+        if (editCategory !== "IELTS" && editCategory !== "DUOLINGO") {
+          toast.error("Please select an exam category");
+          return;
+        }
         const response = await updateExamPrepCatalogCourse(editingCourseId, {
           name,
           description: preservedDescription,
+          category: editCategory,
           thumbnail: minioThumbnail || null,
           sort_order: sortOrderNum,
         });
@@ -539,6 +562,7 @@ export function ProgramDetailPage() {
             course.id === editingCourseId
               ? {
                   ...course,
+                  category: row?.category ?? editCategory,
                   name: row?.name ?? name,
                   description:
                     row?.description?.trim() || preservedDescription || "",
@@ -674,6 +698,25 @@ export function ProgramDetailPage() {
                 </DialogHeader>
 
                 <div className="min-h-0 flex-1 space-y-8 overflow-y-auto p-8">
+                  {isProficiency ? (
+                    <div className="space-y-3">
+                      <label className="text-[15px] text-grayScale-800">
+                        Exam Category
+                      </label>
+                      <select
+                        value={createCategory}
+                        onChange={(e) =>
+                          setCreateCategory(e.target.value as ExamPrepCatalogCategory | "")
+                        }
+                        className="h-12 w-full rounded-[8px] border border-grayScale-400 bg-white px-4 text-[15px] text-grayScale-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                        disabled={creating || uploadingThumbnail}
+                      >
+                        <option value="">Select IELTS or Duolingo…</option>
+                        <option value="IELTS">IELTS</option>
+                        <option value="DUOLINGO">Duolingo</option>
+                      </select>
+                    </div>
+                  ) : null}
                   {isSkillBased ? (
                     <>
                       <div className="space-y-3">
@@ -979,6 +1022,11 @@ export function ProgramDetailPage() {
                   <SearchHighlight text={course.programName} query={listSearch} />
                 </p>
               ) : null}
+              {isProficiency && course.category ? (
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-brand-500">
+                  {course.category === "DUOLINGO" ? "Duolingo" : course.category}
+                </p>
+              ) : null}
               <h3 className="text-[18px] font-medium text-grayScale-900">
                 <SearchHighlight text={course.name} query={listSearch} />
               </h3>
@@ -1070,6 +1118,26 @@ export function ProgramDetailPage() {
                     className="min-h-[88px] resize-y rounded-[8px] border-grayScale-400 px-4 text-[15px]"
                     disabled={savingEdit || uploadingEditThumbnail}
                   />
+                </div>
+              ) : null}
+
+              {isProficiency ? (
+                <div className="space-y-3">
+                  <label className="text-[15px] text-grayScale-800">
+                    Exam Category
+                  </label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) =>
+                      setEditCategory(e.target.value as ExamPrepCatalogCategory | "")
+                    }
+                    className="h-12 w-full rounded-[8px] border border-grayScale-400 bg-white px-4 text-[15px] text-grayScale-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    disabled={savingEdit || uploadingEditThumbnail}
+                  >
+                    <option value="">Select IELTS or Duolingo…</option>
+                    <option value="IELTS">IELTS</option>
+                    <option value="DUOLINGO">Duolingo</option>
+                  </select>
                 </div>
               ) : null}
 

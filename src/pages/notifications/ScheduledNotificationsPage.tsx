@@ -5,7 +5,9 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Megaphone,
+  MoreHorizontal,
   Plus,
   RefreshCw,
   XCircle,
@@ -13,12 +15,24 @@ import {
 import { toast } from "sonner"
 import {
   cancelScheduledNotification,
+  getScheduledNotificationById,
   getScheduledNotifications,
 } from "../../api/notifications.api"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent } from "../../components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "../../components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu"
 import { Select } from "../../components/ui/select"
 import { SpinnerIcon } from "../../components/ui/spinner-icon"
 import {
@@ -71,6 +85,8 @@ export function ScheduledNotificationsPage() {
   const [statusFilter, setStatusFilter] = useState<"" | ScheduledNotificationStatus>("")
   const [channelFilter, setChannelFilter] = useState<"" | NotificationChannel>("")
   const [cancellingId, setCancellingId] = useState<number | null>(null)
+  const [selectedJob, setSelectedJob] = useState<ScheduledNotification | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalCount / limit)),
@@ -89,11 +105,11 @@ export function ScheduledNotificationsPage() {
       })
       setRows(res.data.scheduled_notifications)
       setTotalCount(res.data.total_count)
-    } catch {
+    } catch (error) {
       setError(true)
       setRows([])
       setTotalCount(0)
-      notifyApiError(err, "Failed to load scheduled notifications")
+      notifyApiError(error, "Failed to load scheduled notifications")
     } finally {
       setLoading(false)
     }
@@ -116,10 +132,25 @@ export function ScheduledNotificationsPage() {
         description: `Job #${job.id} was cancelled.`,
       })
       await load()
-    } catch {
-      notifyApiError(err, "Failed to cancel scheduled notification")
+    } catch (error) {
+      notifyApiError(error, "Failed to cancel scheduled notification")
     } finally {
       setCancellingId(null)
+    }
+  }
+
+  const handleViewDetails = async (job: ScheduledNotification) => {
+    setSelectedJob(job)
+    setDetailLoading(true)
+    try {
+      const res = await getScheduledNotificationById(job.id)
+      if (res.data) {
+        setSelectedJob(res.data)
+      }
+    } catch (error) {
+      notifyApiError(error, "Failed to load scheduled notification details")
+    } finally {
+      setDetailLoading(false)
     }
   }
 
@@ -288,21 +319,39 @@ export function ScheduledNotificationsPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {(job.status === "pending" || job.status === "processing") && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={cancellingId === job.id}
-                              onClick={() => void handleCancel(job)}
-                            >
-                              {cancellingId === job.id ? (
-                                <SpinnerIcon className="mr-1 h-3.5 w-3.5" alt="" />
-                              ) : (
-                                <XCircle className="mr-1 h-3.5 w-3.5" />
-                              )}
-                              Cancel
-                            </Button>
-                          )}
+                          <div className="flex justify-end">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 rounded-[6px] p-0 text-grayScale-400 hover:text-grayScale-700"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem onClick={() => void handleViewDetails(job)}>
+                                  <Eye className="mr-2 h-3.5 w-3.5" />
+                                  View details
+                                </DropdownMenuItem>
+                                {(job.status === "pending" || job.status === "processing") && (
+                                  <DropdownMenuItem
+                                    disabled={cancellingId === job.id}
+                                    onClick={() => void handleCancel(job)}
+                                  >
+                                    {cancellingId === job.id ? (
+                                      <SpinnerIcon className="mr-2 h-3.5 w-3.5" alt="" />
+                                    ) : (
+                                      <XCircle className="mr-2 h-3.5 w-3.5" />
+                                    )}
+                                    Cancel job
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -339,6 +388,66 @@ export function ScheduledNotificationsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={selectedJob != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedJob(null)
+        }}
+      >
+        <DialogContent className="max-w-lg gap-0 overflow-hidden rounded-2xl border-0 p-0">
+          {selectedJob ? (
+            <>
+              <div className="border-b border-grayScale-100 px-6 py-5 pr-14">
+                <DialogTitle className="text-base font-bold text-grayScale-900">
+                  Scheduled job #{selectedJob.id}
+                </DialogTitle>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge variant={scheduledStatusBadgeVariant(selectedJob.status)}>
+                    {selectedJob.status}
+                  </Badge>
+                  <span className="text-xs text-grayScale-500">
+                    {channelLabel(selectedJob.channel)}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-4 px-6 py-5 text-sm">
+                {detailLoading ? (
+                  <div className="flex items-center gap-2 text-grayScale-500">
+                    <SpinnerIcon className="h-4 w-4" alt="" />
+                    Loading details…
+                  </div>
+                ) : null}
+                <DetailRow label="Title" value={selectedJob.title || "—"} />
+                <DetailRow label="Message" value={selectedJob.message} />
+                <DetailRow label="Audience" value={targetingSummary(selectedJob)} />
+                <DetailRow
+                  label="Scheduled"
+                  value={formatScheduledAtLabel(selectedJob.scheduled_at)}
+                />
+                {selectedJob.sent_at ? (
+                  <DetailRow label="Sent" value={formatScheduledAtLabel(selectedJob.sent_at)} />
+                ) : null}
+                {selectedJob.last_error ? (
+                  <DetailRow label="Last error" value={selectedJob.last_error} />
+                ) : null}
+                {selectedJob.channel === "email" && selectedJob.email_template_slug ? (
+                  <DetailRow label="Template" value={selectedJob.email_template_slug} />
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">{label}</p>
+      <p className="whitespace-pre-wrap break-words text-grayScale-700">{value}</p>
     </div>
   )
 }

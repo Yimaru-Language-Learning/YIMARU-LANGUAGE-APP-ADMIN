@@ -159,10 +159,13 @@ export interface CreateProgramCourseResponse {
 }
 
 /** Exam prep catalog course row (e.g. IELTS / DET cards) */
+export type ExamPrepCatalogCategory = "IELTS" | "DUOLINGO"
+
 export interface ExamPrepCatalogCourseItem {
   id: number
   name: string
   description?: string | null
+  category?: ExamPrepCatalogCategory | string | null
   thumbnail?: string | null
   sort_order?: number
   units_count?: number
@@ -177,6 +180,7 @@ export interface ExamPrepCatalogCourseItem {
 export interface CreateExamPrepCatalogCourseRequest {
   name: string
   description?: string | null
+  category: ExamPrepCatalogCategory
   thumbnail?: string | null
 }
 
@@ -204,6 +208,7 @@ export interface GetExamPrepCatalogCoursesResponse {
 export interface UpdateExamPrepCatalogCourseRequest {
   name: string
   description?: string | null
+  category?: ExamPrepCatalogCategory
   thumbnail?: string | null
   sort_order: number
 }

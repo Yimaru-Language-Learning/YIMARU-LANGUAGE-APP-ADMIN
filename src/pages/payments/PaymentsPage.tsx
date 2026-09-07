@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { getAllPayments } from "../../api/payments.api"
+import { getPayments } from "../../api/payments.api"
 import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { ExportCsvButton } from "../../components/export/ExportCsvButton"
 import { ExportTruncationWarning } from "../../components/export/ExportTruncationWarning"
@@ -48,13 +48,12 @@ import {
   formatPaymentStatus,
   computePaymentAggregateStats,
   paymentCustomerName,
-  paymentMatchesDateRange,
   paymentStatusBadgeVariant,
   type PaymentAggregateStats,
 } from "../../lib/payments"
+import { paymentListFiltersToExportQuery } from "../../lib/csvExportFilters"
 import { SUBSCRIPTION_CURRENCIES, SUBSCRIPTION_PLAN_CATEGORIES } from "../../lib/subscriptionPlans"
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
-import { paymentListFiltersToExportQuery } from "../../lib/csvExportFilters"
 import type {
   Payment,
   PaymentPlanCategory,
@@ -88,35 +87,16 @@ type PaymentListFilters = {
   dateTo: string
 }
 
-function paymentMatchesSearch(payment: Payment, query: string): boolean {
-  const q = query.trim().toLowerCase()
-  if (!q) return true
-  const haystack = [
-    String(payment.id),
-    String(payment.user_id),
-    String(payment.plan_id),
-    String(payment.subscription_id),
-    payment.session_id,
-    payment.transaction_id,
-    payment.nonce,
-    payment.amount,
-    payment.currency,
-    payment.payment_method,
-    payment.status,
-    payment.plan_name,
-    payment.plan_category,
-    formatPaymentPlanCategory(payment.plan_category),
-    payment.user_email,
-    payment.user_first_name,
-    payment.user_last_name,
-    paymentCustomerName(payment),
-    formatPaymentMethod(payment.payment_method),
-    formatPaymentStatus(payment.status),
-    formatPaymentAmount(payment),
-  ]
-    .join(" ")
-    .toLowerCase()
-  return haystack.includes(q)
+function buildPaymentsQuery(filters: PaymentListFilters, searchQuery: string) {
+  return paymentListFiltersToExportQuery({
+    status: filters.status || undefined,
+    provider: filters.provider || undefined,
+    planCategory: filters.planCategory || undefined,
+    currency: filters.currency || undefined,
+    reference: searchQuery.trim() || undefined,
+    dateFrom: filters.dateFrom || undefined,
+    dateTo: filters.dateTo || undefined,
+  })
 }
 
 function copyText(value: string, label: string) {
@@ -140,9 +120,12 @@ export function PaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [payments, setPayments] = useState<Payment[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [paymentStats, setPaymentStats] = useState<PaymentAggregateStats>(EMPTY_PAYMENT_STATS)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "">("")
   const [providerFilter, setProviderFilter] = useState<PaymentProvider | "">("")
   const [planCategoryFilter, setPlanCategoryFilter] = useState<PaymentPlanCategory | "">("")
@@ -182,23 +165,95 @@ export function PaymentsPage() {
     { value: dateTo },
   ])
 
-  const hasActiveFilters = activeFilterCount > 0 || Boolean(searchQuery.trim())
+  const hasActiveFilters = activeFilterCount > 0 || Boolean(debouncedSearchQuery.trim())
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchQuery])
 
   const fetchPayments = useCallback(async () => {
     setLoading(true)
     setError(false)
     try {
-      const all = await getAllPayments({})
-      setPayments(all)
+      const baseQuery = buildPaymentsQuery(listFilters, debouncedSearchQuery)
+      const offset = (page - 1) * pageSize
+      const listPromise = getPayments({
+        ...baseQuery,
+        limit: pageSize,
+        offset,
+      })
+
+      const statsPromise = (async () => {
+        if (!statusFilter) {
+          const [successRes, pendingRes, revenueRes] = await Promise.all([
+            getPayments({ ...baseQuery, status: "SUCCESS", limit: 1, offset: 0 }),
+            getPayments({ ...baseQuery, status: "PENDING", limit: 1, offset: 0 }),
+            getPayments({
+              ...baseQuery,
+              status: "SUCCESS",
+              limit: 100,
+              offset: 0,
+            }),
+          ])
+          setPaymentStats({
+            successfulCount: successRes.data.total_count,
+            pendingCount: pendingRes.data.total_count,
+            totalRevenue: computePaymentAggregateStats(revenueRes.data.payments).totalRevenue,
+          })
+          return
+        }
+
+        const filteredRes = await getPayments({
+          ...baseQuery,
+          limit: 1,
+          offset: 0,
+        })
+        const filteredTotal = filteredRes.data.total_count
+        let totalRevenue = 0
+        if (statusFilter === "SUCCESS" && filteredTotal > 0) {
+          const revenueRes = await getPayments({
+            ...baseQuery,
+            status: "SUCCESS",
+            limit: Math.min(100, filteredTotal),
+            offset: 0,
+          })
+          totalRevenue = computePaymentAggregateStats(revenueRes.data.payments).totalRevenue
+        }
+        setPaymentStats({
+          successfulCount: statusFilter === "SUCCESS" ? filteredTotal : 0,
+          pendingCount: statusFilter === "PENDING" ? filteredTotal : 0,
+          totalRevenue,
+        })
+      })()
+
+      const [listRes] = await Promise.all([listPromise, statsPromise])
+
+      setPayments(listRes.data.payments)
+      setTotalCount(listRes.data.total_count)
     } catch (e) {
       console.error(e)
       setError(true)
       setPayments([])
+      setTotalCount(0)
+      setPaymentStats(EMPTY_PAYMENT_STATS)
       notifyApiError(e, "Failed to load payments")
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [
+    debouncedSearchQuery,
+    statusFilter,
+    providerFilter,
+    planCategoryFilter,
+    currencyFilter,
+    dateFrom,
+    dateTo,
+    page,
+    pageSize,
+  ])
 
   useEffect(() => {
     void fetchPayments()
@@ -207,7 +262,7 @@ export function PaymentsPage() {
   useEffect(() => {
     setPage(1)
   }, [
-    searchQuery,
+    debouncedSearchQuery,
     statusFilter,
     providerFilter,
     planCategoryFilter,
@@ -217,51 +272,11 @@ export function PaymentsPage() {
     pageSize,
   ])
 
-  const filteredPayments = useMemo(() => {
-    return payments.filter((payment) => {
-      if (statusFilter && payment.status !== statusFilter) return false
-      if (
-        providerFilter &&
-        payment.payment_method?.toUpperCase() !== providerFilter.toUpperCase()
-      ) {
-        return false
-      }
-      if (planCategoryFilter && payment.plan_category !== planCategoryFilter) return false
-      if (
-        currencyFilter &&
-        payment.currency?.toUpperCase() !== currencyFilter.toUpperCase()
-      ) {
-        return false
-      }
-      if (!paymentMatchesDateRange(payment, dateFrom, dateTo)) return false
-      return paymentMatchesSearch(payment, searchQuery)
-    })
-  }, [
-    payments,
-    statusFilter,
-    providerFilter,
-    planCategoryFilter,
-    currencyFilter,
-    dateFrom,
-    dateTo,
-    searchQuery,
-  ])
-
-  const paymentStats: PaymentAggregateStats = useMemo(
-    () =>
-      filteredPayments.length
-        ? computePaymentAggregateStats(filteredPayments)
-        : EMPTY_PAYMENT_STATS,
-    [filteredPayments],
-  )
-
-  const totalCount = filteredPayments.length
   const pageCount = Math.max(1, Math.ceil(totalCount / pageSize))
   const safePage = Math.min(page, pageCount)
-  const paginatedPayments = useMemo(
-    () => filteredPayments.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [filteredPayments, safePage, pageSize],
-  )
+  const paginatedPayments = payments
+
+  const { successfulCount, totalRevenue, pendingCount } = paymentStats
 
   const toggleStatus = (value: PaymentStatus) => {
     setStatusFilter((current) => (current === value ? "" : value))
@@ -285,8 +300,6 @@ export function PaymentsPage() {
     setSearchQuery("")
     setPage(1)
   }
-
-  const { successfulCount, totalRevenue, pendingCount } = paymentStats
 
   const pageStart = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1
   const pageEnd = Math.min(safePage * pageSize, totalCount)

@@ -362,6 +362,7 @@ export function SubscriptionPlansTab() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={handleCreated}
+        existingPlans={plans}
       />
 
       <EditSubscriptionPlanDialog
@@ -371,6 +372,7 @@ export function SubscriptionPlansTab() {
           if (!open) setPlanToEdit(null)
         }}
         onUpdated={handleUpdated}
+        existingPlans={plans}
       />
 
       <DeleteSubscriptionPlanDialog

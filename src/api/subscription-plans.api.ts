@@ -26,6 +26,7 @@ function normalizeSubscriptionPlan(raw: unknown): SubscriptionPlan | null {
     price: Number(raw.price ?? 0),
     currency: String(raw.currency ?? "ETB"),
     is_lifetime: Boolean(raw.is_lifetime ?? false),
+    is_free: Boolean(raw.is_free ?? false),
     is_active: Boolean(raw.is_active ?? true),
     created_at: String(raw.created_at ?? ""),
   }

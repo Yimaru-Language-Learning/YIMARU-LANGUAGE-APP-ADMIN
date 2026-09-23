@@ -19,6 +19,8 @@ import { SpinnerIcon } from "../../../components/ui/spinner-icon"
 import { Textarea } from "../../../components/ui/textarea"
 import { ToggleSwitch } from "../../../components/ui/toggle-switch"
 import {
+  DUPLICATE_SUBSCRIPTION_PLAN_PERIOD_MESSAGE,
+  findConflictingSubscriptionPlan,
   formatPlanCategory,
   LIFETIME_DURATION_DEFAULT,
   SUBSCRIPTION_CURRENCIES,
@@ -38,6 +40,7 @@ interface EditDraft {
   price: string
   currency: string
   is_lifetime: boolean
+  is_free: boolean
   is_active: boolean
 }
 
@@ -50,6 +53,7 @@ function planToDraft(plan: SubscriptionPlan): EditDraft {
     price: String(plan.price),
     currency: plan.currency,
     is_lifetime: Boolean(plan.is_lifetime),
+    is_free: Boolean(plan.is_free),
     is_active: plan.is_active,
   }
 }
@@ -68,16 +72,21 @@ function draftToPayload(draft: EditDraft): UpdateSubscriptionPlanPayload | null 
   if (!name) return null
   if (!description) return null
   if (!Number.isFinite(duration_value) || duration_value < 1) return null
-  if (!Number.isFinite(price) || price < 0) return null
+  if (draft.is_free) {
+    if (price !== 0) return null
+  } else if (!Number.isFinite(price) || price <= 0) {
+    return null
+  }
 
   return {
     name,
     description,
     duration_value,
     duration_unit,
-    price,
+    price: draft.is_free ? 0 : price,
     currency: draft.currency,
     is_lifetime: draft.is_lifetime,
+    is_free: draft.is_free,
     is_active: draft.is_active,
   }
 }
@@ -94,6 +103,7 @@ type EditSubscriptionPlanDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onUpdated: (plan: SubscriptionPlan) => void
+  existingPlans: SubscriptionPlan[]
 }
 
 export function EditSubscriptionPlanDialog({
@@ -101,6 +111,7 @@ export function EditSubscriptionPlanDialog({
   open,
   onOpenChange,
   onUpdated,
+  existingPlans,
 }: EditSubscriptionPlanDialogProps) {
   const [draft, setDraft] = useState<EditDraft | null>(null)
   const [saving, setSaving] = useState(false)
@@ -123,6 +134,21 @@ export function EditSubscriptionPlanDialog({
     const payload = draftToPayload(draft)
     if (!payload) {
       toast.error("Please fill in all required fields with valid values.")
+      return
+    }
+
+    const conflict = findConflictingSubscriptionPlan(
+      existingPlans,
+      {
+        category: plan.category,
+        is_lifetime: payload.is_lifetime,
+        duration_value: payload.duration_value,
+        duration_unit: payload.duration_unit,
+      },
+      plan.id,
+    )
+    if (conflict) {
+      toast.error(DUPLICATE_SUBSCRIPTION_PLAN_PERIOD_MESSAGE)
       return
     }
 
@@ -283,19 +309,45 @@ export function EditSubscriptionPlanDialog({
                 </div>
               )}
 
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-[8px] border border-grayScale-100 bg-grayScale-50/50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-grayScale-800">Free subscription</p>
+                  <p className="text-xs text-grayScale-500">
+                    Learners activate instantly with no Chapa or payment gateway checkout
+                  </p>
+                </div>
+                <ToggleSwitch
+                  variant="plain"
+                  checked={draft.is_free}
+                  aria-label="Free subscription"
+                  onCheckedChange={() =>
+                    setDraft((d) =>
+                      d
+                        ? {
+                            ...d,
+                            is_free: !d.is_free,
+                            price: !d.is_free ? "0" : d.price,
+                          }
+                        : d,
+                    )
+                  }
+                />
+              </label>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-grayScale-400">
-                    Price <span className="text-destructive">*</span>
+                    Price {!draft.is_free && <span className="text-destructive">*</span>}
                   </label>
                   <Input
                     type="number"
-                    min={0}
+                    min={draft.is_free ? 0 : 0.01}
                     step="0.01"
-                    value={draft.price}
+                    value={draft.is_free ? "0" : draft.price}
                     onChange={(e) => setDraft((d) => d && { ...d, price: e.target.value })}
                     className="rounded-[6px]"
-                    required
+                    required={!draft.is_free}
+                    disabled={draft.is_free}
                   />
                 </div>
                 <div className="space-y-1.5">

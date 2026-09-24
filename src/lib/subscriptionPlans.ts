@@ -20,6 +20,64 @@ export const LIFETIME_DURATION_DEFAULT = {
   duration_unit: "YEAR" as SubscriptionPlanDurationUnit,
 }
 
+export const DUPLICATE_SUBSCRIPTION_PLAN_PERIOD_MESSAGE =
+  "Only one plan is allowed per category and billing period. A free plan and a paid plan cannot share the same period—edit the existing plan or change category or duration."
+
+export type SubscriptionPlanPeriodCandidate = {
+  category: string
+  is_lifetime: boolean
+  duration_value: number
+  duration_unit: SubscriptionPlanDurationUnit
+}
+
+function normalizedPeriod(
+  candidate: SubscriptionPlanPeriodCandidate,
+): SubscriptionPlanPeriodCandidate {
+  if (candidate.is_lifetime) {
+    return {
+      category: candidate.category,
+      is_lifetime: true,
+      duration_value: LIFETIME_DURATION_DEFAULT.duration_value,
+      duration_unit: LIFETIME_DURATION_DEFAULT.duration_unit,
+    }
+  }
+  return {
+    ...candidate,
+    duration_unit: String(candidate.duration_unit).toUpperCase() as SubscriptionPlanDurationUnit,
+  }
+}
+
+export function sameSubscriptionPlanPeriod(
+  a: SubscriptionPlanPeriodCandidate,
+  b: SubscriptionPlanPeriodCandidate,
+): boolean {
+  const left = normalizedPeriod(a)
+  const right = normalizedPeriod(b)
+  return (
+    left.category === right.category &&
+    left.is_lifetime === right.is_lifetime &&
+    left.duration_value === right.duration_value &&
+    left.duration_unit === right.duration_unit
+  )
+}
+
+export function findConflictingSubscriptionPlan(
+  plans: SubscriptionPlan[],
+  candidate: SubscriptionPlanPeriodCandidate,
+  excludePlanId?: number,
+): SubscriptionPlan | undefined {
+  return plans.find(
+    (plan) =>
+      plan.id !== excludePlanId &&
+      sameSubscriptionPlanPeriod(candidate, {
+        category: plan.category,
+        is_lifetime: plan.is_lifetime,
+        duration_value: plan.duration_value,
+        duration_unit: plan.duration_unit,
+      }),
+  )
+}
+
 /** True when a plan is configured as one-time (never expires). */
 export function isLifetimePlan(
   plan: Pick<SubscriptionPlan, "is_lifetime"> | { is_lifetime?: boolean | null } | null | undefined,
@@ -64,7 +122,10 @@ export function formatPlanDuration(
   return `${v} ${word}`
 }
 
-export function formatPlanPrice(plan: Pick<SubscriptionPlan, "price" | "currency">): string {
+export function formatPlanPrice(
+  plan: Pick<SubscriptionPlan, "price" | "currency" | "is_free">,
+): string {
+  if (plan.is_free) return "Free"
   const amount = Number(plan.price)
   const formatted = Number.isFinite(amount)
     ? amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
@@ -94,6 +155,7 @@ export function planToUpdatePayload(
     price: plan.price,
     currency: plan.currency,
     is_lifetime: plan.is_lifetime,
+    is_free: plan.is_free,
     is_active: plan.is_active,
     ...overrides,
   }

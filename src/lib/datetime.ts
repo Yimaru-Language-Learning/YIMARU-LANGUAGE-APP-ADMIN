@@ -49,11 +49,8 @@ export function getAppDateTimeParts(iso: string | null | undefined): {
   }
 }
 
-/**
- * Parse YYYY-MM-DD HH:MM as EAT wall clock and return RFC3339 UTC.
- * Returns null when invalid or not in the future.
- */
-export function toRfc3339FromAppLocal(
+/** Parse YYYY-MM-DD HH:MM as EAT wall clock and return RFC3339 UTC. */
+function parseRfc3339FromAppLocal(
   year: string,
   month: string,
   day: string,
@@ -82,8 +79,23 @@ export function toRfc3339FromAppLocal(
   const parsed = new Date(iso)
   if (Number.isNaN(parsed.getTime())) return null
   if (toAppCalendarDate(parsed) !== `${y}-${mo}-${d}`) return null
-  if (parsed.getTime() <= Date.now()) return null
   return parsed.toISOString()
+}
+
+/**
+ * Parse a future YYYY-MM-DD HH:MM EAT wall-clock value as RFC3339 UTC.
+ * Intended for scheduling; historical values are rejected.
+ */
+export function toRfc3339FromAppLocal(
+  year: string,
+  month: string,
+  day: string,
+  hour: string,
+  minute: string,
+): string | null {
+  const iso = parseRfc3339FromAppLocal(year, month, day, hour, minute)
+  if (!iso || Date.parse(iso) <= Date.now()) return null
+  return iso
 }
 
 /** Value for `<input type="datetime-local" />` showing wall clock in EAT. */
@@ -100,7 +112,7 @@ export function fromDatetimeLocalAppValue(value: string): string | undefined {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(trimmed)
   if (!match) return undefined
   const [, year, month, day, hour, minute] = match
-  return toRfc3339FromAppLocal(year, month, day, hour, minute) ?? undefined
+  return parseRfc3339FromAppLocal(year, month, day, hour, minute) ?? undefined
 }
 
 /** Calendar YYYY-MM-DD of an instant in the app timezone. */

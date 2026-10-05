@@ -1,5 +1,6 @@
 import type { PracticePublishStatus } from "../types/course.types"
 import { normalizePublishStatus } from "./publishStatus"
+import { normalizeSearchText } from "./searchText"
 
 export type PublishStatusFilter = "all" | PracticePublishStatus
 
@@ -7,11 +8,11 @@ export function textMatchesSearch(
   query: string,
   ...fields: (string | null | undefined)[]
 ): boolean {
-  const needle = query.trim().toLowerCase()
+  const needle = normalizeSearchText(query)
   if (!needle) return true
   return fields.some((field) => {
     if (typeof field !== "string") return false
-    return field.toLowerCase().includes(needle)
+    return normalizeSearchText(field).includes(needle)
   })
 }
 

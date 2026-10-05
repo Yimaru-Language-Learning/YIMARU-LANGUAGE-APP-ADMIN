@@ -34,12 +34,14 @@ export function DisplayValue({
   className,
   unassignedClassName,
   query = "",
+  ignoreWhitespace = false,
 }: {
   value: string | number | null | undefined
   className?: string
   unassignedClassName?: string
   /** When set, matching search keywords are highlighted. */
   query?: string
+  ignoreWhitespace?: boolean
 }): ReactNode {
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
@@ -47,7 +49,7 @@ export function DisplayValue({
     }
     const asText = String(value)
     if (query.trim()) {
-      return <SearchHighlight text={asText} query={query} className={className} />
+      return <SearchHighlight text={asText} query={query} className={className} ignoreWhitespace={ignoreWhitespace} />
     }
     return <span className={className}>{value}</span>
   }
@@ -56,7 +58,7 @@ export function DisplayValue({
   }
   const text = value!.trim()
   if (query.trim()) {
-    return <SearchHighlight text={text} query={query} className={className} />
+    return <SearchHighlight text={text} query={query} className={className} ignoreWhitespace={ignoreWhitespace} />
   }
   return <span className={className}>{text}</span>
 }

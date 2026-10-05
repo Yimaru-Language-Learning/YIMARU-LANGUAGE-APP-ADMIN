@@ -71,11 +71,47 @@ export function formatPaymentPlanCategory(category: string): string {
 export function paymentStatusBadgeVariant(
   status: string,
 ): "success" | "warning" | "destructive" | "secondary" | "info" {
-  const s = status.toUpperCase()
+  const s = status.trim().toUpperCase()
   if (s === "SUCCESS" || s === "COMPLETED" || s === "PAID") return "success"
   if (s === "PENDING" || s === "PROCESSING") return "warning"
-  if (s === "FAILED" || s === "CANCELLED" || s === "EXPIRED") return "destructive"
+  if (s === "FAILED") return "destructive"
   return "secondary"
+}
+
+export function paymentStatusAppearance(status: string): {
+  variant: ReturnType<typeof paymentStatusBadgeVariant>
+  badgeClassName: string
+  icon: "clock" | "x" | null
+  detailIconClassName: string
+} {
+  const s = status.trim().toUpperCase()
+  const variant = paymentStatusBadgeVariant(s)
+  if (s === "EXPIRED") {
+    return {
+      variant,
+      badgeClassName: "border-slate-200 bg-slate-100 text-slate-700",
+      icon: "clock",
+      detailIconClassName: "bg-slate-100 text-slate-700",
+    }
+  }
+  if (s === "CANCELLED" || s === "CANCELED") {
+    return {
+      variant,
+      badgeClassName: "border-grayScale-200 bg-grayScale-100 text-grayScale-600",
+      icon: "x",
+      detailIconClassName: "bg-grayScale-100 text-grayScale-600",
+    }
+  }
+  return {
+    variant,
+    badgeClassName: "",
+    icon: null,
+    detailIconClassName:
+      variant === "success" ? "bg-green-50 text-green-600"
+        : variant === "destructive" ? "bg-red-50 text-red-600"
+          : variant === "warning" ? "bg-amber-50 text-amber-600"
+            : "bg-grayScale-100 text-grayScale-500",
+  }
 }
 
 export interface PaymentAggregateStats {

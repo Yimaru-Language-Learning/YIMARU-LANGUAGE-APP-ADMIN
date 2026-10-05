@@ -22,6 +22,7 @@ import { AdminFiltersPanel } from "../../components/filters/AdminFiltersPanel"
 import { ExportCsvButton } from "../../components/export/ExportCsvButton"
 import { ExportTruncationWarning } from "../../components/export/ExportTruncationWarning"
 import { Badge } from "../../components/ui/badge"
+import { PaymentStatusBadge, PaymentStatusIcon } from "../../components/payments/PaymentStatusBadge"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import {
@@ -45,10 +46,9 @@ import {
   formatPaymentDate,
   formatPaymentMethod,
   formatPaymentPlanCategory,
-  formatPaymentStatus,
   computePaymentAggregateStats,
   paymentCustomerName,
-  paymentStatusBadgeVariant,
+  paymentStatusAppearance,
   type PaymentAggregateStats,
 } from "../../lib/payments"
 import { paymentListFiltersToExportQuery } from "../../lib/csvExportFilters"
@@ -641,9 +641,7 @@ export function PaymentsPage() {
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 sm:px-4">
-                        <Badge variant={paymentStatusBadgeVariant(payment.status)} className="text-[10px]">
-                          {formatPaymentStatus(payment.status)}
-                        </Badge>
+                        <PaymentStatusBadge status={payment.status} className="text-[10px]" />
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-xs text-grayScale-600 sm:px-4">
                         {formatPaymentDate(payment.paid_at ?? payment.created_at)}
@@ -759,12 +757,9 @@ export function PaymentsPage() {
                   ) : (
                     <div className={cn(
                       "grid h-12 w-12 shrink-0 place-items-center rounded-2xl",
-                      selected.status === "SUCCESS" ? "bg-green-50 text-green-600"
-                        : selected.status === "FAILED" ? "bg-red-50 text-red-600"
-                        : selected.status === "PENDING" ? "bg-amber-50 text-amber-600"
-                        : "bg-grayScale-100 text-grayScale-500",
+                      paymentStatusAppearance(selected.status).detailIconClassName,
                     )}>
-                      <CreditCard className="h-6 w-6" />
+                      <PaymentStatusIcon status={selected.status} className="h-6 w-6" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1 pt-0.5">
@@ -772,9 +767,7 @@ export function PaymentsPage() {
                       Payment #{selected.id}
                     </DialogTitle>
                     <div className="mt-1.5 flex items-center gap-1.5 text-xs text-grayScale-400">
-                      <Badge variant={paymentStatusBadgeVariant(selected.status)} className="text-[10px]">
-                        {formatPaymentStatus(selected.status)}
-                      </Badge>
+                      <PaymentStatusBadge status={selected.status} className="text-[10px]" />
                       <span>·</span>
                       <span>{formatPaymentAmount(selected)}</span>
                     </div>

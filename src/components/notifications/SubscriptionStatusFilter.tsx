@@ -61,8 +61,10 @@ export function SubscriptionStatusFilter({
                 onCheckedChange={() => onChange(toggleAudienceSubscriptionStatus(selected, code))}
                 onSelect={(event) => event.preventDefault()}
                 className={cn(
-                  "relative cursor-pointer rounded py-2 pl-8 pr-2 text-sm text-grayScale-700 outline-none data-[highlighted]:bg-grayScale-100",
-                  selected.includes(code) && "bg-brand-50 font-medium text-brand-700",
+                  "relative cursor-pointer rounded py-2 pl-8 pr-2 text-sm outline-none transition-colors",
+                  selected.includes(code)
+                    ? "bg-brand-50 font-medium text-white data-[highlighted]:bg-brand-600 data-[highlighted]:text-white"
+                    : "text-grayScale-600 data-[highlighted]:bg-grayScale-100",
                 )}
               >
                 <span className="absolute left-2 top-1/2 -translate-y-1/2">

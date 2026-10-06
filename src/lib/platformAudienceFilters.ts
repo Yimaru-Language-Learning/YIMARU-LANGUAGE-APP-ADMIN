@@ -2,6 +2,24 @@ import type { GetUsersParams } from "../api/users.api"
 import { countActiveFilters } from "./adminFilterUtils"
 import { fromDatetimeLocalAppValue } from "./datetime"
 
+export const AUDIENCE_SUBSCRIPTION_STATUS_OPTIONS = [
+  { code: "ACTIVE", label: "Active" },
+  { code: "PENDING", label: "Pending" },
+  { code: "EXPIRED", label: "Expired" },
+  { code: "NEVER_SUBSCRIBED", label: "Never subscribed" },
+] as const
+
+export type AudienceSubscriptionStatus = typeof AUDIENCE_SUBSCRIPTION_STATUS_OPTIONS[number]["code"]
+
+export function toggleAudienceSubscriptionStatus(
+  selected: readonly AudienceSubscriptionStatus[],
+  status: AudienceSubscriptionStatus,
+): AudienceSubscriptionStatus[] {
+  return selected.includes(status)
+    ? selected.filter((value) => value !== status)
+    : [...selected, status]
+}
+
 export interface PlatformAudienceFilters {
   country: string
   region: string
@@ -14,7 +32,7 @@ export interface PlatformAudienceFilters {
   languageGoal: string
   learningGoal: string
   knowledgeLevel: string
-  subscriptionStatus: string
+  subscriptionStatuses: AudienceSubscriptionStatus[]
   planId: string
   planCategory: string
   autoRenew: string
@@ -43,7 +61,7 @@ export const EMPTY_PLATFORM_AUDIENCE_FILTERS: PlatformAudienceFilters = {
   languageGoal: "",
   learningGoal: "",
   knowledgeLevel: "",
-  subscriptionStatus: "",
+  subscriptionStatuses: [],
   planId: "",
   planCategory: "",
   autoRenew: "",
@@ -80,7 +98,10 @@ function optionalInt(value: string): number | undefined {
 }
 
 export function countPlatformAudienceActiveFilters(filters: PlatformAudienceFilters): number {
-  return countActiveFilters(Object.values(filters).map((value) => ({ value, defaultValue: "" })))
+  return countActiveFilters(Object.values(filters).map((value) => ({
+    value: Array.isArray(value) ? value.join(",") : value,
+    defaultValue: "",
+  })))
 }
 
 export function platformAudienceFiltersToGetUsersParams(
@@ -106,7 +127,7 @@ export function platformAudienceFiltersToGetUsersParams(
     language_goal: optionalString(filters.languageGoal),
     learning_goal: optionalString(filters.learningGoal),
     knowledge_level: optionalString(filters.knowledgeLevel),
-    subscription_status: optionalString(filters.subscriptionStatus),
+    subscription_status: optionalString(filters.subscriptionStatuses.join(",")),
     plan_id: optionalInt(filters.planId),
     plan_category: optionalString(filters.planCategory),
     auto_renew: optionalBool(filters.autoRenew),

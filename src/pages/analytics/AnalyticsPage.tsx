@@ -1,4 +1,4 @@
-import { useEffect, useState, type ElementType, type ReactNode } from "react"
+import { useState, type ElementType, type ReactNode } from "react"
 import spinnerSrc from "../../assets/Circular-indeterminate progress indicator.svg"
 import {
   Area,
@@ -43,7 +43,8 @@ import {
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import { cn } from "../../lib/utils"
-import { getDashboard } from "../../api/analytics.api"
+import { useAnalyticsDashboard } from "../../hooks/useAnalyticsDashboard"
+import { AnalyticsUpdateBanner } from "../../components/analytics/AnalyticsUpdateBanner"
 import { AnalyticsTimeRangeFilter, getDashboardFilterLabel } from "../../components/analytics/AnalyticsTimeRangeFilter"
 import {
   MonthlyRevenueAreaChart,
@@ -62,7 +63,7 @@ import {
   aggregateRevenueByMonth,
   formatRevenueAxisTick,
 } from "../../lib/analytics"
-import type { DashboardData, DashboardFilters, LabelCount } from "../../types/analytics.types"
+import type { DashboardFilters, LabelCount } from "../../types/analytics.types"
 import { formatAppDateTime } from "../../lib/datetime"
 import { isUnassignedLabel } from "../../lib/displayValue"
 import {
@@ -348,29 +349,9 @@ function Section({
 const DEFAULT_FILTERS: DashboardFilters = { mode: "all_time" }
 
 export function AnalyticsPage() {
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
   const [activeSummaryTab, setActiveSummaryTab] = useState<"key" | "content" | "operations">("key")
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS)
-
-  const fetchData = async (nextFilters: DashboardFilters = filters) => {
-    setLoading(true)
-    setError(false)
-    try {
-      const res = await getDashboard(nextFilters)
-      setDashboard(res.data)
-    } catch {
-      setError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchData(filters)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters])
+  const { dashboard, loading, error, updatedAt, refresh, dismissUpdate } = useAnalyticsDashboard(filters, "analytics")
 
   if (!dashboard && loading) {
     return (
@@ -394,7 +375,7 @@ export function AnalyticsPage() {
         <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-red-100 bg-red-50/30 py-24">
           <img src={alertSrc} alt="" className="h-12 w-12" />
           <span className="text-sm text-destructive">Failed to load analytics data.</span>
-          <Button variant="outline" size="sm" onClick={() => fetchData(filters)}>
+          <Button variant="outline" size="sm" onClick={() => { void refresh() }}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Retry
           </Button>
@@ -483,12 +464,14 @@ export function AnalyticsPage() {
             {getDashboardFilterLabel(filters)} · Generated {generatedAt}
           </span>
           <AnalyticsTimeRangeFilter value={filters} onChange={setFilters} />
-          <Button variant="outline" size="sm" onClick={() => fetchData(filters)} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { void refresh() }} disabled={loading}>
             <RefreshCw className={cn("mr-2 h-3.5 w-3.5", loading && "animate-spin")} />
             Refresh
           </Button>
         </div>
       </div>
+
+      <AnalyticsUpdateBanner updatedAt={updatedAt} onDismiss={dismissUpdate} />
 
       {loading && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-grayScale-100 bg-grayScale-50 px-3 py-2 text-xs text-grayScale-500">

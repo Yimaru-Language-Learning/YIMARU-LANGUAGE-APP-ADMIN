@@ -69,7 +69,9 @@ export function useAnalyticsDashboard(
         })
         if (!active) return
         const nextSignature = getAnalyticsKpiSignature(res.data, view)
-        if (!manual && signature !== null && signature !== nextSignature) {
+        // A changed successful response is an update, whether fetched by a
+        // poll or the Refresh button. Initial/filter baselines stay silent.
+        if (signature !== null && signature !== nextSignature) {
           const when = Date.now()
           setUpdatedAt(when)
           onKpiUpdate?.(when)
@@ -115,8 +117,39 @@ export function useAnalyticsDashboard(
 
   useEffect(() => {
     if (updatedAt === null) return
-    const timer = setTimeout(dismissUpdate, 10_000)
-    return () => clearTimeout(timer)
+    // An in-flight request can finish after the tab becomes hidden. Do not
+    // let its notification expire before the admin can see it.
+    let remainingMs = 10_000
+    let visibleSince: number | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const pause = () => {
+      if (timer !== null) clearTimeout(timer)
+      timer = null
+      if (visibleSince !== null) {
+        remainingMs = Math.max(0, remainingMs - (Date.now() - visibleSince))
+        visibleSince = null
+      }
+    }
+    const onVisibilityChange = () => {
+      pause()
+      if (document.visibilityState === "hidden") return
+      visibleSince = Date.now()
+      timer = setTimeout(() => {
+        if (document.visibilityState === "hidden") {
+          pause()
+          return
+        }
+        dismissUpdate()
+      }, remainingMs)
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    onVisibilityChange()
+    return () => {
+      pause()
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
   }, [updatedAt, dismissUpdate])
 
   return { dashboard, loading, error, updatedAt, refresh, dismissUpdate, markUpdated }

@@ -415,6 +415,7 @@ export interface GetUsersParams {
   education_level?: string
   occupation?: string
   age_group?: string
+  gender?: string
   favourite_topic?: string
   language_goal?: string
   learning_goal?: string
@@ -480,6 +481,7 @@ export function buildUsersListQuery(params: GetUsersParams): Record<string, stri
   addOptionalString(q, "education_level", params.education_level)
   addOptionalString(q, "occupation", params.occupation)
   addOptionalString(q, "age_group", params.age_group)
+  addOptionalString(q, "gender", params.gender)
   addOptionalString(q, "favourite_topic", params.favourite_topic)
   addOptionalString(q, "language_goal", params.language_goal)
   addOptionalString(q, "learning_goal", params.learning_goal)

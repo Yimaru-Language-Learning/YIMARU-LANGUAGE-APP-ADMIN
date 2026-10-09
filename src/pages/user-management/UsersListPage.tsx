@@ -28,7 +28,7 @@ import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
 import { usersExportQuery } from "../../lib/csvExportFilters"
 import { UnassignedLabel } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
-import { displayUserRegion, displayUserCountry } from "../../lib/userProfileFieldDisplay"
+import { displayUserRegion, displayUserCountry, PROFILE_FILTER_AGE_GROUPS } from "../../lib/userProfileFieldDisplay"
 import { APP_TIMEZONE_LABEL, formatAppDateTime, fromDatetimeLocalAppValue } from "../../lib/datetime"
 
 /** Portaled menu — native `<select>` lists break inside `overflow-y-auto` shells (e.g. app main). */
@@ -45,10 +45,14 @@ function UserListFilterDropdown({
   label: string
   value: string
   allLabel: string
-  options: readonly string[]
+  options: readonly (string | { code: string; label: string })[]
   onSelect: (next: string) => void
   disabled?: boolean
 }) {
+  const selectedOption = options.find((opt) => (typeof opt === "string" ? opt : opt.code) === value)
+  const displayValue = !value ? allLabel : typeof selectedOption === "string"
+    ? selectedOption : selectedOption?.label ?? value
+
   return (
     <div className={cn("flex flex-col gap-1", disabled && "opacity-60")}>
       <label
@@ -72,7 +76,7 @@ function UserListFilterDropdown({
               disabled && "cursor-not-allowed bg-grayScale-50 text-grayScale-400",
             )}
           >
-            <span className="min-w-0 truncate">{value || allLabel}</span>
+            <span className="min-w-0 truncate">{displayValue}</span>
             <ChevronDown className="h-4 w-4 shrink-0 text-grayScale-400" />
           </button>
         </DropdownMenu.Trigger>
@@ -97,14 +101,14 @@ function UserListFilterDropdown({
               </DropdownMenu.Item>
               {options.map((opt) => (
                 <DropdownMenu.Item
-                  key={opt}
+                  key={typeof opt === "string" ? opt : opt.code}
                   className={cn(
                     "cursor-pointer rounded px-2 py-2 text-sm text-grayScale-700 outline-none data-[highlighted]:bg-grayScale-100",
-                    value === opt && "bg-brand-50 font-medium text-brand-700",
+                    value === (typeof opt === "string" ? opt : opt.code) && "bg-brand-50 font-medium text-brand-700",
                   )}
-                  onSelect={() => onSelect(opt)}
+                  onSelect={() => onSelect(typeof opt === "string" ? opt : opt.code)}
                 >
-                  {opt}
+                  {typeof opt === "string" ? opt : opt.label}
                 </DropdownMenu.Item>
               ))}
             </DropdownMenu.Content>
@@ -143,6 +147,8 @@ export function UsersListPage() {
   const [countryFilter, setCountryFilter] = useState("")
   const [regionFilter, setRegionFilter] = useState("")
   const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState("")
+  const [ageGroupFilter, setAgeGroupFilter] = useState("")
+  const [genderFilter, setGenderFilter] = useState("")
   const [loading, setLoading] = useState(false)
   const [userSummary, setUserSummary] = useState<DashboardUsers | null>(null)
   const [userSummaryLoading, setUserSummaryLoading] = useState(true)
@@ -162,6 +168,8 @@ export function UsersListPage() {
   }, [])
 
   useEffect(() => {
+    // Ignore responses from a previous filter/page selection or an unmounted page.
+    let active = true
     const fetchUsers = async () => {
       setLoading(true)
       try {
@@ -178,7 +186,10 @@ export function UsersListPage() {
               ? regionFilter.trim()
               : undefined,
           subscription_status: subscriptionStatusFilter || undefined,
+          age_group: ageGroupFilter || undefined,
+          gender: genderFilter || undefined,
         })
+        if (!active) return
         const apiUsers = res.data.data.users
 
         const mapped = apiUsers.map(mapUserApiToUser)
@@ -191,6 +202,7 @@ export function UsersListPage() {
         })
         setToggledStatuses((prev) => ({ ...prev, ...initialStatuses }))
       } catch (error) {
+        if (!active) return
         console.error("Failed to fetch users:", error)
         setUsers([])
         setTotal(0)
@@ -199,11 +211,14 @@ export function UsersListPage() {
           : undefined
         toast.error(typeof msg === "string" && msg.trim() ? msg : "Failed to fetch users")
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
 
     fetchUsers()
+    return () => {
+      active = false
+    }
   }, [
     page,
     pageSize,
@@ -213,6 +228,8 @@ export function UsersListPage() {
     countryFilter,
     regionFilter,
     subscriptionStatusFilter,
+    ageGroupFilter,
+    genderFilter,
     setUsers,
     setTotal,
   ])
@@ -322,6 +339,8 @@ export function UsersListPage() {
     { value: countryFilter },
     { value: regionFilter },
     { value: subscriptionStatusFilter },
+    { value: ageGroupFilter },
+    { value: genderFilter },
   ])
 
   const clearFilters = () => {
@@ -330,6 +349,8 @@ export function UsersListPage() {
     setCountryFilter("")
     setRegionFilter("")
     setSubscriptionStatusFilter("")
+    setAgeGroupFilter("")
+    setGenderFilter("")
     setPage(1)
   }
 
@@ -346,6 +367,8 @@ export function UsersListPage() {
             ? regionFilter.trim()
             : undefined,
         subscription_status: subscriptionStatusFilter || undefined,
+        age_group: ageGroupFilter || undefined,
+        gender: genderFilter || undefined,
       }),
     [
       search,
@@ -354,6 +377,8 @@ export function UsersListPage() {
       countryFilter,
       regionFilter,
       subscriptionStatusFilter,
+      ageGroupFilter,
+      genderFilter,
     ],
   )
 
@@ -466,7 +491,7 @@ export function UsersListPage() {
           className="border-0 border-b rounded-none shadow-none"
           activeFilterCount={activeFilterCount}
           onClearFilters={clearFilters}
-          footer="Dates are sent as RFC3339 (UTC). Country and region filters use the lists above; the API matches case-insensitively."
+          footer="Dates are sent as RFC3339 (UTC). Age uses the age group saved in the user’s profile. Text filters match case-insensitively."
           search={
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
@@ -558,6 +583,28 @@ export function UsersListPage() {
                 <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-grayScale-400" />
               </div>
             </div>
+            <UserListFilterDropdown
+              id="filter-age-group"
+              label="Age group"
+              value={ageGroupFilter}
+              allLabel="All age groups"
+              options={PROFILE_FILTER_AGE_GROUPS}
+              onSelect={(next) => {
+                setAgeGroupFilter(next)
+                setPage(1)
+              }}
+            />
+            <UserListFilterDropdown
+              id="filter-gender"
+              label="Gender"
+              value={genderFilter}
+              allLabel="All genders"
+              options={[{ code: "male", label: "Male" }, { code: "female", label: "Female" }]}
+              onSelect={(next) => {
+                setGenderFilter(next)
+                setPage(1)
+              }}
+            />
           </div>
         </AdminFiltersPanel>
 

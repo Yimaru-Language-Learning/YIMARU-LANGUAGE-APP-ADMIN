@@ -100,6 +100,11 @@ const KNOWLEDGE_LEVEL_OPTIONS: ProfileFieldOption[] = [
 ]
 
 export const PROFILE_FILTER_AGE_GROUPS = AGE_GROUP_OPTIONS
+export const PROFILE_FILTER_GENDERS: ProfileFieldOption[] = [
+  { code: "male", label: "Male" },
+  { code: "female", label: "Female" },
+  { code: "unassigned", label: "Unassigned" },
+]
 export const PROFILE_FILTER_OCCUPATIONS = OCCUPATION_OPTIONS
 export const PROFILE_FILTER_EDUCATION_LEVELS = EDUCATION_LEVEL_OPTIONS
 export const PROFILE_FILTER_LEARNING_GOALS = LEARNING_GOAL_OPTIONS

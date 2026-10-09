@@ -28,7 +28,7 @@ import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../lib/csv-export"
 import { usersExportQuery } from "../../lib/csvExportFilters"
 import { UnassignedLabel } from "../../lib/displayValue"
 import { SearchHighlight } from "../../components/SearchHighlight"
-import { displayUserRegion, displayUserCountry, PROFILE_FILTER_AGE_GROUPS } from "../../lib/userProfileFieldDisplay"
+import { displayUserRegion, displayUserCountry, PROFILE_FILTER_AGE_GROUPS, PROFILE_FILTER_GENDERS } from "../../lib/userProfileFieldDisplay"
 import { APP_TIMEZONE_LABEL, formatAppDateTime, fromDatetimeLocalAppValue } from "../../lib/datetime"
 
 /** Portaled menu — native `<select>` lists break inside `overflow-y-auto` shells (e.g. app main). */
@@ -599,7 +599,7 @@ export function UsersListPage() {
               label="Gender"
               value={genderFilter}
               allLabel="All genders"
-              options={[{ code: "male", label: "Male" }, { code: "female", label: "Female" }]}
+              options={PROFILE_FILTER_GENDERS}
               onSelect={(next) => {
                 setGenderFilter(next)
                 setPage(1)

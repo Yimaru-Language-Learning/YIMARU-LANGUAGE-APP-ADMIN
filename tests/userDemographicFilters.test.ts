@@ -3,7 +3,7 @@ import test from "node:test"
 import { buildUsersListQuery, getUsers } from "../src/api/users.api"
 import http from "../src/api/http"
 import { usersExportQuery } from "../src/lib/csvExportFilters"
-import { PROFILE_FILTER_AGE_GROUPS } from "../src/lib/userProfileFieldDisplay"
+import { PROFILE_FILTER_AGE_GROUPS, PROFILE_FILTER_GENDERS } from "../src/lib/userProfileFieldDisplay"
 
 test("age filter uses the existing profile age groups", () => {
   assert.deepEqual(PROFILE_FILTER_AGE_GROUPS.map(({ code }) => code), [
@@ -20,6 +20,18 @@ test("demographic filters are trimmed and shared with CSV export", () => {
     age_group: "18_24", gender: "female", country: "Ethiopia", subscription_status: "ACTIVE",
   })
   assert.deepEqual(usersExportQuery(params), buildUsersListQuery(params))
+})
+
+test("Unassigned gender is a distinct option shared by the list and CSV export", () => {
+  assert.deepEqual(PROFILE_FILTER_GENDERS, [
+    { code: "male", label: "Male" },
+    { code: "female", label: "Female" },
+    { code: "unassigned", label: "Unassigned" },
+  ])
+  const params = { gender: " unassigned ", age_group: "18_24", country: "Ethiopia" }
+  const expected = { gender: "unassigned", age_group: "18_24", country: "Ethiopia" }
+  assert.deepEqual(buildUsersListQuery(params), expected)
+  assert.deepEqual(usersExportQuery(params), expected)
 })
 
 test("All age groups / All genders do not restrict the list or export", () => {

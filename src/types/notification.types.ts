@@ -104,6 +104,7 @@ export interface BulkSendResult {
 }
 
 export interface ScheduledNotificationTargetRaw {
+  automation?: import("./automation.types").AutomationJobMeta
   phones?: string[]
   emails?: string[]
   type?: string

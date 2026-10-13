@@ -296,6 +296,7 @@ export function ScheduledNotificationsPage() {
                             {job.title || <UnassignedLabel />}
                           </p>
                           <p className="truncate text-xs text-grayScale-400">{job.message}</p>
+                          {job.target_raw?.automation && <p className="mt-1 text-xs text-brand-600">Automated · {job.target_raw.automation.kind === "payment_recovery" ? "Subscription recovery" : "Inactivity"} · Step {job.target_raw.automation.step}</p>}
                           {job.channel === "email" && job.email_template_slug ? (
                             <p className="mt-0.5 truncate text-[10px] text-grayScale-400">
                               Template: {job.email_template_slug}
@@ -312,7 +313,7 @@ export function ScheduledNotificationsPage() {
                           <Badge variant={scheduledStatusBadgeVariant(job.status)}>
                             {job.status}
                           </Badge>
-                          {job.last_error && job.status === "failed" && (
+                          {job.last_error && (
                             <p className="mt-1 max-w-[180px] truncate text-[10px] text-destructive">
                               {job.last_error}
                             </p>

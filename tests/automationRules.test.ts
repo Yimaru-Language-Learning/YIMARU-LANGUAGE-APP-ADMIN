@@ -8,9 +8,17 @@ import { getScheduledNotifications } from "../src/api/notifications.api"
 import http from "../src/api/http"
 
 function configuration(): AutomationConfig {
-  return { version: 3, rules: ["payment_recovery", "inactivity"].map((kind, index) => ({ kind: kind as "payment_recovery" | "inactivity", enabled: false, channels: ["push"], enabled_at: "", epoch: "", created_by: 0, steps: (index ? [4320, 10080, 20160] : [20, 4320, 10080]).map((delay_minutes) => ({ delay_minutes, title: "Reminder", message: "Safe message" })) })) }
+  return { version: 3, rules: ["payment_recovery", "inactivity", "new_course"].map((kind, index) => ({ kind: kind as AutomationConfig["rules"][number]["kind"], enabled: false, channels: ["push"], enabled_at: "", epoch: "", created_by: 0, steps: (index === 2 ? [0] : index ? [4320, 10080, 20160] : [20, 4320, 10080]).map((delay_minutes) => ({ delay_minutes, title: "Reminder", message: "Safe message" })) })) }
 }
 test("approved timelines and push-only defaults validate", () => assert.equal(validateAutomationConfig(configuration()), null))
+test("new courses allow one announcement, including zero delay, but never a repeated sequence", () => {
+  const config = configuration()
+  config.rules[2].steps[0].delay_minutes = -1
+  assert.ok(validateAutomationConfig(config))
+  config.rules[2].steps[0].delay_minutes = 0
+  config.rules[2].steps.push({ ...config.rules[2].steps[0], delay_minutes: 10 })
+  assert.ok(validateAutomationConfig(config))
+})
 for (const [name, change] of Object.entries({
   "duplicate kind": (c: AutomationConfig) => c.rules[1].kind = c.rules[0].kind,
   "empty channel": (c: AutomationConfig) => c.rules[0].channels = [],

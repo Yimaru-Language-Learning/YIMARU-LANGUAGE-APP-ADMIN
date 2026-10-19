@@ -16,7 +16,6 @@ import {
   Shield,
   User,
 } from "lucide-react"
-import { toast } from "sonner"
 import { getApiErrorMessage, notifyApiError } from "../../../lib/apiErrors"
 import {
   getActivityLogById,
@@ -59,6 +58,7 @@ import {
   toRfc3339StartOfDay,
 } from "../../../lib/activityLogDisplay"
 import { cn } from "../../../lib/utils"
+import { activityAppLabel, activityRequestId } from "../../../lib/activityAppMetadata"
 import { EXPORT_PERMISSIONS, EXPORT_ROUTES } from "../../../lib/csv-export"
 import { activityLogExportQuery } from "../../../lib/csvExportFilters"
 import { TABLE_PAGE_SIZE_OPTIONS } from "../../../lib/tablePagination"
@@ -605,6 +605,19 @@ export function ActivityLogListPanel({
                   label="IP address"
                   value={selectedLog.ip_address || <UnassignedLabel />}
                 />
+                <DetailItem
+                  icon={<Monitor className="h-4 w-4" />}
+                  label="App version"
+                  value={activityAppLabel(selectedLog.metadata)}
+                />
+                {activityRequestId(selectedLog.metadata) ? (
+                  <DetailItem
+                    icon={<Info className="h-4 w-4" />}
+                    label="Request ID"
+                    value={activityRequestId(selectedLog.metadata)}
+                    title={activityRequestId(selectedLog.metadata) ?? undefined}
+                  />
+                ) : null}
                 <DetailItem
                   icon={<Monitor className="h-4 w-4" />}
                   label="User agent"

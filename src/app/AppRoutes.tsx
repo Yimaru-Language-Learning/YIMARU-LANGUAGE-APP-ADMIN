@@ -41,6 +41,7 @@ import { NotificationsPage } from "../pages/notifications/NotificationsPage";
 import { CreateNotificationPage } from "../pages/notifications/CreateNotificationPage";
 import { ScheduledNotificationsPage } from "../pages/notifications/ScheduledNotificationsPage";
 import { AutomationsPage } from "../pages/notifications/AutomationsPage";
+import { CheckoutRequestsPage } from "../pages/notifications/CheckoutRequestsPage";
 import { AllNotificationsPage } from "../pages/notifications/AllNotificationsPage";
 import { EmailTemplatesPage } from "../pages/notifications/EmailTemplatesPage";
 import { EmailTemplateDetailPage } from "../pages/notifications/EmailTemplateDetailPage";
@@ -343,6 +344,7 @@ export function AppRoutes() {
           element={<ScheduledNotificationsPage />}
         />
         <Route path="/notifications/automations" element={<AutomationsPage />} />
+        <Route path="/notifications/checkout-requests" element={<CheckoutRequestsPage />} />
         <Route path="/notifications/all" element={<AllNotificationsPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/subscriptions/export" element={<SubscriptionsExportPage />} />

@@ -106,6 +106,7 @@ const navEntries: NavEntry[] = [
       { label: "Send notification", to: "/notifications/create" },
       { label: "Scheduled", to: "/notifications/scheduled" },
       { label: "Automations", to: "/notifications/automations" },
+      { label: "Checkout requests", to: "/notifications/checkout-requests" },
     ],
   },
 
@@ -334,6 +335,7 @@ export function Sidebar({
             if (entry.kind === "group") {
               const isNotifications = entry.basePath === "/notifications";
               const visibleChildren = entry.children.filter((child) =>
+                (child.to !== "/notifications/checkout-requests" || hasActivityLogPermission("activity_logs.list", permissions)) &&
                 (child.to !== "/notifications/automations" || hasPermission("settings.get") || sessionTeamRole === "ADMIN" || sessionTeamRole === "SUPER_ADMIN") &&
                 isNavEntryAllowedForTeamRole(
                   { kind: "link", label: child.label, to: child.to },

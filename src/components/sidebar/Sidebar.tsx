@@ -8,6 +8,7 @@ import {
   CreditCard,
   LayoutDashboard,
   LogOut,
+  Share2,
   UserCircle2,
   Users,
   UsersRound,
@@ -110,6 +111,12 @@ const navEntries: NavEntry[] = [
 
   { kind: "section", label: "Operations" },
   { kind: "link", label: "Payments", to: "/payments", icon: CreditCard },
+  {
+    kind: "link",
+    label: "Influencer referrals",
+    to: "/influencers",
+    icon: Share2,
+  },
   {
     kind: "link",
     label: "Subscriptions export",

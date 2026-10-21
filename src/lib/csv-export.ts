@@ -12,6 +12,7 @@ export const EXPORT_ROUTES = {
   subscriptions: "/admin/subscriptions/export",
   activityLogs: "/activity-logs/export",
   teamMembers: "/team/members/export",
+  influencers: "/admin/influencers/export",
 } as const
 
 export const EXPORT_PERMISSIONS = {
@@ -20,6 +21,7 @@ export const EXPORT_PERMISSIONS = {
   subscriptions: "subscriptions.export",
   activityLogs: "activity_logs.export",
   teamMembers: "team.members.export",
+  influencers: "influencers.export",
 } as const
 
 /** Base name used in downloaded CSV filenames (resource + local date/time). */
@@ -29,6 +31,7 @@ export const EXPORT_RESOURCE_NAMES = {
   subscriptions: "subscriptions",
   activityLogs: "activity-logs",
   teamMembers: "team-members",
+  influencers: "influencers-report",
 } as const
 
 const EXPORT_PATH_RESOURCE_NAMES: Record<string, string> = {
@@ -37,6 +40,7 @@ const EXPORT_PATH_RESOURCE_NAMES: Record<string, string> = {
   [EXPORT_ROUTES.subscriptions]: EXPORT_RESOURCE_NAMES.subscriptions,
   [EXPORT_ROUTES.activityLogs]: EXPORT_RESOURCE_NAMES.activityLogs,
   [EXPORT_ROUTES.teamMembers]: EXPORT_RESOURCE_NAMES.teamMembers,
+  [EXPORT_ROUTES.influencers]: EXPORT_RESOURCE_NAMES.influencers,
 }
 
 export function buildExportFilename(resourceName: string, at: Date = new Date()): string {

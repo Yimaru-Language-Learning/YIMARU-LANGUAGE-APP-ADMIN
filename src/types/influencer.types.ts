@@ -78,10 +78,12 @@ export interface InfluencerClick {
   clicked_at: string
 }
 
+/** Per-day payment metrics for an influencer's attributed users. */
 export interface InfluencerDailyRevenue {
   date: string
   clicks: number
-  registrations: number
+  /** Count of successful payments on this day — NOT new-user registrations. */
+  payments_count: number
   revenue: number
   commission: number
 }

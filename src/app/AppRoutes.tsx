@@ -76,6 +76,8 @@ import { PrivacyPage } from "../pages/PrivacyPage";
 import { AccountDeletionPage } from "../pages/AccountDeletionPage";
 import { AppReviewsPage } from "../pages/ratings/AppReviewsPage";
 import { PersonasPage } from "../pages/personas/PersonasPage";
+import { InfluencersListPage } from "../pages/influencers/InfluencersListPage";
+import { InfluencerDetailPage } from "../pages/influencers/InfluencerDetailPage";
 
 export function AppRoutes() {
   return (
@@ -354,6 +356,8 @@ export function AppRoutes() {
         <Route path="/operations/app-reviews" element={<AppReviewsPage />} />
         <Route path="/ratings" element={<AppReviewsPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/influencers" element={<InfluencersListPage />} />
+        <Route path="/influencers/:id" element={<InfluencerDetailPage />} />
 
         <Route path="/team" element={<TeamManagementPage />} />
         <Route path="/team/add" element={<AddTeamMemberPage />} />

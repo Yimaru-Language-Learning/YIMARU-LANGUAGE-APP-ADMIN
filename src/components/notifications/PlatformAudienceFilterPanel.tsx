@@ -22,6 +22,7 @@ import {
 } from "../../lib/userProfileFieldDisplay"
 import { getSubscriptionPlans } from "../../api/subscription-plans.api"
 import type { SubscriptionPlan } from "../../types/subscription.types"
+import { SubscriptionStatusFilter } from "./SubscriptionStatusFilter"
 
 type CodeLabelOption = { code: string; label: string }
 
@@ -144,14 +145,6 @@ function DisabledFilterHint({ label, reason }: { label: string; reason: string }
     </div>
   )
 }
-
-const SUBSCRIPTION_STATUS_OPTIONS = [
-  { code: "ACTIVE", label: "Active" },
-  {
-    code: "Unsubscribed",
-    label: "Unsubscribed (pending, expired, or never subscribed)",
-  },
-]
 
 const PLAN_CATEGORY_OPTIONS = [
   { code: "LEARN_ENGLISH", label: "Learn English" },
@@ -332,13 +325,9 @@ export function PlatformAudienceFilterPanel({
         </FilterSection>
 
         <FilterSection title="Subscription">
-          <FilterDropdown
-            id="audience-subscription-status"
-            label="Subscription status"
-            value={filters.subscriptionStatus}
-            allLabel="Any status"
-            options={SUBSCRIPTION_STATUS_OPTIONS}
-            onSelect={(subscriptionStatus) => patch({ subscriptionStatus })}
+          <SubscriptionStatusFilter
+            selected={filters.subscriptionStatuses}
+            onChange={(subscriptionStatuses) => patch({ subscriptionStatuses })}
           />
           <FilterDropdown
             id="audience-plan"

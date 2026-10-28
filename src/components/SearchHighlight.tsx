@@ -1,5 +1,6 @@
 import { Fragment, useMemo } from "react"
 import { cn } from "../lib/utils"
+import { segmentWhitespaceInsensitiveSearch } from "../lib/searchText"
 
 export function getSearchTokens(query: string): string[] {
   return query.trim().split(/\s+/).filter(Boolean)
@@ -34,17 +35,21 @@ interface SearchHighlightProps {
   query: string
   className?: string
   highlightClassName?: string
+  ignoreWhitespace?: boolean
 }
 
 export function SearchHighlight({
   text,
   query,
   className,
+  ignoreWhitespace = false,
   highlightClassName = "rounded-sm bg-amber-200/90 px-0.5 font-inherit text-inherit",
 }: SearchHighlightProps) {
   const segments = useMemo(
-    () => segmentByTokens(text, getSearchTokens(query)),
-    [text, query],
+    () => ignoreWhitespace
+      ? segmentWhitespaceInsensitiveSearch(text, query)
+      : segmentByTokens(text, getSearchTokens(query)),
+    [text, query, ignoreWhitespace],
   )
 
   if (!query.trim()) {

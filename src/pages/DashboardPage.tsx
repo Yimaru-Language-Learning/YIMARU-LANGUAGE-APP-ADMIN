@@ -40,7 +40,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { SensitiveRevealProvider, SensitiveValue } from "../components/ui/sensitive-value"
 import { cn } from "../lib/utils"
 import { getTeamMemberById } from "../api/team.api"
-import { getDashboard } from "../api/analytics.api"
+import { useAnalyticsDashboard } from "../hooks/useAnalyticsDashboard"
+import { AnalyticsUpdateBanner } from "../components/analytics/AnalyticsUpdateBanner"
 import { getSubscriptionPlans } from "../api/subscription-plans.api"
 import { getRatingSummary, listRatingsByTarget } from "../api/ratings.api"
 import { useEffect, useState, type ReactNode } from "react"
@@ -54,7 +55,7 @@ import {
   getVideoLessonsSummary,
   buildSubscriptionStatusPie,
 } from "../lib/analytics"
-import type { DashboardData, DashboardFilters } from "../types/analytics.types"
+import type { DashboardFilters } from "../types/analytics.types"
 import { formatAppDateTime } from "../lib/datetime"
 import { formatAverageStars } from "../lib/ratingsDisplay"
 import { formatPlanDuration } from "../lib/subscriptionPlans"
@@ -84,8 +85,6 @@ const DEFAULT_FILTERS: DashboardFilters = { mode: "all_time" }
 
 export function DashboardPage() {
   const [userFirstName, setUserFirstName] = useState<string>("")
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
   const [activeStatTab, setActiveStatTab] = useState<"primary" | "secondary">("primary")
   const [appRatings, setAppRatings] = useState<Rating[]>([])
   const [appRatingsSummary, setAppRatingsSummary] = useState<RatingSummary>({
@@ -94,6 +93,7 @@ export function DashboardPage() {
   })
   const [appRatingsLoading, setAppRatingsLoading] = useState(true)
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS)
+  const { dashboard, loading, updatedAt, dismissUpdate, markUpdated } = useAnalyticsDashboard(filters, "dashboard")
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([])
   const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(true)
 
@@ -152,23 +152,6 @@ export function DashboardPage() {
     fetchPlans()
   }, [])
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      setLoading(true)
-      try {
-        const res = await getDashboard(filters)
-        setDashboard(res.data)
-      } catch (err) {
-        console.error(err)
-        setDashboard(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchDashboard()
-  }, [filters])
-
   const registrationData =
     dashboard?.users.registrations_last_30_days.map((d) => ({
       date: formatDate(d.date),
@@ -218,7 +201,9 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {loading ? (
+      <AnalyticsUpdateBanner updatedAt={updatedAt} onDismiss={dismissUpdate} />
+
+      {loading && !dashboard ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-grayScale-100 bg-white py-24 shadow-sm">
           <img src={spinnerSrc} alt="" className="h-10 w-10 animate-spin" />
           <span className="text-sm font-medium text-grayScale-400">Loading dashboard…</span>
@@ -445,7 +430,12 @@ export function DashboardPage() {
             <section className="space-y-4">
               <DashboardSectionTitle>Revenue &amp; subscriptions</DashboardSectionTitle>
             <div className="grid gap-4">
-              <RevenueTrendCard paymentMethod={filters.payment_method} />
+              <RevenueTrendCard
+                paymentMethod={filters.payment_method}
+                sharedDashboard={dashboard}
+                sharedFilters={filters}
+                onKpiUpdate={markUpdated}
+              />
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <ActivePlansBreakdownCard

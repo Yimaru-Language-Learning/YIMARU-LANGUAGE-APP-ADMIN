@@ -178,10 +178,16 @@ function normalizeDashboardResponse(body: unknown): DashboardData {
   };
 }
 
-export const getDashboard = (filters?: DashboardFilters) =>
+export const getDashboard = (
+  filters?: DashboardFilters,
+  options?: { signal?: AbortSignal; quiet?: boolean; timeout?: number },
+) =>
   http
     .get<unknown>("/analytics/dashboard", {
       params: buildDashboardQueryParams(filters),
+      signal: options?.signal,
+      skipErrorToast: options?.quiet,
+      timeout: options?.timeout,
     })
     .then((res) => ({
       ...res,

@@ -1019,7 +1019,7 @@ export function ProgramDetailPage() {
               </div>
               {isSkillBased && course.programName ? (
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-brand-500">
-                  <SearchHighlight text={course.programName} query={listSearch} />
+                  <SearchHighlight text={course.programName} query={listSearch} ignoreWhitespace />
                 </p>
               ) : null}
               {isProficiency && course.category ? (
@@ -1028,10 +1028,10 @@ export function ProgramDetailPage() {
                 </p>
               ) : null}
               <h3 className="text-[18px] font-medium text-grayScale-900">
-                <SearchHighlight text={course.name} query={listSearch} />
+                <SearchHighlight text={course.name} query={listSearch} ignoreWhitespace />
               </h3>
                 <p className="text-[14px] text-grayScale-500 font-medium">
-                <DisplayValue value={course.description} query={listSearch} />
+                <DisplayValue value={course.description} query={listSearch} ignoreWhitespace />
               </p>
             </div>
 

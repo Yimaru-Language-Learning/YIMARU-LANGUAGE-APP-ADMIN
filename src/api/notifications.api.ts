@@ -396,7 +396,7 @@ function normalizeScheduledNotification(raw: unknown): ScheduledNotification | n
     target_role: raw.target_role != null ? String(raw.target_role) : undefined,
     target_team_member_ids: Array.isArray(raw.target_team_member_ids)
       ? raw.target_team_member_ids.map((v) => Number(v))
-      : Array.isArray(raw.target_raw?.team_member_ids)
+      : isRecord(raw.target_raw) && Array.isArray(raw.target_raw.team_member_ids)
         ? (raw.target_raw as { team_member_ids: unknown[] }).team_member_ids.map((v) =>
             Number(v),
           )
@@ -404,11 +404,17 @@ function normalizeScheduledNotification(raw: unknown): ScheduledNotification | n
     target_team_role:
       raw.target_team_role != null
         ? String(raw.target_team_role)
-        : raw.target_raw?.team_role != null
+        : isRecord(raw.target_raw) && raw.target_raw.team_role != null
           ? String((raw.target_raw as { team_role: unknown }).team_role)
           : undefined,
     target_raw: isRecord(raw.target_raw)
       ? {
+          automation: isRecord(raw.target_raw.automation) ? {
+            kind: String(raw.target_raw.automation.kind) as import("../types/automation.types").AutomationKind,
+            step: Number(raw.target_raw.automation.step),
+            due_at: String(raw.target_raw.automation.due_at ?? ""),
+            reason: raw.target_raw.automation.reason != null ? String(raw.target_raw.automation.reason) : undefined,
+          } : undefined,
           phones: Array.isArray(raw.target_raw.phones)
             ? raw.target_raw.phones.map(String)
             : undefined,

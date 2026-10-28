@@ -396,7 +396,9 @@ export function normalizeUserSubscriptions(raw: unknown): UserSubscriptionsData 
   };
 }
 
-/** Query params for GET /users (RFC3339 for created_* / last_login_*; subscription_status: ACTIVE | PENDING | Unsubscribed | EXPIRED).
+/** Query params for GET /users (RFC3339 for created_* / last_login_*;
+ * subscription_status: comma-separated ACTIVE, PENDING, EXPIRED, NEVER_SUBSCRIBED (OR matching).
+ * Legacy Unsubscribed is also supported.
  * status: ACTIVE | PENDING | SUSPENDED | DEACTIVATED | INACTIVE (all statuses except ACTIVE).
  */
 export interface GetUsersParams {
@@ -413,6 +415,7 @@ export interface GetUsersParams {
   education_level?: string
   occupation?: string
   age_group?: string
+  gender?: string
   favourite_topic?: string
   language_goal?: string
   learning_goal?: string
@@ -478,6 +481,7 @@ export function buildUsersListQuery(params: GetUsersParams): Record<string, stri
   addOptionalString(q, "education_level", params.education_level)
   addOptionalString(q, "occupation", params.occupation)
   addOptionalString(q, "age_group", params.age_group)
+  addOptionalString(q, "gender", params.gender)
   addOptionalString(q, "favourite_topic", params.favourite_topic)
   addOptionalString(q, "language_goal", params.language_goal)
   addOptionalString(q, "learning_goal", params.learning_goal)
